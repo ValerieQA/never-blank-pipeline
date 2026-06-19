@@ -31,17 +31,24 @@ The pipeline has two distinct layers:
 ┌──────────────────────────────────────────────────────────────────┐
 │                    INTERNAL NEVER BLANK                          │
 │                                                                  │
-│   Intelligence Engine → Topic Generator → Topic Scoring          │
-│                                │                                 │
-│                          Strategy Layer                          │
-│                                │                                 │
-│              Memory ◄─────────►│◄──── Reports                   │
-│                                │                                 │
-│                       Content Generator                          │
-│                       Quality Control                            │
-└───────────────────────────────┬──────────────────────────────────┘
-                                │
-                                ▼
+│   Intelligence Engine                                            │
+│          │                                                       │
+│          ▼                                                       │
+│   Observation Layer        ◄──── Memory (past observations)     │
+│   (discover before creating)                                     │
+│          │                                                       │
+│          ▼                                                       │
+│   Topic Generator → Topic Scoring                                │
+│                          │                                       │
+│                    Strategy Layer                                │
+│                          │                                       │
+│          Memory ◄────────►│◄──── Reports                        │
+│                          │                                       │
+│                  Content Generator                               │
+│                  Quality Control                                 │
+└──────────────────────────┬───────────────────────────────────────┘
+                           │
+                           ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │                    EXTERNAL NEVER BLANK                          │
 │                                                                  │
@@ -118,22 +125,71 @@ Category 6 always takes priority over all others.
 
 **Output:** structured intelligence items in `data/intelligence/YYYY-MM-DD/raw/*.json`
 
-### 2. Topic Generator
+### 2. Observation Layer
 
-Extracts publishable topic ideas from raw intelligence items.
+> **Never Blank discovers observations before it creates content.**
+> **The goal is not to publish information. The goal is to publish insights.**
 
-This step answers: *what is the interesting thought here?*
-Not: *what happened?* — but: *what does this reveal?*
+The Observation Layer is where raw intelligence becomes something worth saying.
 
-- Each raw item is passed through a topic extraction prompt (`config/prompts/topic_extract.yaml`)
-- The prompt looks for the observation, the pattern, the paradox, or the implication
-- Output is a `TopicCandidate` object: `{idea, angle, source_category, source_ref, evergreen}`
+It does not ask: *what happened?*
+It asks: *what is true here that most people have not named yet?*
 
-Examples of what the Topic Generator should surface:
-- From a statistic → the counterintuitive implication
-- From a case study → the transferable lesson
-- From a market shift → what it means for founders specifically
-- From Never Blank's own history → a pattern worth naming
+An observation is not a topic. It is not a headline. It is a noticed pattern — something that
+makes a reader stop and think: "Hm. That's actually true."
+
+The layer looks across collected intelligence items and searches for:
+
+| Observation Type    | Description                                                                 | Example                                                             |
+|---------------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------|
+| **Pattern**         | Something that repeats across unrelated contexts                            | Founders who post least often tend to have the strongest positioning |
+| **Paradox**         | Two things that are both true but seem to contradict each other             | The busiest businesses look like they're closed                      |
+| **Reversal**        | Conventional wisdom that operates backwards in practice                     | Being less visible sometimes increases credibility                   |
+| **Gap**             | Something important that the industry is not talking about                  | Everyone discusses content strategy; nobody discusses content silence |
+| **Behavior delta**  | The difference between what people say and what they actually do            | Founders say they want clarity; they keep adding complexity          |
+| **Signal cluster**  | Multiple unrelated signals that point to the same underlying shift           | Three separate trends all indicating the same change in buyer trust  |
+| **Implication**     | A known fact whose consequence has not been widely acknowledged             | If attention is scarce, silence is a positioning decision            |
+
+**The Observation Layer is not a summarizer.** It does not compress information.
+It elevates the one thing that is genuinely worth saying.
+
+**Process:**
+
+```
+Raw intelligence items
+        ↓
+Observation Discovery prompt
+(config/prompts/observation_discovery.yaml)
+        ↓
+Candidate observations scored by:
+  - non-obviousness (is this already widely said?)
+  - specificity (is this concrete enough to be useful?)
+  - relevance to Never Blank's audience
+  - novelty vs. memory (not already published)
+        ↓
+Validated observations saved to data/observations/YYYY-MM-DD.json
+        ↓
+Passed to Topic Generator
+```
+
+**Observations are reusable.** A strong observation may generate multiple content pieces
+over time — different angles, different platforms, different contexts. Observations are stored
+in memory and can be referenced again when they become relevant.
+
+**Output:** `data/observations/YYYY-MM-DD.json`
+Each observation: `{statement, type, source_refs[], score, evergreen, used_in[]}`
+
+### 3. Topic Generator
+
+Converts validated observations into publishable topic briefs.
+
+The observation is the asset. The topic is how it gets packaged for a specific audience moment.
+
+- One observation → may generate multiple topic angles
+- Topic Generator selects the angle that best fits the current moment and platform context
+- Output is a `TopicCandidate`: `{observation_id, angle, platform_fit, content_goal, evergreen}`
+
+The Topic Generator does not invent new ideas. It serves the observations the Observation Layer discovered.
 
 **Output:** `data/intelligence/YYYY-MM-DD/candidates_raw.json`
 
@@ -175,6 +231,7 @@ Persistent store of everything the system has done:
 
 Stored in `data/memory/`:
 - `published.json` — log of every published piece
+- `observations.json` — all discovered observations with usage history; reused across content cycles
 - `topic_embeddings.json` — vector index for deduplication
 - `voice_examples.json` — curated brand voice reference set
 
@@ -369,7 +426,9 @@ config/
     ├── facebook_post.yaml         # Facebook post prompt
     ├── instagram_caption.yaml
     ├── threads_post.yaml
-    ├── topic_extract.yaml         # prompt for extracting idea from raw intelligence item
+    ├── observation_discovery.yaml  # prompt for discovering observations from intelligence
+    ├── observation_score.yaml     # prompt for scoring observation non-obviousness
+    ├── topic_extract.yaml         # prompt for converting observation into topic angle
     ├── topic_score.yaml           # prompt for scoring and ranking topic candidates
     ├── strategy_brief.yaml        # prompt for strategy layer
     ├── qc_factuality.yaml         # prompt for factuality check
@@ -419,7 +478,8 @@ Never-Blank-pipeline/
 │   ├── internal/
 │   │   ├── __init__.py
 │   │   ├── intelligence_engine.py  # collects raw items from all source categories
-│   │   ├── topic_generator.py      # extracts topic ideas from raw intelligence
+│   │   ├── observation_layer.py    # discovers observations from raw intelligence
+│   │   ├── topic_generator.py      # converts observations into topic angles
 │   │   ├── topic_scorer.py         # scores and ranks candidates into publication queue
 │   │   ├── strategy.py             # applies editorial logic, builds ContentBrief
 │   │   └── memory.py               # reads/writes memory store
@@ -460,9 +520,11 @@ Never-Blank-pipeline/
 ├── data/
 │   ├── intelligence/
 │   │   └── YYYY-MM-DD/
-│   │       ├── raw/               # raw items per source category
-│   │       ├── candidates_raw.json    # topic ideas before scoring
+│   │       ├── raw/                   # raw items per source category
+│   │       ├── candidates_raw.json    # topic angles before scoring
 │   │       └── publication_queue.json # scored, ranked, ready for strategy
+│   ├── observations/
+│   │   └── YYYY-MM-DD.json            # validated observations (reusable across content pieces)
 
 │   ├── drafts/
 │   │   ├── pending/               # content awaiting publish
@@ -526,10 +588,13 @@ GOOGLE_SHEET_ID=
 1. **Human Review is optional. Human Dependency is forbidden.** The system continues working when the human is unavailable. Valeria can review; the pipeline cannot wait for her.
 2. **Failures have types, and types have responses.** Technical failures retry. Quality failures rewrite. Factual risks quarantine. Only system crashes require human action.
 3. **Prompts live in config, not code.** Python loads templates; it never builds prompt strings.
-4. **Content comes from ideas, not news.** News is one input among six. The most powerful content often comes from observations, paradoxes, and patterns — not headlines.
-5. **Manual queue takes priority.** Automation serves when humans have nothing queued.
-6. **Memory prevents repetition.** Every published topic is remembered semantically, not just by title.
-7. **The system reports itself.** Every run is visible in Google Sheets without opening the code.
-8. **Brand voice is a constraint, not an afterthought.** Voice validation runs before every publish. On failure, the system rewrites — it does not stop.
-9. **Images are part of the content, not decoration.** Generated automatically, with hook and branding.
-10. **One source of truth per concern.** Config owns rules. Memory owns history. Sheets owns visibility.
+4. **The system discovers before it creates.** Raw intelligence is collected first. Then the Observation Layer finds what is actually worth saying. Only then does content generation begin.
+5. **The goal is insights, not information.** An observation is not a summary of what happened. It is a named pattern that most people have not articulated yet.
+6. **Content comes from ideas, not news.** News is one input among six. The most powerful content often comes from observations, paradoxes, and patterns — not headlines.
+7. **Manual queue takes priority.** Automation serves when humans have nothing queued.
+8. **Observations are reusable assets.** A single observation may fuel multiple content pieces across different platforms and time periods. Observations are stored in memory, not discarded after use.
+9. **Memory prevents repetition.** Every published topic is remembered semantically, not just by title.
+10. **The system reports itself.** Every run is visible in Google Sheets without opening the code.
+11. **Brand voice is a constraint, not an afterthought.** Voice validation runs before every publish. On failure, the system rewrites — it does not stop.
+12. **Images are part of the content, not decoration.** Generated automatically, with hook and branding.
+13. **One source of truth per concern.** Config owns rules. Memory owns history. Sheets owns visibility.
