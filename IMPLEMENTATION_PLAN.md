@@ -34,6 +34,7 @@
    - `config/quality.yaml` — QC thresholds with sensible defaults
    - `config/platforms.yaml` — character limits, image dimensions per platform
    - `config/signals.yaml` — RSS feed list, keyword clusters (empty lists for now)
+   - `config/platforms.yaml` — must include Telegram entry with `max_chars`, `supports_image`, `link_format`
 
 5. Create all prompt template files in `config/prompts/`
    - Each file is a YAML with keys: `system`, `user`, `variables` (list of placeholders)
@@ -95,8 +96,13 @@
        "date": "YYYY-MM-DD",
        "title": "...",
        "slug": "...",
-       "platforms": ["wix", "linkedin"],
-       "urls": {"wix": "...", "linkedin": "..."},
+       "observation_id": "...",
+       "channels": {
+         "wix":      {"status": "green",  "url": "..."},
+         "linkedin": {"status": "green",  "url": "..."},
+         "telegram": {"status": "green",  "message_id": "..."}
+       },
+       "overall_status": "green",
        "topic_summary": "one-sentence summary for dedup"
      }
    ]
@@ -124,7 +130,8 @@
 
 1. Write real prompt templates in `config/prompts/`
    - `blog_post.yaml`: system prompt establishes Never Blank voice and purpose; user prompt includes `{title}`, `{angle}`, `{goal}`, `{brand_voice_examples}`
-   - `linkedin_post.yaml`, `facebook_post.yaml`, `instagram_caption.yaml`, `threads_post.yaml`: adapted per platform constraints
+   - `linkedin_post.yaml`, `facebook_post.yaml`, `instagram_caption.yaml`, `threads_post.yaml`, `telegram_post.yaml`: adapted per platform constraints
+   - `telegram_post.yaml` specifically: hook + insight + optional `{article_url}` placeholder; short by design, not a compressed article
    - All prompts must include voice anchoring via `{brand_voice_examples}`
 
 2. Create `ContentBrief` dataclass in `src/internal/strategy.py`
@@ -188,31 +195,62 @@
 
 ## Phase 5 — Publishing
 
-**Goal:** Approved content publishes to all target platforms.
+**Goal:** Approved content publishes to all target platforms. Each platform is independent — a failure on one does not block others.
 
 ### Steps
 
 1. Implement `src/publishing/wix.py`
-   - `publish_post(title, content, slug)` → Wix Headless CMS API → returns `{"url": "...", "post_id": "..."}`
+   - `publish_post(title, content, slug)` → Wix Headless CMS API → returns `{"url": "...", "post_id": "...", "status": "green"}`
 
 2. Implement `src/publishing/linkedin.py`
-   - `publish_post(text)` → LinkedIn Share API → returns `{"url": "...", "post_id": "..."}`
+   - `publish_post(text)` → LinkedIn Share API → returns `{"url": "...", "post_id": "...", "status": "green"}`
 
 3. Implement `src/publishing/facebook.py`
-   - `publish_post(message, image_url)` → Facebook Graph API → returns `{"post_id": "..."}`
+   - `publish_post(message, image_url)` → Facebook Graph API → returns `{"post_id": "...", "status": "green"}`
 
 4. Implement `src/publishing/instagram.py`
-   - `publish_post(image_url, caption)` → two-step: create container → publish → returns `{"post_id": "..."}`
+   - `publish_post(image_url, caption)` → two-step: create container → publish → returns `{"post_id": "...", "status": "green"}`
 
 5. Implement `src/publishing/threads.py`
-   - `publish_post(text)` → Threads API → returns `{"post_id": "..."}`
+   - `publish_post(text)` → Threads API → returns `{"post_id": "...", "status": "green"}`
 
-6. Each publisher:
-   - Reads credentials from `.env` only (no hardcoded values)
-   - Returns structured result object
-   - Raises typed exceptions on failure (not raw requests errors)
+6. Implement `src/publishing/telegram.py`
+   - `publish_post(hook, insight, article_url, image_path)` → Telegram Bot API
+   - `article_url` is optional — included when a Wix post was published in the same run
+   - `image_path` is optional — sends as photo message if provided, text-only otherwise
+   - Returns `{"message_id": "...", "status": "green"}`
 
-**Acceptance:** Publish one test post to each platform. Verify the post appears. Verify no credentials appear in any source file.
+7. Per-platform independence rules (enforced in the runner, not in individual publishers):
+   - Each publisher is called in sequence; result is collected regardless of outcome
+   - On `Exception`: catch, log, mark that channel as `failed`, continue to next channel
+   - Retry logic: up to `max_retries` from `quality.yaml`, with exponential backoff, per channel
+   - After all channels complete: evaluate overall run status
+     - All required channels `green` or `skipped` → overall `GREEN`
+     - At least one required channel `failed`, others succeeded → overall `PARTIAL`
+     - All required channels `failed` → overall `RED`
+
+8. Update `data/memory/published.json` schema to track per-channel results:
+   ```json
+   {
+     "id": "uuid",
+     "date": "YYYY-MM-DD",
+     "title": "...",
+     "observation_id": "...",
+     "channels": {
+       "wix":      {"status": "green",  "url": "...", "post_id": "..."},
+       "linkedin": {"status": "green",  "url": "...", "post_id": "..."},
+       "facebook": {"status": "failed", "error": "...", "retries": 3},
+       "instagram":{"status": "green",  "post_id": "..."},
+       "threads":  {"status": "skipped","reason": "not applicable for this topic"},
+       "telegram": {"status": "green",  "message_id": "..."}
+     },
+     "overall_status": "partial"
+   }
+   ```
+
+**Acceptance:**
+- Publish one test post. Verify all 6 channels receive content. Verify no credentials appear in any source file.
+- Simulate a Telegram API failure. Verify other channels still publish. Verify overall status is `PARTIAL`, not `RED`. Verify failure appears in Google Sheet "Failures & Retries" tab.
 
 ---
 
@@ -301,12 +339,19 @@
       → passed first time: GREEN, continue
    5. generate visual assets
       → type1 fail: retry (up to max_retries)
-      → still failing: publish without image, log warning
-   6. publish to all target platforms
-      → type1 fail: retry with backoff
-      → still failing after retries: RED status, alert, stop run
-   7. update memory
-   8. write report to Google Sheet with final status (GREEN / YELLOW / ORANGE / RED)
+      → still failing: continue without image, log warning (image is optional per channel)
+   6. publish to all target platforms — independently, per channel
+      for each channel in [wix, linkedin, facebook, instagram, threads, telegram]:
+        → attempt publish
+        → on fail: retry with backoff (up to max_retries)
+        → on still failing: mark channel as FAILED, log, continue to next channel
+        → telegram receives wix_url if wix published successfully in this run
+      after all channels:
+        → all green/skipped → overall GREEN (or YELLOW if QC rewrote)
+        → some failed → overall PARTIAL
+        → all failed → overall RED, alert
+   7. update memory with per-channel results
+   8. write report to Google Sheet with per-channel status columns and overall status
    ```
 
 2. Implement `scripts/run_publish_only.py`
@@ -361,6 +406,6 @@
 
 - No AI model selection rationale (TBD based on cost vs. quality testing)
 - No embedding model for semantic deduplication (Phase 2 uses string similarity; Phase 7+ can upgrade)
-- No Threads API implementation (API availability may change — stub ready)
+- No Threads API implementation (API availability may change — stub ready, same pattern as Telegram)
 - No performance analytics integration (manual notes in memory for now)
 - No multi-language content (English only in v1)

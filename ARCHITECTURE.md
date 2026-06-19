@@ -54,6 +54,8 @@ The pipeline has two distinct layers:
 │                                                                  │
 │   Wix Blog  │  LinkedIn  │  Facebook  │  Instagram  │  Threads  │
 │                                                                  │
+│                         Telegram                                 │
+│                                                                  │
 │                      Visual Assets Layer                         │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -254,16 +256,33 @@ Report covers:
 
 ### Platform Map
 
-| Platform     | Format                  | Primary Purpose              |
-|--------------|-------------------------|------------------------------|
-| Wix Blog     | Long-form article       | SEO, depth, demonstration    |
-| LinkedIn     | Professional post       | Thought leadership, reach    |
-| Facebook     | Post + image            | Community, warmth            |
-| Instagram    | Image + caption         | Visual identity, hook        |
-| Threads      | Short text              | Conversation starter         |
+| Platform     | Format                         | Primary Purpose                       |
+|--------------|--------------------------------|---------------------------------------|
+| Wix Blog     | Long-form article              | SEO, depth, demonstration             |
+| LinkedIn     | Professional post              | Thought leadership, reach             |
+| Facebook     | Post + image                   | Community, warmth                     |
+| Instagram    | Image + caption                | Visual identity, hook                 |
+| Threads      | Short text                     | Conversation starter                  |
+| Telegram     | Short insight + optional link  | Fast broadcast, sharp observations    |
 
 Each platform has its own prompt template in `config/prompts/`.
 Content is adapted — not copied — across platforms.
+
+### Telegram Role
+
+Telegram is not an article platform. It is a fast broadcast channel.
+
+A Telegram post contains:
+- One sharp hook (the observation stated plainly)
+- One business insight (why it matters)
+- Link to the full Wix article when one exists for this topic
+- Optional visual card if a branded image was generated
+
+Telegram publishes the same day as the full article, not as a teaser before it.
+The goal is to deliver value instantly to subscribers, with a path to depth for those who want it.
+
+Telegram content is generated from `config/prompts/telegram_post.yaml`.
+It is short by design — not a compressed version of the article, but a self-contained insight.
 
 ### Visual Assets Layer
 
@@ -332,17 +351,32 @@ Failures are not equal. The system's response depends on what broke.
 
 ### Status System
 
-Every pipeline run and every content piece carries one of four statuses:
+Status is tracked at two levels: per-platform and per-run.
 
-| Status     | Meaning                                              | Human action required? |
-|------------|------------------------------------------------------|------------------------|
-| **GREEN**  | Published successfully                               | No                     |
-| **YELLOW** | Quality issue detected — system rewrote and resolved | No                     |
-| **ORANGE** | Topic quarantined — skipped, pipeline continued      | No (optional review)   |
-| **RED**    | System failure — broken API key, pipeline crash      | Yes                    |
+**Per-platform status** — every channel is tracked independently.
+A failed Telegram post does not block LinkedIn. A failed Instagram does not block Wix.
+
+| Status      | Meaning                                                         | Human action required? |
+|-------------|-----------------------------------------------------------------|------------------------|
+| **GREEN**   | Published successfully                                          | No                     |
+| **YELLOW**  | Quality issue detected — system rewrote and resolved            | No                     |
+| **ORANGE**  | Topic quarantined — skipped, pipeline continued                 | No (optional review)   |
+| **SKIPPED** | Platform intentionally excluded for this topic (with reason)    | No                     |
+| **FAILED**  | Platform publish failed after all retries                       | No (logged, continued) |
+| **RED**     | System-level failure — pipeline cannot continue at all          | Yes                    |
+
+**Per-run overall status** — the final status of a complete pipeline run:
+
+- **GREEN** — all required channels are either `GREEN`, `YELLOW`, or `SKIPPED` with reason
+- **PARTIAL** — at least one required channel is `FAILED`, others succeeded
+- **ORANGE** — topic was quarantined; pipeline moved to next topic
+- **RED** — system-level failure; pipeline stopped
+
+A run is not GREEN unless every required channel is either published or intentionally skipped with a recorded reason.
+`FAILED` on a single channel does not stop other channels — it logs and continues.
+`FAILED` on all channels escalates to RED.
 
 Human intervention is required **only for RED**.
-ORANGE items are visible in the Google Sheet for optional review — but the pipeline did not wait.
 
 ### QC Checks (in order)
 
@@ -353,8 +387,8 @@ ORANGE items are visible in the Google Sheet for optional review — but the pip
 | Consistency Check       | Type 2       | Regenerate platform variants |
 | Factuality Check        | Type 3       | Quarantine topic            |
 | Hallucination Detection | Type 3       | Quarantine topic            |
-| Platform API health     | Type 1       | Retry with backoff          |
-| Image rendering         | Type 1       | Retry, then skip image      |
+| Per-platform API health | Type 1       | Retry with backoff per channel; failure logged, pipeline continues to next channel |
+| Image rendering         | Type 1       | Retry, then publish without image |
 
 QC config (thresholds, max retries, max rewrites, strictness) lives in `config/quality.yaml`.
 
@@ -392,16 +426,19 @@ The Google Sheet serves as the human control panel.
 - Columns: `title`, `angle`, `target_platforms`, `priority`, `notes`, `status`
 
 **2. Published**
-- Every published piece
-- Columns: `date`, `topic`, `platform`, `url`, `status`
+- Every published piece — one row per run (not per platform)
+- Columns: `date`, `topic`, `overall_status`, `wix_url`, `wix_status`, `linkedin_status`, `facebook_status`, `instagram_status`, `threads_status`, `telegram_status`, `telegram_url`
+- Status per channel: `green` / `yellow` / `skipped` / `failed`
+- Allows instant visibility into which channels succeeded and which did not
 
 **3. Pipeline Log**
 - Every run logged automatically
-- Columns: `run_date`, `trigger`, `topic_selected`, `qc_result`, `publish_result`, `errors`
+- Columns: `run_date`, `trigger`, `topic_selected`, `qc_result`, `overall_status`, `failed_channels`, `errors`
 
 **4. Failures & Retries**
-- Failed runs with error reason
-- Columns: `date`, `topic`, `stage`, `error`, `retry_count`, `resolved`
+- Per-channel failures with error reason
+- Columns: `date`, `topic`, `channel`, `stage`, `error`, `retry_count`, `resolved`
+- A Telegram failure appears here but does not mark the full run as RED
 
 **5. Upcoming Topics**
 - Auto-populated from topic candidates that passed prioritization
@@ -426,6 +463,7 @@ config/
     ├── facebook_post.yaml         # Facebook post prompt
     ├── instagram_caption.yaml
     ├── threads_post.yaml
+    ├── telegram_post.yaml         # short insight + optional article link
     ├── observation_discovery.yaml  # prompt for discovering observations from intelligence
     ├── observation_score.yaml     # prompt for scoring observation non-obviousness
     ├── topic_extract.yaml         # prompt for converting observation into topic angle
@@ -504,6 +542,7 @@ Never-Blank-pipeline/
 │   │   ├── facebook.py            # Facebook Graph API publisher
 │   │   ├── instagram.py           # Instagram publisher
 │   │   ├── threads.py             # Threads publisher
+│   │   ├── telegram.py            # Telegram Bot API publisher
 │   │   └── cloudinary_upload.py   # image hosting
 │   │
 │   ├── reporting/
@@ -577,6 +616,8 @@ META_IG_USER_ID=
 META_FB_PAGE_ID=
 META_FB_PAGE_TOKEN=
 THREADS_ACCESS_TOKEN=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHANNEL_ID=
 GOOGLE_SHEETS_CREDENTIALS_JSON=
 GOOGLE_SHEET_ID=
 ```
