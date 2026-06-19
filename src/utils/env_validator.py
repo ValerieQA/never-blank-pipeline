@@ -9,8 +9,9 @@ log = get_logger("env_validator")
 
 PHASE_0 = [
     "NB_OPENAI_API_KEY",
-    "NB_OPENAI_MODEL",
+    "NB_OPENAI_CHAT_MODEL",
     "NB_OPENAI_EMBEDDING_MODEL",
+    "NB_OPENAI_TEMPERATURE",
 ]
 
 PHASE_1 = PHASE_0 + [

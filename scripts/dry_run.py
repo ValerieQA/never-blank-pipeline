@@ -202,7 +202,7 @@ def run(test_llm: bool = False) -> None:
         print(f"    • {f}")
 
     print("\n  Env vars required for this stage (Phase 0):")
-    for v in ["NB_OPENAI_API_KEY", "NB_OPENAI_MODEL", "NB_OPENAI_EMBEDDING_MODEL"]:
+    for v in ["NB_OPENAI_API_KEY", "NB_OPENAI_CHAT_MODEL", "NB_OPENAI_EMBEDDING_MODEL", "NB_OPENAI_TEMPERATURE"]:
         status = "✓ set" if os.environ.get(v) else "✗ missing"
         print(f"    • {v} — {status}")
 

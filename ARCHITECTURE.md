@@ -735,7 +735,8 @@ Required secrets:
 ```
 # ── OpenAI (LLM provider for all AI tasks) ──────
 NB_OPENAI_API_KEY=
-NB_OPENAI_MODEL=gpt-4o
+NB_OPENAI_CHAT_MODEL=gpt-5.5
+NB_OPENAI_TEMPERATURE=0.7
 NB_OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 
 # ── Cloudinary (image hosting) ───────────────────
@@ -784,7 +785,7 @@ V1 is not designed for Anthropic compatibility.
 
 | Purpose                  | API used                              |
 |--------------------------|---------------------------------------|
-| All text generation      | OpenAI Chat Completions (`NB_OPENAI_MODEL`) |
+| All text generation      | OpenAI Chat Completions (`NB_OPENAI_CHAT_MODEL`) |
 | Semantic deduplication   | OpenAI Embeddings (`NB_OPENAI_EMBEDDING_MODEL`) |
 | Observation scoring      | OpenAI Chat Completions               |
 | QC checks (factuality, voice) | OpenAI Chat Completions          |

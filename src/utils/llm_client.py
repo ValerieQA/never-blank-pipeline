@@ -19,8 +19,12 @@ def _get_client() -> OpenAI:
     return _client
 
 
+def _temperature() -> float:
+    return float(os.environ.get("NB_OPENAI_TEMPERATURE", "0.7"))
+
+
 def _model() -> str:
-    return os.environ.get("NB_OPENAI_MODEL", "gpt-4o")
+    return os.environ.get("NB_OPENAI_CHAT_MODEL", "gpt-4o")
 
 
 def _embedding_model() -> str:
@@ -36,6 +40,7 @@ def chat(system: str, user: str, json_mode: bool = False) -> str:
     client = _get_client()
     kwargs: dict[str, Any] = {
         "model": _model(),
+        "temperature": _temperature(),
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -44,7 +49,7 @@ def chat(system: str, user: str, json_mode: bool = False) -> str:
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
 
-    log.debug("chat() model=%s json_mode=%s", _model(), json_mode)
+    log.debug("chat() model=%s temp=%s json_mode=%s", _model(), _temperature(), json_mode)
     response = client.chat.completions.create(**kwargs)
     content = response.choices[0].message.content or ""
 
