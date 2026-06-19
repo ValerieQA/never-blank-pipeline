@@ -199,17 +199,33 @@ The Topic Generator does not invent new ideas. It serves the observations the Ob
 
 Ranks all topic candidates into a publication queue.
 
-Scoring factors (weights defined in `config/intelligence.yaml`):
+**Base scoring factors** (weights defined in `config/intelligence.yaml`):
 - **Relevance** — how closely this topic connects to Never Blank's positioning
-- **Originality** — how different this is from recently published content (checked against memory)
+- **Originality** — semantic distance from published content (embedding comparison, not string match)
 - **Platform fit** — does this work as a long article, a short post, or both
 - **Recency signal** — time-sensitive topics score higher when fresh
 - **Source category weight** — per the priority table above
 
-Topics that score below the minimum threshold are dropped.
+**Diversity adjustment** (reads from `memory/portfolio.json`):
+
+The scoring system applies bonuses and penalties to enforce long-term content diversity.
+These adjustments prevent the system from drifting toward one type of content.
+
+| Condition                                                          | Adjustment              |
+|--------------------------------------------------------------------|-------------------------|
+| Observation type matches the last 3 published types               | −20% score penalty      |
+| Observation type not used in the last 30 days                     | +15% score bonus        |
+| Source category not used in the last 14 days                      | +10% score bonus        |
+| Content goal same as last 3 published goals                       | −15% score penalty      |
+| Content goal not used in last 20 published pieces                 | +20% score bonus        |
+
+Thresholds and weights are configured in `config/intelligence.yaml` under `diversity_weights`.
+The diversity adjustment is additive to the base score — it does not override it.
+
+Topics that score below the minimum threshold after adjustment are dropped.
 The top N candidates are written to the publication queue.
 
-**Output:** `data/intelligence/YYYY-MM-DD/publication_queue.json` (ordered list)
+**Output:** `data/intelligence/YYYY-MM-DD/publication_queue.json` (ordered list with scores and diversity_adjustment breakdown)
 
 ### 4. Strategy Layer
 
@@ -250,17 +266,47 @@ Each article receives 2–3 tags automatically. No human tag selection. No manua
 
 ### 5. Memory
 
-Persistent store of everything the system has done:
-- Published topics and their slugs
-- Topic embeddings for semantic deduplication
-- Per-platform performance notes (added manually or via future integrations)
-- Brand voice examples (approved reference posts)
+Memory is not an archive. It is an active constraint on future decisions.
+Every layer of the pipeline reads from memory before making choices.
 
-Stored in `data/memory/`:
-- `published.json` — log of every published piece
-- `observations.json` — all discovered observations with usage history; reused across content cycles
-- `topic_embeddings.json` — vector index for deduplication
-- `voice_examples.json` — curated brand voice reference set
+**What memory stores:**
+
+`data/memory/published.json`
+- Full log of every published piece with per-channel results
+- Used by: deduplication, portfolio tracking, observation staleness checks
+
+`data/memory/observations.json`
+- All discovered observations with: statement, type, score, source_refs, `used_in[]`, `use_count`, `last_used_date`
+- An observation is never permanently retired — but it enters a cooldown after `max_uses` (configured in `quality.yaml`)
+- Used by: Observation Layer (checks before adding a new candidate), Topic Generator
+
+`data/memory/embeddings.json`
+- Semantic vector index of every published topic summary and observation statement
+- **String similarity is not sufficient.** Embeddings are required from day one.
+- Used by: deduplication check in QC; observation novelty check in Observation Layer
+- Two pieces are considered duplicates if cosine similarity > threshold (configured in `quality.yaml`)
+
+`data/memory/voice_examples.json`
+- Curated brand voice reference posts
+- **This file must be updated periodically** as the brand matures — not set once and frozen
+- A voice drift alert is triggered if the rolling voice score drops below threshold over 10 consecutive posts (see Brand Voice Drift Detection)
+- Used by: QC voice check; rewrite prompts
+
+`data/memory/portfolio.json`
+- Running distribution of content across all dimensions
+- Updated after every successful publish
+- Structure:
+  ```json
+  {
+    "observation_type_counts": {"paradox": 12, "reversal": 4, "gap": 2, ...},
+    "content_goal_counts": {"educate": 10, "challenge": 6, "demonstrate": 8, "invite": 4},
+    "source_category_counts": {"market_signals": 15, "business_observations": 8, ...},
+    "tag_counts": {"business": 14, "visibility": 9, "observations": 11, ...},
+    "voice_scores_rolling": [0.87, 0.85, 0.82, ...],
+    "last_used_observation_types": ["paradox", "paradox", "reversal", "paradox", ...]
+  }
+  ```
+- Used by: Topic Scoring (diversity adjustment), Portfolio Health Report
 
 ### 6. Reports
 
@@ -419,17 +465,39 @@ Human intervention is required **only for RED**.
 
 ### QC Checks (in order)
 
-| Check                   | Failure Type | System Response            |
-|-------------------------|--------------|----------------------------|
-| Duplication Detection   | Type 2       | Rewrite with new angle     |
-| Brand Voice Validation  | Type 2       | Rewrite with voice anchoring |
-| Consistency Check       | Type 2       | Regenerate platform variants |
-| Factuality Check        | Type 3       | Quarantine topic            |
-| Hallucination Detection | Type 3       | Quarantine topic            |
-| Per-platform API health | Type 1       | Retry with backoff per channel; failure logged, pipeline continues to next channel |
-| Image rendering         | Type 1       | Retry, then publish without image |
+| Check                        | Failure Type | System Response            |
+|------------------------------|--------------|----------------------------|
+| Semantic Duplication         | Type 2       | Rewrite with new angle     |
+| Brand Voice Validation       | Type 2       | Rewrite with voice anchoring |
+| Consistency Check            | Type 2       | Regenerate platform variants |
+| Factuality Check             | Type 3       | Quarantine topic            |
+| Hallucination Detection      | Type 3       | Quarantine topic            |
+| Per-platform API health      | Type 1       | Retry with backoff per channel; failure logged, pipeline continues to next channel |
+| Image rendering              | Type 1       | Retry, then publish without image |
 
 QC config (thresholds, max retries, max rewrites, strictness) lives in `config/quality.yaml`.
+
+### Brand Voice Drift Detection
+
+Single-post QC validates each article in isolation. But brand voice can drift slowly across
+200 posts without any single post failing its voice check. Drift is invisible at the post level.
+
+The system runs a **rolling voice drift check** after every publish:
+- Reads the last N voice scores from `memory/portfolio.json` (`voice_scores_rolling`)
+- If the 10-post rolling average drops below `voice_drift_threshold` in `quality.yaml` → **ORANGE alert**
+- The alert is logged to the Pipeline Log and the Failures tab in Google Sheet
+- The pipeline does not stop — but the alert is visible and prompts optional review
+- Recommended response: update `voice_examples.json` with recent approved posts
+
+This is not a per-post failure. It is a **longitudinal signal** that the brand voice is shifting.
+
+```
+After each successful publish:
+  → record voice score in portfolio.json
+  → compute rolling average of last 10 scores
+  → if average < threshold: log ORANGE drift alert to Google Sheet
+  → continue pipeline
+```
 
 ### Rewrite Loop
 
@@ -482,6 +550,18 @@ The Google Sheet serves as the human control panel.
 **5. Upcoming Topics**
 - Auto-populated from topic candidates that passed prioritization
 - For visibility — not for editing
+
+**6. Portfolio Health** *(updated monthly, auto-generated)*
+- Distribution of observation types published (count per type, last 30 / 90 / all-time)
+- Distribution of content goals (educate / challenge / demonstrate / invite)
+- Distribution of source categories used
+- Distribution of Wix tags
+- Rolling brand voice score (10-post average, trend)
+- Observations used 3+ times (flagged for cooldown review)
+- Intelligence sources not used in 30+ days (flagged as potentially stale)
+- Columns: `metric`, `last_30_days`, `last_90_days`, `all_time`, `flag`
+
+This tab is the 12-month health check. It answers: is the content portfolio balanced, or has the system drifted into a single mode?
 
 ---
 
@@ -590,6 +670,7 @@ Never-Blank-pipeline/
 │   ├── reporting/
 │   │   ├── __init__.py
 │   │   ├── reporter.py            # assembles run report
+│   │   ├── portfolio_reporter.py  # computes portfolio health metrics from memory
 │   │   └── sheets.py              # writes to Google Sheet dashboard
 │   │
 │   └── utils/
@@ -611,9 +692,11 @@ Never-Blank-pipeline/
 │   │   ├── pending/               # content awaiting publish
 │   │   └── quarantine/            # factual risk — awaiting optional human review
 │   ├── memory/
-│   │   ├── published.json
-│   │   ├── topic_embeddings.json
-│   │   └── voice_examples.json
+│   │   ├── published.json          # full publish log with per-channel results
+│   │   ├── observations.json       # all observations with use_count, last_used_date, cooldown flag
+│   │   ├── embeddings.json         # semantic vectors for all published topics and observations
+│   │   ├── portfolio.json          # running distribution across all content dimensions
+│   │   └── voice_examples.json     # brand voice reference set (updated periodically)
 │   ├── visuals/                   # generated images by date-slug
 │   └── reports/                   # run reports by date
 │
@@ -629,7 +712,8 @@ Never-Blank-pipeline/
 │   ├── run_intelligence.py        # run only the intelligence engine (collect + score)
 │   ├── run_publish_only.py        # publish a quarantined draft after manual decision
 │   ├── sync_sheets.py             # pull manual topics from Google Sheets
-│   └── sync_wix_tags.py           # sync tag label→ID map from Wix into platforms.yaml
+│   ├── sync_wix_tags.py           # sync tag label→ID map from Wix into platforms.yaml
+│   └── generate_health_report.py  # compute and write Portfolio Health tab to Google Sheet
 │
 └── tests/
     ├── test_quality/
@@ -676,9 +760,11 @@ GOOGLE_SHEET_ID=
 5. **The goal is insights, not information.** An observation is not a summary of what happened. It is a named pattern that most people have not articulated yet.
 6. **Content comes from ideas, not news.** News is one input among six. The most powerful content often comes from observations, paradoxes, and patterns — not headlines.
 7. **Manual queue takes priority.** Automation serves when humans have nothing queued.
-8. **Observations are reusable assets.** A single observation may fuel multiple content pieces across different platforms and time periods. Observations are stored in memory, not discarded after use.
-9. **Memory prevents repetition.** Every published topic is remembered semantically, not just by title.
-10. **The system reports itself.** Every run is visible in Google Sheets without opening the code.
-11. **Brand voice is a constraint, not an afterthought.** Voice validation runs before every publish. On failure, the system rewrites — it does not stop.
-12. **Images are part of the content, not decoration.** Generated automatically, with hook and branding.
-13. **One source of truth per concern.** Config owns rules. Memory owns history. Sheets owns visibility.
+8. **Observations are reusable assets — but not indefinitely.** A single observation may fuel multiple content pieces. Observations enter cooldown after `max_uses` to prevent the same insight from becoming a crutch.
+9. **Memory prevents repetition semantically, not lexically.** Deduplication uses embeddings. String matching is not sufficient — two different phrasings of the same idea must be detected as duplicates.
+10. **Diversity is enforced, not assumed.** Topic Scoring applies explicit bonuses and penalties based on portfolio distribution. The system does not drift into a single observation type by accident.
+11. **Brand voice drift is a longitudinal risk.** Single-post QC catches today's failure. Rolling voice score tracking catches the slow drift that kills a brand over 6 months.
+12. **The system reports itself — including its own health.** Every run is visible in Google Sheets. Portfolio health is visible monthly. The system can report when it is becoming repetitive before a human notices.
+13. **Brand voice examples are living references, not frozen artifacts.** `voice_examples.json` must be updated as the brand matures. A voice example from month 1 may no longer represent month 9.
+14. **Images are part of the content, not decoration.** Generated automatically, with hook and branding.
+15. **One source of truth per concern.** Config owns rules. Memory owns history. Sheets owns visibility.
