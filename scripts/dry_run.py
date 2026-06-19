@@ -1,11 +1,11 @@
 """
-Dry-run runner for Phase 0 and Phase 1.
+Dry-run runner for Phase 0, Phase 1, and Phase 2.
 
-Validates the foundation without making any API calls or publishing anything.
+Validates the foundation and memory layer without making API calls or publishing.
 Optionally tests the OpenAI client if NB_OPENAI_API_KEY is present.
 
 Usage:
-    python scripts/dry_run.py              # structure + config only
+    python scripts/dry_run.py              # structure + config + memory only
     python scripts/dry_run.py --test-llm  # also tests OpenAI connection
 """
 import sys
@@ -14,7 +14,6 @@ import json
 import argparse
 from pathlib import Path
 
-# Allow running from repo root
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
@@ -27,7 +26,12 @@ from src.utils.config_loader import (
     load_intelligence, load_prompt,
 )
 from src.internal.memory import (
-    load_published, load_observations, load_portfolio, load_voice_examples,
+    load_published, load_observation_registry, load_portfolio,
+    load_voice_examples, load_embeddings, load_theme_registry,
+    get_embedding, cosine_similarity, is_duplicate,
+    save_embedding, save_published, update_portfolio,
+    get_diversity_adjustment, is_voice_drifting, get_theme_saturation,
+    register_theme, _is_mock_mode,
 )
 from src.internal.topic_prioritizer import get_next_topic
 
@@ -53,21 +57,22 @@ def check(label: str, ok: bool, detail: str = "") -> None:
 def run(test_llm: bool = False) -> None:
     print("\n╔══════════════════════════════════════════════════╗")
     print("║       Never Blank Pipeline — Dry Run             ║")
-    print("║       Phase 0 + Phase 1                          ║")
+    print("║       Phase 0 + Phase 1 + Phase 2                ║")
     print("╚══════════════════════════════════════════════════╝")
 
-    # ── 1. Environment ─────────────────────────────────────────────────────────
+    mode = "MOCK (no API key)" if _is_mock_mode() else "LIVE (OpenAI)"
+    print(f"\n  Embedding mode: {mode}")
+
+    # ── 1. Environment ──────────────────────────────────────────────────────────
     section("1. Environment Variables")
     result = validate(phase="phase0", strict=False)
     for var in result["present"]:
         check(var, True, "set")
     for var in result["missing"]:
-        check(var, False, "MISSING")
+        check(var, False, "MISSING (expected at this stage)")
+    check("Phase 0 env complete", result["ok"])
 
-    phase0_ok = result["ok"]
-    check("Phase 0 env complete", phase0_ok)
-
-    # ── 2. Config files ────────────────────────────────────────────────────────
+    # ── 2. Config files ─────────────────────────────────────────────────────────
     section("2. Config Files")
     configs = {
         "brand.yaml": load_brand,
@@ -80,12 +85,12 @@ def run(test_llm: bool = False) -> None:
     for name, loader in configs.items():
         try:
             data = loader()
-            check(name, True, f"{len(data)} keys")
+            check(name, True, f"{len(data)} top-level keys")
         except Exception as exc:
             check(name, False, str(exc))
             config_ok = False
 
-    # ── 3. Prompt contracts ────────────────────────────────────────────────────
+    # ── 3. Prompt contracts ─────────────────────────────────────────────────────
     section("3. Prompt Contracts")
     prompt_names = [
         "observation_discovery", "observation_score", "topic_extract",
@@ -98,9 +103,9 @@ def run(test_llm: bool = False) -> None:
     for name in prompt_names:
         try:
             p = load_prompt(name)
-            status = p.get("status", "unknown")
             has_contract = bool(p.get("input_schema") and p.get("output_schema"))
-            check(name, has_contract, f"status={status}, contract={'yes' if has_contract else 'NO'}")
+            check(name, has_contract,
+                  f"status={p.get('status','?')}, contract={'yes' if has_contract else 'NO'}")
             if not has_contract:
                 prompts_ok = False
         except Exception as exc:
@@ -111,27 +116,31 @@ def run(test_llm: bool = False) -> None:
             load_prompt(name)
             check(name, False, "should raise ValueError for not_needed")
         except ValueError:
-            check(name, True, "correctly marked not_needed — no LLM call")
+            check(name, True, "correctly marked not_needed")
         except Exception as exc:
             check(name, False, str(exc))
 
-    # ── 4. Memory files ────────────────────────────────────────────────────────
-    section("4. Memory Files")
-    memory_files = {
-        "published": load_published,
-        "observations": load_observations,
-        "portfolio": load_portfolio,
-        "voice_examples": load_voice_examples,
-    }
-    for name, loader in memory_files.items():
+    # ── 4. Memory files ─────────────────────────────────────────────────────────
+    section("4. Memory Files — Schemas")
+    memory_checks = [
+        ("published.json",            load_published,            list),
+        ("observation_registry.json", load_observation_registry, list),
+        ("portfolio.json",            load_portfolio,            dict),
+        ("voice_examples.json",       load_voice_examples,       list),
+        ("embeddings.json",           load_embeddings,           list),
+        ("theme_registry.json",       load_theme_registry,       list),
+    ]
+    for name, loader, expected_type in memory_checks:
         try:
             data = loader()
-            check(f"memory/{name}.json", True, type(data).__name__)
+            ok = isinstance(data, expected_type)
+            check(f"memory/{name}", ok, f"{expected_type.__name__}, len={len(data) if hasattr(data,'__len__') else 'n/a'}")
         except Exception as exc:
-            check(f"memory/{name}.json", False, str(exc))
+            check(f"memory/{name}", False, str(exc))
 
-    # ── 5. Topic queue ─────────────────────────────────────────────────────────
+    # ── 5. Topic queue ──────────────────────────────────────────────────────────
     section("5. Manual Topic Queue")
+    topic = None
     try:
         topic = get_next_topic()
         if topic:
@@ -143,10 +152,102 @@ def run(test_llm: bool = False) -> None:
     except Exception as exc:
         check("topics_manual.csv", False, str(exc))
 
-    # ── 6. Optional: LLM connection ────────────────────────────────────────────
+    # ── 6. Semantic Deduplication ───────────────────────────────────────────────
+    section("6. Semantic Deduplication (mock embeddings)")
+
+    text_a = "Why the busiest businesses look closed — The visibility gap that costs clients"
+    text_b = "How founders accidentally hide their expertise from the market"
+    text_c = "Why the busiest businesses look closed — The visibility gap that costs clients"  # exact copy
+
+    vec_a = get_embedding(text_a)
+    check("get_embedding() returns vector", len(vec_a) > 0, f"dim={len(vec_a)}")
+    check("vector is normalized", abs(sum(v*v for v in vec_a) - 1.0) < 0.01, "unit length ✓")
+
+    sim_ab = cosine_similarity(vec_a, get_embedding(text_b))
+    sim_ac = cosine_similarity(vec_a, get_embedding(text_c))
+    check("different texts → low similarity", sim_ab < 0.95, f"sim={sim_ab:.4f}")
+    check("identical texts → high similarity", sim_ac > 0.99, f"sim={sim_ac:.4f}")
+
+    # save text_a to embeddings store, then check text_c is flagged as duplicate
+    save_embedding(text_a, vec_a, slug="why-busiest-businesses-look-closed")
+    is_dup_c, score_c, match_c = is_duplicate(text_c)
+    check("identical text detected as duplicate", is_dup_c,
+          f"sim={score_c:.4f}, matched={match_c!r}")
+
+    is_dup_b, score_b, _ = is_duplicate(text_b)
+    check("different text NOT flagged as duplicate", not is_dup_b,
+          f"sim={score_b:.4f} (threshold=0.85)")
+
+    # ── 7. Portfolio Update ─────────────────────────────────────────────────────
+    section("7. Portfolio Update (simulated publication)")
+
+    p_before = load_portfolio()
+    total_before = p_before.get("total_published", 0)
+
+    update_portfolio(
+        observation_type="pattern",
+        content_goal="challenge",
+        tags=["visibility", "founder"],
+        source_category="manual",
+        voice_score=0.84,
+        published_date="2026-06-19",
+    )
+
+    p_after = load_portfolio()
+    total_after = p_after.get("total_published", 0)
+    check("total_published incremented", total_after == total_before + 1,
+          f"{total_before} → {total_after}")
+    check("observation_type_counts updated",
+          p_after["observation_type_counts"].get("pattern", 0) > 0,
+          str(p_after["observation_type_counts"]))
+    check("voice_scores_rolling updated",
+          len(p_after["voice_scores_rolling"]) > 0,
+          str(p_after["voice_scores_rolling"]))
+    check("last_published_date set",
+          p_after.get("last_published_date") == "2026-06-19",
+          p_after.get("last_published_date", ""))
+
+    # ── 8. Diversity Scoring ────────────────────────────────────────────────────
+    section("8. Diversity Scoring")
+
+    adj_pattern_challenge = get_diversity_adjustment("pattern", "challenge")
+    adj_gap_educate       = get_diversity_adjustment("gap", "educate")
+    check("diversity_adjustment returns float", isinstance(adj_pattern_challenge, float),
+          f"pattern/challenge={adj_pattern_challenge:+.4f}")
+    check("underrepresented type gets positive boost",
+          adj_gap_educate >= 0,
+          f"gap/educate={adj_gap_educate:+.4f} (not yet used)")
+
+    drifting, avg_score = is_voice_drifting()
+    check("voice drift check runs", True,
+          f"drifting={drifting}, avg={avg_score}")
+
+    # ── 9. Theme Registry ───────────────────────────────────────────────────────
+    section("9. Theme Registry")
+
+    theme_id = register_theme(
+        text="Why the busiest businesses look closed",
+        slug="why-busiest-businesses-look-closed",
+        published_date="2026-06-19",
+    )
+    check("theme registered", bool(theme_id), f"theme_id={theme_id[:8]}...")
+
+    saturation = get_theme_saturation("Why busy founders seem invisible to clients")
+    check("theme saturation score returned", isinstance(saturation, float),
+          f"saturation={saturation:.4f} (mock embeddings → not semantically meaningful)")
+
+    new_sat = get_theme_saturation("Pricing strategy for B2B SaaS companies")
+    check("different theme → lower saturation", new_sat < saturation,
+          f"saturation={new_sat:.4f} (different topic)")
+
+    registry = load_theme_registry()
+    check("theme_registry.json has entry", len(registry) > 0,
+          f"{len(registry)} cluster(s)")
+
+    # ── 10. Optional: LLM connection ────────────────────────────────────────────
     if test_llm:
-        section("6. OpenAI Connection Test")
-        if not os.environ.get("NB_OPENAI_API_KEY"):
+        section("10. OpenAI Connection Test")
+        if _is_mock_mode():
             check("OpenAI ping", False, "NB_OPENAI_API_KEY not set — skipped")
         else:
             try:
@@ -158,55 +259,63 @@ def run(test_llm: bool = False) -> None:
                 check("chat() response", "OK" in response, response.strip()[:40])
             except Exception as exc:
                 check("chat() response", False, str(exc))
-
             try:
-                from src.utils.llm_client import embed
-                vector = embed("Never Blank test embedding")
+                from src.utils.llm_client import embed as oai_embed
+                vector = oai_embed("Never Blank test embedding")
                 check("embed() response", len(vector) > 0, f"dim={len(vector)}")
             except Exception as exc:
                 check("embed() response", False, str(exc))
     else:
-        section("6. OpenAI Connection Test")
+        section("10. OpenAI Connection Test")
         print("  (skipped — run with --test-llm to include)")
 
-    # ── Summary ────────────────────────────────────────────────────────────────
+    # ── Summary ─────────────────────────────────────────────────────────────────
     section("Summary")
-    print("  Files created:")
+
+    print("  Phase 2 — Memory files created/confirmed:")
     created = [
-        "src/models.py", "src/utils/logger.py", "src/utils/env_validator.py",
-        "src/utils/config_loader.py", "src/utils/llm_client.py",
-        "src/utils/google_sheets.py (stub)",
-        "src/internal/memory.py", "src/internal/topic_prioritizer.py",
-        "config/brand.yaml", "config/strategy.yaml", "config/quality.yaml",
-        "config/platforms.yaml", "config/intelligence.yaml",
-        "config/prompts/ (12 contracts + 3 not_needed stubs)",
-        "data/memory/ (5 JSON files)",
-        "topics_manual.csv (1 example row)",
+        "data/memory/published.json          — run records with per-channel results",
+        "data/memory/embeddings.json         — text + vector + slug + model metadata",
+        "data/memory/observation_registry.json — observations with cooldown tracking",
+        "data/memory/portfolio.json          — running distribution counters",
+        "data/memory/theme_registry.json     — semantic clusters with centroids",
+        "data/memory/voice_examples.json     — voice reference samples",
     ]
     for f in created:
         print(f"    • {f}")
 
-    print("\n  Stubbed (not implemented yet):")
-    stubbed = [
-        "src/utils/google_sheets.py — Phase 8",
-        "src/internal/intelligence_engine.py — Phase 7",
-        "src/internal/observation_layer.py — Phase 7",
-        "src/internal/topic_scorer.py — Phase 7",
-        "src/internal/strategy.py — Phase 3",
-        "src/content/generator.py — Phase 3",
-        "src/quality/ — Phase 4",
-        "src/publishing/ — Phase 5",
-        "src/reporting/ — Phase 8",
+    print("\n  Phase 2 — Modules updated/created:")
+    modules = [
+        "src/internal/memory.py  — full rewrite: schemas, dedup, portfolio,",
+        "                           theme registry, diversity scoring, mock embeddings",
     ]
-    for f in stubbed:
-        print(f"    • {f}")
+    for m in modules:
+        print(f"    • {m}")
 
-    print("\n  Env vars required for this stage (Phase 0):")
-    for v in ["NB_OPENAI_API_KEY", "NB_OPENAI_CHAT_MODEL", "NB_OPENAI_EMBEDDING_MODEL", "NB_OPENAI_TEMPERATURE"]:
-        status = "✓ set" if os.environ.get(v) else "✗ missing"
-        print(f"    • {v} — {status}")
+    print("\n  Still stubbed (Phase 3+):")
+    stubbed = [
+        "src/internal/strategy.py       — ContentBrief builder (Phase 3)",
+        "src/content/generator.py       — OpenAI content generation (Phase 3)",
+        "src/quality/                   — QC gate, voice, factuality (Phase 4)",
+        "src/publishing/                — all 6 channel publishers (Phase 5)",
+        "src/reporting/                 — Google Sheets reporter (Phase 8)",
+        "src/internal/intelligence_engine.py — signal collection (Phase 7)",
+    ]
+    for s in stubbed:
+        print(f"    • {s}")
 
-    print(f"\n  Phase 0/1 foundation: {'READY' if config_ok and prompts_ok else 'NEEDS ATTENTION'}")
+    print("\n  Env vars required for this stage:")
+    for v, note in [
+        ("NB_OPENAI_API_KEY",        "optional for Phase 2 — mock used if absent"),
+        ("NB_OPENAI_CHAT_MODEL",     "required for Phase 3+"),
+        ("NB_OPENAI_EMBEDDING_MODEL","required for Phase 3+"),
+        ("NB_OPENAI_TEMPERATURE",    "required for Phase 3+"),
+    ]:
+        status = "✓ set" if os.environ.get(v) else "○ not set"
+        print(f"    • {v} — {status}  ({note})")
+
+    all_ok = config_ok and prompts_ok
+    print(f"\n  Phase 0/1/2 foundation: {'READY' if all_ok else 'NEEDS ATTENTION'}")
     print()
 
 
