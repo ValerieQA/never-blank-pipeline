@@ -31,17 +31,17 @@ The pipeline has two distinct layers:
 ┌──────────────────────────────────────────────────────────────────┐
 │                    INTERNAL NEVER BLANK                          │
 │                                                                  │
-│   Signal Monitor → Market Analysis → Topic Prioritization        │
-│                           │                                      │
-│                     Strategy Layer                               │
-│                           │                                      │
-│              Memory ◄────►│◄──── Reports                        │
-│                           │                                      │
-│                    Content Generator                             │
-│                    Quality Control                               │
-└──────────────────────────────┬───────────────────────────────────┘
-                               │
-                               ▼
+│   Intelligence Engine → Topic Generator → Topic Scoring          │
+│                                │                                 │
+│                          Strategy Layer                          │
+│                                │                                 │
+│              Memory ◄─────────►│◄──── Reports                   │
+│                                │                                 │
+│                       Content Generator                          │
+│                       Quality Control                            │
+└───────────────────────────────┬──────────────────────────────────┘
+                                │
+                                ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │                    EXTERNAL NEVER BLANK                          │
 │                                                                  │
@@ -53,25 +53,35 @@ The pipeline has two distinct layers:
 
 ---
 
-## Topic Priority System
+## Topic Pipeline
 
-**Manual topics always take priority over automated signals.**
+Content does not come from news. Content comes from interesting ideas.
+An idea can emerge from a market shift, a research finding, a business paradox, a behavioral pattern, or the system's own analysis. News is one source among many.
 
 ```
-┌─────────────────────────────────────┐
-│         TOPIC QUEUE LOGIC           │
-│                                     │
-│  1. Read Google Sheet / CSV         │
-│     ↓                               │
-│  2. Manual topics exist?            │
-│     YES → publish manual topic      │
-│     NO  → run signal pipeline       │
-│            ↓                        │
-│         Market signals + news       │
-│         → topic candidate           │
-│         → strategy filter           │
-│         → approved topic            │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                      TOPIC PIPELINE                              │
+│                                                                  │
+│  1. Manual Queue (Google Sheet / CSV)                            │
+│     │                                                            │
+│     ├── topics exist? → YES → take from queue → Strategy Layer  │
+│     │                                                            │
+│     └── queue empty? → Intelligence Engine                       │
+│                             │                                    │
+│                     [collect from all sources]                   │
+│                             │                                    │
+│                       Topic Generator                            │
+│                    (extract idea from source)                    │
+│                             │                                    │
+│                        Topic Scoring                             │
+│                  (relevance + originality +                      │
+│                   platform fit + recency check)                  │
+│                             │                                    │
+│                      Publication Queue                           │
+│                    (ordered list of candidates)                  │
+│                             │                                    │
+│                       Strategy Layer                             │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 Manual topics live in `topics_manual.csv` and are synced from Google Sheets.
@@ -81,34 +91,67 @@ Each manual topic row includes: title, angle, platform targets, priority order, 
 
 ## Internal Never Blank — Detailed Design
 
-### 1. Signal Monitor
+### 1. Intelligence Engine
 
-Watches external sources for relevant signals:
-- Industry news (RSS feeds, defined in config)
-- LinkedIn trending topics in the coaching / consulting space
-- Google Trends (keyword clusters defined in config)
-- Competitor content (defined list in config)
+Never Blank does not rely on news. It draws from multiple source categories,
+each with its own collection method and priority weight.
 
-**Output:** raw signal objects saved to `data/signals/YYYY-MM-DD.json`
+**Source categories (defined in `config/intelligence.yaml`):**
 
-### 2. Market Analysis
+| # | Category                  | Examples                                                                 | Priority |
+|---|---------------------------|--------------------------------------------------------------------------|----------|
+| 1 | Market Signals            | industry changes, regulations, platform updates, AI developments         | High     |
+| 2 | Business Observations     | recurring patterns, customer behavior, founder behavior, operational gaps | High     |
+| 3 | Research Insights         | public studies, surveys, market reports, industry statistics             | Medium   |
+| 4 | Business Facts            | surprising statistics, historical decisions, unusual cases               | Medium   |
+| 5 | Never Blank Analysis      | patterns discovered by the system, comparisons, signal synthesis         | High     |
+| 6 | Manual Topics             | Google Sheet queue, founder-provided topics                              | Highest  |
 
-Processes raw signals into structured insights:
-- Clusters signals by theme
-- Scores relevance to Never Blank positioning
-- Flags urgency (time-sensitive news vs. evergreen angles)
-- Eliminates noise below relevance threshold
+Categories 1–4 are collected from external sources (RSS, APIs, configured URLs).
+Category 5 is generated internally — the system synthesizes patterns from what it has already collected and published.
+Category 6 always takes priority over all others.
 
-**Output:** `data/analysis/YYYY-MM-DD.json`
+**Collection behavior:**
+- Sources are defined in `config/intelligence.yaml` — no source URLs inside Python
+- Each source entry has: `type`, `url`, `category`, `fetch_interval`, `relevance_filter`
+- Raw items are saved to `data/intelligence/YYYY-MM-DD/raw/`
 
-### 3. Topic Prioritization
+**Output:** structured intelligence items in `data/intelligence/YYYY-MM-DD/raw/*.json`
 
-Ranks analyzed signals into publishable topic candidates:
-- Checks against memory (no duplicate topics within configurable window)
-- Scores by: relevance, timeliness, platform fit, audience value
-- Returns an ordered list of candidates
+### 2. Topic Generator
 
-**Output:** `data/topic_candidates/YYYY-MM-DD.json`
+Extracts publishable topic ideas from raw intelligence items.
+
+This step answers: *what is the interesting thought here?*
+Not: *what happened?* — but: *what does this reveal?*
+
+- Each raw item is passed through a topic extraction prompt (`config/prompts/topic_extract.yaml`)
+- The prompt looks for the observation, the pattern, the paradox, or the implication
+- Output is a `TopicCandidate` object: `{idea, angle, source_category, source_ref, evergreen}`
+
+Examples of what the Topic Generator should surface:
+- From a statistic → the counterintuitive implication
+- From a case study → the transferable lesson
+- From a market shift → what it means for founders specifically
+- From Never Blank's own history → a pattern worth naming
+
+**Output:** `data/intelligence/YYYY-MM-DD/candidates_raw.json`
+
+### 3. Topic Scoring
+
+Ranks all topic candidates into a publication queue.
+
+Scoring factors (weights defined in `config/intelligence.yaml`):
+- **Relevance** — how closely this topic connects to Never Blank's positioning
+- **Originality** — how different this is from recently published content (checked against memory)
+- **Platform fit** — does this work as a long article, a short post, or both
+- **Recency signal** — time-sensitive topics score higher when fresh
+- **Source category weight** — per the priority table above
+
+Topics that score below the minimum threshold are dropped.
+The top N candidates are written to the publication queue.
+
+**Output:** `data/intelligence/YYYY-MM-DD/publication_queue.json` (ordered list)
 
 ### 4. Strategy Layer
 
@@ -319,15 +362,16 @@ config/
 ├── strategy.yaml         # editorial rules, content goals, angle patterns
 ├── quality.yaml          # QC thresholds, enabled checks, failure behavior
 ├── platforms.yaml        # per-platform specs (character limits, image sizes)
-├── signals.yaml          # RSS feeds, keyword clusters, competitor list
+├── intelligence.yaml     # source categories, URLs, fetch intervals, scoring weights
 └── prompts/
-    ├── blog_post.yaml        # full Wix article prompt template
-    ├── linkedin_post.yaml    # LinkedIn post prompt
-    ├── facebook_post.yaml    # Facebook post prompt
+    ├── blog_post.yaml             # full Wix article prompt template
+    ├── linkedin_post.yaml         # LinkedIn post prompt
+    ├── facebook_post.yaml         # Facebook post prompt
     ├── instagram_caption.yaml
     ├── threads_post.yaml
-    ├── topic_analysis.yaml   # prompt for market analysis step
-    ├── strategy_brief.yaml   # prompt for strategy layer
+    ├── topic_extract.yaml         # prompt for extracting idea from raw intelligence item
+    ├── topic_score.yaml           # prompt for scoring and ranking topic candidates
+    ├── strategy_brief.yaml        # prompt for strategy layer
     ├── qc_factuality.yaml         # prompt for factuality check
     ├── qc_voice.yaml              # prompt for brand voice validation
     ├── rewrite_with_feedback.yaml # rewrite prompt that includes QC failure reason
@@ -374,11 +418,11 @@ Never-Blank-pipeline/
 │   │
 │   ├── internal/
 │   │   ├── __init__.py
-│   │   ├── signal_monitor.py      # fetches raw signals from RSS, trends
-│   │   ├── market_analysis.py     # clusters and scores signals
-│   │   ├── topic_prioritizer.py   # ranks topic candidates
-│   │   ├── strategy.py            # applies editorial logic, builds ContentBrief
-│   │   └── memory.py              # reads/writes memory store
+│   │   ├── intelligence_engine.py  # collects raw items from all source categories
+│   │   ├── topic_generator.py      # extracts topic ideas from raw intelligence
+│   │   ├── topic_scorer.py         # scores and ranks candidates into publication queue
+│   │   ├── strategy.py             # applies editorial logic, builds ContentBrief
+│   │   └── memory.py               # reads/writes memory store
 │   │
 │   ├── content/
 │   │   ├── __init__.py
@@ -414,9 +458,12 @@ Never-Blank-pipeline/
 │       └── logger.py              # structured logging
 │
 ├── data/
-│   ├── signals/                   # raw signal JSON files by date
-│   ├── analysis/                  # scored analysis JSON files by date
-│   ├── topic_candidates/          # ranked topic lists by date
+│   ├── intelligence/
+│   │   └── YYYY-MM-DD/
+│   │       ├── raw/               # raw items per source category
+│   │       ├── candidates_raw.json    # topic ideas before scoring
+│   │       └── publication_queue.json # scored, ranked, ready for strategy
+
 │   ├── drafts/
 │   │   ├── pending/               # content awaiting publish
 │   │   └── quarantine/            # factual risk — awaiting optional human review
@@ -436,7 +483,8 @@ Never-Blank-pipeline/
 │
 ├── scripts/
 │   ├── run_pipeline.py            # main entry point: full pipeline run
-│   ├── run_publish_only.py        # publish pre-approved draft manually
+│   ├── run_intelligence.py        # run only the intelligence engine (collect + score)
+│   ├── run_publish_only.py        # publish a quarantined draft after manual decision
 │   └── sync_sheets.py             # pull manual topics from Google Sheets
 │
 └── tests/
@@ -478,9 +526,10 @@ GOOGLE_SHEET_ID=
 1. **Human Review is optional. Human Dependency is forbidden.** The system continues working when the human is unavailable. Valeria can review; the pipeline cannot wait for her.
 2. **Failures have types, and types have responses.** Technical failures retry. Quality failures rewrite. Factual risks quarantine. Only system crashes require human action.
 3. **Prompts live in config, not code.** Python loads templates; it never builds prompt strings.
-4. **Manual queue takes priority.** Automation serves when humans have nothing queued.
-5. **Memory prevents repetition.** Every published topic is remembered semantically, not just by title.
-6. **The system reports itself.** Every run is visible in Google Sheets without opening the code.
-7. **Brand voice is a constraint, not an afterthought.** Voice validation runs before every publish. On failure, the system rewrites — it does not stop.
-8. **Images are part of the content, not decoration.** Generated automatically, with hook and branding.
-9. **One source of truth per concern.** Config owns rules. Memory owns history. Sheets owns visibility.
+4. **Content comes from ideas, not news.** News is one input among six. The most powerful content often comes from observations, paradoxes, and patterns — not headlines.
+5. **Manual queue takes priority.** Automation serves when humans have nothing queued.
+6. **Memory prevents repetition.** Every published topic is remembered semantically, not just by title.
+7. **The system reports itself.** Every run is visible in Google Sheets without opening the code.
+8. **Brand voice is a constraint, not an afterthought.** Voice validation runs before every publish. On failure, the system rewrites — it does not stop.
+9. **Images are part of the content, not decoration.** Generated automatically, with hook and branding.
+10. **One source of truth per concern.** Config owns rules. Memory owns history. Sheets owns visibility.
