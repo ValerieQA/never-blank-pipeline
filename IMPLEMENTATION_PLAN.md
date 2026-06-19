@@ -26,9 +26,17 @@
    - Document every required secret with description and example format
 
 3. Create `requirements.txt`
-   - `anthropic`, `python-dotenv`, `pyyaml`, `gspread`, `google-auth`, `cloudinary`, `requests`, `Pillow`, `feedparser`, `pytrends`, `numpy`
+   - `openai`, `python-dotenv`, `pyyaml`, `gspread`, `google-auth`, `cloudinary`, `requests`, `Pillow`, `feedparser`, `numpy`
+   - Note: `openai` covers both Chat Completions and Embeddings — single package, single provider
 
-4. Create empty config stubs
+4. Create `.env.example` with all 20 `NB_`-prefixed variables (see Secrets section in ARCHITECTURE.md)
+
+5. Create `src/utils/env_validator.py`
+   - Reads all required `NB_` variables at startup
+   - Raises clear error with variable name if any required variable is missing or empty
+   - Called before any other module initializes — pipeline fails fast with a human-readable message, not a cryptic KeyError inside a publisher
+
+6. Create empty config stubs
    - `config/brand.yaml` — placeholder with color palette structure
    - `config/strategy.yaml` — placeholder with angle pattern structure
    - `config/quality.yaml` — QC thresholds with sensible defaults
@@ -43,7 +51,7 @@
    - Each file is a YAML with keys: `system`, `user`, `variables` (list of placeholders)
    - Content is placeholder text only — real prompts come in Phase 3
 
-6. Populate `config/platforms.yaml` with known Wix IDs (these are already live):
+7. Populate `config/platforms.yaml` with known Wix IDs (these are already live):
    ```yaml
    wix:
      category_id: "35920a76-8a41-4645-aeb1-322ae240a57a"
@@ -57,11 +65,11 @@
        founder:      "64d4d6d7-a79c-48a5-9bfa-b62a75a2f278"
    ```
 
-7. Create `src/utils/config_loader.py`
+8. Create `src/utils/config_loader.py`
    - `load_yaml(path)` — loads any YAML config
    - `load_prompt(name, variables)` — loads prompt template, fills `{variable}` placeholders
 
-8. Create `src/utils/logger.py`
+9. Create `src/utils/logger.py`
    - Structured logging: timestamp, level, component, message
 
 **Acceptance:** `python -c "from src.utils.config_loader import load_yaml; print('ok')"` runs without error.
@@ -134,7 +142,8 @@ Verify `config/platforms.yaml` contains the Wix category ID and all 6 tag IDs.
    - `load_published()` → list of published items
    - `save_published(item)` → appends to published.json
    - `load_voice_examples()` → list of voice reference texts
-   - `is_duplicate(topic_summary, threshold)` → basic string similarity for now (embeddings later)
+   - `is_duplicate(topic_summary, threshold)` → OpenAI Embeddings API (`NB_OPENAI_EMBEDDING_MODEL`) + cosine similarity
+   - **String similarity is not used.** Embeddings required from V1 to catch semantic duplicates.
 
 **Acceptance:** Add a fake entry to `published.json`. Call `is_duplicate("same topic summary")` → should return `True`. Call with different text → `False`.
 
@@ -172,7 +181,7 @@ Verify `config/platforms.yaml` contains the Wix category ID and all 6 tag IDs.
    truncate to 60 chars, check against `memory/published.json` for uniqueness — append `-2`, `-3` if needed.
 
 3. Create `src/content/generator.py`
-   - `generate_blog_post(brief)` → calls Claude API with blog_post prompt
+   - `generate_blog_post(brief)` → calls OpenAI Chat Completions with blog_post prompt
    - `generate_platform_variant(brief, platform, blog_post)` → adapts blog post per platform
    - Never builds prompt strings — always calls `config_loader.load_prompt(name, variables)`
 
@@ -298,7 +307,7 @@ Verify `config/platforms.yaml` contains the Wix category ID and all 6 tag IDs.
    - Extracts the strongest single sentence from content to use as image headline
 
 3. Implement `src/content/image_builder.py`
-   - `extract_hook(content)` → Claude API call → returns hook string
+   - `extract_hook(content)` → **no LLM call** — returns `brief.observation_statement` directly (the observation is the hook)
    - `render_image(hook, platform, template)` → Pillow rendering → saves to `data/visuals/`
    - `upload_image(path)` → Cloudinary upload → returns CDN URL
 
@@ -317,7 +326,7 @@ Verify `config/platforms.yaml` contains the Wix category ID and all 6 tag IDs.
    - `fetch_trends_signals()` → Google Trends for configured keywords
 
 2. Implement `src/internal/market_analysis.py`
-   - `analyze_signals(signals)` → Claude API call using `topic_analysis.yaml` prompt
+   - `analyze_signals(signals)` → OpenAI Chat Completions using `observation_discovery.yaml` prompt
    - Returns scored and clustered signal groups
 
 3. Implement `src/internal/strategy.py` (full version)

@@ -646,7 +646,7 @@ Never-Blank-pipeline/
 │   │
 │   ├── content/
 │   │   ├── __init__.py
-│   │   ├── generator.py           # calls Claude API with loaded prompt + brief
+│   │   ├── generator.py           # calls OpenAI API with loaded prompt + brief
 │   │   ├── adapters.py            # adapts long-form to per-platform variants
 │   │   └── image_builder.py       # renders visual assets
 │   │
@@ -676,6 +676,8 @@ Never-Blank-pipeline/
 │   └── utils/
 │       ├── __init__.py
 │       ├── config_loader.py       # loads YAML configs and prompt templates
+│       ├── env_validator.py       # validates all NB_ env vars at startup; fails fast with clear error
+│       ├── llm_client.py          # single OpenAI client wrapper (chat + embeddings); loaded once
 │       ├── google_sheets.py       # Google Sheets read/write client
 │       └── logger.py              # structured logging
 │
@@ -731,23 +733,86 @@ All secrets live in `.env` — never committed to the repository.
 
 Required secrets:
 ```
-ANTHROPIC_API_KEY=
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-WIX_API_KEY=
-WIX_SITE_ID=
-LINKEDIN_ACCESS_TOKEN=
-META_USER_TOKEN=
-META_IG_USER_ID=
-META_FB_PAGE_ID=
-META_FB_PAGE_TOKEN=
-THREADS_ACCESS_TOKEN=
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_CHANNEL_ID=
-GOOGLE_SHEETS_CREDENTIALS_JSON=
-GOOGLE_SHEET_ID=
+# ── OpenAI (LLM provider for all AI tasks) ──────
+NB_OPENAI_API_KEY=
+NB_OPENAI_MODEL=gpt-4o
+NB_OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+
+# ── Cloudinary (image hosting) ───────────────────
+NB_CLOUDINARY_CLOUD_NAME=
+NB_CLOUDINARY_API_KEY=
+NB_CLOUDINARY_API_SECRET=
+
+# ── Wix ──────────────────────────────────────────
+NB_WIX_API_KEY=
+NB_WIX_SITE_ID=
+
+# ── LinkedIn ─────────────────────────────────────
+NB_LINKEDIN_ACCESS_TOKEN=
+
+# ── Meta (Facebook + Instagram) ──────────────────
+NB_META_USER_TOKEN=
+NB_META_IG_USER_ID=
+NB_META_FB_PAGE_ID=
+NB_META_FB_PAGE_TOKEN=
+
+# ── Threads ──────────────────────────────────────
+NB_THREADS_ACCESS_TOKEN=
+
+# ── Telegram ─────────────────────────────────────
+NB_TELEGRAM_BOT_TOKEN=
+NB_TELEGRAM_CHANNEL_ID=
+
+# ── Google Sheets ────────────────────────────────
+NB_GOOGLE_SHEETS_CREDENTIALS_JSON=
+NB_GOOGLE_SHEET_ID=
 ```
+
+**Total: 20 variables. All prefixed with `NB_` for project isolation.**
+
+---
+
+## LLM Provider
+
+**V1 uses OpenAI as the single LLM provider. This is a deliberate architectural decision.**
+
+Reasons: Clarity Lab already uses OpenAI. Existing prompt experience is with OpenAI.
+Single provider = single billing, single credential, single failure point.
+
+Multi-provider support may be added in V2 if there is a demonstrated business need.
+V1 is not designed for Anthropic compatibility.
+
+| Purpose                  | API used                              |
+|--------------------------|---------------------------------------|
+| All text generation      | OpenAI Chat Completions (`NB_OPENAI_MODEL`) |
+| Semantic deduplication   | OpenAI Embeddings (`NB_OPENAI_EMBEDDING_MODEL`) |
+| Observation scoring      | OpenAI Chat Completions               |
+| QC checks (factuality, voice) | OpenAI Chat Completions          |
+
+### LLM Call Audit
+
+Not every step requires an LLM call. Where deterministic code, rules, or embeddings
+are sufficient, they are preferred — to reduce cost, latency, and hallucination risk.
+
+| Pipeline Step            | Uses LLM? | Approach                                                             |
+|--------------------------|-----------|----------------------------------------------------------------------|
+| Observation discovery    | Yes       | OpenAI Chat — pattern recognition across unstructured text           |
+| Observation scoring      | Yes       | OpenAI Chat — non-obviousness requires judgment                      |
+| Topic extraction         | Yes       | OpenAI Chat — observation → angle requires context understanding     |
+| Topic scoring            | **No**    | Deterministic formula (weights in config) + embedding cosine similarity for relevance |
+| Strategy brief building  | **No**    | Fully deterministic — rules from `strategy.yaml` (tag mapping, slug gen, platform rules) |
+| Blog post generation     | Yes       | OpenAI Chat                                                          |
+| Platform content adapters (×6) | Yes | OpenAI Chat — per-platform prompt                                 |
+| QC factuality check      | Yes       | OpenAI Chat                                                          |
+| QC voice validation      | Yes       | OpenAI Chat — nuance and tone require judgment                       |
+| Rewrite with feedback    | Yes       | OpenAI Chat                                                          |
+| Image hook extraction    | **No**    | Deterministic — observation statement from ContentBrief is the hook  |
+| Semantic deduplication   | **No**    | Cosine similarity on pre-computed embeddings (no chat call)          |
+| Portfolio health metrics | **No**    | Deterministic — counting and averaging from portfolio.json           |
+| Brand voice drift score  | **No**    | Deterministic — rolling average of recorded voice scores             |
+
+**LLM calls eliminated vs original plan: 4**
+(topic scoring, strategy brief, image hook extraction, deduplication — all now deterministic or embedding-only)
 
 ---
 
