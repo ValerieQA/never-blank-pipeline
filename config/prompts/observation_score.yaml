@@ -1,52 +1,80 @@
 name: observation_score
-status: stub
+status: ready
 purpose: >
-  Score a single observation for non-obviousness, specificity, and audience
-  relevance. Used as a secondary validation after observation_discovery.
+  Score a single observation on non-obviousness and specificity.
+  Used to rank observations before adding them to the topic queue.
 
 input_schema:
   statement:
     type: str
-    description: The observation statement to score
   observation_type:
     type: str
     enum: [pattern, paradox, reversal, gap, behavior_delta, signal_cluster, implication]
-  audience_description:
-    type: str
-    description: Who Never Blank writes for
+  portfolio_context:
+    type: dict
+    description: Current portfolio — to assess diversity value
 
 output_schema:
   type: json_object
   fields:
     non_obviousness_score:
       type: float
-      range: [0.0, 1.0]
+      description: 0.0–1.0
     specificity_score:
       type: float
-      range: [0.0, 1.0]
-    audience_relevance_score:
+      description: 0.0–1.0
+    composite_score:
       type: float
-      range: [0.0, 1.0]
-    combined_score:
-      type: float
-      description: Weighted average of the three scores
-    pass:
-      type: bool
-      description: True if combined_score >= 0.60
+      description: Weighted average — non_obviousness * 0.6 + specificity * 0.4
+    diversity_value:
+      type: str
+      description: high | medium | low — based on how underrepresented this type is in portfolio
+    reasoning:
+      type: str
+      description: One sentence explaining the composite score
 
 required_context:
   - statement
   - observation_type
-  - audience_description
 
 constraints:
-  - output must be valid JSON object
-  - scores are floats between 0.0 and 1.0
-  - combined_score = (non_obviousness * 0.5) + (specificity * 0.3) + (audience_relevance * 0.2)
+  - all scores must be floats between 0.0 and 1.0
+  - composite_score must equal non_obviousness * 0.6 + specificity * 0.4 (rounded to 4 decimal places)
+  - output must be valid JSON
 
 failure_modes:
-  - returns invalid JSON: retry once, then assign score 0.0 and log ERROR
-  - returns score outside [0,1]: clamp to range in Python, log WARNING
+  - returns invalid JSON: retry once
+  - scores out of range: clamp and log warning
 
-system: "PLACEHOLDER — written in Phase 3"
-user: "PLACEHOLDER — written in Phase 3"
+system: |
+  You score observations for Never Blank's content pipeline.
+
+  You evaluate two dimensions:
+
+  NON-OBVIOUSNESS (0.0–1.0):
+  - 0.0–0.3: Generic. "Most founders underestimate content." Everyone knows this. Useless.
+  - 0.4–0.6: Somewhat specific but still heard before. Needs more grounding.
+  - 0.7–0.9: Genuinely surprising. Names something real that most people have not articulated.
+  - 1.0: Extremely rare. A true reversal or paradox that reframes an assumption.
+
+  SPECIFICITY (0.0–1.0):
+  - 0.0–0.3: Vague. Could apply to any business, any founder, any situation.
+  - 0.4–0.6: Names a domain but not a mechanism.
+  - 0.7–0.9: Names the exact behavior, pattern, or mechanism. Reproducible.
+  - 1.0: Names a specific, verifiable, nameable pattern with a clear mechanism.
+
+  Format: Return valid JSON only. No text outside the JSON object.
+
+user: |
+  Score this observation.
+
+  STATEMENT: {statement}
+  OBSERVATION TYPE: {observation_type}
+  PORTFOLIO CONTEXT: {portfolio_context_json}
+
+  Return JSON with these exact keys:
+  - "non_obviousness_score": float 0.0–1.0
+  - "specificity_score": float 0.0–1.0
+  - "composite_score": float (non_obviousness * 0.6 + specificity * 0.4)
+  - "diversity_value": "high", "medium", or "low"
+  - "reasoning": one sentence explaining the composite score

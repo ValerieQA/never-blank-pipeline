@@ -1,60 +1,92 @@
 name: topic_extract
-status: stub
+status: ready
 purpose: >
-  Convert a validated observation into a publishable topic angle.
-  The observation is the asset; this prompt packages it for the right
-  audience moment and content goal.
+  Extract a content topic from an observation.
+  A topic is not a summary of the observation — it is a frame that makes
+  the observation compelling for a specific audience and platform set.
 
 input_schema:
-  observation_statement:
+  observation_id:
     type: str
-    description: The validated observation (one sentence)
+  statement:
+    type: str
   observation_type:
     type: str
     enum: [pattern, paradox, reversal, gap, behavior_delta, signal_cluster, implication]
-  content_goal:
-    type: str
-    enum: [educate, challenge, demonstrate, invite]
-  recently_used_angles:
+  portfolio_context:
+    type: dict
+  target_platforms:
     type: list[str]
-    description: Angles used in the last 10 published pieces (for diversity)
-  audience_description:
-    type: str
 
 output_schema:
   type: json_object
   fields:
     title:
       type: str
-      description: Working title for the article, max 80 chars
+      description: Article title — specific, non-clickbait, compelling
     angle:
       type: str
-      description: The specific lens or approach for this piece, max 200 chars
+      description: The specific perspective this content takes on the observation
     hook:
       type: str
-      description: Opening sentence that earns the reader's attention, max 120 chars
+      description: Opening sentence — states the pattern as a fact
+    content_goal:
+      type: str
+      enum: [educate, challenge, demonstrate, invite]
     platform_fit:
       type: list[str]
-      enum_values: [wix, linkedin, facebook, instagram, threads, telegram]
-    evergreen:
-      type: bool
+      description: Which platforms this topic suits best
 
 required_context:
-  - observation_statement
+  - statement
   - observation_type
-  - content_goal
-  - audience_description
 
 constraints:
-  - output must be valid JSON object
-  - title max 80 characters
-  - hook must not be a question (declarative statement preferred)
-  - angle must not repeat any angle in recently_used_angles
+  - title must be specific and non-clickbait (no "X Things You Need To Know")
+  - hook must be a single declarative sentence — no question
+  - content_goal must match the observation_type per the strategy
+  - output must be valid JSON
 
 failure_modes:
-  - title too long: truncate in Python, log WARNING
-  - returns invalid JSON: retry once, then quarantine observation and log ERROR
-  - angle repeats recent content: retry with recently_used_angles as explicit exclusion list
+  - title is generic: retry with specificity constraint injected
+  - returns invalid JSON: retry once
 
-system: "PLACEHOLDER — written in Phase 3"
-user: "PLACEHOLDER — written in Phase 3"
+system: |
+  You extract content topics from observations for Never Blank, a content strategy practice.
+
+  An observation is a raw pattern. A topic is a frame.
+  Your job is to find the frame that makes the observation most compelling for a founder
+  audience — the specific angle, the right hook, the best content goal.
+
+  Content goal guidance:
+  - pattern → educate: help the reader name what they are already experiencing
+  - paradox → challenge: confront an assumption the reader holds
+  - reversal → challenge: show that the opposite of the common belief is true
+  - gap → demonstrate: show what is missing and what it costs
+  - behavior_delta → demonstrate: show a shift and its implications
+  - signal_cluster → educate: connect dots the reader has not connected
+  - implication → invite: create a forward-looking perspective or question
+
+  Title guidance:
+  - Specific and grounded. Not aspirational. Not a promise.
+  - Good: "Why the busiest founders look closed for business"
+  - Bad: "How to Leverage Your Content for Maximum Visibility"
+  - The title should make a reader who is NOT looking for content advice stop and read.
+
+  Format: Return valid JSON only. No text outside the JSON object.
+
+user: |
+  Extract a content topic from this observation.
+
+  OBSERVATION ID: {observation_id}
+  STATEMENT: {statement}
+  OBSERVATION TYPE: {observation_type}
+  TARGET PLATFORMS: {target_platforms_json}
+  PORTFOLIO CONTEXT: {portfolio_context_json}
+
+  Return JSON with these exact keys:
+  - "title": article title
+  - "angle": specific content angle
+  - "hook": opening sentence (declarative, not a question)
+  - "content_goal": one of educate, challenge, demonstrate, invite
+  - "platform_fit": list of platforms this topic suits

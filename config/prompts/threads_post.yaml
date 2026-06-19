@@ -1,57 +1,86 @@
 name: threads_post
-status: stub
+status: ready
 purpose: >
-  Adapt a blog article into a Threads thread (sequence of posts).
-  Each post in the thread is self-contained but builds on the previous.
-  Threads is a conversation starter — not a broadcast channel.
+  Write a Threads sequence for a Never Blank content piece.
+  Format: 3–5 connected posts that build to an insight.
+  Each post must stand alone and also build the sequence.
 
 input_schema:
+  title:
+    type: str
+  angle:
+    type: str
+  hook:
+    type: str
   observation_statement:
     type: str
-  article_title:
-    type: str
-  article_body:
+  observation_type:
     type: str
   content_goal:
     type: str
-    enum: [educate, challenge, demonstrate, invite]
-  wix_article_url:
+  blog_body:
     type: str
-    description: Optional. Final post in thread may link to article.
-  brand_voice_examples:
-    type: list[str]
-  min_posts:
-    type: int
-    default: 3
-  max_posts:
-    type: int
-    default: 6
 
 output_schema:
   type: json_object
   fields:
-    posts:
+    sequence:
       type: list[str]
-      description: >
-        Ordered list of thread posts. Each post max 500 chars.
-        First post is the hook. Last post may include article link.
+      description: List of 3–5 post strings, each max 500 chars
 
 required_context:
   - observation_statement
-  - article_title
-  - content_goal
+  - hook
+  - blog_body
 
 constraints:
+  - 3–5 posts in the sequence
   - each post max 500 characters
-  - min 3, max 6 posts in the thread
-  - post 1 must work as a standalone — if someone reads only it, it delivers value
-  - posts must flow as a logical sequence, not disconnected takes
-  - output must be valid JSON object with posts array
+  - post 1 must be a standalone hook — someone reading only this post gets the core idea
+  - the sequence builds progressively — do not repeat the same point
+  - no hashtags
+  - output must be valid JSON
 
 failure_modes:
-  - any post exceeds 500 chars: truncate at last complete sentence
-  - fewer than 3 posts generated: retry with explicit minimum
-  - returns invalid JSON: retry once, log ERROR
+  - any post exceeds 500 chars: truncate at sentence boundary
+  - fewer than 3 posts: retry with sequence length injected
+  - returns invalid JSON: retry once
 
-system: "PLACEHOLDER — written in Phase 3"
-user: "PLACEHOLDER — written in Phase 3"
+system: |
+  You write Threads post sequences for Never Blank, a content strategy practice
+  for founder-led businesses.
+
+  A Threads sequence is a series of connected short posts. Each post must:
+  1. Stand alone — someone seeing only this post gets value.
+  2. Contribute to the arc — the sequence has a shape: hook → tension → insight → implication.
+
+  Sequence structure for Never Blank:
+  - Post 1: The observation stated as a blunt fact. (Hook — the scroll-stopper.)
+  - Post 2: The common behavior that sustains this pattern. (What most people do.)
+  - Post 3: The mechanism — why does this happen. (The explanation.)
+  - Post 4: The cost — what it actually causes. (The stakes.)
+  - Post 5 (optional): The implication — what changes if you see this clearly.
+
+  Voice rules:
+  - Short, punchy. No filler words.
+  - Each post is 1–4 sentences max.
+  - Threads is casual — slightly more blunt than LinkedIn, less formal than a blog.
+  - Do not number the posts. Do not add "1/5" or thread markers.
+  - No hashtags.
+
+  Format: Return valid JSON only. No text outside the JSON object.
+
+user: |
+  Write a Threads sequence for Never Blank.
+
+  OBSERVATION: {observation_statement}
+  OBSERVATION TYPE: {observation_type}
+  HOOK: {hook}
+  ANGLE: {angle}
+  CONTENT GOAL: {content_goal}
+
+  ARTICLE BODY (use for depth — do not copy):
+  {blog_body}
+
+  Return JSON with this exact key:
+  - "sequence": list of 3–5 post strings, each max 500 characters

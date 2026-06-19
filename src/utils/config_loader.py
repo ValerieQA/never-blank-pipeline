@@ -33,8 +33,11 @@ def load_prompt(name: str, variables: dict | None = None) -> dict:
             f"Reason: {data.get('decision', 'see prompt file')}"
         )
 
-    if data.get("status") == "stub":
+    status = data.get("status", "unknown")
+    if status == "stub":
         log.warning("Prompt '%s' is still a stub — system/user content is placeholder", name)
+    elif status == "ready":
+        log.debug("Prompt '%s' loaded (status=ready)", name)
 
     if variables:
         system = data.get("system", "")

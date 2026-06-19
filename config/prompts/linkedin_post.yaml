@@ -1,51 +1,90 @@
 name: linkedin_post
-status: stub
+status: ready
 purpose: >
   Adapt a blog article into a LinkedIn professional post.
   LinkedIn audience: founders, operators, consultants.
   Format: thought leadership — not promotion.
 
 input_schema:
-  article_title:
+  title:
     type: str
-  article_body:
+  angle:
     type: str
   observation_statement:
     type: str
   content_goal:
     type: str
     enum: [educate, challenge, demonstrate, invite]
-  wix_article_url:
+  blog_body:
     type: str
-    description: Optional. Include if article is published on Wix.
-  brand_voice_examples:
-    type: list[str]
+    description: Full blog article — use as source material
+  wix_url:
+    type: str
+    description: Published article URL (optional at draft stage)
+  tone_notes:
+    type: str
 
 output_schema:
   type: json_object
   fields:
     text:
       type: str
-      description: Full LinkedIn post text, max 3000 chars
+      description: Full LinkedIn post text, max 2800 chars
     hook_line:
       type: str
       description: First line — must stop the scroll
 
 required_context:
-  - article_title
+  - title
   - observation_statement
   - content_goal
+  - blog_body
 
 constraints:
-  - max 3000 characters
-  - first line must work as a standalone hook (no "In my experience..." openers)
-  - do not use hashtags more than 3
-  - do not end with "What do you think?" or generic engagement bait
-  - output must be valid JSON object
+  - max 2800 characters
+  - first line must be hook — no preamble
+  - max 3 hashtags at end
+  - no "let me know what you think" or similar closers
+  - output must be valid JSON
 
 failure_modes:
-  - text exceeds 3000 chars: truncate at last complete sentence before limit
-  - returns invalid JSON: retry once, log ERROR
+  - text exceeds 3000 chars: truncate at last paragraph boundary
+  - voice drift: rewrite anchored to observation_statement
+  - returns invalid JSON: retry once
 
-system: "PLACEHOLDER — written in Phase 3"
-user: "PLACEHOLDER — written in Phase 3"
+system: |
+  You write LinkedIn posts for Never Blank, a content strategy practice
+  for founder-led businesses.
+
+  The LinkedIn audience is founders, agency owners, consultants, and senior operators.
+  They have seen thousands of posts. They skip anything that opens with a cliché,
+  a humble brag, or a question they already know the answer to.
+
+  Voice rules:
+  - The first line is a pattern interrupt. State the observation bluntly. No wind-up.
+  - Write in short paragraphs (1–3 lines). LinkedIn is a scroll medium.
+  - Say the insight once, develop it, leave. Do not restate the same point three times.
+  - Peer-to-peer. You are an operator talking to another operator.
+  - End on a specific insight or a genuine question — not "thoughts?" or "agree?".
+  - Never Blank does not promote itself in posts. The content IS the demonstration.
+  - Max 3 hashtags at the end. Choose niche ones, not #business or #entrepreneur.
+  - No emoji unless it carries meaning.
+
+  Format: Return valid JSON only. No text outside the JSON object.
+
+user: |
+  Write a LinkedIn post for Never Blank based on this article.
+
+  OBSERVATION: {observation_statement}
+  ARTICLE TITLE: {title}
+  ANGLE: {angle}
+  CONTENT GOAL: {content_goal}
+
+  ARTICLE BODY (use as source — do not copy, extract the best insight):
+  {blog_body}
+
+  ARTICLE URL: {wix_url}
+
+  Return JSON with these exact keys:
+  - "text": full LinkedIn post (max 2800 chars), hashtags at end
+  - "hook_line": the exact first line of the post

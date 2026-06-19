@@ -23,6 +23,10 @@ def _temperature() -> float:
     return float(os.environ.get("NB_OPENAI_TEMPERATURE", "0.7"))
 
 
+def _qc_temperature() -> float:
+    return float(os.environ.get("NB_OPENAI_QC_TEMPERATURE", "0.2"))
+
+
 def _model() -> str:
     return os.environ.get("NB_OPENAI_CHAT_MODEL", "gpt-4o")
 
@@ -65,6 +69,42 @@ def chat(system: str, user: str, json_mode: bool = False) -> str:
 def chat_json(system: str, user: str) -> dict:
     """Convenience: chat with json_mode=True, returns parsed dict."""
     raw = chat(system, user, json_mode=True)
+    return json.loads(raw)
+
+
+def chat_qc(system: str, user: str, json_mode: bool = False) -> str:
+    """
+    Same as chat() but uses NB_OPENAI_QC_TEMPERATURE (default 0.2).
+    Use for factuality checks and voice scoring — low temp for consistency.
+    """
+    client = _get_client()
+    kwargs: dict[str, Any] = {
+        "model": _model(),
+        "temperature": _qc_temperature(),
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+    }
+    if json_mode:
+        kwargs["response_format"] = {"type": "json_object"}
+
+    log.debug("chat_qc() model=%s temp=%s", _model(), _qc_temperature())
+    response = client.chat.completions.create(**kwargs)
+    content = response.choices[0].message.content or ""
+
+    if json_mode:
+        try:
+            json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"QC LLM returned invalid JSON: {exc}") from exc
+
+    return content
+
+
+def chat_qc_json(system: str, user: str) -> dict:
+    """QC variant: low temperature + json_mode, returns parsed dict."""
+    raw = chat_qc(system, user, json_mode=True)
     return json.loads(raw)
 
 

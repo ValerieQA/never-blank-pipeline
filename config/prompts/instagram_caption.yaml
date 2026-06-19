@@ -1,49 +1,83 @@
 name: instagram_caption
-status: stub
+status: ready
 purpose: >
-  Write an Instagram caption to accompany a branded visual card.
-  The image carries the hook; the caption adds depth and directs to bio link.
+  Write an Instagram caption for a Never Blank content piece.
+  Instagram audience: founders and small business owners who follow business content creators.
+  Format: conversational, one strong insight, save-worthy.
 
 input_schema:
+  title:
+    type: str
+  angle:
+    type: str
+  hook:
+    type: str
   observation_statement:
     type: str
-  hook_sentence:
-    type: str
-    description: Text displayed on the image card
-  article_title:
+  observation_type:
     type: str
   content_goal:
     type: str
-    enum: [educate, challenge, demonstrate, invite]
-  brand_voice_examples:
-    type: list[str]
 
 output_schema:
   type: json_object
   fields:
     caption:
       type: str
-      description: Instagram caption, max 2200 chars
+      description: Full caption, 150–300 words
     hashtags:
       type: list[str]
-      description: 5–10 relevant hashtags (without # prefix, added by code)
+      description: 5–10 hashtags without the # sign
+    hook_line:
+      type: str
+      description: First line of caption
 
 required_context:
+  - title
   - observation_statement
-  - hook_sentence
-  - content_goal
+  - hook
 
 constraints:
-  - caption max 2200 characters
-  - first line must complement the image hook, not repeat it verbatim
-  - end with "link in bio" or equivalent only if article URL is available
-  - 5–10 hashtags, no more
-  - output must be valid JSON object
+  - caption 150–300 words (not counting hashtags)
+  - hashtags on a separate line at the end, 5–10 tags
+  - first line must hook before the "more" cutoff (125 chars)
+  - no generic hashtags like #smallbusiness #entrepreneur
+  - output must be valid JSON
 
 failure_modes:
-  - caption exceeds 2200 chars: truncate at last sentence before limit
-  - too many hashtags: trim to 10 in Python
-  - returns invalid JSON: retry once, log ERROR
+  - caption too short or hashtags missing: retry
+  - returns invalid JSON: retry once
 
-system: "PLACEHOLDER — written in Phase 3"
-user: "PLACEHOLDER — written in Phase 3"
+system: |
+  You write Instagram captions for Never Blank, a content strategy practice
+  for founder-led businesses.
+
+  Instagram is a visual-first platform. The caption supports the image — it does not
+  replace the article. The reader should get one strong, memorable insight from the caption.
+  They should want to save it or share it, not just like it.
+
+  Voice rules:
+  - Open with the observation stated as a fact, not a question.
+  - Write in short paragraphs. Two to three sentences max per paragraph.
+  - The tone is slightly warmer than LinkedIn — more like a direct message from someone
+    who noticed something and is sharing it immediately.
+  - Do not end with "link in bio" — that is implied. End with the insight.
+  - Hashtags: specific niche tags (#founderled, #contentmarketing, #visibilitystrategy).
+    No vanity tags. No tags over 500k posts unless they are very relevant.
+
+  Format: Return valid JSON only. No text outside the JSON object.
+
+user: |
+  Write an Instagram caption for Never Blank.
+
+  OBSERVATION: {observation_statement}
+  OBSERVATION TYPE: {observation_type}
+  TITLE: {title}
+  ANGLE: {angle}
+  HOOK LINE: {hook}
+  CONTENT GOAL: {content_goal}
+
+  Return JSON with these exact keys:
+  - "caption": full caption text, 150–300 words (do not include hashtags in this field)
+  - "hashtags": list of 5–10 hashtag strings WITHOUT the # sign
+  - "hook_line": the exact first line of the caption

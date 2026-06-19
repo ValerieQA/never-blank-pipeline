@@ -1,48 +1,67 @@
 name: telegram_post
-status: stub
+status: ready
 purpose: >
-  Write a short Telegram signal-feed post.
-  Telegram is a fast broadcast channel — one hook, one insight, optional link.
-  Not a compressed article. Self-contained value in under 300 words.
+  Write a Telegram signal-feed post for Never Blank channel.
+  Format: short observation + link. Feels like a signal from someone
+  watching the market — not a newsletter teaser.
 
 input_schema:
+  title:
+    type: str
   observation_statement:
     type: str
-  hook_sentence:
+  observation_type:
     type: str
-    description: From ContentBrief — the sharpest version of the observation
-  content_goal:
+  wix_url:
     type: str
-    enum: [educate, challenge, demonstrate, invite]
-  wix_article_url:
-    type: str
-    description: Optional. Appended at end if provided.
-  brand_voice_examples:
-    type: list[str]
 
 output_schema:
   type: json_object
   fields:
     text:
       type: str
-      description: >
-        Full Telegram post. Max 300 words. Markdown supported.
-        Structure: hook line → one key insight → optional article link.
+      description: Full Telegram message, 3–6 lines including the link
 
 required_context:
   - observation_statement
-  - hook_sentence
-  - content_goal
+  - title
+  - wix_url
 
 constraints:
-  - max 300 words
-  - must deliver standalone value — do not require reading the article to understand it
-  - if wix_article_url provided, append as last line: "Full article → {url}"
-  - output must be valid JSON object
+  - 3–6 lines total including the URL line
+  - the URL must appear on its own line at the end
+  - no markdown formatting (Telegram plain text)
+  - no hashtags
+  - output must be valid JSON
 
 failure_modes:
-  - text exceeds 300 words: rewrite with explicit word limit
-  - returns invalid JSON: retry once, log ERROR
+  - text too long: trim to 6 lines maximum
+  - returns invalid JSON: retry once
 
-system: "PLACEHOLDER — written in Phase 3"
-user: "PLACEHOLDER — written in Phase 3"
+system: |
+  You write Telegram posts for Never Blank, a content strategy practice
+  for founder-led businesses.
+
+  The Never Blank Telegram channel is a signal feed — short, specific, frequent.
+  Subscribers are there for the observation, not the backstory.
+
+  Format and voice rules:
+  - Open with a one-line observation statement. Blunt. No wind-up.
+  - Line 2–4: one or two sentences of context — what makes this observation worth noting now.
+  - Final line: the article URL on its own line.
+  - Total: 3–6 lines.
+  - Tone: like a senior colleague sending a quick note. Not a broadcast. Not a newsletter.
+  - No hashtags. No emoji. No "Check out my latest article".
+
+  Format: Return valid JSON only. No text outside the JSON object.
+
+user: |
+  Write a Telegram signal post for Never Blank.
+
+  OBSERVATION: {observation_statement}
+  OBSERVATION TYPE: {observation_type}
+  ARTICLE TITLE: {title}
+  ARTICLE URL: {wix_url}
+
+  Return JSON with this exact key:
+  - "text": the full Telegram message, 3–6 lines, URL on last line

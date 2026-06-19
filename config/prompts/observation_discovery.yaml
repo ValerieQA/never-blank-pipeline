@@ -1,57 +1,94 @@
 name: observation_discovery
-status: stub
+status: ready
 purpose: >
-  Given a batch of raw intelligence items, discover non-obvious observations
-  worth building content around. Not summaries — named patterns, paradoxes,
-  reversals, gaps, behavior deltas, signal clusters, or implications.
+  Read raw intelligence items and surface non-obvious observations.
+  An observation is not a summary of the news. It is a noticed pattern —
+  something that makes a reader stop and think: "Hm. That is actually true."
 
 input_schema:
   intelligence_items:
+    type: list[dict]
+    description: Raw items from Intelligence Engine (title, summary, source, category, date)
+  existing_observation_statements:
     type: list[str]
-    description: Raw text items from intelligence sources (max 20)
-  published_observation_statements:
-    type: list[str]
-    description: Statements of already-published observations (for novelty check)
-  brand_positioning:
-    type: str
-    description: One-paragraph description of Never Blank audience and positioning
+    description: Statements already in memory — avoid near-duplicates
+  portfolio_context:
+    type: dict
+    description: Current distribution of observation_types and content_goals
 
 output_schema:
-  type: json_array
-  items:
-    observation_type:
-      type: str
-      enum: [pattern, paradox, reversal, gap, behavior_delta, signal_cluster, implication]
-    statement:
-      type: str
-      description: Observation stated in one sentence, max 150 chars
-    non_obviousness_score:
-      type: float
-      range: [0.0, 1.0]
-    specificity_score:
-      type: float
-      range: [0.0, 1.0]
-    source_indices:
-      type: list[int]
-      description: Indices into intelligence_items that support this observation
-    evergreen:
-      type: bool
+  type: json_object
+  fields:
+    observations:
+      type: list[dict]
+      fields:
+        statement:
+          type: str
+          description: The observation as a single declarative sentence
+        observation_type:
+          type: str
+          enum: [pattern, paradox, reversal, gap, behavior_delta, signal_cluster, implication]
+        non_obviousness_score:
+          type: float
+          description: 0.0–1.0 — how surprising and non-generic is this
+        specificity_score:
+          type: float
+          description: 0.0–1.0 — how concrete and named is this
+        source_refs:
+          type: list[str]
+          description: Indices or identifiers from the input intelligence_items
 
 required_context:
   - intelligence_items (min 1)
-  - brand_positioning
 
 constraints:
-  - output must be valid JSON array
-  - each statement is one sentence, max 150 characters
-  - do not summarize news items — only named patterns qualify
-  - skip observations already in published_observation_statements
-  - minimum non_obviousness_score to include: 0.60
+  - each observation must be a single declarative sentence (no "and" joining two claims)
+  - observations must be specific — generic patterns like "founders underestimate marketing" score 0
+  - do not surface observations already in existing_observation_statements (check semantically)
+  - minimum 1 observation, maximum 5 per call
+  - output must be valid JSON
 
 failure_modes:
-  - returns summaries not observations: retry with stricter constraint
-  - returns empty array: log WARNING, continue to next batch
-  - returns invalid JSON: retry once, then skip and log ERROR
+  - no non-obvious patterns found: return empty observations list — do not invent
+  - all observations are near-duplicates of existing: return empty list
+  - returns invalid JSON: retry once
 
-system: "PLACEHOLDER — written in Phase 3"
-user: "PLACEHOLDER — written in Phase 3"
+system: |
+  You are the observation discovery engine for Never Blank, a content strategy practice.
+
+  Your job is to read raw intelligence items — news, research, business data, market signals —
+  and find the non-obvious patterns underneath them. You do not summarize the news.
+  You find what is true that the news has not named.
+
+  Observation types you look for:
+  - pattern: a recurring behavior or structure across multiple inputs
+  - paradox: something that appears to contradict logic but is consistently true
+  - reversal: a common assumption that reality inverts (what everyone believes is wrong)
+  - gap: something obviously missing that no one is naming
+  - behavior_delta: a notable shift in how people act compared to how they used to act
+  - signal_cluster: multiple unrelated signals that point to the same underlying trend
+  - implication: a consequence of a known fact that has not been explicitly drawn
+
+  Quality bar:
+  - non_obviousness: would a smart founder say "I already knew that"? If yes, score < 0.5.
+  - specificity: is the observation nameable? "Founders resist visibility" is vague. Score < 0.4.
+    "Founders who are most booked consistently underinvest in content compared to founders
+    who are actively selling" is specific. Score > 0.7.
+
+  Format: Return valid JSON only. No text outside the JSON object.
+
+user: |
+  Discover observations from these intelligence items.
+
+  INTELLIGENCE ITEMS:
+  {intelligence_items_json}
+
+  EXISTING OBSERVATIONS IN MEMORY (avoid near-duplicates):
+  {existing_observation_statements_json}
+
+  CURRENT PORTFOLIO DISTRIBUTION (consider diversity):
+  {portfolio_context_json}
+
+  Return JSON with this exact key:
+  - "observations": list of observation dicts, each with:
+    statement, observation_type, non_obviousness_score, specificity_score, source_refs

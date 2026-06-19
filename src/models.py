@@ -114,6 +114,25 @@ class ChannelResult:
 
 
 @dataclass
+class ContentPackage:
+    """All generated content for one publication run."""
+    brief: "ContentBrief"
+    blog_title: str
+    blog_body: str                  # Markdown
+    blog_meta_description: str
+    blog_hook_sentence: str
+    linkedin_text: str
+    linkedin_hook_line: str
+    instagram_caption: str
+    instagram_hashtags: list[str]
+    facebook_text: str
+    threads_sequence: list[str]     # 3–5 posts
+    telegram_text: str
+    image_prompt: str               # deterministic, no LLM call
+    generated_at: str               # ISO datetime
+
+
+@dataclass
 class RunResult:
     run_id: str
     topic_title: str

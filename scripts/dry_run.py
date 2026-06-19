@@ -292,10 +292,19 @@ def run(test_llm: bool = False) -> None:
     for m in modules:
         print(f"    • {m}")
 
-    print("\n  Still stubbed (Phase 3+):")
+    print("\n  Phase 3 — Implemented:")
     stubbed = [
-        "src/internal/strategy.py       — ContentBrief builder (Phase 3)",
-        "src/content/generator.py       — OpenAI content generation (Phase 3)",
+        "src/internal/strategy.py       — ContentBrief builder ✓",
+        "src/content/generator.py       — 6-platform content generation ✓",
+        "config/prompts/ (9 prompts)    — real content, status=ready ✓",
+        "scripts/generate.py            — full content package runner ✓",
+        "data/drafts/                   — output folder ✓",
+    ]
+    for f in stubbed:
+        print(f"    • {f}")
+
+    print("\n  Still stubbed (Phase 4+):")
+    stubbed = [
         "src/quality/                   — QC gate, voice, factuality (Phase 4)",
         "src/publishing/                — all 6 channel publishers (Phase 5)",
         "src/reporting/                 — Google Sheets reporter (Phase 8)",

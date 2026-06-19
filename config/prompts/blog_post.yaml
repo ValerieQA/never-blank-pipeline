@@ -1,5 +1,5 @@
 name: blog_post
-status: stub
+status: ready
 purpose: >
   Generate a full Wix blog article from a ContentBrief.
   The article must demonstrate intelligence, not broadcast information.
@@ -10,6 +10,8 @@ input_schema:
     type: str
   angle:
     type: str
+  hook:
+    type: str
   content_goal:
     type: str
     enum: [educate, challenge, demonstrate, invite]
@@ -17,13 +19,7 @@ input_schema:
     type: str
   observation_type:
     type: str
-  source_signals:
-    type: list[str]
-    description: Raw source material the article may reference (for factuality grounding)
-  brand_voice_examples:
-    type: list[str]
-    description: 3-5 example passages that represent Never Blank voice
-  audience_description:
+  tone_notes:
     type: str
 
 output_schema:
@@ -33,7 +29,7 @@ output_schema:
       type: str
     body:
       type: str
-      description: Full article in markdown, 600-1200 words
+      description: Full article in Markdown, 700–1200 words
     meta_description:
       type: str
       description: SEO meta description, max 155 chars
@@ -44,24 +40,65 @@ output_schema:
 required_context:
   - title
   - angle
-  - content_goal
   - observation_statement
-  - brand_voice_examples (min 1)
+  - content_goal
 
 constraints:
-  - length: 600–1200 words
-  - no invented statistics not present in source_signals
-  - no named people unless present in source_signals
-  - output must be valid JSON object
-  - body must be markdown (headings, paragraphs — no bullet lists as primary structure)
+  - length 700–1200 words
+  - no invented statistics
+  - output must be valid JSON
+  - body must be Markdown — paragraphs and subheadings only, no primary bullet lists
   - meta_description max 155 characters
-  - do not end with a call-to-action asking readers to share or subscribe
+  - do not end with a call-to-action to share or subscribe
+  - do not start the article with "I" or "We"
 
 failure_modes:
   - body too short (< 500 words): rewrite with length constraint injected
   - invented facts detected by qc_factuality: quarantine
   - voice drift detected by qc_voice: rewrite with voice examples re-anchored
-  - returns invalid JSON: retry once, then quarantine and log ERROR
+  - returns invalid JSON: retry once, then quarantine
 
-system: "PLACEHOLDER — written in Phase 3"
-user: "PLACEHOLDER — written in Phase 3"
+system: |
+  You write long-form articles for Never Blank, a content strategy practice
+  for founder-led businesses.
+
+  Never Blank demonstrates intelligence through content. Every article is evidence
+  that the author understands something most business owners have not yet named.
+  The article must earn its length — no padding, no obvious advice, no listicles
+  disguised as insight.
+
+  Voice rules:
+  - Direct and observational. Not preachy. You name what is true, not what should be true.
+  - Peer-to-peer. You are writing for a smart, experienced founder who has read all the
+    standard business content and is tired of it.
+  - Specific. Use named patterns and concrete mechanisms — not vague generalities.
+  - Grounded. No invented statistics. No named companies or people unless given in the brief.
+  - Never start the article with "I", "We", or a question. Start with the observation.
+  - Avoid: "In today's world", "game-changer", "leverage", "hustle", "journey", "unpack".
+
+  Structure:
+  - Open with the hook — no warm-up paragraphs.
+  - State the core observation clearly by the second paragraph.
+  - Develop the mechanism: why does this happen, what sustains it.
+  - Show the cost or consequence for a founder specifically.
+  - End with an implication or a question that creates tension, not with advice or resolution.
+  - No CTA at the end. No "reach out" or "book a call".
+
+  Format: Return valid JSON only. No text outside the JSON object.
+
+user: |
+  Write a Never Blank blog article from this brief.
+
+  OBSERVATION: {observation_statement}
+  OBSERVATION TYPE: {observation_type}
+  TITLE: {title}
+  ANGLE: {angle}
+  OPENING HOOK: {hook}
+  CONTENT GOAL: {content_goal}
+  VOICE NOTES: {tone_notes}
+
+  Return JSON with these exact keys:
+  - "title": the article title (can differ slightly from the brief title if you find a stronger frame)
+  - "body": full article in Markdown, 700–1200 words
+  - "meta_description": SEO description, max 155 characters, no quotes inside
+  - "hook_sentence": the literal first sentence of the article
