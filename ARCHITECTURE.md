@@ -185,25 +185,99 @@ Images are generated automatically per post using the following rules:
 
 ---
 
+## Autonomy Principle
+
+> **Human Review is optional. Human Dependency is forbidden.**
+
+The system must be able to continue working when the human is unavailable.
+A pipeline that stops and waits for approval on every uncertain post breaks its own promise.
+
+Never Blank exists to produce evidence of intelligence without requiring constant supervision.
+If the system needs Valeria to check every article before it publishes, the system has failed.
+
+The human can review. The human cannot be a required step.
+
+---
+
 ## Quality Control Layer
 
 Every piece of content passes through QC before publishing.
-QC is a sequential gate — any failure stops publication and logs the reason.
+QC failures do not stop the pipeline — they trigger the appropriate autonomous response.
+
+### Failure Types and System Responses
+
+Failures are not equal. The system's response depends on what broke.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     QC FAILURE HANDLING                             │
+│                                                                     │
+│  TYPE 1 — Technical Failure                                         │
+│  API down, image failed to render, network timeout                  │
+│  Response: retry (up to N times from config)                        │
+│            → if still failing: RED status, alert                    │
+│                                                                     │
+│  TYPE 2 — Quality Failure                                           │
+│  Duplicate topic, voice drift, inconsistency across platforms       │
+│  Response: rewrite (up to N times from config)                      │
+│            → if still failing: ORANGE status, skip topic, continue  │
+│                                                                     │
+│  TYPE 3 — Factual Risk                                              │
+│  Claim cannot be verified against source signals                    │
+│  Invented statistic, person, date, or event                         │
+│  Response: quarantine topic, log reason, continue to next topic     │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Status System
+
+Every pipeline run and every content piece carries one of four statuses:
+
+| Status     | Meaning                                              | Human action required? |
+|------------|------------------------------------------------------|------------------------|
+| **GREEN**  | Published successfully                               | No                     |
+| **YELLOW** | Quality issue detected — system rewrote and resolved | No                     |
+| **ORANGE** | Topic quarantined — skipped, pipeline continued      | No (optional review)   |
+| **RED**    | System failure — broken API key, pipeline crash      | Yes                    |
+
+Human intervention is required **only for RED**.
+ORANGE items are visible in the Google Sheet for optional review — but the pipeline did not wait.
 
 ### QC Checks (in order)
 
-| Check                   | Description                                                          |
-|-------------------------|----------------------------------------------------------------------|
-| Duplication Detection   | Semantic similarity against `memory/topic_embeddings.json`. Blocks if score > threshold. |
-| Factuality Check        | Claude re-reads the content and flags any claims that are unverifiable or that contradict the brief. |
-| Hallucination Prevention| Checks for invented statistics, named people, or specific dates not present in the source signals. |
-| Consistency Check       | Verifies that all platform variants carry the same core message and angle. |
-| Brand Voice Validation  | Compares output against `memory/voice_examples.json`. Flags tonal drift. |
+| Check                   | Failure Type | System Response            |
+|-------------------------|--------------|----------------------------|
+| Duplication Detection   | Type 2       | Rewrite with new angle     |
+| Brand Voice Validation  | Type 2       | Rewrite with voice anchoring |
+| Consistency Check       | Type 2       | Regenerate platform variants |
+| Factuality Check        | Type 3       | Quarantine topic            |
+| Hallucination Detection | Type 3       | Quarantine topic            |
+| Platform API health     | Type 1       | Retry with backoff          |
+| Image rendering         | Type 1       | Retry, then skip image      |
 
-QC config (thresholds, enabled checks, strictness) lives in `config/quality.yaml`.
+QC config (thresholds, max retries, max rewrites, strictness) lives in `config/quality.yaml`.
 
-All QC failures are logged to the report with the specific reason.
-Failed content is saved to `data/drafts/failed/` for manual review.
+### Rewrite Loop
+
+```
+Generate
+  ↓
+QC check
+  ↓ fail (Type 2)
+Rewrite with failure reason injected into prompt
+  ↓
+QC check
+  ↓ fail again
+Rewrite attempt 2
+  ↓
+QC check
+  ↓ still failing after N attempts
+ORANGE → quarantine → log → next topic
+```
+
+The failure reason from QC is passed back into the generation prompt on rewrite.
+The system does not rewrite blindly — it rewrites with context.
 
 ---
 
@@ -254,9 +328,10 @@ config/
     ├── threads_post.yaml
     ├── topic_analysis.yaml   # prompt for market analysis step
     ├── strategy_brief.yaml   # prompt for strategy layer
-    ├── qc_factuality.yaml    # prompt for factuality check
-    ├── qc_voice.yaml         # prompt for brand voice validation
-    └── image_hook.yaml       # prompt for extracting hook sentence for image
+    ├── qc_factuality.yaml         # prompt for factuality check
+    ├── qc_voice.yaml              # prompt for brand voice validation
+    ├── rewrite_with_feedback.yaml # rewrite prompt that includes QC failure reason
+    └── image_hook.yaml            # prompt for extracting hook sentence for image
 ```
 
 Prompt templates use `{variable}` placeholders filled at runtime.
@@ -343,8 +418,8 @@ Never-Blank-pipeline/
 │   ├── analysis/                  # scored analysis JSON files by date
 │   ├── topic_candidates/          # ranked topic lists by date
 │   ├── drafts/
-│   │   ├── pending/               # content awaiting QC
-│   │   └── failed/                # content that failed QC
+│   │   ├── pending/               # content awaiting publish
+│   │   └── quarantine/            # factual risk — awaiting optional human review
 │   ├── memory/
 │   │   ├── published.json
 │   │   ├── topic_embeddings.json
@@ -400,11 +475,12 @@ GOOGLE_SHEET_ID=
 
 ## Design Principles
 
-1. **Prompts live in config, not code.** Python loads templates; it never builds prompt strings.
-2. **Manual queue takes priority.** Automation serves when humans have nothing queued.
-3. **Memory prevents repetition.** Every published topic is remembered semantically, not just by title.
-4. **QC is a hard gate.** Failed content does not publish — it waits for human review.
-5. **The system reports itself.** Every run is visible in Google Sheets without opening the code.
-6. **Brand voice is a constraint, not an afterthought.** Voice validation runs before every publish.
-7. **Images are part of the content, not decoration.** Generated automatically, with hook and branding.
-8. **One source of truth per concern.** Config owns rules. Memory owns history. Sheets owns visibility.
+1. **Human Review is optional. Human Dependency is forbidden.** The system continues working when the human is unavailable. Valeria can review; the pipeline cannot wait for her.
+2. **Failures have types, and types have responses.** Technical failures retry. Quality failures rewrite. Factual risks quarantine. Only system crashes require human action.
+3. **Prompts live in config, not code.** Python loads templates; it never builds prompt strings.
+4. **Manual queue takes priority.** Automation serves when humans have nothing queued.
+5. **Memory prevents repetition.** Every published topic is remembered semantically, not just by title.
+6. **The system reports itself.** Every run is visible in Google Sheets without opening the code.
+7. **Brand voice is a constraint, not an afterthought.** Voice validation runs before every publish. On failure, the system rewrites — it does not stop.
+8. **Images are part of the content, not decoration.** Generated automatically, with hook and branding.
+9. **One source of truth per concern.** Config owns rules. Memory owns history. Sheets owns visibility.

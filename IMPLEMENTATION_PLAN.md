@@ -153,30 +153,36 @@
 
 ## Phase 4 — Quality Control
 
-**Goal:** Content cannot publish without passing all QC checks.
+**Goal:** QC runs autonomously. It never stops the pipeline waiting for a human — it rewrites, quarantines, or retries depending on failure type.
 
 ### Steps
 
 1. Write QC prompt templates
-   - `config/prompts/qc_factuality.yaml`: instructs Claude to identify any claims that are not verifiable from the provided source signals
-   - `config/prompts/qc_voice.yaml`: instructs Claude to compare content against voice examples and flag drift
+   - `config/prompts/qc_factuality.yaml`: instructs Claude to identify claims not verifiable from the provided source signals; returns structured JSON with `passed` and `flags`
+   - `config/prompts/qc_voice.yaml`: instructs Claude to compare content against voice examples and flag drift; returns `passed` and `issues`
+   - `config/prompts/rewrite_with_feedback.yaml`: rewrite prompt that receives the original brief + original content + QC failure reason
 
 2. Implement `src/quality/deduplication.py`
-   - `check_duplicate(topic_summary)` → returns `{"passed": bool, "score": float, "reason": str}`
-   - Uses string similarity for Phase 4; embeddings can replace later
+   - `check_duplicate(topic_summary)` → `{"passed": bool, "score": float, "reason": str, "failure_type": "type2"}`
 
 3. Implement `src/quality/factuality.py`
-   - `check_factuality(content, source_signals)` → Claude API call → returns `{"passed": bool, "flags": list}`
+   - `check_factuality(content, source_signals)` → `{"passed": bool, "flags": list, "failure_type": "type3"}`
 
 4. Implement `src/quality/voice.py`
-   - `check_voice(content, voice_examples)` → Claude API call → returns `{"passed": bool, "issues": list}`
+   - `check_voice(content, voice_examples)` → `{"passed": bool, "issues": list, "failure_type": "type2"}`
 
 5. Implement `src/quality/gate.py`
    - `run_qc(content, brief)` → runs all checks in sequence
-   - First failure stops the chain and returns `{"passed": False, "failed_at": "check_name", "reason": "..."}`
-   - All passed → `{"passed": True}`
+   - Returns structured result: `{"passed": bool, "status": "green|yellow|orange", "failed_at": str, "failure_type": "type1|type2|type3", "reason": str}`
+   - Does NOT raise exceptions — always returns a result object the runner can act on
 
-**Acceptance:** Generate content from Phase 3. Run `gate.run_qc(content, brief)`. Inject a fake factual claim and verify QC catches it.
+6. Implement rewrite loop in `src/content/generator.py`
+   - `rewrite_with_feedback(content, brief, qc_result)` → calls `rewrite_with_feedback.yaml` prompt
+   - Max rewrite attempts configured in `quality.yaml` as `max_rewrites`
+
+**Acceptance:**
+- Generate content. Inject a fake factual claim. Run QC → result should be `failure_type: type3`, `status: orange`.
+- Inject a voice drift issue. Run QC → result should be `failure_type: type2`. Call rewrite → verify new content is generated. Re-run QC → should pass → `status: yellow`.
 
 ---
 
@@ -282,28 +288,35 @@
 
 ### Steps
 
-1. Implement `scripts/run_pipeline.py`
+1. Implement `scripts/run_pipeline.py` with full autonomous failure handling:
    ```
    1. sync manual topics from Google Sheets
    2. get next topic (manual or signal)
    3. generate content
    4. run QC gate
-      → fail: log failure, stop
+      → type2 fail: rewrite (up to max_rewrites)
+         → still failing: ORANGE, quarantine topic, go to step 2 with next topic
+      → type3 fail: ORANGE, quarantine topic, go to step 2 with next topic
+      → passed after rewrite: YELLOW, continue
+      → passed first time: GREEN, continue
    5. generate visual assets
+      → type1 fail: retry (up to max_retries)
+      → still failing: publish without image, log warning
    6. publish to all target platforms
+      → type1 fail: retry with backoff
+      → still failing after retries: RED status, alert, stop run
    7. update memory
-   8. write report to Google Sheet
+   8. write report to Google Sheet with final status (GREEN / YELLOW / ORANGE / RED)
    ```
 
 2. Implement `scripts/run_publish_only.py`
-   - Takes a draft from `data/drafts/pending/` and publishes it
-   - For manual override: when QC passed but you want to review before publishing
+   - Takes a quarantined draft from `data/drafts/quarantine/` and publishes it after manual decision
+   - This is optional — not a required step in the normal flow
 
-3. Add retry logic in the runner
-   - On publish failure: retry up to N times (N from `quality.yaml`)
-   - Log each retry to report
+3. Status is always written to Google Sheet, even on RED
+   - Pipeline crash does not produce a silent failure
 
-**Acceptance:** Run `python scripts/run_pipeline.py`. Observe: topic selected, content generated, QC passed, image created, published to all platforms, Google Sheet updated.
+**Acceptance:** Run `python scripts/run_pipeline.py`. Force a type2 QC failure → observe rewrite → observe YELLOW publish. Force a type3 → observe quarantine, observe system pick next topic and publish that instead. Google Sheet shows both outcomes correctly.
 
 ---
 
