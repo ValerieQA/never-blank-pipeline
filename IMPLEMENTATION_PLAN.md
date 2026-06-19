@@ -34,20 +34,38 @@
    - `config/quality.yaml` — QC thresholds with sensible defaults
    - `config/platforms.yaml` — character limits, image dimensions per platform
    - `config/signals.yaml` — RSS feed list, keyword clusters (empty lists for now)
-   - `config/platforms.yaml` — must include Telegram entry with `max_chars`, `supports_image`, `link_format`
+   - `config/platforms.yaml` — must include:
+     - Telegram: `max_chars`, `supports_image`, `link_format`
+     - Wix: `category_id` (Never Blank category), `language`, `tags` map (label → Wix tag ID)
+     - All other platforms: character limits, image dimensions
 
 5. Create all prompt template files in `config/prompts/`
    - Each file is a YAML with keys: `system`, `user`, `variables` (list of placeholders)
    - Content is placeholder text only — real prompts come in Phase 3
 
-6. Create `src/utils/config_loader.py`
+6. Populate `config/platforms.yaml` with known Wix IDs (these are already live):
+   ```yaml
+   wix:
+     category_id: "35920a76-8a41-4645-aeb1-322ae240a57a"
+     language: "en"
+     tags:
+       business:     "0d69fc2a-13a7-4bd4-8fe9-45f7e8f76d73"
+       visibility:   "782b5758-e864-4531-b9d6-dfecfc6df4fe"
+       content:      "8166f258-13a1-448f-b846-049f813ccb8e"
+       strategy:     "034e0b1e-c9c9-4940-97c2-af679d22acae"
+       observations: "f718bc87-4a92-4798-8933-68729e340a29"
+       founder:      "64d4d6d7-a79c-48a5-9bfa-b62a75a2f278"
+   ```
+
+7. Create `src/utils/config_loader.py`
    - `load_yaml(path)` — loads any YAML config
    - `load_prompt(name, variables)` — loads prompt template, fills `{variable}` placeholders
 
-7. Create `src/utils/logger.py`
+8. Create `src/utils/logger.py`
    - Structured logging: timestamp, level, component, message
 
 **Acceptance:** `python -c "from src.utils.config_loader import load_yaml; print('ok')"` runs without error.
+Verify `config/platforms.yaml` contains the Wix category ID and all 6 tag IDs.
 
 ---
 
@@ -140,11 +158,18 @@
    class ContentBrief:
        title: str
        angle: str
-       goal: str          # educate / challenge / demonstrate / invite
+       goal: str               # educate / challenge / demonstrate / invite
+       observation_type: str   # pattern / paradox / reversal / gap / behavior_delta / etc.
        platforms: list[str]
        tone_notes: str
        source_signals: list[str]
+       wix_slug: str           # auto-generated from title, slugified
+       wix_category_id: str    # always Never Blank category ID from platforms.yaml
+       wix_tags: list[str]     # tag labels assigned by strategy layer from strategy.yaml mapping
    ```
+
+   Slug generation rule: lowercase title, replace spaces with `-`, strip special characters,
+   truncate to 60 chars, check against `memory/published.json` for uniqueness — append `-2`, `-3` if needed.
 
 3. Create `src/content/generator.py`
    - `generate_blog_post(brief)` → calls Claude API with blog_post prompt
@@ -200,7 +225,12 @@
 ### Steps
 
 1. Implement `src/publishing/wix.py`
-   - `publish_post(title, content, slug)` → Wix Headless CMS API → returns `{"url": "...", "post_id": "...", "status": "green"}`
+   - `publish_post(brief, content)` → Wix Blog API → returns `{"url": "...", "post_id": "...", "status": "green"}`
+   - Automatically sets on every post — no manual input ever required:
+     - `slug` from `brief.wix_slug`
+     - `categoryIds` from `brief.wix_category_id` (Never Blank category)
+     - `tagIds` resolved from `brief.wix_tags` labels using the label→ID map in `platforms.yaml`
+     - `language` from `platforms.yaml`
 
 2. Implement `src/publishing/linkedin.py`
    - `publish_post(text)` → LinkedIn Share API → returns `{"url": "...", "post_id": "...", "status": "green"}`

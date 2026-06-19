@@ -218,10 +218,35 @@ Applies Never Blank editorial logic to each topic candidate:
 - Maps topic to platform format (long blog vs. short social)
 - Sets tone guidance based on brand voice config
 - Defines the content goal: educate / challenge / demonstrate / invite
+- **Assigns Wix tags automatically** based on content goal and observation type
+- **Generates the URL slug** from the article title (no manual entry)
 
 All strategy rules live in `config/strategy.yaml` — no logic inside Python.
 
-**Output:** approved `ContentBrief` object passed to Content Generator
+Tag assignment is defined in `config/strategy.yaml` as a mapping:
+
+```yaml
+tag_assignment:
+  observation_type:
+    pattern:     ["observations", "business"]
+    paradox:     ["observations", "strategy"]
+    reversal:    ["visibility", "strategy"]
+    gap:         ["visibility", "content"]
+    behavior_delta: ["founder", "business"]
+    signal_cluster: ["business", "strategy"]
+    implication: ["observations", "founder"]
+  content_goal:
+    educate:     ["content"]
+    challenge:   ["observations"]
+    demonstrate: ["visibility"]
+    invite:      ["founder"]
+```
+
+Each article receives 2–3 tags automatically. No human tag selection. No manual slug entry.
+
+**Output:** approved `ContentBrief` object passed to Content Generator.
+`ContentBrief` includes: `title`, `angle`, `goal`, `platforms`, `tone_notes`, `source_signals`,
+`wix_tags: list[str]`, `wix_slug: str`, `wix_category_id: str`
 
 ### 5. Memory
 
@@ -267,6 +292,20 @@ Report covers:
 
 Each platform has its own prompt template in `config/prompts/`.
 Content is adapted — not copied — across platforms.
+
+### Wix Publishing — Automatic Metadata
+
+Every Wix post is published with full metadata set automatically. No manual steps.
+
+| Field         | Source                                              |
+|---------------|-----------------------------------------------------|
+| Category      | Always `Never Blank` — hardcoded category ID in config |
+| Tags          | Assigned by Strategy Layer from `strategy.yaml` mapping |
+| Slug          | Auto-generated from article title (slugified, deduplicated vs memory) |
+| Language      | `en` (set in config)                               |
+
+The Wix category ID (`35920a76-8a41-4645-aeb1-322ae240a57a`) is stored in `config/platforms.yaml`.
+Available tag IDs are stored in `config/platforms.yaml` as a label→ID map and kept in sync on startup.
 
 ### Telegram Role
 
@@ -457,6 +496,9 @@ config/
 ├── quality.yaml          # QC thresholds, enabled checks, failure behavior
 ├── platforms.yaml        # per-platform specs (character limits, image sizes)
 ├── intelligence.yaml     # source categories, URLs, fetch intervals, scoring weights
+# platforms.yaml includes:
+#   wix.category_id, wix.tags (label→id map), wix.language
+#   per-platform character limits, image dimensions
 └── prompts/
     ├── blog_post.yaml             # full Wix article prompt template
     ├── linkedin_post.yaml         # LinkedIn post prompt
@@ -586,7 +628,8 @@ Never-Blank-pipeline/
 │   ├── run_pipeline.py            # main entry point: full pipeline run
 │   ├── run_intelligence.py        # run only the intelligence engine (collect + score)
 │   ├── run_publish_only.py        # publish a quarantined draft after manual decision
-│   └── sync_sheets.py             # pull manual topics from Google Sheets
+│   ├── sync_sheets.py             # pull manual topics from Google Sheets
+│   └── sync_wix_tags.py           # sync tag label→ID map from Wix into platforms.yaml
 │
 └── tests/
     ├── test_quality/
