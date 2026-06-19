@@ -1,0 +1,57 @@
+name: rewrite_with_feedback
+status: stub
+purpose: >
+  Rewrite generated content that failed a QC check.
+  The failure reason is injected explicitly so the system rewrites
+  with context — not blindly.
+
+input_schema:
+  original_content:
+    type: str
+    description: The content that failed QC
+  content_brief:
+    type: dict
+    description: Original ContentBrief (title, angle, goal, observation_statement)
+  failed_check:
+    type: str
+    enum: [duplication, voice, consistency, factuality]
+  failure_reason:
+    type: str
+    description: Specific explanation of what failed (from QC output)
+  rewrite_guidance:
+    type: str
+    description: >
+      For voice failures: the rewrite_guidance from qc_voice output.
+      For other failures: the flags or reason string.
+  brand_voice_examples:
+    type: list[str]
+  attempt_number:
+    type: int
+    description: Which rewrite attempt this is (1 or 2)
+
+output_schema:
+  type: json_object
+  fields:
+    content:
+      type: str
+      description: Rewritten content — same format as the original that failed
+
+required_context:
+  - original_content
+  - content_brief
+  - failed_check
+  - failure_reason
+  - brand_voice_examples
+
+constraints:
+  - preserve the same format and length range as the original
+  - address the specific failure_reason — do not rewrite unrelated sections
+  - output must be valid JSON object
+  - content field must be non-empty
+
+failure_modes:
+  - returns same content unchanged: detected by comparing hashes — treat as failure, exhaust retries
+  - returns invalid JSON: retry once, then quarantine topic
+
+system: "PLACEHOLDER — written in Phase 3"
+user: "PLACEHOLDER — written in Phase 3"

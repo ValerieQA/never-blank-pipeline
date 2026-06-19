@@ -1,0 +1,52 @@
+name: observation_score
+status: stub
+purpose: >
+  Score a single observation for non-obviousness, specificity, and audience
+  relevance. Used as a secondary validation after observation_discovery.
+
+input_schema:
+  statement:
+    type: str
+    description: The observation statement to score
+  observation_type:
+    type: str
+    enum: [pattern, paradox, reversal, gap, behavior_delta, signal_cluster, implication]
+  audience_description:
+    type: str
+    description: Who Never Blank writes for
+
+output_schema:
+  type: json_object
+  fields:
+    non_obviousness_score:
+      type: float
+      range: [0.0, 1.0]
+    specificity_score:
+      type: float
+      range: [0.0, 1.0]
+    audience_relevance_score:
+      type: float
+      range: [0.0, 1.0]
+    combined_score:
+      type: float
+      description: Weighted average of the three scores
+    pass:
+      type: bool
+      description: True if combined_score >= 0.60
+
+required_context:
+  - statement
+  - observation_type
+  - audience_description
+
+constraints:
+  - output must be valid JSON object
+  - scores are floats between 0.0 and 1.0
+  - combined_score = (non_obviousness * 0.5) + (specificity * 0.3) + (audience_relevance * 0.2)
+
+failure_modes:
+  - returns invalid JSON: retry once, then assign score 0.0 and log ERROR
+  - returns score outside [0,1]: clamp to range in Python, log WARNING
+
+system: "PLACEHOLDER — written in Phase 3"
+user: "PLACEHOLDER — written in Phase 3"

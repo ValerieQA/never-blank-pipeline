@@ -1,0 +1,34 @@
+wix:
+  category_id: "35920a76-8a41-4645-aeb1-322ae240a57a"
+  language: "en"
+  max_chars: null
+  tags:
+    business:     "0d69fc2a-13a7-4bd4-8fe9-45f7e8f76d73"
+    visibility:   "782b5758-e864-4531-b9d6-dfecfc6df4fe"
+    content:      "8166f258-13a1-448f-b846-049f813ccb8e"
+    strategy:     "034e0b1e-c9c9-4940-97c2-af679d22acae"
+    observations: "f718bc87-4a92-4798-8933-68729e340a29"
+    founder:      "64d4d6d7-a79c-48a5-9bfa-b62a75a2f278"
+
+linkedin:
+  max_chars: 3000
+  supports_image: true
+
+facebook:
+  max_chars: 63206
+  supports_image: true
+
+instagram:
+  max_chars: 2200
+  supports_image: true
+  requires_image: true
+
+threads:
+  max_chars: 500
+  supports_image: true
+  thread_max_posts: 6
+
+telegram:
+  max_chars: 4096
+  supports_image: true
+  link_format: "markdown"

@@ -1,0 +1,47 @@
+name: qc_factuality
+status: stub
+purpose: >
+  Review generated content for factual claims that cannot be verified
+  against the provided source signals. Flag invented statistics, named
+  people, specific dates, or events not present in the sources.
+
+input_schema:
+  content:
+    type: str
+    description: The generated article or post text to review
+  source_signals:
+    type: list[str]
+    description: Original intelligence items used as the basis for this content
+
+output_schema:
+  type: json_object
+  fields:
+    passed:
+      type: bool
+    flags:
+      type: list[str]
+      description: Each flag is a specific claim that could not be verified
+    risk_level:
+      type: str
+      enum: [none, low, high]
+      description: >
+        none — no issues found;
+        low — minor unverifiable claims, judgment call;
+        high — invented statistics or named people → quarantine
+
+required_context:
+  - content
+  - source_signals
+
+constraints:
+  - output must be valid JSON object
+  - do not flag general business knowledge or widely accepted facts
+  - only flag specific statistics, dates, names, and events
+  - if source_signals is empty, treat all specific claims as unverifiable
+
+failure_modes:
+  - returns invalid JSON: retry once, then treat as passed=false risk_level=high
+  - false positives on general knowledge: acceptable in V1, tuned in Phase 3
+
+system: "PLACEHOLDER — written in Phase 3"
+user: "PLACEHOLDER — written in Phase 3"

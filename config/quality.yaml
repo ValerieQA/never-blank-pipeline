@@ -1,0 +1,24 @@
+deduplication:
+  similarity_threshold: 0.85
+
+observations:
+  max_uses: 3
+  cooldown_days: 60
+
+rewrites:
+  max_rewrites: 2
+
+retries:
+  max_retries: 3
+  backoff_seconds: 5
+
+voice_drift:
+  rolling_window: 10
+  alert_threshold: 0.72
+
+qc_checks:
+  duplication: true
+  voice: true
+  factuality: true
+  hallucination: true
+  consistency: true

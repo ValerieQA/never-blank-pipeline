@@ -1,0 +1,48 @@
+name: telegram_post
+status: stub
+purpose: >
+  Write a short Telegram signal-feed post.
+  Telegram is a fast broadcast channel — one hook, one insight, optional link.
+  Not a compressed article. Self-contained value in under 300 words.
+
+input_schema:
+  observation_statement:
+    type: str
+  hook_sentence:
+    type: str
+    description: From ContentBrief — the sharpest version of the observation
+  content_goal:
+    type: str
+    enum: [educate, challenge, demonstrate, invite]
+  wix_article_url:
+    type: str
+    description: Optional. Appended at end if provided.
+  brand_voice_examples:
+    type: list[str]
+
+output_schema:
+  type: json_object
+  fields:
+    text:
+      type: str
+      description: >
+        Full Telegram post. Max 300 words. Markdown supported.
+        Structure: hook line → one key insight → optional article link.
+
+required_context:
+  - observation_statement
+  - hook_sentence
+  - content_goal
+
+constraints:
+  - max 300 words
+  - must deliver standalone value — do not require reading the article to understand it
+  - if wix_article_url provided, append as last line: "Full article → {url}"
+  - output must be valid JSON object
+
+failure_modes:
+  - text exceeds 300 words: rewrite with explicit word limit
+  - returns invalid JSON: retry once, log ERROR
+
+system: "PLACEHOLDER — written in Phase 3"
+user: "PLACEHOLDER — written in Phase 3"

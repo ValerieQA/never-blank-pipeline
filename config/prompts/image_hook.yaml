@@ -1,0 +1,17 @@
+name: image_hook
+status: not_needed
+purpose: >
+  NOT USED IN V1.
+  Image hook is extracted deterministically from ContentBrief.observation_statement.
+  No LLM call required.
+  This file is retained for documentation of the architectural decision.
+
+decision: >
+  The observation_statement in ContentBrief is the hook by definition.
+  It was already validated for specificity, non-obviousness, and length
+  in the observation_scoring step. Using it directly eliminates one LLM
+  call with no quality tradeoff.
+
+implementation_note: >
+  src/content/image_builder.py extracts hook as:
+    hook = brief.observation_statement[:brand_config.image.hook_max_chars]

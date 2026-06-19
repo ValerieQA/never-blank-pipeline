@@ -1,0 +1,16 @@
+name: strategy_brief
+status: not_needed
+purpose: >
+  NOT USED IN V1.
+  ContentBrief construction is fully deterministic — no LLM call.
+
+decision: >
+  Tag assignment: rules from strategy.yaml tag_assignment mapping.
+  Slug: slugified title, uniqueness checked against memory/published.json.
+  Platform format: strategy.yaml platform_format mapping.
+  Content goal: strategy.yaml content_goal_by_observation_type mapping.
+  All logic lives in src/internal/strategy.py.
+
+implementation_note: >
+  src/internal/strategy.py builds ContentBrief from TopicCandidate
+  using only config rules and memory lookups.

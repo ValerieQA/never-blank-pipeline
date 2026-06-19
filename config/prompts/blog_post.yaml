@@ -1,0 +1,67 @@
+name: blog_post
+status: stub
+purpose: >
+  Generate a full Wix blog article from a ContentBrief.
+  The article must demonstrate intelligence, not broadcast information.
+  It should feel like Never Blank wrote it — not like a generic AI post.
+
+input_schema:
+  title:
+    type: str
+  angle:
+    type: str
+  content_goal:
+    type: str
+    enum: [educate, challenge, demonstrate, invite]
+  observation_statement:
+    type: str
+  observation_type:
+    type: str
+  source_signals:
+    type: list[str]
+    description: Raw source material the article may reference (for factuality grounding)
+  brand_voice_examples:
+    type: list[str]
+    description: 3-5 example passages that represent Never Blank voice
+  audience_description:
+    type: str
+
+output_schema:
+  type: json_object
+  fields:
+    title:
+      type: str
+    body:
+      type: str
+      description: Full article in markdown, 600-1200 words
+    meta_description:
+      type: str
+      description: SEO meta description, max 155 chars
+    hook_sentence:
+      type: str
+      description: Opening sentence of the article (used for image overlay)
+
+required_context:
+  - title
+  - angle
+  - content_goal
+  - observation_statement
+  - brand_voice_examples (min 1)
+
+constraints:
+  - length: 600–1200 words
+  - no invented statistics not present in source_signals
+  - no named people unless present in source_signals
+  - output must be valid JSON object
+  - body must be markdown (headings, paragraphs — no bullet lists as primary structure)
+  - meta_description max 155 characters
+  - do not end with a call-to-action asking readers to share or subscribe
+
+failure_modes:
+  - body too short (< 500 words): rewrite with length constraint injected
+  - invented facts detected by qc_factuality: quarantine
+  - voice drift detected by qc_voice: rewrite with voice examples re-anchored
+  - returns invalid JSON: retry once, then quarantine and log ERROR
+
+system: "PLACEHOLDER — written in Phase 3"
+user: "PLACEHOLDER — written in Phase 3"

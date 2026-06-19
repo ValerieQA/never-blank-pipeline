@@ -1,0 +1,51 @@
+name: linkedin_post
+status: stub
+purpose: >
+  Adapt a blog article into a LinkedIn professional post.
+  LinkedIn audience: founders, operators, consultants.
+  Format: thought leadership — not promotion.
+
+input_schema:
+  article_title:
+    type: str
+  article_body:
+    type: str
+  observation_statement:
+    type: str
+  content_goal:
+    type: str
+    enum: [educate, challenge, demonstrate, invite]
+  wix_article_url:
+    type: str
+    description: Optional. Include if article is published on Wix.
+  brand_voice_examples:
+    type: list[str]
+
+output_schema:
+  type: json_object
+  fields:
+    text:
+      type: str
+      description: Full LinkedIn post text, max 3000 chars
+    hook_line:
+      type: str
+      description: First line — must stop the scroll
+
+required_context:
+  - article_title
+  - observation_statement
+  - content_goal
+
+constraints:
+  - max 3000 characters
+  - first line must work as a standalone hook (no "In my experience..." openers)
+  - do not use hashtags more than 3
+  - do not end with "What do you think?" or generic engagement bait
+  - output must be valid JSON object
+
+failure_modes:
+  - text exceeds 3000 chars: truncate at last complete sentence before limit
+  - returns invalid JSON: retry once, log ERROR
+
+system: "PLACEHOLDER — written in Phase 3"
+user: "PLACEHOLDER — written in Phase 3"

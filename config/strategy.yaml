@@ -1,0 +1,50 @@
+target_audience:
+  - small business owners
+  - founder-led businesses
+  - operators too busy to maintain a consistent public presence
+
+content_goals:
+  - educate
+  - challenge
+  - demonstrate
+  - invite
+
+slug:
+  max_length: 60
+  separator: "-"
+
+tag_assignment:
+  observation_type:
+    pattern:        ["observations", "business"]
+    paradox:        ["observations", "strategy"]
+    reversal:       ["visibility", "strategy"]
+    gap:            ["visibility", "content"]
+    behavior_delta: ["founder", "business"]
+    signal_cluster: ["business", "strategy"]
+    implication:    ["observations", "founder"]
+  content_goal:
+    educate:        ["content"]
+    challenge:      ["observations"]
+    demonstrate:    ["visibility"]
+    invite:         ["founder"]
+
+platform_format:
+  wix:       long_article
+  linkedin:  professional_post
+  facebook:  post_with_image
+  instagram: image_with_caption
+  threads:   thread_sequence
+  telegram:  signal_feed
+
+threads:
+  min_posts: 3
+  max_posts: 6
+
+content_goal_by_observation_type:
+  pattern:        educate
+  paradox:        challenge
+  reversal:       challenge
+  gap:            demonstrate
+  behavior_delta: demonstrate
+  signal_cluster: educate
+  implication:    invite

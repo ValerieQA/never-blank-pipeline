@@ -1,0 +1,10 @@
+.env
+data/
+assets/logo/
+assets/fonts/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.DS_Store

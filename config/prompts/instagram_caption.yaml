@@ -1,0 +1,49 @@
+name: instagram_caption
+status: stub
+purpose: >
+  Write an Instagram caption to accompany a branded visual card.
+  The image carries the hook; the caption adds depth and directs to bio link.
+
+input_schema:
+  observation_statement:
+    type: str
+  hook_sentence:
+    type: str
+    description: Text displayed on the image card
+  article_title:
+    type: str
+  content_goal:
+    type: str
+    enum: [educate, challenge, demonstrate, invite]
+  brand_voice_examples:
+    type: list[str]
+
+output_schema:
+  type: json_object
+  fields:
+    caption:
+      type: str
+      description: Instagram caption, max 2200 chars
+    hashtags:
+      type: list[str]
+      description: 5–10 relevant hashtags (without # prefix, added by code)
+
+required_context:
+  - observation_statement
+  - hook_sentence
+  - content_goal
+
+constraints:
+  - caption max 2200 characters
+  - first line must complement the image hook, not repeat it verbatim
+  - end with "link in bio" or equivalent only if article URL is available
+  - 5–10 hashtags, no more
+  - output must be valid JSON object
+
+failure_modes:
+  - caption exceeds 2200 chars: truncate at last sentence before limit
+  - too many hashtags: trim to 10 in Python
+  - returns invalid JSON: retry once, log ERROR
+
+system: "PLACEHOLDER — written in Phase 3"
+user: "PLACEHOLDER — written in Phase 3"

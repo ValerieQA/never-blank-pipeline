@@ -1,0 +1,57 @@
+name: qc_voice
+status: stub
+purpose: >
+  Validate that generated content matches the Never Blank brand voice.
+  Compare against curated voice examples and brand constraints.
+  Flag tonal drift, corporate language, or generic AI phrasing.
+
+input_schema:
+  content:
+    type: str
+    description: Generated text to validate
+  platform:
+    type: str
+    enum: [wix, linkedin, facebook, instagram, threads, telegram]
+  voice_examples:
+    type: list[str]
+    description: Curated example posts representing approved Never Blank voice
+  voice_constraints:
+    type: dict
+    description: From brand.yaml — tone list and avoid list
+
+output_schema:
+  type: json_object
+  fields:
+    passed:
+      type: bool
+    score:
+      type: float
+      range: [0.0, 1.0]
+      description: Voice alignment score (1.0 = perfect match)
+    issues:
+      type: list[str]
+      description: Specific phrases or patterns that drift from brand voice
+    rewrite_guidance:
+      type: str
+      description: >
+        If passed=false, one sentence describing what to fix
+        (injected into rewrite_with_feedback prompt)
+
+required_context:
+  - content
+  - platform
+  - voice_examples (min 1)
+  - voice_constraints
+
+constraints:
+  - output must be valid JSON object
+  - score is a float between 0.0 and 1.0
+  - rewrite_guidance must be present when passed=false
+  - passed=true threshold: score >= 0.72 (from quality.yaml voice_drift.alert_threshold)
+
+failure_modes:
+  - returns invalid JSON: retry once, then treat as passed=true score=0.0 and log WARNING
+  - no voice_examples provided: skip check, log WARNING, mark as passed
+
+system: "PLACEHOLDER — written in Phase 3"
+user: "PLACEHOLDER — written in Phase 3"

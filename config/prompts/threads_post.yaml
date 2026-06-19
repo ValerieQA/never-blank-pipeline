@@ -1,0 +1,57 @@
+name: threads_post
+status: stub
+purpose: >
+  Adapt a blog article into a Threads thread (sequence of posts).
+  Each post in the thread is self-contained but builds on the previous.
+  Threads is a conversation starter — not a broadcast channel.
+
+input_schema:
+  observation_statement:
+    type: str
+  article_title:
+    type: str
+  article_body:
+    type: str
+  content_goal:
+    type: str
+    enum: [educate, challenge, demonstrate, invite]
+  wix_article_url:
+    type: str
+    description: Optional. Final post in thread may link to article.
+  brand_voice_examples:
+    type: list[str]
+  min_posts:
+    type: int
+    default: 3
+  max_posts:
+    type: int
+    default: 6
+
+output_schema:
+  type: json_object
+  fields:
+    posts:
+      type: list[str]
+      description: >
+        Ordered list of thread posts. Each post max 500 chars.
+        First post is the hook. Last post may include article link.
+
+required_context:
+  - observation_statement
+  - article_title
+  - content_goal
+
+constraints:
+  - each post max 500 characters
+  - min 3, max 6 posts in the thread
+  - post 1 must work as a standalone — if someone reads only it, it delivers value
+  - posts must flow as a logical sequence, not disconnected takes
+  - output must be valid JSON object with posts array
+
+failure_modes:
+  - any post exceeds 500 chars: truncate at last complete sentence
+  - fewer than 3 posts generated: retry with explicit minimum
+  - returns invalid JSON: retry once, log ERROR
+
+system: "PLACEHOLDER — written in Phase 3"
+user: "PLACEHOLDER — written in Phase 3"

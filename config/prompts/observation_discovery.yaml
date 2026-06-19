@@ -1,0 +1,57 @@
+name: observation_discovery
+status: stub
+purpose: >
+  Given a batch of raw intelligence items, discover non-obvious observations
+  worth building content around. Not summaries — named patterns, paradoxes,
+  reversals, gaps, behavior deltas, signal clusters, or implications.
+
+input_schema:
+  intelligence_items:
+    type: list[str]
+    description: Raw text items from intelligence sources (max 20)
+  published_observation_statements:
+    type: list[str]
+    description: Statements of already-published observations (for novelty check)
+  brand_positioning:
+    type: str
+    description: One-paragraph description of Never Blank audience and positioning
+
+output_schema:
+  type: json_array
+  items:
+    observation_type:
+      type: str
+      enum: [pattern, paradox, reversal, gap, behavior_delta, signal_cluster, implication]
+    statement:
+      type: str
+      description: Observation stated in one sentence, max 150 chars
+    non_obviousness_score:
+      type: float
+      range: [0.0, 1.0]
+    specificity_score:
+      type: float
+      range: [0.0, 1.0]
+    source_indices:
+      type: list[int]
+      description: Indices into intelligence_items that support this observation
+    evergreen:
+      type: bool
+
+required_context:
+  - intelligence_items (min 1)
+  - brand_positioning
+
+constraints:
+  - output must be valid JSON array
+  - each statement is one sentence, max 150 characters
+  - do not summarize news items — only named patterns qualify
+  - skip observations already in published_observation_statements
+  - minimum non_obviousness_score to include: 0.60
+
+failure_modes:
+  - returns summaries not observations: retry with stricter constraint
+  - returns empty array: log WARNING, continue to next batch
+  - returns invalid JSON: retry once, then skip and log ERROR
+
+system: "PLACEHOLDER — written in Phase 3"
+user: "PLACEHOLDER — written in Phase 3"

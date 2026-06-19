@@ -1,0 +1,37 @@
+name: "Never Blank"
+tagline: "Intelligent content for founder-led businesses"
+
+voice:
+  tone:
+    - direct
+    - intelligent
+    - observational
+    - non-corporate
+    - grounded
+  avoid:
+    - buzzwords
+    - hype
+    - generic advice
+    - corporate speak
+    - listicles disguised as insights
+  posture: >
+    Never Blank does not tell founders what to do.
+    It names what they already sense but have not articulated.
+    The reader should feel: "That is exactly it."
+
+palette:
+  primary: "#000000"
+  secondary: "#FFFFFF"
+  accent: "#1A1A1A"
+  highlight: "#F5F5F5"
+
+logo:
+  path: "assets/logo/never-blank-logo.png"
+
+fonts:
+  primary: "Inter"
+  secondary: "Georgia"
+
+image:
+  hook_max_chars: 80
+  layout_default: "dark"

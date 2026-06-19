@@ -1,0 +1,60 @@
+name: topic_extract
+status: stub
+purpose: >
+  Convert a validated observation into a publishable topic angle.
+  The observation is the asset; this prompt packages it for the right
+  audience moment and content goal.
+
+input_schema:
+  observation_statement:
+    type: str
+    description: The validated observation (one sentence)
+  observation_type:
+    type: str
+    enum: [pattern, paradox, reversal, gap, behavior_delta, signal_cluster, implication]
+  content_goal:
+    type: str
+    enum: [educate, challenge, demonstrate, invite]
+  recently_used_angles:
+    type: list[str]
+    description: Angles used in the last 10 published pieces (for diversity)
+  audience_description:
+    type: str
+
+output_schema:
+  type: json_object
+  fields:
+    title:
+      type: str
+      description: Working title for the article, max 80 chars
+    angle:
+      type: str
+      description: The specific lens or approach for this piece, max 200 chars
+    hook:
+      type: str
+      description: Opening sentence that earns the reader's attention, max 120 chars
+    platform_fit:
+      type: list[str]
+      enum_values: [wix, linkedin, facebook, instagram, threads, telegram]
+    evergreen:
+      type: bool
+
+required_context:
+  - observation_statement
+  - observation_type
+  - content_goal
+  - audience_description
+
+constraints:
+  - output must be valid JSON object
+  - title max 80 characters
+  - hook must not be a question (declarative statement preferred)
+  - angle must not repeat any angle in recently_used_angles
+
+failure_modes:
+  - title too long: truncate in Python, log WARNING
+  - returns invalid JSON: retry once, then quarantine observation and log ERROR
+  - angle repeats recent content: retry with recently_used_angles as explicit exclusion list
+
+system: "PLACEHOLDER — written in Phase 3"
+user: "PLACEHOLDER — written in Phase 3"

@@ -1,0 +1,47 @@
+name: facebook_post
+status: stub
+purpose: >
+  Adapt a blog article into a Facebook post.
+  Facebook audience: broader small business community, warmer tone.
+  Format: conversational, grounded, image-paired.
+
+input_schema:
+  article_title:
+    type: str
+  article_body:
+    type: str
+  observation_statement:
+    type: str
+  content_goal:
+    type: str
+    enum: [educate, challenge, demonstrate, invite]
+  wix_article_url:
+    type: str
+    description: Optional link to full article
+  brand_voice_examples:
+    type: list[str]
+
+output_schema:
+  type: json_object
+  fields:
+    text:
+      type: str
+      description: Full Facebook post text, max 500 words (conversational, not formal)
+
+required_context:
+  - article_title
+  - observation_statement
+  - content_goal
+
+constraints:
+  - warmer and more direct than LinkedIn — but not casual or sloppy
+  - max 500 words
+  - no hashtag walls
+  - output must be valid JSON object
+
+failure_modes:
+  - text too long: rewrite with word count constraint
+  - returns invalid JSON: retry once, log ERROR
+
+system: "PLACEHOLDER — written in Phase 3"
+user: "PLACEHOLDER — written in Phase 3"

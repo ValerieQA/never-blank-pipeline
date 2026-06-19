@@ -1,0 +1,16 @@
+name: topic_score
+status: not_needed
+purpose: >
+  NOT USED IN V1.
+  Topic scoring is fully deterministic.
+  No LLM call required.
+
+decision: >
+  Scoring uses a weighted formula with inputs from intelligence.yaml.
+  Relevance is measured via cosine similarity against a positioning embedding.
+  Diversity adjustment reads from memory/portfolio.json.
+  All computations happen in src/internal/topic_scorer.py.
+
+implementation_note: >
+  Factors and weights defined in config/intelligence.yaml under
+  scoring_weights and diversity_weights.
