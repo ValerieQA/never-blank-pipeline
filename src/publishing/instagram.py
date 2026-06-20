@@ -99,7 +99,17 @@ class InstagramPublisher(BasePublisher):
             return self._fail(f"Publish HTTP {code2}: {err}")
 
         media_id = resp2.get("id", "")
+
+        # Fetch permalink (media_id is numeric; shortcode needed for IG URL)
+        permalink: str = ""
+        if media_id:
+            code3, meta, _ = _fetch(
+                f"{_GRAPH}/{media_id}?fields=permalink&access_token={urllib.parse.quote(ig_token)}"
+            )
+            if code3 == 200:
+                permalink = meta.get("permalink", "")
+
         return self._published(
             external_id=media_id,
-            url=f"https://www.instagram.com/p/{media_id}/" if media_id else None,
+            url=permalink or f"https://www.instagram.com/",
         )

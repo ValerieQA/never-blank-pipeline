@@ -1,0 +1,86 @@
+name: Phase 5D — Live Publish Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      wave1_only:
+        description: "Run Wave 1 only (Wix / Telegram / Facebook / Instagram)"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  live-publish:
+    name: Live Publish Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install --quiet python-dotenv openai Pillow cloudinary
+
+      - name: Create content fixture
+        run: python scripts/create_fixture.py
+
+      - name: Generate branded image
+        env:
+          NB_OPENAI_API_KEY:        ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_CLOUDINARY_CLOUD_NAME: ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
+          NB_CLOUDINARY_API_KEY:    ${{ secrets.NB_CLOUDINARY_API_KEY }}
+          NB_CLOUDINARY_API_SECRET: ${{ secrets.NB_CLOUDINARY_API_SECRET }}
+        run: python scripts/generate_image.py --upload
+
+      - name: Run live publish test
+        env:
+          NB_OPENAI_API_KEY:                 ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_WIX_API_KEY:                    ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:                    ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_POST_OWNER_ID:              ${{ secrets.NB_WIX_POST_OWNER_ID }}
+          NB_LINKEDIN_ACCESS_TOKEN:          ${{ secrets.NB_LINKEDIN_ACCESS_TOKEN }}
+          NB_LINKEDIN_CLIENT_ID:             ${{ secrets.NB_LINKEDIN_CLIENT_ID }}
+          NB_LINKEDIN_CLIENT_SECRET:         ${{ secrets.NB_LINKEDIN_CLIENT_SECRET }}
+          NB_META_USER_TOKEN:                ${{ secrets.NB_META_USER_TOKEN }}
+          NB_META_IG_USER_ID:                ${{ secrets.NB_META_IG_USER_ID }}
+          NB_META_FB_PAGE_ID:                ${{ secrets.NB_META_FB_PAGE_ID }}
+          NB_META_FB_PAGE_TOKEN:             ${{ secrets.NB_META_FB_PAGE_TOKEN }}
+          NB_THREADS_ACCESS_TOKEN:           ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
+          NB_TELEGRAM_BOT_TOKEN:             ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
+          NB_TELEGRAM_CHANNEL_ID:            ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
+          NB_CLOUDINARY_CLOUD_NAME:          ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
+          NB_CLOUDINARY_API_KEY:             ${{ secrets.NB_CLOUDINARY_API_KEY }}
+          NB_CLOUDINARY_API_SECRET:          ${{ secrets.NB_CLOUDINARY_API_SECRET }}
+          NB_GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.NB_GOOGLE_SHEETS_CREDENTIALS_JSON }}
+          NB_GOOGLE_SHEET_ID:                ${{ secrets.NB_GOOGLE_SHEET_ID }}
+        run: |
+          if [ "${{ inputs.wave1_only }}" = "true" ]; then
+            python scripts/live_publish_test.py --wave1-only
+          else
+            python scripts/live_publish_test.py
+          fi
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-publish-report-${{ github.run_id }}
+          path: |
+            reports/live_publish_test.json
+            reports/live_publish_test.md
+            data/images/latest/image.png
+          retention-days: 90
+
+      - name: Print report to step summary
+        if: always()
+        run: |
+          echo "## Phase 5D — Live Publish Test" >> $GITHUB_STEP_SUMMARY
+          if [ -f reports/live_publish_test.md ]; then
+            cat reports/live_publish_test.md >> $GITHUB_STEP_SUMMARY
+          fi

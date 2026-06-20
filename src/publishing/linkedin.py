@@ -21,7 +21,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from src.publishing.base import BasePublisher, DraftPackage, _fetch
+from src.publishing.base import BasePublisher, DraftPackage, _fetch, _fetch_h
 from src.publishing.result import PublishResult, PublishStatus
 
 _LI_VERSION = "202504"
@@ -193,7 +193,7 @@ class LinkedInPublisher(BasePublisher):
                 }
             }
 
-        code, resp, _ = _fetch(
+        code, resp, _, resp_headers = _fetch_h(
             "https://api.linkedin.com/rest/posts",
             method="POST",
             headers=auth_headers,
@@ -201,11 +201,17 @@ class LinkedInPublisher(BasePublisher):
         )
 
         if code in (200, 201):
-            post_id = resp.get("id", resp.get("value", ""))
-            note    = " (with image)" if image_urn else " (text-only — image upload failed)"
+            # LinkedIn returns the post URN in X-RestLi-Id header
+            restli_id = resp_headers.get("X-RestLi-Id", resp_headers.get("x-restli-id", ""))
+            post_id   = restli_id or resp.get("id", resp.get("value", ""))
+            # Construct share URL from URN (urn:li:share:ID → linkedin.com/feed/update/urn:li:share:ID/)
+            post_url = ""
+            if post_id and ":" in str(post_id):
+                post_url = f"https://www.linkedin.com/feed/update/{post_id}/"
+            note = "(with image)" if image_urn else "(text-only — image upload failed)"
             return self._published(
                 external_id=str(post_id),
-                url="https://www.linkedin.com/feed/",
+                url=post_url or "https://www.linkedin.com/feed/",
                 raw_path=note,
             )
 

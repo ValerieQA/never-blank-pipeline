@@ -120,6 +120,42 @@ def _fetch(
     return code, parsed, text
 
 
+def _fetch_h(
+    url: str,
+    *,
+    method: str = "GET",
+    headers: dict = None,
+    body: bytes = None,
+    timeout: int = 20,
+) -> tuple[int, dict, str, dict]:
+    """Like _fetch() but also returns response headers as a dict."""
+    req = urllib.request.Request(
+        url, data=body, method=method, headers=headers or {}
+    )
+    resp_headers: dict = {}
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw          = resp.read()
+            code         = resp.status
+            resp_headers = dict(resp.headers)
+    except urllib.error.HTTPError as exc:
+        code = exc.code
+        try:
+            raw = exc.read()
+        except Exception:
+            raw = b""
+        resp_headers = dict(exc.headers) if exc.headers else {}
+    except Exception as exc:
+        return 0, {}, str(exc), {}
+
+    text = raw.decode("utf-8", errors="replace")
+    try:
+        parsed = json.loads(text)
+    except Exception:
+        parsed = {"_raw": text}
+    return code, parsed, text, resp_headers
+
+
 # ── Base publisher ─────────────────────────────────────────────────────────────
 
 class BasePublisher(ABC):

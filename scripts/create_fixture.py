@@ -122,6 +122,17 @@ def main() -> None:
             "wix_tags":         ["034e0b1e-c9c9-4940-97c2-af679d22acae", "64d4d6d7-a79c-48a5-9bfa-b62a75a2f278"],
         },
         "threads.json": {"sequence": THREADS},
+        "qc_report.json": {
+            "overall_status": "GREEN",
+            "checks": [],
+            "rewrite_count": 0,
+            "final_status": "GREEN",
+            "quarantined": False,
+            "quarantine_reason": "",
+            "quarantine_path": None,
+            "generated_at": now,
+            "_note": "fixture — pre-approved content, QC manually cleared",
+        },
     }
     text_files = {
         "blog_post.md":   BLOG_POST,
