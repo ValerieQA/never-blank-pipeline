@@ -1,0 +1,62 @@
+name: Generate Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Mode"
+        required: true
+        type: choice
+        options:
+          - dry-run
+          - upload
+
+jobs:
+  generate-image:
+    name: Image Pipeline (${{ inputs.mode }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install --quiet python-dotenv openai Pillow cloudinary
+
+      - name: Create test fixture (if no generated draft exists)
+        run: |
+          if [ ! -f data/drafts/latest/metadata.json ]; then
+            python scripts/create_fixture.py
+          fi
+
+      - name: Run image pipeline
+        env:
+          NB_OPENAI_API_KEY:         ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_CLOUDINARY_CLOUD_NAME:  ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
+          NB_CLOUDINARY_API_KEY:     ${{ secrets.NB_CLOUDINARY_API_KEY }}
+          NB_CLOUDINARY_API_SECRET:  ${{ secrets.NB_CLOUDINARY_API_SECRET }}
+        run: python scripts/generate_image.py --${{ inputs.mode }}
+
+      - name: Upload generated image artifact
+        if: inputs.mode == 'upload' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-image-${{ github.run_id }}
+          path: data/images/latest/
+          retention-days: 30
+
+      - name: Show image URL
+        if: inputs.mode == 'upload'
+        run: |
+          if [ -f data/drafts/latest/image_url.txt ]; then
+            URL=$(cat data/drafts/latest/image_url.txt)
+            echo "## Image Generated" >> $GITHUB_STEP_SUMMARY
+            echo "**Cloudinary URL:** $URL" >> $GITHUB_STEP_SUMMARY
+            echo "![preview]($URL)" >> $GITHUB_STEP_SUMMARY
+          fi

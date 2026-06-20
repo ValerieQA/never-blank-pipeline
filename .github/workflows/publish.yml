@@ -32,12 +32,25 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install --quiet python-dotenv
+        run: pip install --quiet python-dotenv openai Pillow cloudinary
 
       - name: Create test fixture (if no generated draft exists)
         run: |
           if [ ! -f data/drafts/latest/metadata.json ]; then
             python scripts/create_fixture.py
+          fi
+
+      - name: Generate image (if no image_url.txt yet)
+        env:
+          NB_OPENAI_API_KEY:        ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_CLOUDINARY_CLOUD_NAME: ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
+          NB_CLOUDINARY_API_KEY:    ${{ secrets.NB_CLOUDINARY_API_KEY }}
+          NB_CLOUDINARY_API_SECRET: ${{ secrets.NB_CLOUDINARY_API_SECRET }}
+        run: |
+          if [ ! -f data/drafts/latest/image_url.txt ]; then
+            python scripts/generate_image.py --upload
+          else
+            echo "image_url.txt already exists — skipping image generation"
           fi
 
       - name: Run publisher

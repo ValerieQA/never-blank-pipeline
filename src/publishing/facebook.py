@@ -1,13 +1,15 @@
 """
-Facebook Page publisher — Graph API /v21.0/{page_id}/feed.
+Facebook Page publisher — Graph API v21.0.
+
+If image_url is available: POST /{page_id}/photos (image + caption).
+Otherwise:                 POST /{page_id}/feed  (text only).
 
 dry_run    — validate payload, no API call
 draft_only — SKIPPED (Facebook has no draft concept via API)
-live       — POST to page feed → PUBLISHED
+live       — PUBLISHED
 
 Requires: NB_META_FB_PAGE_ID, NB_META_FB_PAGE_TOKEN
 """
-import json
 import os
 import urllib.parse
 
@@ -38,29 +40,43 @@ class FacebookPublisher(BasePublisher):
         if not text:
             return self._fail("facebook.txt is empty")
 
+        has_image = bool(draft.image_url)
+
         if mode == "dry_run":
             return PublishResult(
                 platform=self.name,
                 status=PublishStatus.SKIPPED,
-                error_message=f"dry_run: payload valid — {len(text)} chars",
+                error_message=(
+                    f"dry_run: payload valid — {len(text)} chars, "
+                    f"image={'yes (' + draft.image_url + ')' if has_image else 'none (text-only post)'}"
+                ),
             )
 
-        params: dict = {"message": text, "access_token": page_token}
+        if has_image:
+            # Photo post: image + caption
+            params = {
+                "url":          draft.image_url,
+                "caption":      text,
+                "access_token": page_token,
+            }
+            endpoint = f"{_GRAPH}/{page_id}/photos"
+        else:
+            # Text-only feed post
+            params = {
+                "message":      text,
+                "access_token": page_token,
+            }
+            endpoint = f"{_GRAPH}/{page_id}/feed"
 
-        # Attach image if available (as link preview; full photo upload is V2)
-        if draft.image_url:
-            params["link"] = draft.image_url
-
-        body = urllib.parse.urlencode(params).encode()
         code, resp, _ = _fetch(
-            f"{_GRAPH}/{page_id}/feed",
+            endpoint,
             method="POST",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
-            body=body,
+            body=urllib.parse.urlencode(params).encode(),
         )
 
         if code in (200, 201):
-            post_id = resp.get("id", "")
+            post_id = resp.get("post_id", resp.get("id", ""))
             url = f"https://www.facebook.com/{post_id}" if post_id else ""
             return self._published(external_id=post_id, url=url)
 
