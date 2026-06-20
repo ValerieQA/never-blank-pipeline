@@ -33,9 +33,20 @@ _LI_HEADERS_BASE = {
 
 def _get_author_urn(token: str, client_id: str, client_secret: str) -> tuple[str, str]:
     """
-    Call /oauth/v2/introspectToken to get the user's sub (person ID).
+    Resolve the LinkedIn author URN for posting.
+
+    Resolution order:
+      1. NB_LINKEDIN_AUTHOR_URN env var (most reliable — set this)
+      2. Token introspection `sub` field (only present with openid scope)
+
     Returns (urn, error_message).
     """
+    # 1. Explicit env var — always preferred
+    static_urn = os.getenv("NB_LINKEDIN_AUTHOR_URN", "")
+    if static_urn:
+        return static_urn if static_urn.startswith("urn:li:") else f"urn:li:person:{static_urn}", ""
+
+    # 2. Introspection (requires openid scope — may not be available)
     basic = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
     code, resp, _ = _fetch(
         "https://www.linkedin.com/oauth/v2/introspectToken",
@@ -53,9 +64,17 @@ def _get_author_urn(token: str, client_id: str, client_secret: str) -> tuple[str
     if code != 200:
         return "", f"Introspection HTTP {code}: {resp.get('error_description', '')[:120]}"
     sub = resp.get("sub", "")
-    if not sub:
-        return "", "Introspection returned no 'sub' field — cannot resolve author URN"
-    return f"urn:li:person:{sub}", ""
+    if sub:
+        return f"urn:li:person:{sub}", ""
+
+    return (
+        "",
+        "Cannot resolve LinkedIn author URN. "
+        "Add NB_LINKEDIN_AUTHOR_URN to GitHub Secrets. "
+        "Find it: LinkedIn Developer Portal → Tools → OAuth 2.0 tools → "
+        "generate a token, the API returns your member URN, "
+        "OR check your profile URL and look for the numeric id."
+    )
 
 
 def _upload_image_to_linkedin(
