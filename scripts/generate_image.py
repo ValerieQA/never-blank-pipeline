@@ -92,16 +92,16 @@ def dry_run() -> int:
         print(f"  ✗  Pillow error: {exc}")
         errors.append("pillow")
 
-    # ── 4. OpenAI ────────────────────────────────────────────────────
+    # ── 4. OpenAI (optional — has programmatic fallback) ─────────────
     print(f"\n{SEP}")
-    print("  OpenAI (DALL-E 3)")
+    print("  OpenAI (gpt-image-1 / dall-e-3) — optional, has fallback")
     print(SEP)
     key = os.getenv("NB_OPENAI_API_KEY", "")
     if key:
         print(f"  ✓  NB_OPENAI_API_KEY present ({len(key)} chars)")
+        print(f"  ○  If AI image generation unavailable → programmatic Pillow image used")
     else:
-        print(f"  ✗  NB_OPENAI_API_KEY missing")
-        errors.append("openai key")
+        print(f"  ○  NB_OPENAI_API_KEY not set — will use programmatic Pillow image")
 
     # ── 5. Cloudinary ─────────────────────────────────────────────────
     print(f"\n{SEP}")

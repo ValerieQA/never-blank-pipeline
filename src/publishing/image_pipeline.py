@@ -14,6 +14,7 @@ Public API:
   composite_image(base_bytes, hook_text) -> PIL.Image
 """
 import json
+import math
 import os
 import time
 import urllib.request
@@ -21,7 +22,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 # ── Paths & constants ──────────────────────────────────────────────────────────
 
@@ -97,11 +98,55 @@ def _wrap_text(text: str, font: ImageFont.FreeTypeFont, max_w: int) -> list[str]
 
 # ── DALL-E image generation ───────────────────────────────────────────────────
 
-def _generate_dalle_image(prompt: str) -> bytes:
+def _generate_programmatic_base() -> bytes:
     """
-    Generate an image via OpenAI image API.
-    Tries gpt-image-1 (newer accounts) first, falls back to dall-e-3.
-    Returns raw PNG bytes.
+    Create a dark branded background using only Pillow — no AI API required.
+    Produces a 1024×1024 editorial dark image with subtle abstract texture.
+    """
+    import struct, zlib
+
+    W, H = 1024, 1024
+    canvas = Image.new("RGB", (W, H), (4, 4, 6))
+    draw   = ImageDraw.Draw(canvas)
+
+    # Radial gradient: very dark charcoal center expanding to pure black
+    cx, cy = W // 2, H // 2
+    for r in range(min(W, H) // 2, 0, -4):
+        frac  = r / (min(W, H) / 2)
+        shade = int(frac * 22)   # 0→22 (very subtle, stays dark)
+        draw.ellipse(
+            [cx - r, cy - r, cx + r, cy + r],
+            fill=(shade, shade, int(shade * 1.1)),
+        )
+
+    # Thin diagonal accent lines — barely visible
+    for i in range(-6, 14):
+        offset = i * 120
+        draw.line(
+            [(offset, 0), (offset + H, H)],
+            fill=(12, 12, 16),
+            width=1,
+        )
+
+    # Subtle horizontal bands
+    for y in range(0, H, 80):
+        frac  = abs(math.sin(y / 200)) * 0.06
+        shade = int(frac * 255)
+        draw.rectangle([0, y, W, y + 40], fill=(shade, shade, int(shade * 1.05)))
+
+    # Soft blur to smooth everything
+    canvas = canvas.filter(ImageFilter.GaussianBlur(radius=3))
+
+    buf = BytesIO()
+    canvas.save(buf, "PNG")
+    return buf.getvalue()
+
+
+def _generate_ai_image(prompt: str, log=print) -> tuple[bytes, str]:
+    """
+    Try OpenAI image generation.
+    Tries gpt-image-1, then dall-e-3.
+    Returns (bytes, method_used) or raises if both fail.
     """
     import base64
     from openai import OpenAI
@@ -116,25 +161,47 @@ def _generate_dalle_image(prompt: str) -> bytes:
         "Suitable for a thought-leadership brand aimed at founders."
     )
 
-    # gpt-image-1 returns b64_json; dall-e-3 returns url
+    errors: dict = {}
     for model, fmt in [("gpt-image-1", "b64_json"), ("dall-e-3", "url")]:
         try:
-            kwargs = dict(model=model, prompt=styled, size="1024x1024", n=1)
+            kwargs: dict = dict(model=model, prompt=styled, size="1024x1024", n=1)
             if fmt == "b64_json":
                 kwargs["response_format"] = "b64_json"
             response = client.images.generate(**kwargs)
             item = response.data[0]
             if fmt == "b64_json":
-                return base64.b64decode(item.b64_json)
+                return base64.b64decode(item.b64_json), model
             else:
                 with urllib.request.urlopen(item.url, timeout=30) as r:
-                    return r.read()
+                    return r.read(), model
         except Exception as exc:
-            if model == "dall-e-3":
-                raise
-            last_exc = exc
-            continue
-    raise last_exc
+            errors[model] = str(exc)[:120]
+
+    raise RuntimeError(
+        f"OpenAI image generation unavailable. "
+        f"gpt-image-1: {errors.get('gpt-image-1', '?')} | "
+        f"dall-e-3: {errors.get('dall-e-3', '?')}"
+    )
+
+
+def _generate_base_image(prompt: str, log=print) -> tuple[bytes, str]:
+    """
+    Generate base image: try OpenAI first, fall back to programmatic.
+    Returns (bytes, method_used).
+    """
+    openai_key = os.getenv("NB_OPENAI_API_KEY", "")
+    if openai_key:
+        try:
+            data, method = _generate_ai_image(prompt, log=log)
+            log(f"  Base image: AI ({method})")
+            return data, method
+        except Exception as exc:
+            log(f"  OpenAI image generation unavailable ({exc.__class__.__name__}: {str(exc)[:80]})")
+            log(f"  Falling back to programmatic base image…")
+
+    data = _generate_programmatic_base()
+    log(f"  Base image: programmatic (Pillow)")
+    return data, "programmatic"
 
 
 # ── Compositing ────────────────────────────────────────────────────────────────
@@ -283,10 +350,9 @@ def run_image_pipeline(
             f"Abstract, conceptual, dark background."
         )
 
-    # Generate base image
-    log("  Calling DALL-E 3…")
-    base_bytes = _generate_dalle_image(prompt)
-    log(f"  Base image: {len(base_bytes) // 1024}KB received")
+    # Generate base image (AI or programmatic fallback)
+    base_bytes, method = _generate_base_image(prompt, log=log)
+    log(f"  Base image: {len(base_bytes) // 1024}KB  [{method}]")
 
     # Composite branding
     log("  Compositing logo + hook text…")
