@@ -82,6 +82,24 @@ class InstagramPublisher(BasePublisher):
         if not creation_id:
             return self._fail("Container created but no ID returned")
 
+        # Step 1b: wait for container to finish processing (avoids "Media ID not available")
+        import time as _time
+        for attempt in range(10):
+            _time.sleep(3)
+            code_s, status_resp, _ = _fetch(
+                f"{_GRAPH}/{creation_id}"
+                f"?fields=status_code&access_token={urllib.parse.quote(ig_token)}"
+            )
+            status_code = status_resp.get("status_code", "")
+            if status_code == "FINISHED":
+                break
+            if status_code in ("ERROR", "EXPIRED"):
+                err = status_resp.get("status_code", "")
+                return self._fail(f"Container {status_code}: {err}")
+            # IN_PROGRESS or unknown: keep waiting
+        else:
+            return self._fail("Container timed out after 30s — status never FINISHED")
+
         # Step 2: publish container
         publish_params = urllib.parse.urlencode({
             "creation_id":  creation_id,
