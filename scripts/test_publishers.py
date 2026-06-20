@@ -464,6 +464,8 @@ def audit_linkedin() -> Result:
         f"{client_id}:{client_secret}".encode()
     ).decode()
 
+    # LinkedIn introspection requires client_id + client_secret in the POST body
+    # (not just Basic auth header) alongside the token being inspected.
     code_i, intro, _ = _fetch(
         "https://www.linkedin.com/oauth/v2/introspectToken",
         method="POST",
@@ -471,7 +473,11 @@ def audit_linkedin() -> Result:
             "Authorization": f"Basic {basic_auth}",
             "Content-Type":  "application/x-www-form-urlencoded",
         },
-        body=f"token={urllib.parse.quote(token)}".encode(),
+        body=urllib.parse.urlencode({
+            "token":         token,
+            "client_id":     client_id,
+            "client_secret": client_secret,
+        }).encode(),
     )
 
     if code_i == 200:
