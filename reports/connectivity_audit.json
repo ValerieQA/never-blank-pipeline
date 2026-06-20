@@ -1,91 +1,92 @@
 {
-  "generated_at": "2026-06-20T01:39:31.991332+00:00",
+  "generated_at": "2026-06-20T01:59:02.537976+00:00",
   "secrets": [
     {
       "secret": "NB_OPENAI_API_KEY",
       "present": true,
-      "preview": "sk-p...H1IA (164 chars)"
+      "preview": "sk-p...lzUA (164 chars)"
     },
     {
       "secret": "NB_WIX_API_KEY",
-      "present": true,
-      "preview": "IST....VsPN (600 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_WIX_SITE_ID",
-      "present": true,
-      "preview": "b254...67de (36 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_LINKEDIN_ACCESS_TOKEN",
-      "present": true,
-      "preview": "AQWq...yOZQ (350 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_META_USER_TOKEN",
-      "present": true,
-      "preview": "EAAY...ZDZD (286 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_META_IG_USER_ID",
-      "present": true,
-      "preview": "1784...5275 (17 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_META_FB_PAGE_ID",
-      "present": true,
-      "preview": "1219...8622 (16 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_META_FB_PAGE_TOKEN",
-      "present": true,
-      "preview": "EAAY...gFAF (238 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_THREADS_ACCESS_TOKEN",
-      "present": true,
-      "preview": "THAA...GMZD (202 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_TELEGRAM_BOT_TOKEN",
-      "present": true,
-      "preview": "8826...RlfU (46 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_TELEGRAM_CHANNEL_ID",
-      "present": true,
-      "preview": "@nev...eros (20 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_CLOUDINARY_CLOUD_NAME",
-      "present": true,
-      "preview": "df0l...7izx (9 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_CLOUDINARY_API_KEY",
-      "present": true,
-      "preview": "9648...4388 (15 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_CLOUDINARY_API_SECRET",
-      "present": true,
-      "preview": "S697...CuWM (27 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_GOOGLE_SHEETS_CREDENTIALS_JSON",
-      "present": true,
-      "preview": "valid JSON (2342 chars)"
+      "present": false,
+      "preview": ""
     },
     {
       "secret": "NB_GOOGLE_SHEET_ID",
-      "present": true,
-      "preview": "1vC-...xAdo (44 chars)"
+      "present": false,
+      "preview": ""
     }
   ],
   "results": [
     {
       "provider": "OpenAI",
       "status": "PASS",
+      "failure_type": "",
       "reason": "",
       "details": {},
       "checks": [
@@ -103,158 +104,17 @@
     },
     {
       "provider": "Telegram",
-      "status": "PASS",
-      "reason": "",
-      "details": {},
-      "checks": [
-        {
-          "check": "Bot identity (getMe)",
-          "passed": true,
-          "msg": "@never_blank_publisher_bot"
-        },
-        {
-          "check": "Channel access (getChat)",
-          "passed": true,
-          "msg": "type=channel title='Never Blank'"
-        },
-        {
-          "check": "Bot can post (admin check)",
-          "passed": true,
-          "msg": "bot status in channel: administrator"
-        }
-      ]
-    },
-    {
-      "provider": "Wix",
       "status": "FAIL",
-      "reason": "Cannot reach Wix APIs: HTTP Error 403: Forbidden",
+      "failure_type": "",
+      "reason": "Missing secret: NB_TELEGRAM_BOT_TOKEN",
       "details": {},
-      "checks": [
-        {
-          "check": "Site access",
-          "passed": false,
-          "msg": "blog categories: HTTP Error 403: Forbidden | site-list: HTTP Error 403: Forbidden"
-        }
-      ]
-    },
-    {
-      "provider": "LinkedIn",
-      "status": "FAIL",
-      "reason": "LinkedIn token invalid (HTTP 403). Re-authorize at LinkedIn Developer portal.",
-      "details": {},
-      "checks": [
-        {
-          "check": "Token valid",
-          "passed": false,
-          "msg": "HTTP 403 — token expired or revoked"
-        }
-      ]
-    },
-    {
-      "provider": "Facebook",
-      "status": "FAIL",
-      "reason": "Page API failed: HTTP Error 400: Bad Request",
-      "details": {},
-      "checks": [
-        {
-          "check": "Page access",
-          "passed": false,
-          "msg": "HTTP Error 400: Bad Request"
-        }
-      ]
-    },
-    {
-      "provider": "Instagram",
-      "status": "FAIL",
-      "reason": "IG API failed: HTTP Error 400: Bad Request",
-      "details": {},
-      "checks": [
-        {
-          "check": "IG account access",
-          "passed": false,
-          "msg": "HTTP Error 400: Bad Request"
-        }
-      ]
-    },
-    {
-      "provider": "Threads",
-      "status": "FAIL",
-      "reason": "Threads API call failed: HTTP Error 400: Bad Request",
-      "details": {},
-      "checks": [
-        {
-          "check": "Threads profile access",
-          "passed": false,
-          "msg": "HTTP Error 400: Bad Request"
-        }
-      ]
-    },
-    {
-      "provider": "Google Sheets",
-      "status": "WARNING",
-      "reason": "Cannot test auth without 'cryptography' package. Run: pip install cryptography. Credentials JSON is valid.",
-      "details": {},
-      "checks": [
-        {
-          "check": "Credentials JSON valid",
-          "passed": true,
-          "msg": "service_account=never-blank-pipeline@never-blank.iam.gserviceaccount.com"
-        },
-        {
-          "check": "JWT signing (cryptography package)",
-          "passed": false,
-          "msg": "pip install cryptography required for full auth check"
-        },
-        {
-          "check": "Spreadsheet URL format",
-          "passed": true,
-          "msg": "ID=1vC-UzTpY1qv32Fg5C66BceRkgrnMFae-gVoYVKrxAdo"
-        }
-      ]
-    },
-    {
-      "provider": "Cloudinary",
-      "status": "WARNING",
-      "reason": "Cloudinary credentials work but logo not found at /tmp/Never-Blank-pipeline/assets/logo/never-blank-logo.png. Add logo before generating images.",
-      "details": {},
-      "checks": [
-        {
-          "check": "Credentials valid (usage API)",
-          "passed": true,
-          "msg": "plan=Free storage_used=242814315B"
-        },
-        {
-          "check": "Upload permission (test image)",
-          "passed": true,
-          "msg": "uploaded to: https://res.cloudinary.com/df0lt7izx/image/upload/v1781919570/never-blank/audit-test/connectivity-test-1781919570.png"
-        },
-        {
-          "check": "Test asset cleanup",
-          "passed": true,
-          "msg": "test image deleted"
-        },
-        {
-          "check": "Logo file exists",
-          "passed": false,
-          "msg": "NOT FOUND: /tmp/Never-Blank-pipeline/assets/logo/never-blank-logo.png"
-        },
-        {
-          "check": "Output folder: images",
-          "passed": true,
-          "msg": "/tmp/Never-Blank-pipeline/data/images"
-        },
-        {
-          "check": "Output folder: drafts",
-          "passed": true,
-          "msg": "/tmp/Never-Blank-pipeline/data/drafts"
-        }
-      ]
+      "checks": []
     }
   ],
   "summary": {
-    "pass": 2,
-    "fail": 5,
-    "warning": 2,
+    "pass": 1,
+    "fail": 1,
+    "warning": 0,
     "skip": 0
   }
 }
