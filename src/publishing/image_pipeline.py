@@ -99,8 +99,11 @@ def _wrap_text(text: str, font: ImageFont.FreeTypeFont, max_w: int) -> list[str]
 
 def _generate_dalle_image(prompt: str) -> bytes:
     """
-    Call DALL-E 3 with a brand-styled prompt, download result, return raw bytes.
+    Generate an image via OpenAI image API.
+    Tries gpt-image-1 (newer accounts) first, falls back to dall-e-3.
+    Returns raw PNG bytes.
     """
+    import base64
     from openai import OpenAI
     client = OpenAI(api_key=os.environ["NB_OPENAI_API_KEY"])
 
@@ -113,16 +116,25 @@ def _generate_dalle_image(prompt: str) -> bytes:
         "Suitable for a thought-leadership brand aimed at founders."
     )
 
-    response = client.images.generate(
-        model="dall-e-3",
-        prompt=styled,
-        size="1024x1024",
-        quality="standard",
-        n=1,
-    )
-    image_url = response.data[0].url
-    with urllib.request.urlopen(image_url, timeout=30) as resp:
-        return resp.read()
+    # gpt-image-1 returns b64_json; dall-e-3 returns url
+    for model, fmt in [("gpt-image-1", "b64_json"), ("dall-e-3", "url")]:
+        try:
+            kwargs = dict(model=model, prompt=styled, size="1024x1024", n=1)
+            if fmt == "b64_json":
+                kwargs["response_format"] = "b64_json"
+            response = client.images.generate(**kwargs)
+            item = response.data[0]
+            if fmt == "b64_json":
+                return base64.b64decode(item.b64_json)
+            else:
+                with urllib.request.urlopen(item.url, timeout=30) as r:
+                    return r.read()
+        except Exception as exc:
+            if model == "dall-e-3":
+                raise
+            last_exc = exc
+            continue
+    raise last_exc
 
 
 # ── Compositing ────────────────────────────────────────────────────────────────
