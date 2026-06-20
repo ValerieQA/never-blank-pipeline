@@ -622,19 +622,17 @@ def audit_facebook() -> Result:
     else:
         checks.append(_check("debug_token", False, f"HTTP {code_d}"))
 
-    # Step 2: direct page access (only if token appeared valid above)
+    # Step 2: direct page access — id and name only
+    # NOTE: 'tasks' field was removed from the Graph API for page tokens in newer versions.
+    # Posting permission is confirmed via debug_token scopes (pages_manage_posts) above.
     code_p, page, _ = _fetch(
         f"https://graph.facebook.com/v21.0/{page_id}"
-        f"?fields=id,name,tasks"
+        f"?fields=id,name"
         f"&access_token={urllib.parse.quote(page_token)}",
     )
     if code_p == 200 and "error" not in page:
-        name  = page.get("name", "?")
-        tasks = page.get("tasks", [])
+        name = page.get("name", "?")
         checks.append(_check("Page access", True, f"name={name!r}"))
-        can_create = "CREATE_CONTENT" in tasks or not tasks
-        checks.append(_check("Create content permission", can_create,
-                              f"tasks={tasks}" if tasks else "tasks not returned — assume OK"))
     else:
         err_msg, _, _ = _meta_error(page)
         checks.append(_check("Page access", False,
@@ -651,11 +649,10 @@ def audit_facebook() -> Result:
                       failure_type=ftype,
                       checks=checks)
 
-    has_pm = any("manage" in s for s in (page.get("tasks") or []))
-    if not has_pm and "scopes" in locals() and scopes and "pages_manage_posts" not in scopes:
-        return Result(provider, Result.WARNING,
-                      "pages_manage_posts scope not confirmed. Posts may be blocked.",
-                      checks=checks)
+    # Posting permission already confirmed via debug_token scopes above
+    has_pm = "pages_manage_posts" in (locals().get("scopes") or [])
+    checks.append(_check("pages_manage_posts confirmed via debug_token", has_pm,
+                          "confirmed in scopes" if has_pm else "not found in scopes"))
 
     return Result(provider, Result.PASS, checks=checks)
 
@@ -674,23 +671,18 @@ def audit_instagram() -> Result:
     import urllib.parse
 
     # Step 1: IG Business account fields
+    # NOTE: account_type field requires instagram_manage_insights or similar permission
+    # and is not available in all token configurations. Use id+username only for identity;
+    # publishing permission confirmed separately via content_publishing_limit.
     code_ig, ig, _ = _fetch(
         f"https://graph.facebook.com/v21.0/{ig_id}"
-        f"?fields=id,name,username,account_type,followers_count,media_count"
+        f"?fields=id,username,followers_count,media_count"
         f"&access_token={urllib.parse.quote(token)}",
     )
     if code_ig == 200 and "error" not in ig:
-        acct_type   = ig.get("account_type", "?")
-        username    = ig.get("username", "?")
-        is_business = acct_type in ("BUSINESS", "CREATOR")
-        checks.append(_check("Account access", True, f"@{username} type={acct_type}"))
-        checks.append(_check("Business/Creator account", is_business,
-                              f"account_type={acct_type}"))
-        if not is_business:
-            return Result(provider, Result.FAIL,
-                          f"Account type={acct_type}. Must be BUSINESS or CREATOR for API posting.",
-                          failure_type=Result.MISSING_SCOPE,
-                          checks=checks)
+        username = ig.get("username", "?")
+        checks.append(_check("Account access", True,
+                              f"@{username} id={ig_id} followers={ig.get('followers_count','?')}"))
     else:
         err_msg, _, _ = _meta_error(ig)
         checks.append(_check("IG account access", False,
@@ -756,9 +748,11 @@ def audit_threads() -> Result:
                          True, "format check — classification determined by API response"))
 
     # Step 1: identity call on graph.threads.net
+    # NOTE: threads_profile_category was removed from the Threads API and now returns 500.
+    # Use id,username only for identity check.
     code_me, me, _ = _fetch(
         f"https://graph.threads.net/v1.0/me"
-        f"?fields=id,username,threads_profile_category"
+        f"?fields=id,username"
         f"&access_token={urllib.parse.quote(token)}",
     )
     if code_me == 200 and "error" not in me:
