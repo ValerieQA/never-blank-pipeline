@@ -284,10 +284,12 @@ def audit_wix() -> Result:
         headers=base_headers,
         timeout=15,
     )
-    if code_sp == 200:
-        locale = sp.get("properties", {}).get("locale", {}).get("languageCode", "?")
+    if code_sp in (200, 404):
+        # 404 is valid: site-properties returns 404 when no properties have been configured
+        # yet, but the API key and site ID are accepted. 200 = properties exist.
+        locale = sp.get("properties", {}).get("locale", {}).get("languageCode", "?") if code_sp == 200 else "none configured"
         checks.append(_check("API key valid (site-properties)", True,
-                              f"locale={locale}"))
+                              f"HTTP {code_sp} — locale={locale}"))
         key_valid = True
     elif code_sp == 401:
         body_msg = sp.get("message", sp.get("_raw", ""))[:120]
@@ -430,6 +432,7 @@ def audit_linkedin() -> Result:
         headers={
             "Authorization": f"Bearer {token}",
             "X-Restli-Protocol-Version": "2.0.0",
+            "LinkedIn-Version": "202304",
         },
     )
     me_ok = code_me == 200
