@@ -443,112 +443,78 @@ def audit_wix() -> Result:
 
 def audit_linkedin() -> Result:
     provider = "LinkedIn"
-    missing = _require("NB_LINKEDIN_ACCESS_TOKEN")
+    missing = _require("NB_LINKEDIN_ACCESS_TOKEN", "NB_LINKEDIN_CLIENT_ID",
+                       "NB_LINKEDIN_CLIENT_SECRET")
     if missing:
         return Result(provider, Result.FAIL, f"Missing secret: {missing}",
                       failure_type=Result.MISSING_ID)
 
-    token  = _env("NB_LINKEDIN_ACCESS_TOKEN")
-    checks = []
+    token         = _env("NB_LINKEDIN_ACCESS_TOKEN")
+    client_id     = _env("NB_LINKEDIN_CLIENT_ID")
+    client_secret = _env("NB_LINKEDIN_CLIENT_SECRET")
+    checks        = []
 
-    # Step 1a: try /v2/me (works with r_liteprofile / profile scopes — standard OAuth2)
-    # NOTE: /v2/userinfo is OpenID Connect; it requires the 'openid' scope and fails with
-    # "userinfo.GET.NO_VERSION" when the token has only r_liteprofile. Always try /v2/me first.
-    code_me, body_me, _ = _fetch(
-        "https://api.linkedin.com/v2/me",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "X-Restli-Protocol-Version": "2.0.0",
-            "LinkedIn-Version": "202304",
-        },
-    )
-    me_ok = code_me == 200
-    if me_ok:
-        member_id = body_me.get("id", "?")
-        fn = body_me.get("localizedFirstName", "?")
-        checks.append(_check("Token valid (/v2/me)", True, f"id={member_id} firstName={fn!r}"))
-    else:
-        me_error = body_me.get("message", body_me.get("_raw", ""))
-        checks.append(_check("Token valid (/v2/me)", False,
-                              f"HTTP {code_me} — {me_error[:120]}"))
-
-        # Step 1b: try /v2/userinfo (OpenID Connect — requires 'openid' scope)
-        code_ui, body_ui, _ = _fetch(
-            "https://api.linkedin.com/v2/userinfo",
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        if code_ui == 200:
-            sub  = body_ui.get("sub", "?")
-            name = body_ui.get("name", body_ui.get("given_name", "?"))
-            checks.append(_check("Token valid (/v2/userinfo)", True, f"name={name!r} sub={sub}"))
-            checks.append(_check("Note: /v2/me returned 403 but /v2/userinfo passed", True,
-                                  "Token has openid scope but not r_liteprofile — unusual"))
-            me_ok = True
-            member_id = sub
-        else:
-            ui_error = body_ui.get("message", body_ui.get("_raw", ""))
-            checks.append(_check("Token valid (/v2/userinfo)", False,
-                                  f"HTTP {code_ui} — {ui_error[:120]}"))
-
-            # Classify the failure
-            combined = f"{me_error} {ui_error}".lower()
-            if code_me in (401, 403) and ("expire" in combined or "revoke" in combined
-                                           or "invalid" in combined):
-                ftype = Result.TOKEN_EXPIRED
-            elif code_me == 403 and "permission" in combined:
-                ftype = Result.MISSING_SCOPE
-            elif "no_version" in combined or "not_enough_permissions" in combined:
-                # Classic sign of WRONG_ENDPOINT (/v2/userinfo without openid scope)
-                # but /v2/me also failed — real token problem
-                ftype = Result.MISSING_SCOPE
-            elif code_me in (401,):
-                ftype = Result.TOKEN_INVALID
-            else:
-                ftype = Result.UNKNOWN
-
-            return Result(provider, Result.FAIL,
-                          f"/v2/me HTTP {code_me}: {me_error[:100]} | "
-                          f"/v2/userinfo HTTP {code_ui}: {ui_error[:100]}",
-                          failure_type=ftype,
-                          checks=checks)
-
-    # Step 2: introspect token for scopes and expiry
     import urllib.parse
+    import base64
+
+    # LinkedIn Token Introspection API — works with any token type, no read-profile
+    # scope required. Requires client credentials (Basic auth with client_id:client_secret).
+    # Docs: https://learn.microsoft.com/en-us/linkedin/shared/authentication/token-introspection
+    basic_auth = base64.b64encode(
+        f"{client_id}:{client_secret}".encode()
+    ).decode()
+
     code_i, intro, _ = _fetch(
-        "https://api.linkedin.com/v2/introspectToken",
+        "https://www.linkedin.com/oauth/v2/introspectToken",
         method="POST",
         headers={
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Basic {basic_auth}",
             "Content-Type":  "application/x-www-form-urlencoded",
         },
         body=f"token={urllib.parse.quote(token)}".encode(),
     )
+
     if code_i == 200:
-        scopes  = intro.get("scope", "")
-        active  = intro.get("active", False)
-        exp_at  = intro.get("expires_at", 0)
+        active   = intro.get("active", False)
+        scopes   = intro.get("scope", "")
+        exp_at   = intro.get("expires_at", 0)
+        auth_id  = intro.get("authorized_party", intro.get("client_id", "?"))
         has_post = "w_member_social" in scopes or "w_organization_social" in scopes
-        checks.append(_check("Token active (introspect)", active,
-                              f"active={active} expires_at={exp_at}"))
+
+        checks.append(_check("Token introspection", True,
+                              f"active={active} authorized_party={auth_id!r}"))
+        checks.append(_check("Token active", active,
+                              f"expires_at={exp_at}" if exp_at else "no expiry"))
         checks.append(_check("Posting scope (w_member_social)", has_post,
                               f"scopes={scopes!r}"))
+
         if not active:
             return Result(provider, Result.FAIL,
-                          "LinkedIn token is inactive (introspect says active=false). Re-authorize.",
+                          "LinkedIn token is inactive. Re-authorize via LinkedIn Developer Portal.",
                           failure_type=Result.TOKEN_EXPIRED,
                           checks=checks)
         if not has_post:
             return Result(provider, Result.FAIL,
-                          "Token lacks w_member_social scope — cannot post. "
-                          "Re-authorize with 'Share on LinkedIn' (w_member_social) permission.",
+                          f"Token is active but lacks w_member_social scope (cannot post). "
+                          f"Current scopes: {scopes!r}. "
+                          "Re-authorize and ensure 'Share on LinkedIn' product is added to the app.",
                           failure_type=Result.MISSING_SCOPE,
                           checks=checks)
+
+    elif code_i == 401:
+        err = intro.get("error_description", intro.get("_raw", ""))[:120]
+        checks.append(_check("Token introspection", False, f"401 — {err}"))
+        return Result(provider, Result.FAIL,
+                      f"Client credentials rejected by introspection API: {err}. "
+                      "Verify NB_LINKEDIN_CLIENT_ID and NB_LINKEDIN_CLIENT_SECRET.",
+                      failure_type=Result.TOKEN_INVALID,
+                      checks=checks)
     else:
-        intro_err = intro.get("message", intro.get("_raw", ""))
-        checks.append(_check("Scope check (introspect)", False,
-                              f"HTTP {code_i} — {intro_err[:80]}"))
-        return Result(provider, Result.WARNING,
-                      "Token identity confirmed but posting scope could not be verified via introspect.",
+        err = intro.get("error_description", intro.get("message", intro.get("_raw", "")))[:120]
+        checks.append(_check("Token introspection", False, f"HTTP {code_i} — {err}"))
+        return Result(provider, Result.FAIL,
+                      f"Introspection API failed (HTTP {code_i}): {err}",
+                      failure_type=Result.UNKNOWN,
                       checks=checks)
 
     return Result(provider, Result.PASS, checks=checks)
@@ -1132,6 +1098,8 @@ REQUIRED_SECRETS = [
     "NB_WIX_SITE_ID",
     "NB_WIX_POST_OWNER_ID",
     "NB_LINKEDIN_ACCESS_TOKEN",
+    "NB_LINKEDIN_CLIENT_ID",
+    "NB_LINKEDIN_CLIENT_SECRET",
     "NB_META_USER_TOKEN",
     "NB_META_IG_USER_ID",
     "NB_META_FB_PAGE_ID",
