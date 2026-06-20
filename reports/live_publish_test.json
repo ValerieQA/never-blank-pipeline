@@ -1,0 +1,61 @@
+{
+  "run_id": "20260620_183113",
+  "generated_at": "2026-06-20T18:32:03.802228+00:00",
+  "preflight_ok": true,
+  "wave1_passed": true,
+  "summary": {
+    "published": 5,
+    "failed": 1,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "platform": "wix",
+      "status": "PUBLISHED",
+      "url": "",
+      "external_id": "3adb55fc-19a2-4477-ab90-9b57daf0e01e",
+      "error_message": null,
+      "raw_response_path": null
+    },
+    {
+      "platform": "telegram",
+      "status": "PUBLISHED",
+      "url": "https://t.me/never_blank_inneros/7",
+      "external_id": "7",
+      "error_message": null,
+      "raw_response_path": null
+    },
+    {
+      "platform": "facebook",
+      "status": "PUBLISHED",
+      "url": "https://www.facebook.com/1219637131228622_122110184097356169",
+      "external_id": "1219637131228622_122110184097356169",
+      "error_message": null,
+      "raw_response_path": null
+    },
+    {
+      "platform": "instagram",
+      "status": "PUBLISHED",
+      "url": "https://www.instagram.com/p/DZ0V48Bjk8o/",
+      "external_id": "17860586622641229",
+      "error_message": null,
+      "raw_response_path": null
+    },
+    {
+      "platform": "linkedin",
+      "status": "FAILED",
+      "url": null,
+      "external_id": null,
+      "error_message": "Cannot resolve LinkedIn author URN. NB_LINKEDIN_AUTHOR_URN must be set as GitHub Secret.",
+      "raw_response_path": null
+    },
+    {
+      "platform": "threads",
+      "status": "PUBLISHED",
+      "url": "https://www.threads.net/t/18125757235646787",
+      "external_id": "18125757235646787",
+      "error_message": null,
+      "raw_response_path": null
+    }
+  ]
+}
