@@ -104,6 +104,32 @@ class QCResult:
 
 
 @dataclass
+class QCCheckResult:
+    """Result of a single QC check (voice, factuality, duplication)."""
+    check_name: str          # "duplication" | "factuality" | "voice_blog" | "voice_linkedin"
+    status: str              # "green" | "yellow" | "orange" | "red"
+    score: float             # 0.0–1.0 (1.0 = perfect)
+    issues: list[str]        # specific problems found
+    guidance: str            # feedback text for rewriter
+    checked_at: str          # ISO timestamp
+    risk_level: str = "low"  # for factuality: "low" | "medium" | "high"
+    legal_risk: bool = False
+
+
+@dataclass
+class QCReport:
+    """Full QC report for one content package."""
+    overall_status: str           # "GREEN" | "YELLOW" | "ORANGE" | "RED"
+    checks: list[QCCheckResult]
+    rewrite_count: int            # how many rewrites happened
+    final_status: str             # status after all rewrites
+    quarantined: bool
+    quarantine_reason: str
+    quarantine_path: Optional[str]
+    generated_at: str
+
+
+@dataclass
 class ChannelResult:
     channel: str
     status: ChannelStatus

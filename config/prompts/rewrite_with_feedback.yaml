@@ -1,29 +1,31 @@
 name: rewrite_with_feedback
-status: stub
+status: ready
 purpose: >
   Rewrite generated content that failed a QC check.
-  The failure reason is injected explicitly so the system rewrites
-  with context — not blindly.
+  The failure reason and specific guidance are injected explicitly.
+  The rewriter addresses only what failed — it does not rebuild the piece.
 
 input_schema:
   original_content:
     type: str
     description: The content that failed QC
-  content_brief:
-    type: dict
-    description: Original ContentBrief (title, angle, goal, observation_statement)
+  content_type:
+    type: str
+    enum: [blog_body, linkedin, instagram_caption, facebook, threads_post, telegram]
+  observation_statement:
+    type: str
   failed_check:
     type: str
-    enum: [duplication, voice, consistency, factuality]
+    enum: [voice, factuality]
   failure_reason:
     type: str
     description: Specific explanation of what failed (from QC output)
   rewrite_guidance:
     type: str
-    description: >
-      For voice failures: the rewrite_guidance from qc_voice output.
-      For other failures: the flags or reason string.
-  brand_voice_examples:
+    description: Specific instructions for this rewrite
+  tone_list:
+    type: list[str]
+  avoid_list:
     type: list[str]
   attempt_number:
     type: int
@@ -34,24 +36,61 @@ output_schema:
   fields:
     content:
       type: str
-      description: Rewritten content — same format as the original that failed
+      description: Rewritten content — same format and length range as the original
 
 required_context:
   - original_content
-  - content_brief
+  - content_type
   - failed_check
-  - failure_reason
-  - brand_voice_examples
+  - rewrite_guidance
 
 constraints:
-  - preserve the same format and length range as the original
-  - address the specific failure_reason — do not rewrite unrelated sections
-  - output must be valid JSON object
+  - preserve the same format and approximate length as the original
+  - address only the specific issues in rewrite_guidance — do not rewrite the whole piece
+  - output must be valid JSON
   - content field must be non-empty
+  - do not add a preamble or explanation — return only the rewritten content
 
 failure_modes:
-  - returns same content unchanged: detected by comparing hashes — treat as failure, exhaust retries
-  - returns invalid JSON: retry once, then quarantine topic
+  - content shorter than 50% of original: retry with length constraint
+  - returns invalid JSON: retry once, then quarantine original
 
-system: "PLACEHOLDER — written in Phase 3"
-user: "PLACEHOLDER — written in Phase 3"
+system: |
+  You rewrite content for Never Blank that failed an internal QC check.
+
+  Your job is surgical: address exactly what failed, preserve what worked.
+  Do not rebuild the piece. Do not change the angle, observation, or structure
+  unless the failure is about structure specifically.
+
+  FAILED CHECK: {failed_check}
+  ATTEMPT: {attempt_number} of 2
+
+  If this is attempt 2 and the same issues recur, make more aggressive changes —
+  the cost of a second failure is quarantine.
+
+  Voice reference (what Never Blank sounds like):
+  - Direct and observational. Not preachy.
+  - Peer-to-peer. Smart founder talking to another smart founder.
+  - Specific. Names patterns. Does not give generic advice.
+  - No: "In today's world", "leverage", "game-changer", "let's dive in", "unpack".
+  - Tone: {tone_list}
+  - Avoid: {avoid_list}
+
+  Format: Return valid JSON only. One key: "content" with the rewritten text.
+  No explanation, no preamble, no other keys.
+
+user: |
+  Rewrite this {content_type} content to fix the QC failure.
+
+  CORE OBSERVATION (must remain the center of the piece):
+  {observation_statement}
+
+  WHAT FAILED: {failed_check}
+  WHY IT FAILED: {failure_reason}
+  WHAT TO FIX: {rewrite_guidance}
+
+  ORIGINAL CONTENT:
+  {original_content}
+
+  Return JSON with one key:
+  - "content": the rewritten text (same format and approximate length as original)

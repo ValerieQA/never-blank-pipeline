@@ -1,9 +1,9 @@
 name: qc_voice
-status: stub
+status: ready
 purpose: >
   Validate that generated content matches the Never Blank brand voice.
-  Compare against curated voice examples and brand constraints.
-  Flag tonal drift, corporate language, or generic AI phrasing.
+  Reject generic AI fluff, weak agency-style content, and preachy advice.
+  Enforce the principle: content is evidence of intelligence, not filler.
 
 input_schema:
   content:
@@ -11,13 +11,13 @@ input_schema:
     description: Generated text to validate
   platform:
     type: str
-    enum: [wix, linkedin, facebook, instagram, threads, telegram]
-  voice_examples:
-    type: list[str]
-    description: Curated example posts representing approved Never Blank voice
+    enum: [blog, linkedin, facebook, instagram, threads, telegram]
   voice_constraints:
     type: dict
-    description: From brand.yaml — tone list and avoid list
+    description: From brand.yaml — tone and avoid lists
+  observation_statement:
+    type: str
+    description: The core observation this content should demonstrate
 
 output_schema:
   type: json_object
@@ -27,31 +27,86 @@ output_schema:
     score:
       type: float
       range: [0.0, 1.0]
-      description: Voice alignment score (1.0 = perfect match)
     issues:
       type: list[str]
-      description: Specific phrases or patterns that drift from brand voice
+      description: Specific phrases or patterns that fail the voice check
     rewrite_guidance:
       type: str
-      description: >
-        If passed=false, one sentence describing what to fix
-        (injected into rewrite_with_feedback prompt)
+      description: Specific instructions for the rewriter (present if passed=false)
 
 required_context:
   - content
   - platform
-  - voice_examples (min 1)
-  - voice_constraints
+  - observation_statement
 
 constraints:
-  - output must be valid JSON object
-  - score is a float between 0.0 and 1.0
-  - rewrite_guidance must be present when passed=false
-  - passed=true threshold: score >= 0.72 (from quality.yaml voice_drift.alert_threshold)
+  - score >= 0.72 is required to pass (from quality.yaml voice_drift.alert_threshold)
+  - output must be valid JSON
+  - rewrite_guidance must be specific — "be less generic" is not acceptable guidance
+  - issues list must quote the actual phrases that fail, not describe them abstractly
 
 failure_modes:
-  - returns invalid JSON: retry once, then treat as passed=true score=0.0 and log WARNING
-  - no voice_examples provided: skip check, log WARNING, mark as passed
+  - returns invalid JSON: retry once, then treat as passed=true score=0.5 and log WARNING
+  - false positives on acceptable directional statements: tune threshold in Phase 5
 
-system: "PLACEHOLDER — written in Phase 3"
-user: "PLACEHOLDER — written in Phase 3"
+system: |
+  You evaluate content against the Never Blank brand voice.
+
+  Never Blank's principle: content is evidence of intelligence, not a broadcast.
+  Every piece should make a reader think "that is exactly it" — not "that is good advice."
+
+  VOICE CRITERIA (what to check for):
+
+  1. DIRECTNESS — does the content say what it means immediately?
+     Fail: "In today's competitive landscape, it's crucial to..."
+     Pass: "The busiest businesses often look unavailable. That costs them clients."
+
+  2. SPECIFICITY — does the content name patterns, not vague concepts?
+     Fail: "Many founders struggle with visibility."
+     Pass: "Founders who bill by the hour tend to go quiet between projects."
+
+  3. PEER REGISTER — is this written for a smart peer, not a student?
+     Fail: "Here's what you need to understand about content marketing."
+     Pass: "Most founders treat content as a reward for downtime. It is not."
+
+  4. OBSERVATION-FIRST — does the content lead with an observation, not advice?
+     Fail: "If you want to build your audience, you should post consistently."
+     Pass: "Consistent posting is not what builds an audience. Consistent thinking is."
+
+  5. CLEAN LANGUAGE — no AI filler, no corporate speak, no hustle clichés?
+     Auto-fail phrases: "In today's world", "fast-paced", "game-changer", "leverage",
+     "hustle", "journey", "unpack", "let's dive in", "at the end of the day",
+     "it's important to", "you need to", "here's the thing".
+
+  Platform-specific adjustments:
+  - blog: apply all 5 criteria at full weight
+  - linkedin: apply all 5 criteria; shorter content is acceptable
+  - instagram/facebook/threads/telegram: apply criteria 4 and 5 at full weight;
+    criteria 1-3 at 70% weight (shorter format allows less development)
+
+  Score guide:
+  - 0.0–0.5: multiple serious failures → rewrite required
+  - 0.5–0.71: borderline — generic or weak but no auto-fail phrases → rewrite recommended
+  - 0.72–0.89: acceptable — minor issues → passed
+  - 0.90–1.0: strong Never Blank voice → passed
+
+  Format: Return valid JSON only. No text outside the JSON object.
+
+user: |
+  Evaluate this {platform} content against Never Blank brand voice.
+
+  CORE OBSERVATION this content should demonstrate:
+  {observation_statement}
+
+  VOICE CONSTRAINTS:
+  Tone: {tone_list}
+  Avoid: {avoid_list}
+
+  CONTENT TO EVALUATE:
+  {content}
+
+  Return JSON with these exact keys:
+  - "passed": true if score >= 0.72, false otherwise
+  - "score": float 0.0–1.0
+  - "issues": list of specific failing phrases or patterns (with quotes from the text)
+  - "rewrite_guidance": specific rewrite instructions if passed=false, else empty string

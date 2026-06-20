@@ -1,47 +1,108 @@
 name: qc_factuality
-status: stub
+status: ready
 purpose: >
-  Review generated content for factual claims that cannot be verified
-  against the provided source signals. Flag invented statistics, named
-  people, specific dates, or events not present in the sources.
+  Assess factual risk in generated content for Never Blank.
+  This is not fact verification. It is factual risk assessment —
+  identifying claims that could cause reputational, legal, or
+  credibility harm if they turn out to be wrong or unverifiable.
 
 input_schema:
   content:
     type: str
-    description: The generated article or post text to review
+    description: The generated article or post text to assess
   source_signals:
     type: list[str]
-    description: Original intelligence items used as the basis for this content
+    description: Original source material used as input for this content
+  observation_statement:
+    type: str
+    description: The core observation this content is based on
 
 output_schema:
   type: json_object
   fields:
     passed:
       type: bool
-    flags:
-      type: list[str]
-      description: Each flag is a specific claim that could not be verified
     risk_level:
       type: str
-      enum: [none, low, high]
-      description: >
-        none — no issues found;
-        low — minor unverifiable claims, judgment call;
-        high — invented statistics or named people → quarantine
+      enum: [low, medium, high]
+    flags:
+      type: list[str]
+      description: Each flag describes a specific risky claim with location
+    legal_risk:
+      type: bool
+      description: True if content contains financial, legal, medical, or tax advice
+    missing_attribution:
+      type: list[str]
+      description: Specific statistics or claims that need a source reference
+    guidance:
+      type: str
+      description: One paragraph of specific rewrite instructions to reduce risk
 
 required_context:
   - content
-  - source_signals
+  - observation_statement
 
 constraints:
-  - output must be valid JSON object
-  - do not flag general business knowledge or widely accepted facts
-  - only flag specific statistics, dates, names, and events
-  - if source_signals is empty, treat all specific claims as unverifiable
+  - output must be valid JSON
+  - do not flag general business knowledge, widely accepted patterns, or logical inferences
+  - only flag specific unverifiable statistics, named individuals, specific events/dates, legal claims
+  - risk_level=high triggers quarantine — only use if content has serious legal/reputational exposure
+  - if source_signals is empty, flag all specific numerical claims as missing_attribution
 
 failure_modes:
-  - returns invalid JSON: retry once, then treat as passed=false risk_level=high
-  - false positives on general knowledge: acceptable in V1, tuned in Phase 3
+  - returns invalid JSON: retry once, then treat as risk_level=medium passed=false
+  - false positives on common business knowledge: acceptable in V1
 
-system: "PLACEHOLDER — written in Phase 3"
-user: "PLACEHOLDER — written in Phase 3"
+system: |
+  You perform factual risk assessment for Never Blank, a content strategy practice.
+
+  This is NOT fact-checking. You are not verifying whether claims are true.
+  You are identifying claims that carry risk if they are wrong — because they are
+  specific, verifiable, and could embarrass or expose Never Blank to criticism.
+
+  Risk categories to evaluate:
+
+  1. UNVERIFIABLE STATISTICS
+     Flag: specific numbers, percentages, or quantities without a source in source_signals.
+     Example flag: "Claims '73% of founders miss content opportunities' — no source provided."
+     Do NOT flag: general patterns, directional statements, logical inferences.
+
+  2. NAMED INDIVIDUALS OR COMPANIES
+     Flag: any specific person or company name not provided in source_signals.
+     Example flag: "References 'a McKinsey study' — not present in source material."
+     Do NOT flag: invented composite examples clearly labeled as illustrative.
+
+  3. LEGAL / FINANCIAL / MEDICAL / TAX ADVICE RISK
+     Flag: any language that could be construed as professional advice in regulated domains.
+     Example flag: "Phrase 'you should restructure your business as an S-Corp' is tax advice."
+     This automatically sets legal_risk=true and risk_level=high.
+
+  4. MISSING ATTRIBUTION
+     Flag: statistics and research citations that appear in the content but not in source_signals.
+
+  Risk level guidance:
+  - low: no flags, or only minor directional claims without a source
+  - medium: 1–2 unverifiable statistics; no legal risk; rewritable
+  - high: legal/financial/medical/tax advice; named individuals without source;
+          invented statistics presented as fact
+
+  Format: Return valid JSON only. No text outside the JSON object.
+
+user: |
+  Assess the factual risk of this Never Blank content.
+
+  OBSERVATION BASIS: {observation_statement}
+
+  SOURCE SIGNALS PROVIDED:
+  {source_signals_json}
+
+  CONTENT TO ASSESS:
+  {content}
+
+  Return JSON with these exact keys:
+  - "passed": true if risk_level is "low", false otherwise
+  - "risk_level": "low", "medium", or "high"
+  - "flags": list of specific risk descriptions (empty list if none)
+  - "legal_risk": true if content gives legal/financial/medical/tax advice
+  - "missing_attribution": list of claims needing a source (empty list if none)
+  - "guidance": rewrite instructions if risk_level is medium or high, else empty string
