@@ -1,6 +1,13 @@
 .env
-data/
-assets/logo/
+# data/ contents are generated at runtime — ignore everything except folder markers
+data/*
+!data/drafts/
+!data/images/
+data/drafts/*
+!data/drafts/.gitkeep
+data/images/*
+!data/images/.gitkeep
+# logo is a tracked asset — must NOT be ignored
 assets/fonts/
 __pycache__/
 *.py[cod]
