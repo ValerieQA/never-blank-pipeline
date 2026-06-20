@@ -20,15 +20,17 @@ jobs:
           endpoints = [
               ("https://api.linkedin.com/rest/me", {
                   "Authorization": f"Bearer {token}",
-                  "LinkedIn-Version": "202504",
+                  "LinkedIn-Version": "20250401",
                   "X-Restli-Protocol-Version": "2.0.0",
               }),
-              ("https://api.linkedin.com/v2/me?projection=(id)", {
+              ("https://api.linkedin.com/rest/me?fields=id", {
                   "Authorization": f"Bearer {token}",
+                  "LinkedIn-Version": "20250101",
+                  "X-Restli-Protocol-Version": "2.0.0",
               }),
               ("https://api.linkedin.com/v2/me", {
                   "Authorization": f"Bearer {token}",
-                  "LinkedIn-Version": "202304",
+                  "LinkedIn-Version": "202212",
               }),
           ]
           for url, h in endpoints:
@@ -43,5 +45,5 @@ jobs:
                       body = e.read().decode() if hasattr(e, 'read') else str(e)
                   except:
                       body = str(e)
-                  print(f"FAIL {url}: HTTP {getattr(e,'code','?')} {body[:200]}")
+                  print(f"FAIL {url}: HTTP {getattr(e,'code','?')} {body[:300]}")
           PYEOF
