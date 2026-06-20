@@ -863,7 +863,7 @@ def audit_google_sheets() -> Result:
         header  = _b64url(json.dumps({"alg": "RS256", "typ": "JWT"}).encode())
         payload = _b64url(json.dumps({
             "iss": creds["client_email"],
-            "scope": "https://www.googleapis.com/auth/spreadsheets.readonly",
+            "scope": "https://www.googleapis.com/auth/spreadsheets",
             "aud": "https://oauth2.googleapis.com/token",
             "iat": now,
             "exp": now + 3600,
@@ -917,27 +917,86 @@ def audit_google_sheets() -> Result:
             sheet_data = json.loads(sr.read())
 
         title = sheet_data.get("properties", {}).get("title", "?")
+        first_sheet = sheet_data.get("sheets", [{}])[0].get("properties", {}).get("title", "Sheet1")
         sheets_list = [s["properties"]["title"] for s in sheet_data.get("sheets", [])]
-        checks.append(_check("Spreadsheet accessible", True,
+        checks.append(_check("Read access", True,
                               f"title={title!r} tabs={sheets_list}"))
+
+        # Write test: append one row to first sheet, then clear it immediately
+        append_url = (
+            f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}"
+            f"/values/{urllib.parse.quote(first_sheet)}!A1:B1:append"
+            f"?valueInputOption=RAW&insertDataOption=INSERT_ROWS"
+        )
+        write_body = json.dumps({
+            "values": [["__audit_test__", datetime.now(timezone.utc).isoformat()]]
+        }).encode()
+        write_req = urllib.request.Request(
+            append_url, data=write_body, method="POST",
+            headers={"Authorization": f"Bearer {access_token}",
+                     "Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(write_req, timeout=15) as wr:
+            write_resp = json.loads(wr.read())
+
+        updated_range = write_resp.get("updates", {}).get("updatedRange", "?")
+        checks.append(_check("Write access (append row)", True,
+                              f"wrote to {updated_range}"))
+
+        # Clear the test row immediately
+        # Extract the row number from the updated range (e.g. "Sheet1!A5:B5" → row 5)
+        row_num = None
+        try:
+            row_num = updated_range.split("!")[-1].split(":")[0].lstrip("AB")
+        except Exception:
+            pass
+
+        if row_num:
+            clear_range = f"{first_sheet}!A{row_num}:Z{row_num}"
+            clear_url = (
+                f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}"
+                f"/values/{urllib.parse.quote(clear_range)}:clear"
+            )
+            clear_req = urllib.request.Request(
+                clear_url, data=b"{}", method="POST",
+                headers={"Authorization": f"Bearer {access_token}",
+                         "Content-Type": "application/json"},
+            )
+            try:
+                urllib.request.urlopen(clear_req, timeout=10)
+                checks.append(_check("Test row cleanup", True,
+                                     f"cleared {clear_range}"))
+            except Exception as ce:
+                checks.append(_check("Test row cleanup", False,
+                                     f"clear failed: {ce} — delete row {row_num} manually"))
 
     except Exception as exc:
         code = getattr(exc, "code", "?")
+        raw_body = ""
+        try:
+            raw_body = exc.read().decode("utf-8", errors="replace")  # type: ignore[attr-defined]
+        except Exception:
+            pass
+        detail = raw_body[:200] if raw_body else str(exc)
+
         if str(code) == "403":
-            checks.append(_check("Spreadsheet access", False,
-                                  f"403 — service account not shared on spreadsheet"))
+            checks.append(_check("Spreadsheet access", False, f"403 — {detail[:120]}"))
             return Result(provider, Result.FAIL,
-                          f"Service account '{acct_email}' does not have access to spreadsheet {sheet_id}. "
-                          "Share the spreadsheet with the service account email (Viewer or Editor).",
+                          f"Service account '{acct_email}' does not have access to "
+                          f"spreadsheet {sheet_id}. "
+                          "Share it with the service account email as Editor.",
+                          failure_type=Result.MISSING_SCOPE,
                           checks=checks)
         if str(code) == "404":
-            checks.append(_check("Spreadsheet access", False, f"404 — sheet ID not found"))
+            checks.append(_check("Spreadsheet access", False, "404 — sheet ID not found"))
             return Result(provider, Result.FAIL,
-                          f"Spreadsheet ID {sheet_id!r} not found. "
-                          "Check NB_GOOGLE_SHEET_ID.",
+                          f"Spreadsheet ID {sheet_id!r} not found. Check NB_GOOGLE_SHEET_ID.",
+                          failure_type=Result.MISSING_ID,
                           checks=checks)
-        checks.append(_check("Spreadsheet access", False, str(exc)))
-        return Result(provider, Result.FAIL, f"Google Sheets API call failed: {exc}", checks=checks)
+        checks.append(_check("Spreadsheet access", False, detail[:120]))
+        return Result(provider, Result.FAIL,
+                      f"Google Sheets API call failed: {exc}",
+                      checks=checks)
 
     return Result(provider, Result.PASS, checks=checks)
 
