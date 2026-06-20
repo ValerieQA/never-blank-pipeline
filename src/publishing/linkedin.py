@@ -24,7 +24,7 @@ import urllib.request
 from src.publishing.base import BasePublisher, DraftPackage, _fetch, _fetch_h
 from src.publishing.result import PublishResult, PublishStatus
 
-_LI_VERSION = "20250601"
+_LI_VERSION = "202501"
 _LI_HEADERS_BASE = {
     "LinkedIn-Version":          _LI_VERSION,
     "X-Restli-Protocol-Version": "2.0.0",
