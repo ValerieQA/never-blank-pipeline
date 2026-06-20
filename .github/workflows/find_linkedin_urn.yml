@@ -1,0 +1,65 @@
+name: Find LinkedIn URN
+on:
+  workflow_dispatch:
+jobs:
+  find-urn:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Find LinkedIn author URN
+        env:
+          NB_LINKEDIN_ACCESS_TOKEN: ${{ secrets.NB_LINKEDIN_ACCESS_TOKEN }}
+          NB_LINKEDIN_CLIENT_ID: ${{ secrets.NB_LINKEDIN_CLIENT_ID }}
+          NB_LINKEDIN_CLIENT_SECRET: ${{ secrets.NB_LINKEDIN_CLIENT_SECRET }}
+        run: |
+          python3 - <<'PYEOF'
+          import os, base64, json, urllib.request, urllib.parse
+
+          token = os.environ["NB_LINKEDIN_ACCESS_TOKEN"]
+          client_id = os.environ["NB_LINKEDIN_CLIENT_ID"]
+          client_secret = os.environ["NB_LINKEDIN_CLIENT_SECRET"]
+
+          # Try JWT decode (works if token is JWT)
+          parts = token.split(".")
+          if len(parts) == 3:
+              try:
+                  p = parts[1] + "=="
+                  payload = json.loads(base64.b64decode(p).decode())
+                  sub = payload.get("sub", payload.get("id", ""))
+                  if sub:
+                      print(f"JWT sub: {sub}")
+                      print(f"URN: urn:li:person:{sub}")
+              except:
+                  print("Not a standard JWT")
+
+          # Try introspection — full response
+          basic = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+          req = urllib.request.Request(
+              "https://www.linkedin.com/oauth/v2/introspectToken",
+              method="POST",
+              headers={"Authorization": f"Basic {basic}", "Content-Type": "application/x-www-form-urlencoded"},
+              data=urllib.parse.urlencode({"token": token, "client_id": client_id, "client_secret": client_secret}).encode()
+          )
+          with urllib.request.urlopen(req) as r:
+              data = json.loads(r.read())
+          print("Introspection response (all fields):", json.dumps(data, indent=2))
+
+          # Try /v2/me (may fail without r_liteprofile)
+          for endpoint, version in [
+              ("https://api.linkedin.com/v2/me", None),
+              ("https://api.linkedin.com/v2/userinfo", None),
+          ]:
+              try:
+                  h = {"Authorization": f"Bearer {token}"}
+                  if version:
+                      h["LinkedIn-Version"] = version
+                  req2 = urllib.request.Request(endpoint, headers=h)
+                  with urllib.request.urlopen(req2) as r2:
+                      d = json.loads(r2.read())
+                      print(f"{endpoint}: {json.dumps(d)[:300]}")
+              except Exception as e:
+                  print(f"{endpoint}: {e}")
+          PYEOF
