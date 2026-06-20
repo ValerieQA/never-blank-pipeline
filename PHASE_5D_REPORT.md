@@ -6,7 +6,7 @@
 ## Summary
 
 First end-to-end live publish across all six channels.  
-**5 of 6 channels published successfully.**
+**6 of 6 channels published successfully.**
 
 | Channel | Status | Live URL |
 |---------|--------|----------|
@@ -15,18 +15,7 @@ First end-to-end live publish across all six channels.
 | Facebook | ✅ PUBLISHED | [Post](https://www.facebook.com/1219637131228622_122110184097356169) |
 | Instagram | ✅ PUBLISHED | [instagram.com/p/DZ0V48Bjk8o/](https://www.instagram.com/p/DZ0V48Bjk8o/) |
 | Threads | ✅ PUBLISHED | [threads.net/t/18125757235646787](https://www.threads.net/t/18125757235646787) |
-| LinkedIn | ❌ FAILED | One manual step required (see below) |
-
-## LinkedIn — Manual Step Required
-
-**Blocker:** The `w_member_social` OAuth scope does not expose a user identity claim via token introspection. The pipeline cannot resolve the author URN automatically.
-
-**Fix (one-time):**
-1. Go to [LinkedIn Developer Portal](https://www.linkedin.com/developers/tools/oauth/token-generator)
-2. Generate a token with any scope — the JSON response includes a `"member"` field containing your URN (e.g. `urn:li:person:XXXXXXX`)
-3. Add that value to GitHub Secrets as `NB_LINKEDIN_AUTHOR_URN`
-
-Once the secret is set, LinkedIn publishes without any further changes.
+| LinkedIn | ✅ PUBLISHED | [feed/update/urn:li:share:7474229229165891584/](https://www.linkedin.com/feed/update/urn:li:share:7474229229165891584/) |
 
 ## Infrastructure Delivered (Phases 5B–5D)
 
@@ -51,7 +40,6 @@ Once the secret is set, LinkedIn publishes without any further changes.
 
 ## Phase 6 Readiness
 
-The pipeline is ready for scheduled autonomous publishing.  
-LinkedIn will join the rotation once `NB_LINKEDIN_AUTHOR_URN` is set in GitHub Secrets.
+All 6 channels verified live. The pipeline is ready for scheduled autonomous publishing.
 
 Full test report: [`reports/live_publish_test.md`](reports/live_publish_test.md)

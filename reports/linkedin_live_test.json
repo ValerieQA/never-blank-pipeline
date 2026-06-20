@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-06-20T22:38:33.158079+00:00",
+  "mode": "live",
+  "channels": ["linkedin"],
+  "results": [
+    {
+      "platform": "linkedin",
+      "status": "PUBLISHED",
+      "url": "https://www.linkedin.com/feed/update/urn:li:share:7474229229165891584/",
+      "external_id": "urn:li:share:7474229229165891584",
+      "error_message": null,
+      "raw_response_path": "(with image)"
+    }
+  ],
+  "summary": {
+    "published": 1,
+    "draft_created": 0,
+    "skipped": 0,
+    "failed": 0
+  }
+}
