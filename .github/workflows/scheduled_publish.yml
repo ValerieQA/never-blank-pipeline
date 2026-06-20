@@ -1,0 +1,90 @@
+name: Scheduled Publisher
+
+# Cron fires at 10:00 UTC Mon/Wed/Fri (covers both EST=UTC-5 and EDT=UTC-4).
+# The Python script performs the authoritative timezone check and exits cleanly
+# if it is not within the configured publish window in America/New_York.
+
+on:
+  schedule:
+    - cron: "0 10 * * 1,3,5"   # 10:00 UTC = 06:00 ET (DST) / 05:00 ET (std)
+    - cron: "0 11 * * 1,3,5"   # 11:00 UTC = 06:00 ET (std) / 07:00 ET (DST)
+
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Force run regardless of schedule (--force)"
+        required: false
+        type: boolean
+        default: false
+      check_only:
+        description: "Only check whether publish is due (--check-only)"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  scheduled-publish:
+    name: Scheduled Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install --quiet python-dotenv openai Pillow cloudinary PyYAML
+
+      - name: Run scheduled publisher
+        env:
+          NB_OPENAI_API_KEY:                 ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_WIX_API_KEY:                    ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:                    ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_POST_OWNER_ID:              ${{ secrets.NB_WIX_POST_OWNER_ID }}
+          NB_LINKEDIN_ACCESS_TOKEN:          ${{ secrets.NB_LINKEDIN_ACCESS_TOKEN }}
+          NB_LINKEDIN_CLIENT_ID:             ${{ secrets.NB_LINKEDIN_CLIENT_ID }}
+          NB_LINKEDIN_CLIENT_SECRET:         ${{ secrets.NB_LINKEDIN_CLIENT_SECRET }}
+          NB_LINKEDIN_AUTHOR_URN:            ${{ secrets.NB_LINKEDIN_AUTHOR_URN }}
+          NB_META_USER_TOKEN:                ${{ secrets.NB_META_USER_TOKEN }}
+          NB_META_IG_USER_ID:                ${{ secrets.NB_META_IG_USER_ID }}
+          NB_META_FB_PAGE_ID:                ${{ secrets.NB_META_FB_PAGE_ID }}
+          NB_META_FB_PAGE_TOKEN:             ${{ secrets.NB_META_FB_PAGE_TOKEN }}
+          NB_THREADS_ACCESS_TOKEN:           ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
+          NB_TELEGRAM_BOT_TOKEN:             ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
+          NB_TELEGRAM_CHANNEL_ID:            ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
+          NB_CLOUDINARY_CLOUD_NAME:          ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
+          NB_CLOUDINARY_API_KEY:             ${{ secrets.NB_CLOUDINARY_API_KEY }}
+          NB_CLOUDINARY_API_SECRET:          ${{ secrets.NB_CLOUDINARY_API_SECRET }}
+          NB_GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.NB_GOOGLE_SHEETS_CREDENTIALS_JSON }}
+          NB_GOOGLE_SHEET_ID:                ${{ secrets.NB_GOOGLE_SHEET_ID }}
+        run: |
+          if [ "${{ inputs.force }}" = "true" ]; then
+            python scripts/scheduled_publish.py --force
+          elif [ "${{ inputs.check_only }}" = "true" ]; then
+            python scripts/scheduled_publish.py --check-only
+          else
+            python scripts/scheduled_publish.py
+          fi
+
+      - name: Upload scheduled publish report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scheduled-publish-report-${{ github.run_id }}
+          path: reports/scheduled_publish_report.*
+          retention-days: 90
+
+      - name: Print step summary
+        if: always()
+        run: |
+          echo "## Scheduled Publish Report" >> $GITHUB_STEP_SUMMARY
+          if [ -f reports/scheduled_publish_report.md ]; then
+            cat reports/scheduled_publish_report.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No report generated (run skipped or publish not due)." >> $GITHUB_STEP_SUMMARY
+          fi

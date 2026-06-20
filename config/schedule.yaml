@@ -1,0 +1,55 @@
+schedule:
+  timezone: America/New_York
+  days:
+    - monday
+    - wednesday
+    - friday
+  time: "06:00"
+  jitter_minutes: 0
+
+publication_order:
+  - wix
+  - linkedin
+  - facebook
+  - instagram
+  - threads
+  - telegram
+
+channel_behavior:
+  wix:
+    role: primary
+    required: true
+    # If Wix fails, channels that need the article URL will not publish.
+    provides_url: true
+
+  linkedin:
+    role: social
+    required: false
+    needs_wix_url: false
+
+  facebook:
+    role: social
+    required: false
+    needs_wix_url: false
+
+  instagram:
+    role: social
+    required: false
+    needs_wix_url: false
+
+  threads:
+    role: social
+    required: false
+    needs_wix_url: false
+
+  telegram:
+    role: social
+    required: false
+    needs_wix_url: true   # Telegram appends "Read more →" link to Wix article
+
+fallback_rules:
+  wix_failure: skip_url_dependent_channels
+  social_failure: continue_remaining_channels
+  content_failure: abort_cycle
+  qc_failure: abort_cycle
+  image_failure: continue_without_image
