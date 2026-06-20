@@ -371,16 +371,31 @@ def audit_wix() -> Result:
                       checks=checks)
 
     # Step 3: Blog write — draft create + immediate delete
+    # Wix Blog v3 requires memberId for 3rd-party app draft creation.
+    # This cannot be fetched dynamically via API key auth (Members /my endpoint
+    # requires member/visitor auth). Must be supplied as NB_WIX_POST_OWNER_ID.
+    owner_id = _env("NB_WIX_POST_OWNER_ID")
+    if not owner_id:
+        checks.append(_check("Blog write (NB_WIX_POST_OWNER_ID set)", False,
+                              "NB_WIX_POST_OWNER_ID not set — draft creation requires memberId for 3rd-party apps. "
+                              "Find in Wix dashboard → Members → your profile URL."))
+        return Result(provider, Result.WARNING,
+                      "Blog read confirmed. Write skipped: NB_WIX_POST_OWNER_ID not set. "
+                      "Add this secret to enable full write audit.",
+                      checks=checks)
+
+    draft_body = {
+        "draftPost": {
+            "title":      "__connectivity_audit_draft__",
+            "memberId":   owner_id,
+            "richContent": {"nodes": []},
+        }
+    }
     code_dr, draft, _ = _fetch(
         "https://www.wixapis.com/blog/v3/draft-posts",
         method="POST",
         headers=base_headers,
-        body=json.dumps({
-            "draftPost": {
-                "title":      "__connectivity_audit_draft__",
-                "richContent": {"nodes": []},
-            }
-        }).encode(),
+        body=json.dumps(draft_body).encode(),
         timeout=15,
     )
     if code_dr in (200, 201):
@@ -402,6 +417,18 @@ def audit_wix() -> Result:
                       "API key can read Blog but not write. "
                       "Ensure API key has Blog write permission (not read-only).",
                       failure_type=Result.MISSING_SCOPE,
+                      checks=checks)
+    elif code_dr == 400:
+        body_msg = draft.get("message", draft.get("_raw", ""))[:200]
+        checks.append(_check("Blog write (draft create)", False, f"400 — {body_msg}"))
+        if "owner" in body_msg.lower() or "member" in body_msg.lower():
+            return Result(provider, Result.FAIL,
+                          f"Draft creation rejected: {body_msg}. "
+                          "Verify NB_WIX_POST_OWNER_ID is a valid member GUID for this site.",
+                          failure_type=Result.MISSING_ID,
+                          checks=checks)
+        return Result(provider, Result.WARNING,
+                      f"Blog read OK but write test failed (HTTP 400): {body_msg}",
                       checks=checks)
     else:
         body_msg = draft.get("message", draft.get("_raw", ""))[:120]
@@ -1025,23 +1052,19 @@ def audit_cloudinary() -> Result:
                       f"Credentials valid but upload test failed: {exc}",
                       checks=checks)
 
-    # 3. Image pipeline paths
-    logo_path    = ASSETS_DIR / "logo" / "never-blank-logo.png"
-    output_paths = [
-        Path(__file__).parent.parent / "data" / "images",
-        Path(__file__).parent.parent / "data" / "drafts",
-    ]
-    logo_ok = logo_path.exists()
-    checks.append(_check("Logo file exists", logo_ok,
-                          str(logo_path) if logo_ok else f"NOT FOUND: {logo_path}"))
-    for p in output_paths:
-        checks.append(_check(f"Output folder: {p.name}", p.exists(),
-                              str(p) if p.exists() else f"NOT FOUND: {p}"))
+    # 3. Logo asset check
+    # data/ and assets/logo/ are gitignored (generated content / binary assets).
+    # Output folders (data/images, data/drafts) are created at runtime by the pipeline —
+    # checking them here would always fail in a fresh GitHub Actions checkout.
+    logo_path = ASSETS_DIR / "logo" / "never-blank-logo.png"
+    logo_ok   = logo_path.exists()
+    checks.append(_check("Logo file exists (assets/logo/never-blank-logo.png)", logo_ok,
+                          "found" if logo_ok else "NOT FOUND — add before Phase 6 (image generation)"))
 
     if not logo_ok:
         return Result(provider, Result.WARNING,
-                      f"Cloudinary credentials work but logo not found at {logo_path}. "
-                      "Add logo before generating images.",
+                      "Cloudinary credentials work. Logo missing at assets/logo/never-blank-logo.png — "
+                      "required before Phase 6 (image generation). Add the PNG file.",
                       failure_type=Result.ASSET_MISSING,
                       checks=checks)
 
@@ -1054,6 +1077,7 @@ REQUIRED_SECRETS = [
     "NB_OPENAI_API_KEY",
     "NB_WIX_API_KEY",
     "NB_WIX_SITE_ID",
+    "NB_WIX_POST_OWNER_ID",
     "NB_LINKEDIN_ACCESS_TOKEN",
     "NB_META_USER_TOKEN",
     "NB_META_IG_USER_ID",
