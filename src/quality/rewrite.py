@@ -138,7 +138,53 @@ def apply_feedback(
                 attempt=attempt,
             )
 
-        # For other social platforms, add cases here in Phase 5
+        elif name == "voice_instagram":
+            instagram_cap = _rewrite_text(
+                content=pkg.instagram_caption,
+                content_type="instagram",
+                failed_check="voice",
+                failure_reason=reason,
+                rewrite_guidance=guidance,
+                brief=brief,
+                attempt=attempt,
+            )
+
+        elif name == "voice_facebook":
+            facebook_text = _rewrite_text(
+                content=pkg.facebook_text,
+                content_type="facebook",
+                failed_check="voice",
+                failure_reason=reason,
+                rewrite_guidance=guidance,
+                brief=brief,
+                attempt=attempt,
+            )
+
+        elif name == "voice_threads":
+            threads_raw = _rewrite_text(
+                content="\n---\n".join(pkg.threads_sequence or []),
+                content_type="threads",
+                failed_check="voice",
+                failure_reason=reason,
+                rewrite_guidance=guidance,
+                brief=brief,
+                attempt=attempt,
+            )
+            # Rewrite returns the sequence joined by ---; split it back
+            parts = [p.strip() for p in threads_raw.split("---") if p.strip()]
+            if parts:
+                threads_seq = parts
+
+        elif name == "voice_telegram":
+            telegram_text = _rewrite_text(
+                content=pkg.telegram_text,
+                content_type="telegram",
+                failed_check="voice",
+                failure_reason=reason,
+                rewrite_guidance=guidance,
+                brief=brief,
+                attempt=attempt,
+            )
 
     # If blog was rewritten, regenerate all social posts from new body
     if blog_rewritten:

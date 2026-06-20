@@ -105,23 +105,24 @@ def run_checks(pkg: ContentPackage, brief: ContentBrief) -> list[QCCheckResult]:
     if enabled.get("factuality", True):
         checks.append(factuality_check.check(pkg.blog_body, brief))
 
-    # 3. Voice check — blog (primary quality signal)
+    # 3–8. Voice check — all platforms
     if enabled.get("voice", True):
-        checks.append(voice_check.check(
-            content=pkg.blog_body,
-            platform="blog",
-            observation_statement=brief.observation_statement,
-            check_name="voice_blog",
-        ))
-
-    # 4. Voice spot-check — LinkedIn (highest-reach social channel)
-    if enabled.get("voice", True) and pkg.linkedin_text:
-        checks.append(voice_check.check(
-            content=pkg.linkedin_text,
-            platform="linkedin",
-            observation_statement=brief.observation_statement,
-            check_name="voice_linkedin",
-        ))
+        voice_targets = [
+            (pkg.blog_body,                       "blog",      "voice_blog"),
+            (pkg.linkedin_text,                    "linkedin",  "voice_linkedin"),
+            (pkg.instagram_caption,                "instagram", "voice_instagram"),
+            (pkg.facebook_text,                    "facebook",  "voice_facebook"),
+            (" ".join(pkg.threads_sequence or []), "threads",   "voice_threads"),
+            (pkg.telegram_text,                    "telegram",  "voice_telegram"),
+        ]
+        for content, platform, check_name in voice_targets:
+            if content and content.strip():
+                checks.append(voice_check.check(
+                    content=content,
+                    platform=platform,
+                    observation_statement=brief.observation_statement,
+                    check_name=check_name,
+                ))
 
     return checks
 

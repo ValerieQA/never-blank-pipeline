@@ -6,7 +6,7 @@ observations:
   cooldown_days: 60
 
 rewrites:
-  max_rewrites: 2
+  max_rewrites: 3
 
 retries:
   max_retries: 3

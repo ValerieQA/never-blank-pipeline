@@ -29,7 +29,9 @@ _AUTO_FAIL_PHRASES = [
     "in today's world",
     "in today's fast-paced",
     "in today's competitive",
+    "in today's landscape",
     "game-changer",
+    "game changer",
     "let's dive in",
     "let's unpack",
     "at the end of the day",
@@ -40,19 +42,45 @@ _AUTO_FAIL_PHRASES = [
     "hustle",
     "journey",
     "unpack",
-    "game changer",
     "low-hanging fruit",
     "move the needle",
     "circle back",
     "double down",
     "deep dive",
     "drill down",
+    "cognitive bias",
+    "bustling",
+    "engrossed",
+    "bridges must be built",
+    "unlock",
+    "elevate",
+    "transformative",
+    "seamless",
+    "content is king",
+    "it's not about",
+    "at the core of",
+    "manifests as",
+    "hidden opportunity",
+    "thought leadership",
+    "mismatch between",
+    "it's not about",
+    "this is not about",
+    "it requires a system",
+    "consider the",
 ]
 
 
 def _has_auto_fail(content: str) -> list[str]:
-    """Return list of auto-fail phrases found in content (case-insensitive)."""
-    lower = content.lower()
+    """Return list of auto-fail phrases found in content (case-insensitive).
+    Normalises typographic apostrophes/quotes to ASCII before matching."""
+    lower = (
+        content
+        .lower()
+        .replace("’", "'")   # right single quotation mark → apostrophe
+        .replace("‘", "'")   # left single quotation mark
+        .replace("“", '"')   # left double quotation mark
+        .replace("”", '"')   # right double quotation mark
+    )
     return [p for p in _AUTO_FAIL_PHRASES if p in lower]
 
 

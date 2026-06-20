@@ -1,0 +1,82 @@
+name: Publisher Connectivity Audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Audit a specific platform only (leave blank for all)"
+        required: false
+        type: choice
+        options:
+          - ""
+          - openai
+          - telegram
+          - wix
+          - linkedin
+          - facebook
+          - instagram
+          - threads
+          - google_sheets
+          - cloudinary
+
+jobs:
+  audit:
+    name: Connectivity Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --quiet python-dotenv cryptography
+
+      - name: Run connectivity audit
+        env:
+          NB_OPENAI_API_KEY:                ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_OPENAI_CHAT_MODEL:             ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          NB_OPENAI_EMBEDDING_MODEL:        ${{ secrets.NB_OPENAI_EMBEDDING_MODEL }}
+          NB_OPENAI_TEMPERATURE:            ${{ secrets.NB_OPENAI_TEMPERATURE }}
+          NB_OPENAI_QC_TEMPERATURE:         ${{ secrets.NB_OPENAI_QC_TEMPERATURE }}
+          NB_WIX_API_KEY:                   ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:                   ${{ secrets.NB_WIX_SITE_ID }}
+          NB_LINKEDIN_ACCESS_TOKEN:         ${{ secrets.NB_LINKEDIN_ACCESS_TOKEN }}
+          NB_META_USER_TOKEN:               ${{ secrets.NB_META_USER_TOKEN }}
+          NB_META_IG_USER_ID:               ${{ secrets.NB_META_IG_USER_ID }}
+          NB_META_FB_PAGE_ID:               ${{ secrets.NB_META_FB_PAGE_ID }}
+          NB_META_FB_PAGE_TOKEN:            ${{ secrets.NB_META_FB_PAGE_TOKEN }}
+          NB_THREADS_ACCESS_TOKEN:          ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
+          NB_TELEGRAM_BOT_TOKEN:            ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
+          NB_TELEGRAM_CHANNEL_ID:           ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
+          NB_CLOUDINARY_CLOUD_NAME:         ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
+          NB_CLOUDINARY_API_KEY:            ${{ secrets.NB_CLOUDINARY_API_KEY }}
+          NB_CLOUDINARY_API_SECRET:         ${{ secrets.NB_CLOUDINARY_API_SECRET }}
+          NB_GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.NB_GOOGLE_SHEETS_CREDENTIALS_JSON }}
+          NB_GOOGLE_SHEET_ID:               ${{ secrets.NB_GOOGLE_SHEET_ID }}
+        run: |
+          if [ -n "${{ inputs.platform }}" ]; then
+            python scripts/test_publishers.py --platform "${{ inputs.platform }}"
+          else
+            python scripts/test_publishers.py
+          fi
+
+      - name: Upload audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connectivity-audit-${{ github.run_id }}
+          path: reports/
+          retention-days: 30
+
+      - name: Print Markdown report
+        if: always()
+        run: |
+          echo "## Audit Report" >> $GITHUB_STEP_SUMMARY
+          cat reports/connectivity_audit.md >> $GITHUB_STEP_SUMMARY

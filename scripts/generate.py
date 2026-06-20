@@ -91,8 +91,9 @@ def save_package(pkg: ContentPackage, output_dir: Path) -> dict[str, Path]:
     files["content_brief"] = p
 
     # Blog post (Markdown)
+    # blog_body already contains the H1 title from the LLM — do not prepend again
     p = output_dir / "blog_post.md"
-    blog_md = f"# {pkg.blog_title}\n\n{pkg.blog_body}"
+    blog_md = pkg.blog_body
     _save_text(p, blog_md)
     files["blog_post"] = p
 
