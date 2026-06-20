@@ -47,6 +47,7 @@ jobs:
           NB_OPENAI_QC_TEMPERATURE:         ${{ secrets.NB_OPENAI_QC_TEMPERATURE }}
           NB_WIX_API_KEY:                   ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID:                   ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_POST_OWNER_ID:             ${{ secrets.NB_WIX_POST_OWNER_ID }}
           NB_LINKEDIN_ACCESS_TOKEN:         ${{ secrets.NB_LINKEDIN_ACCESS_TOKEN }}
           NB_META_USER_TOKEN:               ${{ secrets.NB_META_USER_TOKEN }}
           NB_META_IG_USER_ID:               ${{ secrets.NB_META_IG_USER_ID }}
