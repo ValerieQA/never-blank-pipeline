@@ -1,0 +1,151 @@
+# Never Blank Content Matrix
+# Defines the structure and rules for the intermediate matrix layer.
+# Topic → Content Matrix → Platform Posts
+
+version: "1.0"
+
+description: >
+  One row = one topic.
+  The Content Matrix is generated before any platform content.
+  All platform outputs must be derived from the matrix — not directly from the topic.
+
+fields:
+  topic_id:
+    description: "Unique identifier for the topic (from manual queue or generated)"
+    type: string
+
+  topic:
+    description: "Broad subject area"
+    type: string
+
+  core_idea:
+    description: "The specific thought for this content package — more focused than topic"
+    type: string
+
+  observation:
+    description: "What Never Blank notices — the specific pattern or signal"
+    type: string
+
+  mechanism:
+    description: >
+      Why this happens / how the pattern works.
+      Not a description of the problem — the internal logic that creates it.
+    type: string
+
+  cost_of_ignoring:
+    description: >
+      The business cost of not seeing or not acting on this pattern.
+      Not fearmongering. The commercial stake — what founders lose by not noticing.
+    type: string
+
+  strategic_question:
+    description: "The question the reader should ask themselves after reading"
+    type: string
+
+  hook_type:
+    description: "Category of the primary hook"
+    type: string
+    enum:
+      - hidden_cost
+      - contradiction
+      - false_belief
+      - future_consequence
+      - comparison
+      - pattern_interrupt
+
+  primary_hook:
+    description: >
+      The strongest opening line.
+      Must come from cost_of_ignoring or mechanism.
+      Must not be generic.
+      One or two sentences — not a paragraph.
+    type: string
+
+  supporting_points:
+    description: "3–5 short points that can feed blog and platform content"
+    type: list[string]
+    min: 3
+    max: 5
+
+  visual_anchor:
+    description: >
+      Short phrase that guides the image generation.
+      Examples: events becoming patterns / quiet decline / signal through fog / momentum as rate
+    type: string
+
+  sales_angle:
+    description: >
+      Subtle commercial connection to Never Blank.
+      Creates curiosity, not pressure.
+      Maximum 1–2 sentences.
+    type: string
+
+  soft_cta:
+    description: >
+      Low-pressure call to action.
+      Examples:
+        This is the kind of signal Never Blank is built to keep visible.
+        If your business keeps disappearing when you get busy, that is not a content problem.
+        The system you are watching here is the product.
+    type: string
+
+  # Platform-specific angles (brief guidance for each platform generator)
+  linkedin_angle:
+    description: "What makes this topic relevant to a LinkedIn professional audience. Business implication, not personal growth."
+    type: string
+
+  instagram_angle:
+    description: "The visual + minimal text version of the idea. What can be shown, not just said."
+    type: string
+
+  facebook_angle:
+    description: "The plain-language, accessible reflection version. Less expert, more human."
+    type: string
+
+  threads_angle:
+    description: "The provocative, multi-post tension and reframe version. Built for a thinking sequence."
+    type: string
+
+  telegram_angle:
+    description: "The single sharp signal. One observation + one implication. No elaboration."
+    type: string
+
+  stories_flow:
+    description: "Brief description of the story arc for Instagram/Facebook Stories (4-story sequence)"
+    type: string
+
+hook_type_definitions:
+  hidden_cost:
+    description: "Something the reader is paying for without realizing it"
+    example: "Every week you don't publish, you're spending on acquisition instead."
+
+  contradiction:
+    description: "Two things that appear true but conflict"
+    example: "The founder who is too busy to post is usually the one who needs new clients most."
+
+  false_belief:
+    description: "A widely held belief that is wrong or incomplete"
+    example: "Visibility is not a personality trait. It is a system."
+
+  future_consequence:
+    description: "What happens if this pattern continues unchecked"
+    example: "The client who went quiet last month didn't leave because the work was bad."
+
+  comparison:
+    description: "Contrasting two situations or behaviors to reveal the pattern"
+    example: "Founders with worse products and more consistent presence win more work."
+
+  pattern_interrupt:
+    description: "A statement that disrupts an assumed truth"
+    example: "Clients don't know you're busy. They know you're quiet."
+
+platform_differentiation_rules:
+  min_platforms_unique: 5   # at least 5 of 6 platforms must be meaningfully different
+  similarity_threshold: 0.45  # Jaccard word overlap — above this triggers rewrite flag
+  platforms:
+    - linkedin
+    - instagram
+    - facebook
+    - threads
+    - telegram
+    - blog_intro  # first paragraph only

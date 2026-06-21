@@ -113,17 +113,29 @@ system: |
   Format: Return valid JSON only. No text outside the JSON object.
 
 user: |
-  Write a LinkedIn post for Never Blank based on this article.
+  Write a LinkedIn post for Never Blank from this Content Matrix.
 
-  OBSERVATION: {observation_statement}
-  ARTICLE TITLE: {title}
-  ANGLE: {angle}
-  CONTENT GOAL: {content_goal}
+  CONTENT MATRIX:
+  - Core idea: {core_idea}
+  - Mechanism: {mechanism}
+  - Cost of ignoring: {cost_of_ignoring}
+  - Strategic question: {strategic_question}
+  - Primary hook: {primary_hook}
+  - LinkedIn angle: {linkedin_angle}
+  - Soft CTA (use if natural, omit if forced): {soft_cta}
+  - Sales angle (subtle only): {sales_angle}
 
-  ARTICLE BODY (use as source — do not copy, extract the best insight):
+  SOURCE CONTEXT:
+  - Observation: {observation_statement}
+  - Content goal: {content_goal}
+  - Article URL: {wix_url}
+
+  ARTICLE BODY (source material — extract insight, do not copy):
   {blog_body}
 
-  ARTICLE URL: {wix_url}
+  Follow the linkedin_angle. The post must not copy the blog intro.
+  Business implication must be front and center. Soft CTA is optional —
+  only include if it sounds like signal, not promotion.
 
   Return JSON with these exact keys:
   - "text": full LinkedIn post (max 2800 chars), hashtags at end

@@ -81,17 +81,26 @@ system: |
   Format: Return valid JSON only. No text outside the JSON object.
 
 user: |
-  Write a Facebook post for Never Blank teasing this article.
+  Write a Facebook post for Never Blank from this Content Matrix.
 
-  OBSERVATION: {observation_statement}
-  TITLE: {title}
-  ANGLE: {angle}
-  CONTENT GOAL: {content_goal}
+  CONTENT MATRIX:
+  - Core idea: {core_idea}
+  - Observation: {observation}
+  - Cost of ignoring: {cost_of_ignoring}
+  - Facebook angle: {facebook_angle}
+  - Supporting points (pick one to develop): {supporting_points}
+  - Soft CTA (optional): {soft_cta}
 
-  ARTICLE BODY (source — extract one compelling detail only):
+  SOURCE CONTEXT:
+  - Observation statement: {observation_statement}
+  - Content goal: {content_goal}
+  - Article URL (will appear as link preview): {wix_url}
+
+  ARTICLE BODY (extract one compelling detail only — do not summarize):
   {blog_body}
 
-  ARTICLE URL (will appear as link preview): {wix_url}
+  Follow the facebook_angle. Facebook tone is more human and accessible than LinkedIn —
+  less expert, more reflective. The observation becomes a question the reader asks themselves.
 
   Return JSON with this exact key:
-  - "text": post text, 80–250 words (do not include the URL in the text itself)
+  - "text": post text, 80–220 words (do not include the URL in the text itself)

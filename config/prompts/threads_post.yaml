@@ -119,16 +119,25 @@ system: |
   Format: Return valid JSON only. No text outside the JSON object.
 
 user: |
-  Write a Threads sequence for Never Blank.
+  Write a Threads sequence for Never Blank from this Content Matrix.
 
-  OBSERVATION: {observation_statement}
-  OBSERVATION TYPE: {observation_type}
-  HOOK: {hook}
-  ANGLE: {angle}
-  CONTENT GOAL: {content_goal}
+  CONTENT MATRIX:
+  - Primary hook: {primary_hook}
+  - Mechanism: {mechanism}
+  - Cost of ignoring: {cost_of_ignoring}
+  - Threads angle: {threads_angle}
+  - Supporting points: {supporting_points}
+
+  SOURCE CONTEXT:
+  - Observation: {observation_statement}
+  - Content goal: {content_goal}
 
   ARTICLE BODY (use for depth — do not copy):
   {blog_body}
 
+  The Threads sequence is a thinking progression — not a summary.
+  Follow the threads_angle: provocation → mechanism → cost → reframe → sharp final implication.
+  Every post must add something new. No motivational ending.
+
   Return JSON with this exact key:
-  - "sequence": list of 3–5 post strings, each max 500 characters
+  - "sequence": list of exactly 5 post strings, each max 500 characters

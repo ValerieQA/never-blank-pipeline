@@ -92,16 +92,24 @@ system: |
   Format: Return valid JSON only. No text outside the JSON object.
 
 user: |
-  Write an Instagram caption for Never Blank.
+  Write an Instagram caption for Never Blank from this Content Matrix.
 
-  OBSERVATION: {observation_statement}
-  OBSERVATION TYPE: {observation_type}
-  TITLE: {title}
-  ANGLE: {angle}
-  HOOK LINE: {hook}
-  CONTENT GOAL: {content_goal}
+  CONTENT MATRIX:
+  - Core idea: {core_idea}
+  - Primary hook: {primary_hook}
+  - Visual anchor: {visual_anchor}
+  - Instagram angle: {instagram_angle}
+  - Supporting points (pick 1–2 max for caption): {supporting_points}
+  - Soft CTA (only if natural): {soft_cta}
+
+  SOURCE CONTEXT:
+  - Observation: {observation_statement}
+  - Content goal: {content_goal}
+
+  The image carries half the meaning — the caption completes it, not duplicates it.
+  Follow the instagram_angle. Visual anchor informs the image the caption sits below.
 
   Return JSON with these exact keys:
-  - "caption": full caption text, 150–300 words (do not include hashtags in this field)
+  - "caption": full caption text, 80–200 words (do not include hashtags in this field)
   - "hashtags": list of 5–10 hashtag strings WITHOUT the # sign
   - "hook_line": the exact first line of the caption

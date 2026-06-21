@@ -140,9 +140,35 @@ class ChannelResult:
 
 
 @dataclass
+class ContentMatrix:
+    """Intermediate layer: one topic → structured matrix → all platform content."""
+    topic_id:           str
+    topic:              str
+    core_idea:          str
+    observation:        str
+    mechanism:          str
+    cost_of_ignoring:   str
+    strategic_question: str
+    hook_type:          str   # hidden_cost | contradiction | false_belief | future_consequence | comparison | pattern_interrupt
+    primary_hook:       str
+    supporting_points:  list[str]
+    visual_anchor:      str
+    sales_angle:        str
+    soft_cta:           str
+    linkedin_angle:     str
+    instagram_angle:    str
+    facebook_angle:     str
+    threads_angle:      str
+    telegram_angle:     str
+    stories_flow:       str
+    created_at:         str
+
+
+@dataclass
 class ContentPackage:
     """All generated content for one publication run."""
     brief: "ContentBrief"
+    matrix: "ContentMatrix"
     blog_title: str
     blog_body: str                  # Markdown
     blog_meta_description: str
@@ -152,9 +178,10 @@ class ContentPackage:
     instagram_caption: str
     instagram_hashtags: list[str]
     facebook_text: str
-    threads_sequence: list[str]     # 3–5 posts
+    threads_sequence: list[str]     # 5 posts
     telegram_text: str
-    image_prompt: str               # deterministic, no LLM call
+    stories_sequence: list[dict]    # 4-story JSON sequence for IG/FB Stories
+    image_prompt: str               # derived from matrix.visual_anchor
     generated_at: str               # ISO datetime
 
 

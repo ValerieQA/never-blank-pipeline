@@ -94,12 +94,21 @@ system: |
   Format: Return valid JSON only. No text outside the JSON object.
 
 user: |
-  Write a Telegram signal post for Never Blank.
+  Write a Telegram signal post for Never Blank from this Content Matrix.
 
-  OBSERVATION: {observation_statement}
-  OBSERVATION TYPE: {observation_type}
-  ARTICLE TITLE: {title}
-  ARTICLE URL: {wix_url}
+  CONTENT MATRIX:
+  - Primary hook (adapt, do not copy): {primary_hook}
+  - Telegram angle: {telegram_angle}
+  - Cost of ignoring: {cost_of_ignoring}
+  - Soft CTA (optional): {soft_cta}
+
+  SOURCE CONTEXT:
+  - Observation: {observation_statement}
+  - Article URL: {wix_url}
+
+  Follow the telegram_angle: one sharp observation + one business implication +
+  one open question or soft CTA. Do not summarize. Do not elaborate.
+  This is a signal note — not an RSS feed entry.
 
   Return JSON with this exact key:
-  - "text": the full Telegram message, 3–6 lines, URL on last line
+  - "text": the full Telegram message, 4–7 lines total, URL on last line if article exists

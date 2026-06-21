@@ -132,15 +132,29 @@ system: |
   Format: Return valid JSON only. No text outside the JSON object.
 
 user: |
-  Write a Never Blank blog article from this brief.
+  Write a Never Blank blog article from this Content Matrix.
 
-  OBSERVATION: {observation_statement}
-  OBSERVATION TYPE: {observation_type}
-  TITLE: {title}
-  ANGLE: {angle}
-  OPENING HOOK: {hook}
-  CONTENT GOAL: {content_goal}
-  VOICE NOTES: {tone_notes}
+  CONTENT MATRIX:
+  - Core idea: {core_idea}
+  - Observation: {observation}
+  - Mechanism: {mechanism}
+  - Cost of ignoring: {cost_of_ignoring}
+  - Strategic question: {strategic_question}
+  - Primary hook: {primary_hook}
+  - Supporting points: {supporting_points}
+  - Visual anchor: {visual_anchor}
+  - Soft CTA: {soft_cta}
+  - Sales angle (use subtly, do not push): {sales_angle}
+
+  BRIEF CONTEXT:
+  - Observation type: {observation_type}
+  - Title: {title}
+  - Content goal: {content_goal}
+  - Voice notes: {tone_notes}
+
+  Use the primary_hook as the opening. Use mechanism and cost_of_ignoring as the
+  structural backbone. End with the strategic_question as an implication, not advice.
+  Weave in the sales_angle subtly — if it fits. Do not force it.
 
   Return JSON with these exact keys:
   - "title": the article title (can differ slightly from the brief title if you find a stronger frame)

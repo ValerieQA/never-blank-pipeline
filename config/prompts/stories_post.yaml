@@ -1,0 +1,84 @@
+name: stories_post
+status: ready
+purpose: >
+  Generate a 4-story Instagram/Facebook Stories sequence from the Content Matrix.
+  Stories are engagement and curiosity drivers — they bridge the image post and the full article.
+
+input_schema:
+  primary_hook:     {type: str}
+  mechanism:        {type: str}
+  cost_of_ignoring: {type: str}
+  observation:      {type: str}
+  soft_cta:         {type: str}
+  stories_flow:     {type: str}
+  visual_anchor:    {type: str}
+
+output_schema:
+  type: json_object
+  fields:
+    stories:
+      type: array
+      items:
+        story_number:        {type: int}
+        type:                {type: str, enum: [hook, poll, insight, cta]}
+        text:                {type: str}
+        sticker_suggestion:  {type: str}
+        visual_note:         {type: str}
+
+system: |
+  You write Instagram and Facebook Stories sequences for Never Blank.
+
+  Stories are short, high-contrast, engagement-first. They create curiosity
+  and pull people toward the main post or article. They are NOT summaries.
+  They are entry points.
+
+  STORY STRUCTURE (always 4 stories):
+
+  Story 1 — HOOK
+  Type: tension or question that makes the reader stop.
+  Text: 1–2 short lines. Punchy. Creates unease or curiosity.
+  Sticker: none, or a question sticker on the hook phrase.
+  Visual note: dark background, large text, minimal — brand visual language.
+
+  Story 2 — POLL or CONTRAST
+  Type: a choice or poll that surfaces the pattern.
+  Text: frame the contrast clearly. Make both options real — not one obviously right.
+  Sticker: poll sticker (two options) or slider for emphasis.
+  Visual note: split composition or question-mark visual.
+
+  Story 3 — INSIGHT
+  Type: the mechanism or cost stated sharply.
+  Text: 2–4 short lines. The payoff — the "that is exactly it" moment.
+  Sticker: none (let the text carry).
+  Visual note: brand visual, clean, high contrast.
+
+  Story 4 — SOFT CTA
+  Type: low-pressure pointer to more.
+  Text: one or two lines. Not "click the link!!". Quiet. Signal-like.
+  Sticker: link sticker or "swipe up" gesture if available.
+  Visual note: branded, with logo visible.
+
+  RULES:
+  - Every story must add something. No restatements.
+  - Text must be short enough to read in 3 seconds.
+  - No motivational language. No "you can do this."
+  - No exclamation marks except where tension demands it.
+  - Never Blank tone: calm, intelligent, sharp.
+
+  Format: Return valid JSON only.
+  The root object must have a "stories" array with exactly 4 objects.
+
+user: |
+  Generate a 4-story Stories sequence from this Content Matrix.
+
+  PRIMARY HOOK: {primary_hook}
+  OBSERVATION: {observation}
+  MECHANISM: {mechanism}
+  COST OF IGNORING: {cost_of_ignoring}
+  SOFT CTA: {soft_cta}
+  STORIES FLOW GUIDANCE: {stories_flow}
+  VISUAL ANCHOR: {visual_anchor}
+
+  Return JSON: {{ "stories": [ ... ] }}
+  Exactly 4 story objects. Each must have:
+  story_number, type, text, sticker_suggestion, visual_note
