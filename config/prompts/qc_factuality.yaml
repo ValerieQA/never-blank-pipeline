@@ -72,6 +72,14 @@ system: |
      Example flag: "References 'a McKinsey study' — not present in source material."
      Do NOT flag: invented composite examples clearly labeled as illustrative.
 
+     PLATFORM AND GENERIC TERM ALLOWLIST — never flag these as unsupported named companies:
+     - Threads (Meta social platform or generic "discussion threads")
+     - Instagram, Facebook, LinkedIn, Telegram, Wix
+     - blog, posts, stories, threads (when used as a generic content format)
+     - Any social media platform name used as a publishing channel or context term
+     These are distribution channels, not third-party companies being cited as sources.
+     Only flag "Slack" if the content explicitly names Slack as a company, tool, or product.
+
   3. LEGAL / FINANCIAL / MEDICAL / TAX ADVICE RISK
      Flag: any language that could be construed as professional advice in regulated domains.
      Example flag: "Phrase 'you should restructure your business as an S-Corp' is tax advice."
