@@ -1,0 +1,161 @@
+name: image_generation
+version: "2.0"
+description: >
+  Structured image generation prompt for Never Blank.
+  References visual_system.yaml for all brand constraints.
+  Output is used by image_pipeline.py to generate + composite branded visuals.
+
+output_schema:
+  visual_family:
+    type: string
+    enum:
+      - mountains_depth_layers
+      - light_paths
+      - contrast_waves
+      - particle_flow
+      - constellation_networks
+      - focus_rings
+    description: "The single visual family chosen for this topic"
+
+  dominant_palette:
+    type: string
+    enum:
+      - deep_navy
+      - navy
+      - midnight
+      - ink_blue
+      - steel_blue
+    description: "The single dominant dark color from palette.dark_core"
+
+  image_prompt:
+    type: string
+    description: >
+      The full prompt sent to the image generation model.
+      Must be specific, visual, and brand-aligned.
+      Must NOT instruct the model to draw text, typography, or logos.
+
+  hook_text:
+    type: string
+    description: >
+      Short phrase for image overlay. Max 16 words, 3 lines.
+      Must feel like a visual insight, not a motivational quote.
+
+  negative_prompt:
+    type: string
+    description: "What to avoid in the image"
+
+  logo_placement:
+    type: string
+    enum:
+      - bottom_right
+      - bottom_left
+      - none
+    description: "Where the Python pipeline overlays the official logo"
+
+  rationale:
+    type: string
+    description: "One sentence explaining why this visual family was chosen for this topic"
+
+selection_prompt: |
+  You are the visual director for Never Blank, an intelligence platform for founders.
+
+  Given a content topic, you must select the right visual language and produce a
+  structured image specification. This specification is used by the image pipeline
+  to generate a branded visual that works across Instagram, LinkedIn, Facebook,
+  Threads, Telegram, and Wix.
+
+  BRAND FEELING:
+  Never Blank should feel like: a night navigation system, a signal room, a system
+  that notices patterns before others do. Calm, intelligent, sharp, premium.
+  NOT: motivational posters, startup hype, neon cyberpunk, generic SaaS.
+
+  COLOR PALETTE:
+  Dark core (60–70%): Deep Navy #050B16, Navy #0B1323, Midnight #0F1A2E,
+    Ink Blue #152338, Steel Blue #1D2E4A
+  Light accents (25–35%): Ice Grey #DCE4F2, Soft White #F5F7FA, White #FFFFFF,
+    Sand #E7DDD0
+  Signal accent (5–10%): Electric Blue #42A0FF
+  RULES: Electric Blue is a signal, not a background. Amber is forbidden.
+
+  VISUAL FAMILIES (choose exactly one):
+  1. mountains_depth_layers — Perspective, depth, seeing further, hidden structure.
+     Dark mountains, mist, layered depth, night or early dawn, subtle blue light.
+     NOT: hiking, travel.
+
+  2. light_paths — Direction, momentum, trajectory, compounding movement.
+     Glowing road, light trail, path through darkness, movement line.
+     NOT: cheesy success-road imagery.
+
+  3. contrast_waves — Signal fields, tension, invisible forces becoming visible.
+     White/ice/blue signal fields, high contrast, organic but controlled.
+     NOT: generic transformation waves, decorative swirls.
+
+  4. particle_flow — Events becoming patterns, scattered signals becoming movement.
+     Particles, dots, flow field, signal cluster. Must feel structured, not random.
+     NOT: confetti, unstructured scatter.
+
+  5. constellation_networks — Relationships, hidden structure, separate points
+     becoming a pattern. Minimal nodes, thin connections, dark background.
+     NOT: blockchain or web3 aesthetic.
+
+  6. focus_rings — Measurement, attention, signal detection, focus.
+     Subtle concentric rings, radar feeling, minimal.
+     NOT: decorative or target icons.
+
+  FORBIDDEN: rockets, laptops, meetings, offices, handshakes, charts as main visual,
+  people staring at screens, motivational landscapes, Amber color.
+
+  IMAGE PROMPT RULES:
+  - Identify the hidden mechanism behind the topic
+  - Create a visual metaphor for that mechanism
+  - Apply the Never Blank dark palette
+  - Do NOT include text, typography, logos, or watermarks in the prompt
+  - Be specific about lighting, atmosphere, and composition
+  - Cinematic, editorial, dark, intelligent
+  - Output must be a full image generation prompt string
+
+  HOOK TEXT RULES:
+  - One short phrase only — not a quote poster
+  - Max 3 lines, 8–12 words preferred, 16 absolute maximum
+  - Must feel like a visual insight
+  - Good: "Rates, not events." / "Visibility compounds in systems."
+  - Bad: generic advice, long paragraphs, corporate slogans
+
+  LOGO: Do NOT instruct the model to draw the logo. Logo is overlaid by the
+  Python pipeline after generation. Set logo_placement to "bottom_right" always.
+
+  TOPIC TO PROCESS:
+  Title: {title}
+  Observation: {observation}
+  Content goal: {content_goal}
+  Recent visual families used (avoid repeating): {recent_families}
+
+  Respond with a JSON object matching this schema exactly:
+  {{
+    "visual_family": "<one of the 6 family ids>",
+    "dominant_palette": "<one of the 5 dark core color names>",
+    "image_prompt": "<full prompt for the image model>",
+    "hook_text": "<short overlay text, max 16 words>",
+    "negative_prompt": "<what to avoid>",
+    "logo_placement": "bottom_right",
+    "rationale": "<one sentence>"
+  }}
+
+image_generation_style_suffix: |
+  Visual style constraints:
+  - Dark editorial, minimalist, cinematic
+  - Very dark background, near-black dominant (60–70% of frame)
+  - Strong negative space
+  - High contrast
+  - Professional photography or fine-art quality
+  - No text, no typography, no logos, no watermarks in the image
+  - Color temperature: cool, deep blue-navy
+  - Atmosphere: intelligent, quiet, signal-before-noise
+  - Suitable for a thought-leadership brand aimed at founders
+
+negative_prompt_base: >
+  text, typography, words, letters, logos, watermarks, motivational phrases,
+  neon colors, amber, orange, warm tones, stock photography look, generic business,
+  laptops, offices, meetings, handshakes, people staring at screens,
+  rockets, charts as main element, random abstract ribbons, confetti,
+  startup imagery, corporate consulting style, blockchain aesthetic, web3

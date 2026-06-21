@@ -3,10 +3,13 @@
 data/*
 !data/drafts/
 !data/images/
+!data/memory/
 data/drafts/*
 !data/drafts/.gitkeep
 data/images/*
 !data/images/.gitkeep
+data/memory/*
+!data/memory/visual_registry.json
 # logo is a tracked asset — must NOT be ignored
 assets/fonts/
 __pycache__/

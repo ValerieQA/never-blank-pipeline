@@ -1,0 +1,225 @@
+# Never Blank Visual System
+# Source of truth for all image generation, compositing, and brand decisions.
+# Do not modify without updating image_generation.yaml and image_pipeline.py.
+
+brand_feeling:
+  is:
+    - night navigation system
+    - signal room
+    - system that notices patterns before others do
+    - calm, intelligent, sharp, premium
+    - visible presence without noise
+  is_not:
+    - generic SaaS
+    - motivational posters
+    - stock business imagery
+    - AI-generated abstract wallpaper
+    - startup hype
+    - neon cyberpunk
+    - corporate consulting slides
+    - random decorative waves
+
+palette:
+  dark_core:
+    ratio: "60-70%"
+    colors:
+      deep_navy:  "#050B16"
+      navy:       "#0B1323"
+      midnight:   "#0F1A2E"
+      ink_blue:   "#152338"
+      steel_blue: "#1D2E4A"
+
+  light_accents:
+    ratio: "25-35%"
+    colors:
+      ice_grey:   "#DCE4F2"
+      soft_white: "#F5F7FA"
+      white:      "#FFFFFF"
+      sand:       "#E7DDD0"
+
+  signal_accent:
+    ratio: "5-10%"
+    colors:
+      electric_blue: "#42A0FF"
+
+  rules:
+    - Electric Blue is a signal, not a background
+    - Sand is used sparingly — does not define the brand
+    - Amber is forbidden in all forms
+    - Overall feeling must stay dark, deep, and intelligent
+
+visual_families:
+  mountains_depth_layers:
+    id: mountains_depth_layers
+    label: "Mountains / Depth Layers"
+    meaning:
+      - perspective
+      - distance
+      - seeing further
+      - hidden structure
+      - strategic clarity
+    visuals:
+      - dark mountains
+      - mist
+      - layered depth
+      - night or early dawn
+      - subtle blue light
+    avoid:
+      - literal hiking or travel feeling
+    weight: 3  # core family — can repeat more but max 3 in last 9
+
+  light_paths:
+    id: light_paths
+    label: "Light Paths"
+    meaning:
+      - direction
+      - momentum
+      - trajectory
+      - compounding movement
+    visuals:
+      - glowing road
+      - light trail
+      - path through darkness
+      - movement line
+    avoid:
+      - cheesy success-road imagery
+    weight: 2  # high-impact accent
+
+  contrast_waves:
+    id: contrast_waves
+    label: "Contrast Waves"
+    meaning:
+      - signal fields
+      - tension
+      - invisible forces becoming visible
+    visuals:
+      - white / ice / blue signal fields
+      - high contrast
+      - organic but controlled
+    avoid:
+      - generic transformation waves
+      - decorative swirls
+    weight: 2  # high-impact accent
+
+  particle_flow:
+    id: particle_flow
+    label: "Particle Flow"
+    meaning:
+      - events becoming patterns
+      - scattered signals becoming movement
+      - accumulation
+    visuals:
+      - particles
+      - dots
+      - flow field
+      - signal cluster
+    avoid:
+      - random confetti
+      - unstructured scatter
+    weight: 2
+
+  constellation_networks:
+    id: constellation_networks
+    label: "Constellation Networks"
+    meaning:
+      - relationships
+      - hidden structure
+      - separate points becoming a pattern
+    visuals:
+      - minimal nodes
+      - thin connections
+      - dark background
+    avoid:
+      - blockchain aesthetic
+      - web3 aesthetic
+    weight: 2
+
+  focus_rings:
+    id: focus_rings
+    label: "Focus Rings"
+    meaning:
+      - measurement
+      - attention
+      - signal detection
+      - focus
+    visuals:
+      - subtle concentric rings
+      - radar or measurement feeling
+      - minimal
+    avoid:
+      - decorative rings
+      - target icons
+    weight: 1  # rare — use as accent
+
+forbidden_visuals:
+  - Transformation Waves
+  - Data Bars
+  - generic Signal Dots as standalone concept
+  - random AI abstract ribbons
+  - rockets
+  - laptops
+  - meetings
+  - office scenes
+  - handshakes
+  - charts as the main visual element
+  - people staring at screens
+  - motivational landscapes
+  - Amber in any form
+
+instagram_rhythm:
+  cycle:
+    - dark_insight_card
+    - mountains_depth_layers
+    - contrast_waves
+    - particle_flow
+    - light_message_card
+    - constellation_networks
+    - light_paths
+    - focus_rings
+    - sand_pause_card
+  rules:
+    - Do not place too many text-heavy posts next to each other
+    - Do not place too many identical dark cards in a row
+    - Use light cards to let the grid breathe
+    - The feed should feel like one system evolving over time
+    - Visual diversity should exist inside one unified brand language
+
+logo:
+  path: "assets/logo/never-blank-logo.png"
+  placement_default: "bottom_right"
+  size_ratio: 0.22  # 22% of image width
+  margin_px: 40
+  rules:
+    - Use only the official logo file — never ask the image model to draw it
+    - Logo should not dominate the image
+    - Logo overlaid by Python pipeline after AI generation
+    - If the generated image already contains enough brand identity, logo can be minimal
+
+image_text:
+  rules:
+    - One short hook only — not a quote poster
+    - Max 3 lines
+    - 8-12 words preferred
+    - 16 words absolute maximum
+    - Text should feel like a visual insight
+  good_examples:
+    - "Rates, not events."
+    - "Momentum lives in rates."
+    - "Visibility compounds in systems."
+    - "The signal was already there."
+    - "Patterns beat noise."
+  bad_examples:
+    - Long paragraphs
+    - Generic motivational phrases
+    - Advice or how-to phrasing
+    - "Here are 3 ways…"
+    - Corporate slogans
+
+rotation_rules:
+  window: 6  # last N posts for repetition check
+  max_same_family_in_window: 2
+  no_consecutive_same_family: true
+  no_consecutive_same_palette: true
+  mountains_max_in_last_9: 3  # core family exception
+  contrast_waves_max_in_window: 2
+  light_paths_max_in_window: 2

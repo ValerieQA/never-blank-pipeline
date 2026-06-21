@@ -28,8 +28,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from src.publishing.image_pipeline import (
-    LOGO_PATH, IMAGES_DIR, REPO_ROOT, HOOK_MAX_CHARS,
-    _find_font, composite_image, run_image_pipeline,
+    LOGO_PATH, IMAGES_DIR, REPO_ROOT, HOOK_MAX_CHARS, REGISTRY_PATH,
+    _find_font, composite_image, run_image_pipeline, load_registry,
+    choose_visual_family,
 )
 
 DRAFT_BASE = REPO_ROOT / "data" / "drafts" / "latest"
@@ -92,7 +93,29 @@ def dry_run() -> int:
         print(f"  ✗  Pillow error: {exc}")
         errors.append("pillow")
 
-    # ── 4. OpenAI (optional — has programmatic fallback) ─────────────
+    # ── 4. Visual system ──────────────────────────────────────────────
+    print(f"\n{SEP}")
+    print("  Visual system")
+    print(SEP)
+    from src.publishing.image_pipeline import VISUAL_SYSTEM, IMG_GEN_PROMPT
+    if VISUAL_SYSTEM.exists():
+        print(f"  ✓  config/visual_system.yaml")
+    else:
+        print(f"  ✗  config/visual_system.yaml missing")
+        errors.append("visual_system.yaml missing")
+    if IMG_GEN_PROMPT.exists():
+        print(f"  ✓  config/prompts/image_generation.yaml")
+    else:
+        print(f"  ✗  config/prompts/image_generation.yaml missing")
+        errors.append("image_generation.yaml missing")
+    if REGISTRY_PATH.exists():
+        registry = load_registry()
+        n_posts = len(registry.get("posts", []))
+        print(f"  ✓  data/memory/visual_registry.json  ({n_posts} posts logged)")
+    else:
+        print(f"  ○  data/memory/visual_registry.json not yet created (will be initialized on first run)")
+
+    # ── 5. OpenAI (optional — has programmatic fallback) ─────────────
     print(f"\n{SEP}")
     print("  OpenAI (gpt-image-1 / dall-e-3) — optional, has fallback")
     print(SEP)
@@ -147,10 +170,19 @@ def upload() -> int:
 
     try:
         url = run_image_pipeline(draft_dir, IMAGES_DIR, log=lambda msg: print(msg))
+
+        # Load registry to report what was selected
+        registry = load_registry()
+        last_post = registry.get("posts", [{}])[-1] if registry.get("posts") else {}
+
         print(f"\n  ✓  Image pipeline complete")
-        print(f"  ✓  Local:  data/images/latest/image.png")
-        print(f"  ✓  URL:    {url}")
-        print(f"  ✓  Ready:  data/drafts/latest/image_url.txt")
+        print(f"  ✓  Visual family:  {last_post.get('visual_family', '?')}")
+        print(f"  ✓  Hook text:      {last_post.get('hook_text', '?')!r}")
+        print(f"  ✓  Palette:        {last_post.get('dominant_palette', '?')}")
+        print(f"  ✓  Local:          data/images/latest/image.png")
+        print(f"  ✓  Cloudinary URL: {url}")
+        print(f"  ✓  image_url.txt:  data/drafts/latest/image_url.txt  ✓ written")
+        print(f"  ✓  Registry:       data/memory/visual_registry.json  ✓ updated")
         print(f"\n  Next: python scripts/publish.py --dry-run")
         return 0
     except Exception as exc:
