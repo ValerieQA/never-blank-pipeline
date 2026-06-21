@@ -1,0 +1,90 @@
+name: Generate Content
+
+on:
+  workflow_dispatch:
+    inputs:
+      with_qc:
+        description: "Run QC gate after generation"
+        required: false
+        type: boolean
+        default: true
+      topic_id:
+        description: "Force specific topic ID (leave blank for auto)"
+        required: false
+        default: ""
+
+jobs:
+  generate:
+    name: Generate Content (Matrix + QC)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install --quiet python-dotenv openai PyYAML numpy google-auth google-api-python-client
+
+      - name: Generate content
+        env:
+          NB_OPENAI_API_KEY:                 ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_OPENAI_CHAT_MODEL:              ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          NB_OPENAI_TEMPERATURE:             "0.7"
+          NB_OPENAI_QC_TEMPERATURE:          "0.2"
+          NB_OPENAI_EMBEDDING_MODEL:         "text-embedding-3-small"
+          NB_GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.NB_GOOGLE_SHEETS_CREDENTIALS_JSON }}
+          NB_GOOGLE_SHEET_ID:                ${{ secrets.NB_GOOGLE_SHEET_ID }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.with_qc }}" = "true" ]; then ARGS="$ARGS --qc"; fi
+          if [ -n "${{ inputs.topic_id }}" ]; then ARGS="$ARGS --topic-id ${{ inputs.topic_id }}"; fi
+          python scripts/generate.py $ARGS
+
+      - name: Upload draft artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: content-draft-${{ github.run_id }}
+          path: |
+            data/drafts/latest/content_matrix.json
+            data/drafts/latest/blog_post.md
+            data/drafts/latest/linkedin.txt
+            data/drafts/latest/instagram.txt
+            data/drafts/latest/facebook.txt
+            data/drafts/latest/threads_readable.txt
+            data/drafts/latest/telegram.txt
+            data/drafts/latest/stories_readable.txt
+            data/drafts/latest/differentiation_report.json
+            data/drafts/latest/qc_report.json
+          retention-days: 30
+
+      - name: Print step summary
+        if: always()
+        run: |
+          echo "## Content Generation Report" >> $GITHUB_STEP_SUMMARY
+          if [ -f data/drafts/latest/content_matrix.json ]; then
+            echo "### Content Matrix" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            python3 -c "
+          import json
+          m = json.load(open('data/drafts/latest/content_matrix.json'))
+          print(json.dumps({k: m[k] for k in ['topic_id','hook_type','primary_hook','cost_of_ignoring','visual_anchor','sales_angle','soft_cta']}, indent=2))
+          " >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f data/drafts/latest/differentiation_report.json ]; then
+            echo "### Differentiation Check" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            python3 -c "
+          import json
+          r = json.load(open('data/drafts/latest/differentiation_report.json'))
+          print(json.dumps({'ok': r['ok'], 'pairs_flagged': r['pairs_flagged'], 'summary': r['summary']}, indent=2))
+          " >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
