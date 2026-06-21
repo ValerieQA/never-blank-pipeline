@@ -1,7 +1,7 @@
 import os
 import json
 from typing import Any
-from openai import OpenAI
+from openai import OpenAI, BadRequestError
 from src.utils.logger import get_logger
 
 log = get_logger("llm_client")
@@ -31,10 +31,6 @@ def _model() -> str:
     return os.environ.get("NB_OPENAI_CHAT_MODEL", "gpt-4o")
 
 
-def _is_reasoning_model(model: str) -> bool:
-    """o-series models don't accept temperature."""
-    return model.startswith("o") and (model[1:2].isdigit() or model[1:] in ("1", "3", "4"))
-
 
 def _embedding_model() -> str:
     return os.environ.get("NB_OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
@@ -50,18 +46,25 @@ def chat(system: str, user: str, json_mode: bool = False) -> str:
     model = _model()
     kwargs: dict[str, Any] = {
         "model": model,
+        "temperature": _temperature(),
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
     }
-    if not _is_reasoning_model(model):
-        kwargs["temperature"] = _temperature()
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
 
-    log.debug("chat() model=%s temp=%s json_mode=%s", model, kwargs.get("temperature", "default"), json_mode)
-    response = client.chat.completions.create(**kwargs)
+    log.debug("chat() model=%s temp=%s json_mode=%s", model, _temperature(), json_mode)
+    try:
+        response = client.chat.completions.create(**kwargs)
+    except BadRequestError as exc:
+        if "temperature" in str(exc):
+            log.warning("Model %s rejected temperature — retrying without it", model)
+            kwargs.pop("temperature", None)
+            response = client.chat.completions.create(**kwargs)
+        else:
+            raise
     content = response.choices[0].message.content or ""
 
     if json_mode:
@@ -88,18 +91,25 @@ def chat_qc(system: str, user: str, json_mode: bool = False) -> str:
     model = _model()
     kwargs: dict[str, Any] = {
         "model": model,
+        "temperature": _qc_temperature(),
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
     }
-    if not _is_reasoning_model(model):
-        kwargs["temperature"] = _qc_temperature()
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
 
-    log.debug("chat_qc() model=%s temp=%s", model, kwargs.get("temperature", "default"))
-    response = client.chat.completions.create(**kwargs)
+    log.debug("chat_qc() model=%s temp=%s", model, _qc_temperature())
+    try:
+        response = client.chat.completions.create(**kwargs)
+    except BadRequestError as exc:
+        if "temperature" in str(exc):
+            log.warning("Model %s rejected temperature — retrying without it", model)
+            kwargs.pop("temperature", None)
+            response = client.chat.completions.create(**kwargs)
+        else:
+            raise
     content = response.choices[0].message.content or ""
 
     if json_mode:
