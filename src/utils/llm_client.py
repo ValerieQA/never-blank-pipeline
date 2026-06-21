@@ -31,6 +31,11 @@ def _model() -> str:
     return os.environ.get("NB_OPENAI_CHAT_MODEL", "gpt-4o")
 
 
+def _is_reasoning_model(model: str) -> bool:
+    """o-series models don't accept temperature."""
+    return model.startswith("o") and (model[1:2].isdigit() or model[1:] in ("1", "3", "4"))
+
+
 def _embedding_model() -> str:
     return os.environ.get("NB_OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
@@ -42,18 +47,20 @@ def chat(system: str, user: str, json_mode: bool = False) -> str:
     Returns the content string.
     """
     client = _get_client()
+    model = _model()
     kwargs: dict[str, Any] = {
-        "model": _model(),
-        "temperature": _temperature(),
+        "model": model,
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
     }
+    if not _is_reasoning_model(model):
+        kwargs["temperature"] = _temperature()
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
 
-    log.debug("chat() model=%s temp=%s json_mode=%s", _model(), _temperature(), json_mode)
+    log.debug("chat() model=%s temp=%s json_mode=%s", model, kwargs.get("temperature", "default"), json_mode)
     response = client.chat.completions.create(**kwargs)
     content = response.choices[0].message.content or ""
 
@@ -78,18 +85,20 @@ def chat_qc(system: str, user: str, json_mode: bool = False) -> str:
     Use for factuality checks and voice scoring — low temp for consistency.
     """
     client = _get_client()
+    model = _model()
     kwargs: dict[str, Any] = {
-        "model": _model(),
-        "temperature": _qc_temperature(),
+        "model": model,
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
     }
+    if not _is_reasoning_model(model):
+        kwargs["temperature"] = _qc_temperature()
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
 
-    log.debug("chat_qc() model=%s temp=%s", _model(), _qc_temperature())
+    log.debug("chat_qc() model=%s temp=%s", model, kwargs.get("temperature", "default"))
     response = client.chat.completions.create(**kwargs)
     content = response.choices[0].message.content or ""
 
