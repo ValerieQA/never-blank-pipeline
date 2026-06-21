@@ -189,12 +189,13 @@ def apply_feedback(
     # If blog was rewritten, regenerate all social posts from new body
     if blog_rewritten:
         log.info("Blog rewritten — regenerating social posts from new body")
+        matrix = pkg.matrix
         try:
-            li_result  = generate_linkedin(brief, blog_body=blog_body)
-            ig_result  = generate_instagram(brief)
-            fb_result  = generate_facebook(brief, blog_body=blog_body)
-            thr_result = generate_threads(brief, blog_body=blog_body)
-            tg_result  = generate_telegram(brief)
+            li_result  = generate_linkedin(brief, matrix, blog_body=blog_body)
+            ig_result  = generate_instagram(brief, matrix)
+            fb_result  = generate_facebook(brief, matrix, blog_body=blog_body)
+            thr_result = generate_threads(brief, matrix, blog_body=blog_body)
+            tg_result  = generate_telegram(brief, matrix)
 
             linkedin_text  = li_result.get("text", linkedin_text)
             instagram_cap  = ig_result.get("caption", instagram_cap)
@@ -207,6 +208,7 @@ def apply_feedback(
 
     return ContentPackage(
         brief=pkg.brief,
+        matrix=pkg.matrix,
         blog_title=pkg.blog_title,
         blog_body=blog_body,
         blog_meta_description=pkg.blog_meta_description,
@@ -218,6 +220,7 @@ def apply_feedback(
         facebook_text=facebook_text,
         threads_sequence=threads_seq,
         telegram_text=telegram_text,
+        stories_sequence=pkg.stories_sequence,
         image_prompt=pkg.image_prompt,
         generated_at=pkg.generated_at,
     )
