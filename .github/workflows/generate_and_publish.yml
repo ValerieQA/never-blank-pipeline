@@ -67,11 +67,18 @@ jobs:
 
       - name: Confirm image_url.txt written
         run: |
-          if [ ! -f data/drafts/latest/image_url.txt ]; then
-            echo "ERROR: image_url.txt not written — image upload failed."
+          # image pipeline writes to final/ when QC-approved, or to latest/ otherwise
+          URL_FILE=""
+          if [ -f data/drafts/latest/final/image_url.txt ]; then
+            URL_FILE="data/drafts/latest/final/image_url.txt"
+          elif [ -f data/drafts/latest/image_url.txt ]; then
+            URL_FILE="data/drafts/latest/image_url.txt"
+          fi
+          if [ -z "$URL_FILE" ]; then
+            echo "ERROR: image_url.txt not found in final/ or latest/ — image upload failed."
             exit 1
           fi
-          echo "✓ image_url.txt: $(cat data/drafts/latest/image_url.txt)"
+          echo "✓ image_url.txt ($URL_FILE): $(cat $URL_FILE)"
 
       - name: Publish to all channels
         env:
@@ -124,6 +131,7 @@ jobs:
           path: |
             data/drafts/latest/final/
             data/drafts/latest/image_url.txt
+            data/drafts/latest/final/image_url.txt
             data/drafts/latest/content_matrix.json
             data/drafts/latest/differentiation_report.json
             reports/${{ inputs.report_name }}.json
@@ -135,8 +143,11 @@ jobs:
         run: |
           echo "## Full Publish Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -f data/drafts/latest/image_url.txt ]; then
-            URL=$(cat data/drafts/latest/image_url.txt)
+          IMG_URL_FILE=""
+          [ -f data/drafts/latest/final/image_url.txt ] && IMG_URL_FILE="data/drafts/latest/final/image_url.txt"
+          [ -z "$IMG_URL_FILE" ] && [ -f data/drafts/latest/image_url.txt ] && IMG_URL_FILE="data/drafts/latest/image_url.txt"
+          if [ -n "$IMG_URL_FILE" ]; then
+            URL=$(cat $IMG_URL_FILE)
             echo "### Image" >> $GITHUB_STEP_SUMMARY
             echo "**URL:** $URL" >> $GITHUB_STEP_SUMMARY
             echo "![preview]($URL)" >> $GITHUB_STEP_SUMMARY
