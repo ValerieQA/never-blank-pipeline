@@ -1,0 +1,149 @@
+name: Generate + Image + Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Publishing mode"
+        required: true
+        type: choice
+        options:
+          - live
+          - dry-run
+      channels:
+        description: "Channels (comma-separated)"
+        required: false
+        default: "wix,linkedin,facebook,instagram,threads,telegram"
+      report_name:
+        description: "Report filename stem (no extension)"
+        required: false
+        default: "full_live_matrix_test"
+
+jobs:
+  generate-and-publish:
+    name: Generate + Image + Publish (${{ inputs.mode }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install --quiet python-dotenv openai Pillow cloudinary PyYAML numpy google-auth google-api-python-client
+
+      - name: Generate content (+ QC)
+        env:
+          NB_OPENAI_API_KEY:                 ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_OPENAI_CHAT_MODEL:              ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          NB_OPENAI_TEMPERATURE:             "0.7"
+          NB_OPENAI_QC_TEMPERATURE:          "0.2"
+          NB_OPENAI_EMBEDDING_MODEL:         "text-embedding-3-small"
+          NB_GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.NB_GOOGLE_SHEETS_CREDENTIALS_JSON }}
+          NB_GOOGLE_SHEET_ID:                ${{ secrets.NB_GOOGLE_SHEET_ID }}
+        run: python scripts/generate.py --qc
+
+      - name: Verify QC passed and final/ exists
+        run: |
+          if [ ! -d data/drafts/latest/final ]; then
+            echo "ERROR: data/drafts/latest/final/ not found — QC did not pass or content was quarantined."
+            exit 1
+          fi
+          echo "✓ final/ directory exists"
+          ls data/drafts/latest/final/
+
+      - name: Generate image
+        env:
+          NB_OPENAI_API_KEY:         ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_CLOUDINARY_CLOUD_NAME:  ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
+          NB_CLOUDINARY_API_KEY:     ${{ secrets.NB_CLOUDINARY_API_KEY }}
+          NB_CLOUDINARY_API_SECRET:  ${{ secrets.NB_CLOUDINARY_API_SECRET }}
+        run: python scripts/generate_image.py --upload
+
+      - name: Confirm image_url.txt written
+        run: |
+          if [ ! -f data/drafts/latest/image_url.txt ]; then
+            echo "ERROR: image_url.txt not written — image upload failed."
+            exit 1
+          fi
+          echo "✓ image_url.txt: $(cat data/drafts/latest/image_url.txt)"
+
+      - name: Publish to all channels
+        env:
+          NB_OPENAI_API_KEY:                 ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_WIX_API_KEY:                    ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:                    ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_POST_OWNER_ID:              ${{ secrets.NB_WIX_POST_OWNER_ID }}
+          NB_LINKEDIN_ACCESS_TOKEN:          ${{ secrets.NB_LINKEDIN_ACCESS_TOKEN }}
+          NB_LINKEDIN_CLIENT_ID:             ${{ secrets.NB_LINKEDIN_CLIENT_ID }}
+          NB_LINKEDIN_CLIENT_SECRET:         ${{ secrets.NB_LINKEDIN_CLIENT_SECRET }}
+          NB_LINKEDIN_AUTHOR_URN:            ${{ secrets.NB_LINKEDIN_AUTHOR_URN }}
+          NB_META_USER_TOKEN:                ${{ secrets.NB_META_USER_TOKEN }}
+          NB_META_IG_USER_ID:                ${{ secrets.NB_META_IG_USER_ID }}
+          NB_META_FB_PAGE_ID:                ${{ secrets.NB_META_FB_PAGE_ID }}
+          NB_META_FB_PAGE_TOKEN:             ${{ secrets.NB_META_FB_PAGE_TOKEN }}
+          NB_THREADS_ACCESS_TOKEN:           ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
+          NB_TELEGRAM_BOT_TOKEN:             ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
+          NB_TELEGRAM_CHANNEL_ID:            ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
+          NB_CLOUDINARY_CLOUD_NAME:          ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
+          NB_CLOUDINARY_API_KEY:             ${{ secrets.NB_CLOUDINARY_API_KEY }}
+          NB_CLOUDINARY_API_SECRET:          ${{ secrets.NB_CLOUDINARY_API_SECRET }}
+          NB_GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.NB_GOOGLE_SHEETS_CREDENTIALS_JSON }}
+          NB_GOOGLE_SHEET_ID:                ${{ secrets.NB_GOOGLE_SHEET_ID }}
+        run: |
+          CHANNELS="${{ inputs.channels }}"
+          if [ -n "$CHANNELS" ]; then
+            python scripts/publish.py --${{ inputs.mode }} --channels "$CHANNELS"
+          else
+            python scripts/publish.py --${{ inputs.mode }}
+          fi
+
+      - name: Save named report
+        if: always()
+        run: |
+          STEM="${{ inputs.report_name }}"
+          if [ -f reports/publish_report.json ]; then
+            cp reports/publish_report.json reports/${STEM}.json
+            echo "Saved reports/${STEM}.json"
+          fi
+          if [ -f reports/publish_report.md ]; then
+            cp reports/publish_report.md reports/${STEM}.md
+            echo "Saved reports/${STEM}.md"
+          fi
+
+      - name: Upload all artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-publish-${{ github.run_id }}
+          path: |
+            data/drafts/latest/final/
+            data/drafts/latest/image_url.txt
+            data/drafts/latest/content_matrix.json
+            data/drafts/latest/differentiation_report.json
+            reports/${{ inputs.report_name }}.json
+            reports/${{ inputs.report_name }}.md
+          retention-days: 30
+
+      - name: Print step summary
+        if: always()
+        run: |
+          echo "## Full Publish Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f data/drafts/latest/image_url.txt ]; then
+            URL=$(cat data/drafts/latest/image_url.txt)
+            echo "### Image" >> $GITHUB_STEP_SUMMARY
+            echo "**URL:** $URL" >> $GITHUB_STEP_SUMMARY
+            echo "![preview]($URL)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f reports/${{ inputs.report_name }}.md ]; then
+            cat reports/${{ inputs.report_name }}.md >> $GITHUB_STEP_SUMMARY
+          elif [ -f reports/publish_report.md ]; then
+            cat reports/publish_report.md >> $GITHUB_STEP_SUMMARY
+          fi
