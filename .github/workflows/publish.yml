@@ -32,7 +32,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install --quiet python-dotenv openai Pillow cloudinary
+        run: pip install --quiet python-dotenv openai Pillow cloudinary PyYAML
 
       - name: Create test fixture (if no generated draft exists)
         run: |
