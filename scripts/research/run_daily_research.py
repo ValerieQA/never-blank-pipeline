@@ -15,6 +15,7 @@ from scripts.research.discover import run_discovery
 from scripts.research.score import score_candidates, _load_weights
 from scripts.research.enrich import enrich_candidates
 from scripts.research.angles import add_angles
+from scripts.research.prepare_content import prepare_content_packages, format_package_preview
 from scripts.research.sync_to_sheets import sync_to_sheets
 from scripts.research.archive import run_archive
 from src.utils.logger import get_logger
@@ -149,11 +150,32 @@ def run() -> dict:
         summary["selected_for_content"] = len(selected)
         summary["top_signals"] = [s.get("HEADLINE", "")[:80] for s in selected]
 
+    # Stage 10 — Content Package Preparation
+    log.info("=== Stage 10: Content Package Preparation ===")
+    content_packages = []
+    if selected:
+        try:
+            content_packages = prepare_content_packages(selected)
+            summary["content_packages"] = len(content_packages)
+            total_new    = sum(p["images"].get("new_images", 0) for p in content_packages)
+            total_reused = sum(p["images"].get("reused_images", 0) for p in content_packages)
+            summary["images_new"]    = total_new
+            summary["images_reused"] = total_reused
+            log.info(
+                "Content packages prepared: %d | new images: %d | reused: %d",
+                len(content_packages), total_new, total_reused,
+            )
+        except Exception as exc:
+            log.error("Content package preparation failed: %s", exc)
+            summary["content_packages"] = 0
+
     log.info("=== Stage 7: Sheets Sync ===")
     summary["sheet_sync"] = "success" if sync_to_sheets() else "failed"
 
     log.info("=== Stage 9: Archive ===")
     summary["archived"] = run_archive()
+
+    summary["_content_packages"] = content_packages  # for report rendering
 
     return summary
 
@@ -170,6 +192,9 @@ def _print_summary(s: dict) -> None:
         print("Top signals:")
         for i, h in enumerate(s["top_signals"], 1):
             print(f"  {i}. {h}")
+    packages = s.get("_content_packages", [])
+    if packages:
+        print(format_package_preview(packages))
 
 
 if __name__ == "__main__":

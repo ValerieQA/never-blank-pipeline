@@ -16,8 +16,10 @@ data/research/*
 !data/research/signals_active.jsonl
 !data/research/selected_signals.jsonl
 !data/research/seen_index.json
-!data/research/archive/
-data/research/archive/*
+!data/research/image_library.json
+!data/research/content_packages/
+!data/research/images/
+data/research/archive/
 !data/research/archive/.gitkeep
 # logo is a tracked asset — must NOT be ignored
 assets/fonts/

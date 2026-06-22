@@ -32,7 +32,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install --quiet openai PyYAML requests google-auth google-api-python-client
+        run: pip install --quiet openai PyYAML requests google-auth google-api-python-client Pillow cloudinary
 
       - name: Run research pipeline
         env:
@@ -44,13 +44,16 @@ jobs:
           NB_RESEARCH_SHEET_ID:              ${{ secrets.NB_RESEARCH_SHEET_ID }}
           NB_RESEARCH_SHEET_TAB:             "Signals"
           NB_RESEARCH_MAX_DAILY_COST_USD:    "2.00"
+          NB_CLOUDINARY_CLOUD_NAME:          ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
+          NB_CLOUDINARY_API_KEY:             ${{ secrets.NB_CLOUDINARY_API_KEY }}
+          NB_CLOUDINARY_API_SECRET:          ${{ secrets.NB_CLOUDINARY_API_SECRET }}
         run: python scripts/research/run_daily_research.py
 
       - name: Commit research data
         run: |
           git config user.name  "never-blank-bot"
           git config user.email "bot@never-blank.com"
-          git add data/research/ reports/research_*.json 2>/dev/null || true
+          git add data/research/ reports/research_*.json reports/content_packages_*.md 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
@@ -66,6 +69,8 @@ jobs:
           path: |
             data/research/signals_active.jsonl
             data/research/selected_signals.jsonl
+            data/research/content_packages/
+            data/research/image_library.json
             reports/research_*.json
           retention-days: 30
 
@@ -74,18 +79,91 @@ jobs:
         run: |
           echo "## Daily Signal Research" >> $GITHUB_STEP_SUMMARY
           python3 - <<'EOF' >> $GITHUB_STEP_SUMMARY
-          import json, glob
+          import json, glob, sys
+          sys.path.insert(0, ".")
           files = sorted(glob.glob("reports/research_*.json"))
-          if files:
-              d = json.load(open(files[-1]))
-              print(f"**Date:** {d.get('date','')}")
-              print(f"**Candidates found:** {d.get('candidates_found',0)}")
-              print(f"**New signals added:** {d.get('new_signals_added',0)}")
-              print(f"**Selected for content:** {d.get('selected_for_content',0)}")
-              print(f"**Sheet sync:** {d.get('sheet_sync','')}")
-              print(f"**Archived:** {d.get('archived',0)}")
-              for i, s in enumerate(d.get("top_signals",[]), 1):
-                  print(f"{i}. {s}")
-          else:
+          if not files:
               print("No report generated")
+              sys.exit(0)
+
+          d = json.load(open(files[-1]))
+          print(f"## Never Blank Signal Research — {d.get('date','')}")
+          print(f"")
+          print(f"| Metric | Value |")
+          print(f"|---|---|")
+          print(f"| Candidates found | {d.get('candidates_found',0)} |")
+          print(f"| New signals added | {d.get('new_signals_added',0)} |")
+          print(f"| Selected for content | {d.get('selected_for_content',0)} |")
+          print(f"| Duplicates skipped | {d.get('duplicates_skipped',0)} |")
+          print(f"| Sheet sync | {d.get('sheet_sync','')} |")
+          print(f"| Archive moved | {d.get('archived',0)} |")
+          print(f"")
+
+          sigs = d.get("top_signals", [])
+          if sigs:
+              print(f"### Top Signals")
+              for i, s in enumerate(sigs, 1):
+                  print(f"{i}. {s}")
+              print("")
+
+          # Content packages from per-signal JSON files
+          pkg_files = sorted(glob.glob("data/research/content_packages/*.json"))
+          if pkg_files:
+              print("---")
+              print("## Content Package Preview")
+              platforms = ["blog", "linkedin", "facebook", "instagram", "threads", "stories"]
+              for pi, pkg_file in enumerate(pkg_files, 1):
+                  try:
+                      pkg = json.load(open(pkg_file))
+                      headline = pkg.get("HEADLINE", "")
+                      content  = pkg.get("content", {})
+                      images   = pkg.get("images", {})
+                      pimgs    = images.get("platform_images", {})
+
+                      print(f"")
+                      print(f"### Signal #{pi}: {headline[:70]}")
+                      print("")
+
+                      for platform in platforms:
+                          c   = content.get(platform, {})
+                          img = pimgs.get(platform, {})
+                          reused = "yes" if img.get("reused") else "no"
+                          path   = img.get("path", "—")
+
+                          if platform == "blog":
+                              print(f"**Blog**")
+                              print(f"- Headline: {c.get('headline','—')}")
+                              print(f"- Angle: {c.get('angle','—')}")
+                          elif platform == "linkedin":
+                              print(f"**LinkedIn**")
+                              print(f"- Headline: {c.get('headline','—')}")
+                              print(f"- Angle: {c.get('angle','—')}")
+                          elif platform == "facebook":
+                              print(f"**Facebook**")
+                              print(f"- Headline: {c.get('headline','—')}")
+                              print(f"- Angle: {c.get('angle','—')}")
+                          elif platform == "instagram":
+                              print(f"**Instagram**")
+                              print(f"- Headline: {c.get('headline','—')}")
+                              print(f"- Angle: {c.get('angle','—')}")
+                          elif platform == "threads":
+                              print(f"**Threads**")
+                              print(f"- Thread hook: {c.get('thread_hook','—')}")
+                              print(f"- Angle: {c.get('angle','—')}")
+                          elif platform == "stories":
+                              print(f"**Stories**")
+                              print(f"- Story question: {c.get('story_question','—')}")
+                              print(f"- Angle: {c.get('angle','—')}")
+
+                          print(f"- Image: {path[:80] if path else '—'}")
+                          print(f"- Image reused: {reused}")
+                          print("")
+
+                      print(f"**Image summary**")
+                      print(f"- Reuse rate: {images.get('reuse_rate','—')}")
+                      print(f"- New images generated: {images.get('new_images',0)}")
+                      print(f"- Images reused: {images.get('reused_images',0)}")
+                      print("")
+                  except Exception as e:
+                      print(f"Error reading package {pkg_file}: {e}")
           EOF
