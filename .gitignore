@@ -13,6 +13,9 @@ data/memory/*
 !data/memory/visual_registry.json
 data/research/*
 !data/research/.gitkeep
+!data/research/signals_active.jsonl
+!data/research/selected_signals.jsonl
+!data/research/seen_index.json
 !data/research/archive/
 data/research/archive/*
 !data/research/archive/.gitkeep
