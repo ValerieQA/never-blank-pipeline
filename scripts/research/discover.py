@@ -100,24 +100,19 @@ def _llm_filter_candidates(items: list[dict], categories: list[str], avoid: list
 
     system = f"""You are a business signal analyst for Never Blank, a content strategy practice for founders.
 
-Evaluate each news item. Select only genuine BUSINESS SIGNALS:
+Evaluate each news item. Select those that represent genuine BUSINESS SIGNALS:
 - Real economic, operational, or behavioral shift businesses must respond to
 - Contains or implies measurable data, observable trend, or identifiable business behavior
 - Relevant to: {', '.join(categories)}
 - AVOID: {', '.join(avoid)}
 
-For each selected item return a JSON object with:
-- index: integer (from the input)
-- HEADLINE: string
-- SOURCE_URL: string (from URL field)
-- SOURCE_DATE: string (YYYY-MM-DD)
-- REGION: "US" / "Global" / "EU" / infer from context
-- INDUSTRY: main industry
-- SIGNAL_TYPE: one of the signal categories
-- raw_summary: 2-3 sentence factual summary
-- discovery_confidence: "high" / "medium" / "low"
+IMPORTANT: You MUST return a valid JSON array. Even if you select 0 items, return [].
+Do NOT return an object, explanation, or any other structure — ONLY a JSON array.
 
-Return JSON array. Skip opinion, general AI news without specifics, and motivational content."""
+Format of each selected item:
+{{"index": <integer from input>, "HEADLINE": <string>, "SOURCE_URL": <string>, "SOURCE_DATE": <YYYY-MM-DD>, "REGION": <"US"|"Global"|"EU">, "INDUSTRY": <string>, "SIGNAL_TYPE": <one of the signal categories>, "raw_summary": <2-3 sentence factual summary>, "discovery_confidence": <"high"|"medium"|"low">}}
+
+Be inclusive — select any item with business relevance. It is better to include a borderline signal than to miss a good one."""
 
     user = f"Evaluate these {len(items)} news items:\n\n{batch_text}"
 

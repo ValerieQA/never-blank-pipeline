@@ -1,22 +1,28 @@
 rss_feeds:
-  - name: Reuters Business
-    url: https://feeds.reuters.com/reuters/businessNews
-    quality: high
-  - name: AP Business
-    url: https://apnews.com/apf-business?format=rss
-    quality: high
   - name: CNBC Business
     url: https://www.cnbc.com/id/10001147/device/rss/rss.html
+    quality: high
+  - name: CNBC Finance
+    url: https://www.cnbc.com/id/10000664/device/rss/rss.html
     quality: high
   - name: TechCrunch
     url: https://techcrunch.com/feed/
     quality: medium
-  - name: WSJ Business
-    url: https://feeds.a.wsj.com/rss/RSSWSJD.xml
-    quality: high
   - name: Bloomberg Technology
     url: https://feeds.bloomberg.com/technology/news.rss
     quality: high
+  - name: Axios Business
+    url: https://api.axios.com/feed/
+    quality: high
+  - name: Harvard Business Review
+    url: https://hbr.org/the-latest/rss
+    quality: high
+  - name: Ars Technica Business
+    url: https://feeds.arstechnica.com/arstechnica/business
+    quality: medium
+  # Reuters/WSJ/AP blocked on GitHub Actions runners — kept below for reference
+  # - name: Reuters Business
+  #   url: https://feeds.reuters.com/reuters/businessNews
 
 lookback_hours: 72
 max_candidates: 30
