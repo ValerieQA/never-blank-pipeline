@@ -41,16 +41,13 @@ def _llm_score_batch(candidates: list[dict], criteria: dict) -> list[dict]:
 Scoring criteria (binary — earned or not):
 {criteria_desc}
 
-For each signal return:
-- index: integer
-- scores: dict mapping each criterion key to true/false
-- total_score: integer (sum of weights for true criteria, max 10)
-- score_reason: one sentence explaining the total
-- SIGNAL_STRENGTH: "high" (>=8), "medium" (5-7), "low" (<5)
-- DISCUSSION_POTENTIAL: "high" / "medium" / "low"
-- CHANNEL_FIT_SCORE: integer 1-10
+Respond with this exact JSON structure:
+{{"scores": [
+  {{"index": 0, "total_score": 8, "score_reason": "...", "SIGNAL_STRENGTH": "high", "DISCUSSION_POTENTIAL": "high", "CHANNEL_FIT_SCORE": 9}},
+  ...
+]}}
 
-Return a JSON array."""
+One object per input signal, in order."""
 
     user = f"Score these {len(candidates)} signals:\n\n{batch_text}"
 
@@ -58,8 +55,14 @@ Return a JSON array."""
         raw = chat(system, user, json_mode=True)
         parsed = json.loads(raw) if isinstance(raw, str) else raw
         if isinstance(parsed, dict):
-            parsed = list(parsed.values())[0] if parsed else []
-        return parsed if isinstance(parsed, list) else []
+            for v in parsed.values():
+                if isinstance(v, list):
+                    return v
+            log.warning("score LLM returned dict with no list: %s", list(parsed.keys()))
+            return []
+        if isinstance(parsed, list):
+            return parsed
+        return []
     except Exception as exc:
         log.error("LLM scoring failed: %s", exc)
         return []
