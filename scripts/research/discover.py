@@ -89,49 +89,114 @@ def _fetch_rss(feed_url: str, lookback_hours: int) -> list[dict]:
     return items
 
 
-def _llm_filter_candidates(items: list[dict], categories: list[str], avoid: list[str]) -> list[dict]:
-    if not items:
-        return []
-
-    batch_text = "\n\n".join(
-        f"[{i}] HEADLINE: {it['title']}\nDATE: {it['published']}\nURL: {it['link']}\nSUMMARY: {it['summary'][:300]}"
+def _llm_select_indices(items: list[dict], categories: list[str], avoid: list[str]) -> list[int]:
+    """Ask LLM to return indices of relevant items. Avoids JSON array parsing issues."""
+    batch_text = "\n".join(
+        f"[{i}] {it['title']} | {it.get('summary', '')[:150]}"
         for i, it in enumerate(items)
     )
-
     system = f"""You are a business signal analyst for Never Blank, a content strategy practice for founders.
 
-Evaluate each news item. Select those that represent genuine BUSINESS SIGNALS:
-- Real economic, operational, or behavioral shift businesses must respond to
-- Contains or implies measurable data, observable trend, or identifiable business behavior
+Select news items that represent genuine business signals:
+- Economic, operational, or behavioral shift businesses must respond to
 - Relevant to: {', '.join(categories)}
-- AVOID: {', '.join(avoid)}
+- Avoid: {', '.join(avoid)}
 
-IMPORTANT: You MUST return a valid JSON array. Even if you select 0 items, return [].
-Do NOT return an object, explanation, or any other structure — ONLY a JSON array.
+Be inclusive — prefer false positives over missed signals.
 
-Format of each selected item:
-{{"index": <integer from input>, "HEADLINE": <string>, "SOURCE_URL": <string>, "SOURCE_DATE": <YYYY-MM-DD>, "REGION": <"US"|"Global"|"EU">, "INDUSTRY": <string>, "SIGNAL_TYPE": <one of the signal categories>, "raw_summary": <2-3 sentence factual summary>, "discovery_confidence": <"high"|"medium"|"low">}}
+Respond with ONLY a JSON object in this exact format:
+{{"selected": [0, 3, 7, 12]}}
 
-Be inclusive — select any item with business relevance. It is better to include a borderline signal than to miss a good one."""
+Where the numbers are indices from the input list. If nothing qualifies, return {{"selected": []}}."""
 
-    user = f"Evaluate these {len(items)} news items:\n\n{batch_text}"
+    user = f"Select relevant items from this list:\n\n{batch_text}"
 
     try:
         raw = chat(system, user, json_mode=True)
         parsed = json.loads(raw) if isinstance(raw, str) else raw
-        if isinstance(parsed, list):
-            return parsed
         if isinstance(parsed, dict):
-            # LLM may wrap array under any key — find the first list value
-            for v in parsed.values():
-                if isinstance(v, list):
-                    log.info("LLM returned dict with list under key — using it (%d items)", len(v))
-                    return v
-        log.warning("LLM filter returned unexpected type %s — raw: %s", type(parsed), str(raw)[:200])
+            indices = parsed.get("selected", [])
+            if isinstance(indices, list):
+                return [int(i) for i in indices if isinstance(i, (int, float))]
+        log.warning("LLM index selection returned unexpected format: %s", str(raw)[:150])
         return []
     except Exception as exc:
-        log.error("LLM filter failed: %s", exc)
+        log.error("LLM index selection failed: %s", exc)
         return []
+
+
+def _llm_enrich_candidates(items: list[dict], categories: list[str]) -> list[dict]:
+    """Enrich selected items with signal metadata via LLM."""
+    if not items:
+        return []
+
+    batch_text = "\n\n".join(
+        f"[{i}] HEADLINE: {it['title']}\nDATE: {it['published']}\nURL: {it['link']}\nSUMMARY: {it.get('summary','')[:400]}"
+        for i, it in enumerate(items)
+    )
+    system = f"""You are a business signal analyst. Enrich these news items with signal metadata.
+
+For each item return a JSON object with:
+- index: integer (from input)
+- REGION: "US" / "Global" / "EU"
+- INDUSTRY: main industry
+- SIGNAL_TYPE: one of [{', '.join(categories)}]
+- raw_summary: 2-3 sentence factual business summary
+- discovery_confidence: "high" / "medium" / "low"
+
+Respond with: {{"signals": [{{...}}, {{...}}]}}"""
+
+    user = f"Enrich these {len(items)} items:\n\n{batch_text}"
+
+    try:
+        raw = chat(system, user, json_mode=True)
+        parsed = json.loads(raw) if isinstance(raw, str) else raw
+        if isinstance(parsed, dict):
+            for v in parsed.values():
+                if isinstance(v, list):
+                    return v
+        if isinstance(parsed, list):
+            return parsed
+        return []
+    except Exception as exc:
+        log.error("LLM enrichment failed: %s", exc)
+        return []
+
+
+def _llm_filter_candidates(items: list[dict], categories: list[str], avoid: list[str]) -> list[dict]:
+    if not items:
+        return []
+
+    # Step 1: get indices of relevant items (simple, reliable)
+    indices = _llm_select_indices(items, categories, avoid)
+    if not indices:
+        log.info("LLM selected 0 items from %d candidates", len(items))
+        return []
+
+    selected_items = [items[i] for i in indices if i < len(items)]
+    log.info("LLM selected %d items by index: %s", len(selected_items), indices)
+
+    # Step 2: enrich selected items with signal metadata
+    enriched = _llm_enrich_candidates(selected_items, categories)
+
+    # Map enriched metadata back onto selected items
+    meta_by_idx = {e.get("index", i): e for i, e in enumerate(enriched)}
+    result = []
+    for local_idx, item in enumerate(selected_items):
+        meta = meta_by_idx.get(local_idx, {})
+        result.append({
+            "index":               indices[local_idx] if local_idx < len(indices) else local_idx,
+            "HEADLINE":            item["title"],
+            "SOURCE_URL":          item["link"],
+            "SOURCE_DATE":         item["published"],
+            "REGION":              meta.get("REGION", "US"),
+            "INDUSTRY":            meta.get("INDUSTRY", ""),
+            "SIGNAL_TYPE":         meta.get("SIGNAL_TYPE", ""),
+            "raw_summary":         meta.get("raw_summary", item.get("summary", "")[:300]),
+            "discovery_confidence": meta.get("discovery_confidence", "medium"),
+            "SOURCE_NAME":         item.get("SOURCE_NAME", ""),
+        })
+    return result
 
 
 def run_discovery(seen_ids: set) -> list[dict]:
@@ -168,23 +233,15 @@ def run_discovery(seen_ids: set) -> list[dict]:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     candidates = []
     for entry in filtered:
-        idx = entry.get("index", -1)
-        src = new_items[idx] if isinstance(idx, int) and 0 <= idx < len(new_items) else {}
-        source_url = entry.get("SOURCE_URL") or src.get("link", "")
-        headline   = entry.get("HEADLINE") or src.get("title", "")
-        candidates.append({
-            "SIGNAL_ID":            make_signal_id(source_url, headline),
-            "DATE_FOUND":           today,
-            "SOURCE_DATE":          entry.get("SOURCE_DATE") or src.get("published", today),
-            "SOURCE_NAME":          src.get("SOURCE_NAME", ""),
-            "SOURCE_URL":           source_url,
-            "HEADLINE":             headline,
-            "REGION":               entry.get("REGION", "US"),
-            "INDUSTRY":             entry.get("INDUSTRY", ""),
-            "SIGNAL_TYPE":          entry.get("SIGNAL_TYPE", ""),
-            "raw_summary":          entry.get("raw_summary", ""),
-            "discovery_confidence": entry.get("discovery_confidence", "medium"),
-        })
+        source_url = entry.get("SOURCE_URL", "")
+        headline   = entry.get("HEADLINE", "")
+        if not source_url or not headline:
+            continue
+        entry["SIGNAL_ID"]  = make_signal_id(source_url, headline)
+        entry["DATE_FOUND"] = today
+        entry.pop("index", None)
+        entry.pop("_candidate_id", None)
+        candidates.append(entry)
 
     return candidates
 
