@@ -380,107 +380,210 @@ def _wrap_text(text: str, font: ImageFont.FreeTypeFont, max_w: int) -> list[str]
 
 def _generate_programmatic_base(visual_family: str = "mountains_depth_layers") -> bytes:
     """
-    Create a dark branded background using Pillow only.
-    Adapts texture slightly per visual family but always stays within brand palette.
+    Generate a branded Never Blank base image using Pillow.
+
+    Brand rules (from visual_system.yaml):
+    - Background: Deep Navy #050B16 (60-70% of image)
+    - Signal accent: Electric Blue #42A0FF (5-10%)
+    - Forbidden: amber, gold, bright white fills
+    - Dark, editorial, intelligent — never decorative or geometric clip-art
     """
     W, H = 1024, 1024
-    canvas = Image.new("RGB", (W, H), (5, 11, 22))   # Deep Navy #050B16
+    EB   = (66, 160, 255)    # Electric Blue #42A0FF
+    BG   = (5, 11, 22)       # Deep Navy #050B16
+    MID1 = (8, 16, 34)       # Slightly lighter navy
+    MID2 = (12, 22, 48)      # Navy-blue midtone
+
+    canvas = Image.new("RGB", (W, H), BG)
     draw   = ImageDraw.Draw(canvas)
     cx, cy = W // 2, H // 2
 
-    if visual_family in ("mountains_depth_layers", "light_paths"):
-        # Layered horizontal bands — depth / distance feeling
-        for i, shade_base in enumerate(range(4, 28, 3)):
-            y_pct = 0.3 + i * 0.08
-            y0, y1 = int(H * y_pct), int(H * (y_pct + 0.09))
-            shade = shade_base
-            draw.rectangle([0, y0, W, y1], fill=(shade, shade + 2, int(shade * 1.6)))
-        # Subtle radial glow near horizon
-        for r in range(180, 0, -6):
-            frac  = r / 180
-            alpha = int(frac * 18)
+    if visual_family == "mountains_depth_layers":
+        # Layered silhouette bands — receding planes of depth
+        # Each band slightly lighter, slightly bluer toward horizon
+        layers = [
+            (0.62, 0.72, (6, 12, 26)),
+            (0.50, 0.64, (8, 15, 32)),
+            (0.40, 0.53, (10, 18, 38)),
+            (0.32, 0.44, (12, 21, 44)),
+        ]
+        for y_top, y_bot, color in layers:
+            y0, y1 = int(H * y_top), int(H * y_bot)
+            # Draw a subtle ridge using sine variation
+            pts = []
+            for x in range(0, W + 1, 4):
+                ridge = int(math.sin(x / 220 + y_top * 8) * 18 + math.sin(x / 80) * 6)
+                pts.append((x, y0 + ridge))
+            pts += [(W, H), (0, H)]
+            draw.polygon(pts, fill=color)
+        # Horizon glow — Electric Blue ambient at horizon line
+        for r in range(120, 0, -3):
+            frac  = r / 120
+            alpha = int((1 - frac) ** 2 * 28)
             draw.ellipse(
-                [cx - r * 2, cy - r, cx + r * 2, cy + r],
-                fill=(alpha, alpha + 2, int(alpha * 2.2)),
+                [cx - r * 3, int(H * 0.48) - r, cx + r * 3, int(H * 0.48) + r],
+                fill=(alpha, int(alpha * 2.8), int(alpha * 5)),
             )
-        if visual_family == "light_paths":
-            # Single golden-white streak along bottom third
-            for thickness in range(3, 0, -1):
-                alpha = 45 - thickness * 12
-                draw.line(
-                    [(int(W * 0.1), int(H * 0.72)), (int(W * 0.9), int(H * 0.65))],
-                    fill=(alpha + 60, alpha + 50, alpha),
-                    width=thickness,
-                )
+
+    elif visual_family == "light_paths":
+        # Single clean light path — diagonal beam from lower-left to upper-right
+        # Very subtle, editorial feeling — one signal moving through dark space
+        # Dark base gradient
+        for y in range(H):
+            frac  = y / H
+            shade = int(frac * 12)
+            draw.line([(0, y), (W, y)], fill=(shade, shade + 2, shade + 8))
+        # Main beam — soft, Electric Blue tinted
+        for thickness in range(18, 0, -2):
+            alpha = int((thickness / 18) ** 2 * 14)
+            y0 = int(H * 0.72 - thickness * 1.2)
+            y1 = int(H * 0.24 + thickness * 1.2)
+            draw.line(
+                [(int(W * 0.08), y0), (int(W * 0.92), y1)],
+                fill=(alpha, int(alpha * 2.2), int(alpha * 5.5)),
+                width=2,
+            )
+        # Thin Electric Blue core line
+        draw.line(
+            [(int(W * 0.08), int(H * 0.72)), (int(W * 0.92), int(H * 0.24))],
+            fill=(*EB, 80) if len(EB) == 4 else EB,
+            width=1,
+        )
 
     elif visual_family == "contrast_waves":
-        # High-contrast sine wave fields
-        for row in range(0, H, 6):
-            amplitude = 18 + (row / H) * 24
-            for x in range(0, W, 2):
-                y_off = int(math.sin(x / 60 + row / 40) * amplitude)
-                y_px  = row + y_off
-                if 0 <= y_px < H:
-                    frac  = abs(math.sin(x / 80)) * 0.15
-                    shade = int(frac * 200)
-                    draw.point((x, y_px), fill=(shade, shade + 4, int(shade * 1.8)))
+        # Structured parallel wave fields — dark space, signal emerges
+        # Two sets of subtle waves at different frequencies
+        for row in range(0, H, 5):
+            for x in range(0, W, 1):
+                wave1 = math.sin(x / 110 + row / 90) * 0.5 + 0.5
+                wave2 = math.sin(x / 45  - row / 60) * 0.5 + 0.5
+                combined = wave1 * wave2
+                if combined > 0.68:
+                    intensity = int((combined - 0.68) / 0.32 * 32)
+                    draw.point((x, row), fill=(intensity, intensity + 3, intensity + 14))
+        # Single Electric Blue horizon line at 60% height
+        eb_y = int(H * 0.60)
+        for thickness, alpha in [(3, 15), (2, 35), (1, 70)]:
+            draw.line(
+                [(int(W * 0.12), eb_y), (int(W * 0.88), eb_y)],
+                fill=(int(EB[0] * alpha / 100), int(EB[1] * alpha / 100), int(EB[2] * alpha / 100)),
+                width=thickness,
+            )
 
     elif visual_family == "particle_flow":
-        # Structured particle cluster — not random
+        # Directed particle stream — organised flow, not random scatter
+        # Particles flow from lower-left toward upper-right in a contained band
         import random
         rng = random.Random(42)
-        for _ in range(380):
-            x = int(rng.gauss(cx, W * 0.22))
-            y = int(rng.gauss(cy + H * 0.08, H * 0.22))
-            x = max(0, min(W - 1, x))
-            y = max(0, min(H - 1, y))
-            r = rng.randint(1, 3)
-            brightness = rng.randint(18, 80)
-            draw.ellipse([x - r, y - r, x + r, y + r],
-                         fill=(brightness, brightness + 4, int(brightness * 2.2)))
+        # Flow band center line
+        flow_pts = []
+        for x in range(0, W + 1, 8):
+            y_center = int(H * 0.65 - (x / W) * H * 0.32)
+            flow_pts.append((x, y_center))
+
+        for fx, fy in flow_pts[::2]:
+            for _ in range(3):
+                spread_x = rng.randint(-60, 60)
+                spread_y = rng.randint(-40, 40)
+                px = max(0, min(W - 1, fx + spread_x))
+                py = max(0, min(H - 1, fy + spread_y))
+                r  = rng.randint(1, 2)
+                # Closer to flow center = brighter / more blue
+                dist = math.hypot(spread_x, spread_y) / 70
+                intensity = int((1 - min(dist, 1)) ** 2 * 55)
+                draw.ellipse(
+                    [px - r, py - r, px + r, py + r],
+                    fill=(intensity // 4, intensity // 2, intensity + 10),
+                )
+        # Lead particle — Electric Blue
+        if flow_pts:
+            lx, ly = flow_pts[len(flow_pts) // 2]
+            draw.ellipse([lx - 3, ly - 3, lx + 3, ly + 3], fill=EB)
 
     elif visual_family == "constellation_networks":
-        # Minimal node network
+        # Minimal node network — intellectual, connected, dark space
         import random
         rng = random.Random(7)
-        nodes = [(rng.randint(100, W - 100), rng.randint(100, H - 100)) for _ in range(14)]
+        # Deterministic node positions in a roughly central cluster
+        nodes = [
+            (rng.randint(180, W - 180), rng.randint(180, H - 180))
+            for _ in range(12)
+        ]
+        # Edges — only short connections, very dark
         for i, (x1, y1) in enumerate(nodes):
             for x2, y2 in nodes[i + 1:]:
                 dist = math.hypot(x2 - x1, y2 - y1)
-                if dist < 260:
-                    draw.line([(x1, y1), (x2, y2)], fill=(18, 28, 52), width=1)
-        for x, y in nodes:
-            r = 4
-            draw.ellipse([x - r, y - r, x + r, y + r], fill=(30, 55, 110))
-            draw.ellipse([x - 1, y - 1, x + 1, y + 1], fill=(66, 160, 255))
+                if dist < 240:
+                    intensity = int((1 - dist / 240) * 22)
+                    draw.line(
+                        [(x1, y1), (x2, y2)],
+                        fill=(intensity, intensity + 4, intensity + 18),
+                        width=1,
+                    )
+        # Nodes — dark blue with Electric Blue highlights on selected ones
+        highlight_indices = {2, 5, 8}
+        for i, (x, y) in enumerate(nodes):
+            if i in highlight_indices:
+                # Halo
+                draw.ellipse([x - 8, y - 8, x + 8, y + 8],
+                             fill=(EB[0] // 8, EB[1] // 8, EB[2] // 6))
+                draw.ellipse([x - 3, y - 3, x + 3, y + 3], fill=EB)
+            else:
+                draw.ellipse([x - 3, y - 3, x + 3, y + 3], fill=(22, 38, 80))
+                draw.ellipse([x - 1, y - 1, x + 1, y + 1], fill=(32, 55, 100))
 
     elif visual_family == "focus_rings":
-        # Concentric rings from center
-        for r_step, opacity in zip(range(60, 380, 55), [35, 28, 22, 18, 12, 8]):
+        # Concentric rings — single focal point, expanding clarity
+        # Rings off-center (golden ratio point) for editorial feel
+        focal_x = int(W * 0.5)
+        focal_y = int(H * 0.46)
+        radii   = [48, 110, 190, 290, 410, 540]
+        alphas  = [70, 42,  28,  18,  10,   6]
+        for radius, alpha in zip(radii, alphas):
             draw.ellipse(
-                [cx - r_step, cy - r_step, cx + r_step, cy + r_step],
-                outline=(opacity, opacity + 4, int(opacity * 2.8)),
+                [focal_x - radius, focal_y - radius,
+                 focal_x + radius, focal_y + radius],
+                outline=(int(EB[0] * alpha / 100),
+                         int(EB[1] * alpha / 100),
+                         int(EB[2] * alpha / 100)),
                 width=1,
             )
-        # Center dot in Electric Blue
-        draw.ellipse([cx - 5, cy - 5, cx + 5, cy + 5], fill=(66, 160, 255))
+        # Core Electric Blue dot
+        draw.ellipse(
+            [focal_x - 5, focal_y - 5, focal_x + 5, focal_y + 5],
+            fill=EB,
+        )
+        # Subtle cross-hair lines
+        for length, alpha in [(40, 18), (20, 32)]:
+            a = int(EB[0] * alpha / 100), int(EB[1] * alpha / 100), int(EB[2] * alpha / 100)
+            draw.line([(focal_x - length, focal_y), (focal_x + length, focal_y)], fill=a, width=1)
+            draw.line([(focal_x, focal_y - length), (focal_x, focal_y + length)], fill=a, width=1)
 
     else:
-        # Default: radial gradient on deep navy
-        for r in range(min(W, H) // 2, 0, -4):
-            frac  = r / (min(W, H) / 2)
-            shade = int(frac * 22)
-            draw.ellipse(
-                [cx - r, cy - r, cx + r, cy + r],
-                fill=(shade, shade, int(shade * 1.1)),
-            )
+        # Default fallback — clean dark gradient, single EB accent
+        for y in range(H):
+            frac  = y / H
+            shade = int(frac * 14)
+            draw.line([(0, y), (W, y)], fill=(shade + 5, shade + 11, shade + 22))
+        draw.line([(int(W * 0.15), int(H * 0.58)), (int(W * 0.85), int(H * 0.58))],
+                  fill=EB, width=1)
 
-    # Shared: thin diagonal lines across all families
-    for i in range(-6, 14):
-        offset = i * 120
-        draw.line([(offset, 0), (offset + H, H)], fill=(10, 14, 22), width=1)
+    # Shared: very subtle vignette — darkens edges to focus center
+    vignette = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    vg_draw  = ImageDraw.Draw(vignette)
+    for step in range(1, 9):
+        frac  = step / 8
+        alpha = int(frac ** 2 * 80)
+        margin = int(step * 48)
+        vg_draw.rectangle(
+            [margin, margin, W - margin, H - margin],
+            outline=(0, 0, 0, alpha),
+            width=48,
+        )
+    canvas_rgba = canvas.convert("RGBA")
+    canvas_rgba = Image.alpha_composite(canvas_rgba, vignette)
+    canvas = canvas_rgba.convert("RGB")
 
-    canvas = canvas.filter(ImageFilter.GaussianBlur(radius=2))
     buf = BytesIO()
     canvas.save(buf, "PNG")
     return buf.getvalue()

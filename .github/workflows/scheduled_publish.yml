@@ -38,7 +38,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install --quiet python-dotenv openai Pillow cloudinary PyYAML
+        run: pip install --quiet python-dotenv openai Pillow cloudinary PyYAML numpy google-auth google-api-python-client
 
       - name: Run scheduled publisher
         env:
