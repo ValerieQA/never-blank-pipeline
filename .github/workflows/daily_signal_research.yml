@@ -47,6 +47,23 @@ jobs:
           NB_CLOUDINARY_CLOUD_NAME:          ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
           NB_CLOUDINARY_API_KEY:             ${{ secrets.NB_CLOUDINARY_API_KEY }}
           NB_CLOUDINARY_API_SECRET:          ${{ secrets.NB_CLOUDINARY_API_SECRET }}
+          # Publishing secrets
+          NB_PUBLISH_MODE:                   "live"
+          NB_WIX_API_KEY:                    ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:                    ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_POST_OWNER_ID:              ${{ secrets.NB_WIX_POST_OWNER_ID }}
+          NB_WIX_BLOG_CATEGORY_ID:           ${{ secrets.NB_WIX_BLOG_CATEGORY_ID }}
+          NB_WIX_BLOG_TAG_IDS:               ${{ secrets.NB_WIX_BLOG_TAG_IDS }}
+          NB_LINKEDIN_ACCESS_TOKEN:          ${{ secrets.NB_LINKEDIN_ACCESS_TOKEN }}
+          NB_LINKEDIN_CLIENT_ID:             ${{ secrets.NB_LINKEDIN_CLIENT_ID }}
+          NB_LINKEDIN_CLIENT_SECRET:         ${{ secrets.NB_LINKEDIN_CLIENT_SECRET }}
+          NB_LINKEDIN_AUTHOR_URN:            ${{ secrets.NB_LINKEDIN_AUTHOR_URN }}
+          NB_META_FB_PAGE_ID:                ${{ secrets.NB_META_FB_PAGE_ID }}
+          NB_META_FB_PAGE_TOKEN:             ${{ secrets.NB_META_FB_PAGE_TOKEN }}
+          NB_META_IG_USER_ID:                ${{ secrets.NB_META_IG_USER_ID }}
+          NB_THREADS_ACCESS_TOKEN:           ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
+          NB_TELEGRAM_BOT_TOKEN:             ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
+          NB_TELEGRAM_CHANNEL_ID:            ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
         run: python scripts/research/run_daily_research.py
 
       - name: Commit research data
@@ -105,6 +122,34 @@ jobs:
               for i, s in enumerate(sigs, 1):
                   print(f"{i}. {s}")
               print("")
+
+          # Publishing summary
+          pub_reports = d.get("publish_reports", [])
+          if pub_reports:
+              print("---")
+              print("## Publishing Summary")
+              print("")
+              for i, report in enumerate(pub_reports, 1):
+                  headline = report.get("headline", "")
+                  results  = report.get("results", {})
+                  mode     = report.get("mode", "live")
+                  print(f"### Signal #{i}: {headline[:70]}")
+                  print(f"_Mode: {mode}_")
+                  print("")
+                  for platform, res in results.items():
+                      status = res.get("status", "")
+                      if status in ("PUBLISHED", "DRAFT_CREATED"):
+                          icon = "✅"
+                      elif status == "SKIPPED":
+                          icon = "⏭️"
+                      else:
+                          icon = "❌"
+                      url = res.get("url", "")
+                      err = res.get("error_message", "")
+                      url_part = f" — [{url}]({url})" if url else ""
+                      err_part = f" — {err}" if err and status not in ("PUBLISHED","DRAFT_CREATED") else ""
+                      print(f"- {icon} **{platform.title()}** {status}{url_part}{err_part}")
+                  print("")
 
           # Content packages from per-signal JSON files
           pkg_files = sorted(glob.glob("reports/content_packages/*.json"))

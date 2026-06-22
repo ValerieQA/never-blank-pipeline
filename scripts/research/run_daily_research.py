@@ -16,6 +16,7 @@ from scripts.research.score import score_candidates, _load_weights
 from scripts.research.enrich import enrich_candidates
 from scripts.research.angles import add_angles
 from scripts.research.prepare_content import prepare_content_packages, format_package_preview
+from scripts.research.publish_packages import publish_packages, format_publish_summary
 from scripts.research.sync_to_sheets import sync_to_sheets
 from scripts.research.archive import run_archive
 from src.utils.logger import get_logger
@@ -84,6 +85,7 @@ def run() -> dict:
         "sheet_sync": "not_run",
         "archived": 0,
         "top_signals": [],
+        "publish_reports": [],
     }
 
     cfg        = _load_weights()
@@ -169,13 +171,35 @@ def run() -> dict:
             log.error("Content package preparation failed: %s", exc)
             summary["content_packages"] = 0
 
+    # Stage 11 — Live Publishing
+    log.info("=== Stage 11: Live Publishing ===")
+    publish_reports = []
+    if selected and content_packages:
+        try:
+            publish_reports = publish_packages(selected, content_packages)
+            summary["publish_reports"] = publish_reports
+            published_ok = sum(
+                1 for r in publish_reports
+                for res in r.get("results", {}).values()
+                if res.get("status") in ("PUBLISHED", "DRAFT_CREATED")
+            )
+            published_fail = sum(
+                1 for r in publish_reports
+                for res in r.get("results", {}).values()
+                if res.get("status") == "FAILED"
+            )
+            log.info("Publishing done — ok: %d, failed: %d", published_ok, published_fail)
+        except Exception as exc:
+            log.error("Publishing failed: %s", exc)
+
     log.info("=== Stage 7: Sheets Sync ===")
     summary["sheet_sync"] = "success" if sync_to_sheets() else "failed"
 
     log.info("=== Stage 9: Archive ===")
     summary["archived"] = run_archive()
 
-    summary["_content_packages"] = content_packages  # for report rendering
+    summary["_content_packages"] = content_packages   # for report rendering
+    summary["_publish_reports"]  = publish_reports    # for report rendering
 
     return summary
 
@@ -195,6 +219,9 @@ def _print_summary(s: dict) -> None:
     packages = s.get("_content_packages", [])
     if packages:
         print(format_package_preview(packages))
+    pub_reports = s.get("_publish_reports", [])
+    if pub_reports:
+        print(format_publish_summary(pub_reports))
 
 
 if __name__ == "__main__":
