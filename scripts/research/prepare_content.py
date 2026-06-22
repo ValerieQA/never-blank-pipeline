@@ -22,7 +22,7 @@ from src.utils.llm_client import chat
 log = get_logger("research.prepare_content")
 
 SELECTED_FILE    = Path("data/research/selected_signals.jsonl")
-PACKAGES_DIR     = Path("data/research/content_packages")
+PACKAGES_DIR     = Path("reports/content_packages")
 IMAGE_LIBRARY    = Path("data/research/image_library.json")
 PLATFORMS        = ["blog", "linkedin", "facebook", "instagram", "threads", "stories"]
 
@@ -162,7 +162,7 @@ def _generate_programmatic_image(signal: dict) -> tuple[str, str]:
         base_bytes = _generate_programmatic_base(visual_family)
         image      = composite_image(base_bytes, hook_text)
 
-        out_dir  = Path("data/research/images")
+        out_dir  = Path("reports/content_packages/images")
         out_dir.mkdir(parents=True, exist_ok=True)
         img_path = out_dir / f"{sig_id}.png"
         image.save(str(img_path), "PNG", optimize=True)

@@ -53,7 +53,7 @@ jobs:
         run: |
           git config user.name  "never-blank-bot"
           git config user.email "bot@never-blank.com"
-          git add data/research/ reports/research_*.json reports/content_packages_*.md 2>/dev/null || true
+          git add data/research/ reports/research_*.json reports/content_packages/ 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
@@ -69,9 +69,9 @@ jobs:
           path: |
             data/research/signals_active.jsonl
             data/research/selected_signals.jsonl
-            data/research/content_packages/
             data/research/image_library.json
             reports/research_*.json
+            reports/content_packages/
           retention-days: 30
 
       - name: Print step summary
@@ -107,7 +107,7 @@ jobs:
               print("")
 
           # Content packages from per-signal JSON files
-          pkg_files = sorted(glob.glob("data/research/content_packages/*.json"))
+          pkg_files = sorted(glob.glob("reports/content_packages/*.json"))
           if pkg_files:
               print("---")
               print("## Content Package Preview")
