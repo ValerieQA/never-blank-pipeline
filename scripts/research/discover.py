@@ -124,9 +124,16 @@ Return JSON array. Skip opinion, general AI news without specifics, and motivati
     try:
         raw = chat(system, user, json_mode=True)
         parsed = json.loads(raw) if isinstance(raw, str) else raw
+        if isinstance(parsed, list):
+            return parsed
         if isinstance(parsed, dict):
-            parsed = parsed.get("signals", parsed.get("items", list(parsed.values())[0] if parsed else []))
-        return parsed if isinstance(parsed, list) else []
+            # LLM may wrap array under any key — find the first list value
+            for v in parsed.values():
+                if isinstance(v, list):
+                    log.info("LLM returned dict with list under key — using it (%d items)", len(v))
+                    return v
+        log.warning("LLM filter returned unexpected type %s — raw: %s", type(parsed), str(raw)[:200])
+        return []
     except Exception as exc:
         log.error("LLM filter failed: %s", exc)
         return []

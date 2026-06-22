@@ -11,6 +11,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: write
+
 jobs:
   daily-research:
     name: Daily Signal Research
