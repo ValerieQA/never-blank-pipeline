@@ -1,0 +1,45 @@
+rss_feeds:
+  - name: Reuters Business
+    url: https://feeds.reuters.com/reuters/businessNews
+    quality: high
+  - name: AP Business
+    url: https://apnews.com/apf-business?format=rss
+    quality: high
+  - name: CNBC Business
+    url: https://www.cnbc.com/id/10001147/device/rss/rss.html
+    quality: high
+  - name: TechCrunch
+    url: https://techcrunch.com/feed/
+    quality: medium
+  - name: WSJ Business
+    url: https://feeds.a.wsj.com/rss/RSSWSJD.xml
+    quality: high
+  - name: Bloomberg Technology
+    url: https://feeds.bloomberg.com/technology/news.rss
+    quality: high
+
+lookback_hours: 72
+max_candidates: 30
+min_candidates: 5
+
+signal_categories:
+  - AI adoption
+  - hiring changes
+  - layoffs
+  - pricing pressure
+  - labor costs
+  - consumer behavior
+  - regulation
+  - small business pressure
+  - business trust
+  - visibility
+  - operational change
+  - platform changes
+  - technology adoption
+
+avoid_categories:
+  - generic AI hype
+  - motivational content
+  - opinion-only
+  - listicles without data
+  - generic marketing tips

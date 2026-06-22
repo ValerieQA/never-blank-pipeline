@@ -1,0 +1,88 @@
+name: Daily Signal Research
+
+on:
+  schedule:
+    - cron: "0 8 * * *"   # 08:00 UTC = 04:00 ET
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Force run even if no new signals"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  daily-research:
+    name: Daily Signal Research
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install --quiet openai PyYAML requests google-auth google-api-python-client
+
+      - name: Run research pipeline
+        env:
+          NB_OPENAI_API_KEY:                 ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_OPENAI_CHAT_MODEL:              ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          NB_OPENAI_TEMPERATURE:             "0.3"
+          NB_GOOGLE_SERVICE_ACCOUNT_JSON:    ${{ secrets.NB_GOOGLE_SERVICE_ACCOUNT_JSON }}
+          NB_GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.NB_GOOGLE_SHEETS_CREDENTIALS_JSON }}
+          NB_RESEARCH_SHEET_ID:              ${{ secrets.NB_RESEARCH_SHEET_ID }}
+          NB_RESEARCH_SHEET_TAB:             "Signals"
+          NB_RESEARCH_MAX_DAILY_COST_USD:    "2.00"
+        run: python scripts/research/run_daily_research.py
+
+      - name: Commit research data
+        run: |
+          git config user.name  "never-blank-bot"
+          git config user.email "bot@never-blank.com"
+          git add data/research/ reports/research_*.json 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "research: daily signal update $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Upload research artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-${{ github.run_id }}
+          path: |
+            data/research/signals_active.jsonl
+            data/research/selected_signals.jsonl
+            reports/research_*.json
+          retention-days: 30
+
+      - name: Print step summary
+        if: always()
+        run: |
+          echo "## Daily Signal Research" >> $GITHUB_STEP_SUMMARY
+          python3 - <<'EOF' >> $GITHUB_STEP_SUMMARY
+          import json, glob
+          files = sorted(glob.glob("reports/research_*.json"))
+          if files:
+              d = json.load(open(files[-1]))
+              print(f"**Date:** {d.get('date','')}")
+              print(f"**Candidates found:** {d.get('candidates_found',0)}")
+              print(f"**New signals added:** {d.get('new_signals_added',0)}")
+              print(f"**Selected for content:** {d.get('selected_for_content',0)}")
+              print(f"**Sheet sync:** {d.get('sheet_sync','')}")
+              print(f"**Archived:** {d.get('archived',0)}")
+              for i, s in enumerate(d.get("top_signals",[]), 1):
+                  print(f"{i}. {s}")
+          else:
+              print("No report generated")
+          EOF
