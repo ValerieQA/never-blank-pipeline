@@ -1,118 +1,106 @@
 {
   "date": "2026-06-22",
-  "candidates_found": 23,
+  "candidates_found": 19,
   "duplicates_skipped": 0,
   "new_signals_added": 10,
   "selected_for_content": 3,
   "sheet_sync": "success",
   "archived": 0,
   "top_signals": [
-    "The new oil? Inside the effort to turn AI computing power into a tradeable commo",
-    "Microsoft and Chevron plan one of the largest gas-powered data center projects i",
-    "AI chipmaker Groq confirms $650M raise, re-staffs after Nvidia\u2019s $20B not-acqui-"
+    "Shareholders sue Uber\u2019s board over sexual assaults, other incidents",
+    "Gas Stations Accused of Using AI to Boost California Prices",
+    "Oracle Cut 21,000 Employees in 2026, Says AI Replaced Some Jobs"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "c8add3a5ebc5c08e",
+      "headline": "Shareholders sue Uber\u2019s board over sexual assaults, other incidents",
+      "published_at": "2026-06-22 23:02 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "5e3370e3-4892-4d1a-a862-1720c2ee9200",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7474959896132825090/",
+          "external_id": "urn:li:share:7474959896132825090",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "HTTP 500: Please reduce the amount of data you're asking for, then retry your request",
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DZ5-eOUGpX6/",
+          "external_id": "17945034849032021",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18108309625952117",
+          "external_id": "18108309625952117",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/9",
+          "external_id": "9",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      }
+    }
   ],
   "content_packages": 3,
-  "images_new": 1,
-  "images_reused": 12,
+  "images_new": 0,
+  "images_reused": 18,
   "_content_packages": [
     {
-      "SIGNAL_ID": "86a52b35ed6b2618",
-      "HEADLINE": "The new oil? Inside the effort to turn AI computing power into a tradeable commodity",
-      "prepared_at": "2026-06-22 21:09 UTC",
+      "SIGNAL_ID": "c8add3a5ebc5c08e",
+      "HEADLINE": "Shareholders sue Uber\u2019s board over sexual assaults, other incidents",
+      "prepared_at": "2026-06-22 23:00 UTC",
       "content": {
         "blog": {
-          "headline": "AI Compute Is Starting to Look Less Like Cloud Spend and More Like Fuel Risk",
-          "angle": "Compute scarcity is pushing buyers beyond bigger data centers, creating pressure to turn uneven technical capacity into contracts, benchmarks, forward commitments, and tradable risk."
+          "headline": "Uber\u2019s Safety Lawsuit Shows When Trust Risk Reaches the Boardroom",
+          "angle": "Uber faces shareholder allegations over safety oversight \u2192 trust-sensitive scale creates recurring risk that cannot be treated as isolated incidents \u2192 boards need proof of escalation, resourcing, remediation, and accountability \u2192 founders should treat safety controls as governance infrastructure, not operational drag."
         },
         "linkedin": {
-          "headline": "The uncomfortable part of AI compute: it may stop behaving like software spend.",
-          "angle": "AI compute is scarce, uneven, and mission-critical, which means founders may soon need to manage capacity, pricing, and availability with the same seriousness as energy or supply chain risk."
+          "headline": "Uber\u2019s problem is not just what happened in the car; it is what the board can prove happened after.",
+          "angle": "When safety incidents repeat on a trust-sensitive platform, the business implication is that metrics alone are not enough \u2014 investors may ask whether the board saw the pattern, funded the fix, and held anyone accountable."
         },
         "facebook": {
-          "headline": "AI compute is becoming too important to price casually.",
-          "angle": "As firms explore trading compute capacity through futures-like contracts, Silicon Data points to a bigger question: can messy infrastructure be turned into a reliable market?"
+          "headline": "Trust failures rarely stay in one lane.",
+          "angle": "Uber shareholders have sued the company\u2019s board over alleged oversight failures tied to sexual assault and other safety incidents \u2014 if a platform knows the risk is recurring, what evidence should its leaders be able to show?"
         },
         "instagram": {
-          "headline": "When Infrastructure Becomes A Market",
-          "angle": "AI compute scarcity is forcing companies to think beyond access and start thinking in units, benchmarks, contracts, and risk."
+          "headline": "When trust risk reaches the board",
+          "angle": "The Uber lawsuit shows how alleged safety failures can compound from incidents into litigation, then into investor claims about whether governance controls were strong enough."
         },
         "threads": {
-          "thread_hook": "AI compute is not becoming scarce in a clean, convenient way.",
-          "angle": "The thread shows why turning GPUs, latency, location, power cost, networking, and reliability into a tradable product is harder than calling compute the new oil."
+          "thread_hook": "Trust risk becomes governance risk when the pattern is ignored.",
+          "angle": "The thread shows how marketplace safety failures can move from customer harm to litigation to board-level exposure when oversight, escalation, and accountability are hard to prove."
         },
         "stories": {
-          "story_question": "What happens when your AI capacity becomes a pricing risk?",
-          "angle": "The story explores the shift from buying compute as a technical resource to managing it as a scarce input with financial exposure."
-        }
-      },
-      "images": {
-        "platform_images": {
-          "blog": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
-            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
-            "reused": false
-          },
-          "linkedin": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
-            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
-            "reused": false
-          },
-          "facebook": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
-            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
-            "reused": false
-          },
-          "instagram": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
-            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
-            "reused": false
-          },
-          "threads": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
-            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
-            "reused": false
-          },
-          "stories": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
-            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
-            "reused": false
-          }
-        },
-        "new_images": 1,
-        "reused_images": 0,
-        "reuse_rate": "0%",
-        "image_method": "generated:programmatic:particle_flow",
-        "reuse_source": "n/a"
-      }
-    },
-    {
-      "SIGNAL_ID": "788982a5093654be",
-      "HEADLINE": "Microsoft and Chevron plan one of the largest gas-powered data center projects in US",
-      "prepared_at": "2026-06-22 21:09 UTC",
-      "content": {
-        "blog": {
-          "headline": "When AI Growth Runs Into the Power Grid",
-          "angle": "Microsoft and Chevron\u2019s reported gas-powered data center plan signals a new constraint for AI infrastructure: when reliable power becomes the bottleneck, companies may accept emissions exposure to secure growth, but the real test is whether they can manage the carbon, permitting, fuel-cost, and stakeholder risks that follow."
-        },
-        "linkedin": {
-          "headline": "Microsoft\u2019s AI buildout has reached the point where a gas contract may matter as much as a GPU order.",
-          "angle": "AI infrastructure is turning energy procurement into a board-level growth decision, which means founders need to treat power access as strategy, not operations."
-        },
-        "facebook": {
-          "headline": "AI does not just need chips. It needs firm power.",
-          "angle": "Microsoft and Chevron\u2019s reported 20-year gas-powered data center project shows how fast AI demand is changing infrastructure priorities; if reliable energy becomes the growth constraint, what trade-offs will companies be willing to defend?"
-        },
-        "instagram": {
-          "headline": "Power Is The New Bottleneck",
-          "angle": "Microsoft and Chevron\u2019s reported deal shows that AI growth is forcing companies to choose between operational certainty and reputational cleanliness."
-        },
-        "threads": {
-          "thread_hook": "The AI race is moving from chip scarcity to power scarcity.",
-          "angle": "The thread shows how energy procurement has shifted from a sustainability function to a growth-enablement decision with real exposure attached."
-        },
-        "stories": {
-          "story_question": "Would you take the emissions hit to secure the power your growth depends on?",
-          "angle": "The story explores the founder-level tension between speed, reliability, climate commitments, and long-term lock-in."
+          "story_question": "If a safety risk keeps repeating, who owns the proof that it was managed?",
+          "angle": "The story explores the tension between marketplace growth and the governance burden of showing that foreseeable trust risks were escalated, resourced, and addressed."
         }
       },
       "images": {
@@ -156,33 +144,33 @@
       }
     },
     {
-      "SIGNAL_ID": "d06e86950fb9d906",
-      "HEADLINE": "AI chipmaker Groq confirms $650M raise, re-staffs after Nvidia\u2019s $20B not-acqui-hire deal",
-      "prepared_at": "2026-06-22 21:09 UTC",
+      "SIGNAL_ID": "6ba9ccbe1616192c",
+      "HEADLINE": "Gas Stations Accused of Using AI to Boost California Prices",
+      "prepared_at": "2026-06-22 23:00 UTC",
       "content": {
         "blog": {
-          "headline": "Groq\u2019s $650M Raise Shows Why AI Infrastructure Moats Now Include the Org Chart",
-          "angle": "Groq\u2019s raise signals a market where capital is abundant but talent is fragile, forcing AI infrastructure startups to treat fundraising as both a growth engine and a recovery mechanism after incumbent talent raids."
+          "headline": "AI Pricing Has Entered the Antitrust File",
+          "angle": "California consumers allege major gas-station operators used AI pricing tools to inflate pump prices \u2192 the same system sold as optimization now looks like opacity \u2192 founders need governance, audit trails, and limits on competitor data \u2192 if AI sets the price, governance sets the trust."
         },
         "linkedin": {
-          "headline": "Groq didn\u2019t just raise $650M to grow; it raised into a talent wound.",
-          "angle": "AI infrastructure competition is shifting from chip performance alone to whether startups can rebuild leadership and technical capacity faster than incumbents can strip it away."
+          "headline": "The pump price changed faster than the company could explain it.",
+          "angle": "AI pricing may improve margins, but when customers and regulators cannot see how prices are set, the commercial upside turns into a trust and antitrust problem."
         },
         "facebook": {
-          "headline": "A $650M raise sounds like momentum. For Groq, it also looks like repair.",
-          "angle": "Groq\u2019s funding round follows a Nvidia-linked not-acqui-hire shock, raising the question: can AI infrastructure startups use capital fast enough to defend the teams their strategy depends on?"
+          "headline": "When pricing gets smarter, suspicion gets sharper.",
+          "angle": "California consumers have sued gas-station operators including Walmart, Marathon Petroleum, BP, and 7-Eleven over alleged AI-driven pump price inflation; if your company uses algorithmic pricing, can you prove the decision was independent?"
         },
         "instagram": {
-          "headline": "The Org Chart Is The Moat",
-          "angle": "Groq\u2019s $650M raise shows that in AI infrastructure, money is not just for chips, compute, and expansion; it is also for rebuilding after talent gets pulled away."
+          "headline": "When The Model Sets Prices",
+          "angle": "AI pricing is no longer just a revenue tool; it now needs rules, records, and a human explanation customers can believe."
         },
         "threads": {
-          "thread_hook": "AI infrastructure startups are learning a brutal lesson: your best people can become the acquisition target before your company does.",
-          "angle": "The thread reveals why Groq\u2019s $650M raise is less a simple growth story and more a case study in using capital to recover organizational capacity after a talent shock."
+          "thread_hook": "\u201cThe model decided\u201d is not a pricing policy.",
+          "angle": "The thread shows why algorithmic pricing needs governance before it becomes a margin tool that customers, regulators, and courts interpret as manipulation."
         },
         "stories": {
-          "story_question": "Can a startup rebuild talent faster than Nvidia-linked ecosystems can remove it?",
-          "angle": "The story explores the tension between massive AI infrastructure funding and the vulnerability of elite technical teams to aggressive incumbent recruitment."
+          "story_question": "If AI changes your prices, who explains them?",
+          "angle": "The tension between faster revenue optimization and the growing demand for pricing transparency, independence, and proof."
         }
       },
       "images": {
@@ -223,6 +211,134 @@
         "reuse_rate": "100%",
         "image_method": "reused",
         "reuse_source": "most_recent_never_blank"
+      }
+    },
+    {
+      "SIGNAL_ID": "3012cfafdbad7139",
+      "HEADLINE": "Oracle Cut 21,000 Employees in 2026, Says AI Replaced Some Jobs",
+      "prepared_at": "2026-06-22 23:01 UTC",
+      "content": {
+        "blog": {
+          "headline": "Oracle\u2019s Reported AI Layoffs Show the Next Cost-Cutting Playbook",
+          "angle": "Oracle reportedly cut 21,000 employees as AI replaced some functions \u2192 the tension is whether automation savings justify trust, capability, and service risk \u2192 founders should separate repeatable work from judgment-heavy work before cutting roles \u2192 the lesson is that AI changes the cost base only if the organization can absorb what disappears."
+        },
+        "linkedin": {
+          "headline": "The uncomfortable part of Oracle\u2019s reported cuts is not the number.",
+          "angle": "Some jobs may now be viewed as budget lines with a replacement tool attached, which means founders need to watch when AI moves from productivity aid to operating model redesign."
+        },
+        "facebook": {
+          "headline": "Oracle\u2019s reported layoffs point to a harder AI question.",
+          "angle": "If AI can now replace certain job functions, Oracle becomes a case study in whether cost savings are worth the possible loss of knowledge, trust, and service quality \u2014 where would your company draw the line?"
+        },
+        "instagram": {
+          "headline": "When The Work Disappears First",
+          "angle": "Oracle\u2019s reported cuts show how AI adoption can quietly shift from helping teams move faster to making some roles easier to remove."
+        },
+        "threads": {
+          "thread_hook": "AI does not have to replace a whole job to put the job at risk.",
+          "angle": "The thread shows how repeatable tasks become automated, automated tasks become cost questions, and cost questions eventually become headcount decisions."
+        },
+        "stories": {
+          "story_question": "If AI removes 40% of a role, what happens to the person?",
+          "angle": "The story explores the founder tension between lower operating costs and the hidden damage of cutting people before the business knows what knowledge it has lost."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          }
+        },
+        "new_images": 0,
+        "reused_images": 6,
+        "reuse_rate": "100%",
+        "image_method": "reused",
+        "reuse_source": "most_recent_never_blank"
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "c8add3a5ebc5c08e",
+      "headline": "Shareholders sue Uber\u2019s board over sexual assaults, other incidents",
+      "published_at": "2026-06-22 23:02 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "5e3370e3-4892-4d1a-a862-1720c2ee9200",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7474959896132825090/",
+          "external_id": "urn:li:share:7474959896132825090",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "HTTP 500: Please reduce the amount of data you're asking for, then retry your request",
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DZ5-eOUGpX6/",
+          "external_id": "17945034849032021",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18108309625952117",
+          "external_id": "18108309625952117",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/9",
+          "external_id": "9",
+          "error_message": null,
+          "raw_response_path": null
+        }
       }
     }
   ]

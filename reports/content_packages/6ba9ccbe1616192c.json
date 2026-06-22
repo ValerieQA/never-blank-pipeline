@@ -1,0 +1,70 @@
+{
+  "SIGNAL_ID": "6ba9ccbe1616192c",
+  "HEADLINE": "Gas Stations Accused of Using AI to Boost California Prices",
+  "prepared_at": "2026-06-22 23:00 UTC",
+  "content": {
+    "blog": {
+      "headline": "AI Pricing Has Entered the Antitrust File",
+      "angle": "California consumers allege major gas-station operators used AI pricing tools to inflate pump prices → the same system sold as optimization now looks like opacity → founders need governance, audit trails, and limits on competitor data → if AI sets the price, governance sets the trust."
+    },
+    "linkedin": {
+      "headline": "The pump price changed faster than the company could explain it.",
+      "angle": "AI pricing may improve margins, but when customers and regulators cannot see how prices are set, the commercial upside turns into a trust and antitrust problem."
+    },
+    "facebook": {
+      "headline": "When pricing gets smarter, suspicion gets sharper.",
+      "angle": "California consumers have sued gas-station operators including Walmart, Marathon Petroleum, BP, and 7-Eleven over alleged AI-driven pump price inflation; if your company uses algorithmic pricing, can you prove the decision was independent?"
+    },
+    "instagram": {
+      "headline": "When The Model Sets Prices",
+      "angle": "AI pricing is no longer just a revenue tool; it now needs rules, records, and a human explanation customers can believe."
+    },
+    "threads": {
+      "thread_hook": "“The model decided” is not a pricing policy.",
+      "angle": "The thread shows why algorithmic pricing needs governance before it becomes a margin tool that customers, regulators, and courts interpret as manipulation."
+    },
+    "stories": {
+      "story_question": "If AI changes your prices, who explains them?",
+      "angle": "The tension between faster revenue optimization and the growing demand for pricing transparency, independence, and proof."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      }
+    },
+    "new_images": 0,
+    "reused_images": 6,
+    "reuse_rate": "100%",
+    "image_method": "reused",
+    "reuse_source": "most_recent_never_blank"
+  }
+}
