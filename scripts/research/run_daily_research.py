@@ -172,7 +172,8 @@ def run() -> dict:
             summary["content_packages"] = 0
 
     # Stage 11 — Live Publishing
-    log.info("=== Stage 11: Live Publishing ===")
+    publish_enabled = os.environ.get("NB_RESEARCH_PUBLISH_ENABLED", "false").lower() == "true"
+    log.info("=== Stage 11: Live Publishing (enabled=%s) ===", publish_enabled)
     publish_reports = []
     if selected and content_packages:
         try:

@@ -1,10 +1,12 @@
 """
 Stage 11 — Live publishing.
 For each selected signal + its content package, generate full platform content
-and publish to all channels.  No approval gates.  mode='live' by default.
+and publish to all channels.
 
-Safety: if NB_PUBLISH_MODE env var is 'dry_run', all publishers run in dry-run.
-Default: live.
+Guards:
+  NB_RESEARCH_PUBLISH_ENABLED          — must be 'true' to publish (default: false)
+  NB_RESEARCH_MAX_PUBLISH_SIGNALS_PER_RUN — cap on signals per run (default: 1)
+  NB_PUBLISH_MODE                      — 'live' | 'dry_run' (default: live)
 """
 
 import json
@@ -179,14 +181,30 @@ def publish_packages(
     """
     Main entry point.  Publishes each signal across all platforms.
     Returns list of per-signal publish reports.
+
+    Returns empty list (with log warning) if NB_RESEARCH_PUBLISH_ENABLED != 'true'.
+    Caps signals at NB_RESEARCH_MAX_PUBLISH_SIGNALS_PER_RUN (default: 1).
     """
     if not signals:
         return []
 
+    publish_enabled = os.getenv("NB_RESEARCH_PUBLISH_ENABLED", "false").lower() == "true"
+    if not publish_enabled:
+        log.info("Publishing disabled (NB_RESEARCH_PUBLISH_ENABLED != true) — skipping Stage 11")
+        return []
+
+    max_signals = int(os.getenv("NB_RESEARCH_MAX_PUBLISH_SIGNALS_PER_RUN", "1"))
+    if len(signals) > max_signals:
+        log.info(
+            "Capping signals to publish: %d → %d (NB_RESEARCH_MAX_PUBLISH_SIGNALS_PER_RUN=%d)",
+            len(signals), max_signals, max_signals,
+        )
+        signals = signals[:max_signals]
+
     if mode is None:
         mode = os.getenv("NB_PUBLISH_MODE", "live")
 
-    log.info("Publishing %d signals in mode=%s", len(signals), mode)
+    log.info("Publishing %d signal(s) in mode=%s", len(signals), mode)
 
     # Build a lookup by SIGNAL_ID for fast package access
     pkg_map = {p.get("SIGNAL_ID"): p for p in packages}
@@ -216,8 +234,12 @@ def publish_packages(
                 if name == "wix" and result.ok():
                     wix_url = result.url
 
-                results[name] = result.to_dict()
-                log.info("%s → %s", name, result.status.value)
+                res_dict = result.to_dict()
+                # If published/draft but no URL was returned, make that explicit
+                if result.ok() and not result.url:
+                    res_dict["status"] = "published_url_unavailable"
+                results[name] = res_dict
+                log.info("%s → %s (url=%s)", name, result.status.value, result.url or "none")
             except Exception as exc:
                 log.error("%s publish error: %s", name, exc)
                 results[name] = PublishResult(
@@ -256,20 +278,22 @@ def format_publish_summary(reports: list[dict]) -> str:
 
         for platform, res in results.items():
             status = res.get("status", "")
-            icon   = "✅" if status in ("PUBLISHED", "DRAFT_CREATED") else ("⏭️" if status == "SKIPPED" else "❌")
             url    = res.get("url", "")
             err    = res.get("error_message", "")
             label  = platform.title()
 
             if status in ("PUBLISHED", "DRAFT_CREATED"):
                 ok_platforms.append(platform)
-                detail = f" — [{url}]({url})" if url else ""
-                lines.append(f"- {icon} **{label}** {status}{detail}")
+                url_part = f" — [{url}]({url})" if url else ""
+                lines.append(f"- ✅ **{label}** {status}{url_part}")
+            elif status == "published_url_unavailable":
+                ok_platforms.append(platform)
+                lines.append(f"- ✅ **{label}** published — URL unavailable (check platform directly)")
             elif status == "SKIPPED":
-                lines.append(f"- {icon} **{label}** skipped — {err}")
+                lines.append(f"- ⏭️ **{label}** skipped — {err}")
             else:
                 fail_platforms.append(platform)
-                lines.append(f"- {icon} **{label}** FAILED — {err}")
+                lines.append(f"- ❌ **{label}** FAILED — {err}")
 
         lines.append("")
 

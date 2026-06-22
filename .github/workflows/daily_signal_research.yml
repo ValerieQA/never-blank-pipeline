@@ -47,7 +47,9 @@ jobs:
           NB_CLOUDINARY_CLOUD_NAME:          ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
           NB_CLOUDINARY_API_KEY:             ${{ secrets.NB_CLOUDINARY_API_KEY }}
           NB_CLOUDINARY_API_SECRET:          ${{ secrets.NB_CLOUDINARY_API_SECRET }}
-          # Publishing secrets
+          # Publishing guards
+          NB_RESEARCH_PUBLISH_ENABLED:       ${{ secrets.NB_RESEARCH_PUBLISH_ENABLED }}
+          NB_RESEARCH_MAX_PUBLISH_SIGNALS_PER_RUN: ${{ secrets.NB_RESEARCH_MAX_PUBLISH_SIGNALS_PER_RUN }}
           NB_PUBLISH_MODE:                   "live"
           NB_WIX_API_KEY:                    ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID:                    ${{ secrets.NB_WIX_SITE_ID }}
@@ -124,8 +126,16 @@ jobs:
               print("")
 
           # Publishing summary
+          import os as _os
+          pub_enabled = _os.environ.get("NB_RESEARCH_PUBLISH_ENABLED", "false").lower() == "true"
           pub_reports = d.get("publish_reports", [])
-          if pub_reports:
+          if not pub_enabled:
+              print("---")
+              print("## Publishing Summary")
+              print("")
+              print("⏸️ Publishing disabled — set `NB_RESEARCH_PUBLISH_ENABLED=true` to publish live.")
+              print("")
+          elif pub_reports:
               print("---")
               print("## Publishing Summary")
               print("")
@@ -138,17 +148,17 @@ jobs:
                   print("")
                   for platform, res in results.items():
                       status = res.get("status", "")
-                      if status in ("PUBLISHED", "DRAFT_CREATED"):
-                          icon = "✅"
-                      elif status == "SKIPPED":
-                          icon = "⏭️"
-                      else:
-                          icon = "❌"
                       url = res.get("url", "")
                       err = res.get("error_message", "")
-                      url_part = f" — [{url}]({url})" if url else ""
-                      err_part = f" — {err}" if err and status not in ("PUBLISHED","DRAFT_CREATED") else ""
-                      print(f"- {icon} **{platform.title()}** {status}{url_part}{err_part}")
+                      if status in ("PUBLISHED", "DRAFT_CREATED"):
+                          url_part = f" — [{url}]({url})" if url else ""
+                          print(f"- ✅ **{platform.title()}** {status}{url_part}")
+                      elif status == "published_url_unavailable":
+                          print(f"- ✅ **{platform.title()}** published — URL unavailable (check platform directly)")
+                      elif status == "SKIPPED":
+                          print(f"- ⏭️ **{platform.title()}** skipped — {err}")
+                      else:
+                          print(f"- ❌ **{platform.title()}** FAILED — {err}")
                   print("")
 
           # Content packages from per-signal JSON files
