@@ -2,9 +2,13 @@
   "date": "2026-06-22",
   "candidates_found": 21,
   "duplicates_skipped": 0,
-  "new_signals_added": 0,
-  "selected_for_content": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
   "sheet_sync": "success",
   "archived": 0,
-  "top_signals": []
+  "top_signals": [
+    "'Reward for failure': Investor support for Target Chair Brian Cornell falls to l",
+    "Lucid to lay off roughly 18% of U.S. workforce, COO Marc Winterhoff leaves",
+    "UPS to invest $48 million in temperature-controlled facilities amid healthcare b"
+  ]
 }
