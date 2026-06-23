@@ -1,0 +1,345 @@
+{
+  "date": "2026-06-23",
+  "candidates_found": 23,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "China's 618 shopping festival growth slows sharply as consumer spending malaise ",
+    "US Tech Stocks Set to Slide as AI Rout Hits Global Peers",
+    "Abu Dhabi\u2019s MGX Raises About $50 Billion to Accelerate AI Deals"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "9d9ccd0845aefe5c",
+      "headline": "China's 618 shopping festival growth slows sharply as consumer spending malaise persists",
+      "published_at": "2026-06-23 11:33 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "d746a790-842d-4506-b820-308fb0aebc73",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7475148966041477120/",
+          "external_id": "urn:li:share:7475148966041477120",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122111382321356169",
+          "external_id": "1219637131228622_122111382321356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DZ7UclGEifd/",
+          "external_id": "18157750777460835",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18026681945828520",
+          "external_id": "18026681945828520",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/10",
+          "external_id": "10",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      }
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 0,
+  "images_reused": 18,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "9d9ccd0845aefe5c",
+      "HEADLINE": "China's 618 shopping festival growth slows sharply as consumer spending malaise persists",
+      "prepared_at": "2026-06-23 11:30 UTC",
+      "content": {
+        "blog": {
+          "headline": "618 Shows the Cost of Buying Demand",
+          "angle": "China\u2019s slowing 618 growth shows retailers leaning harder on promotions as consumer confidence weakens \u2192 the tension is whether discounts are driving new demand or simply defending share \u2192 JD.com and peers must protect volume without training shoppers to wait \u2192 the lesson is that in a slowdown, promotional success can hide margin, loyalty, and inventory risk."
+        },
+        "linkedin": {
+          "headline": "JD.com can still pull customers into 618, but it may be paying more for less conviction.",
+          "angle": "Slower 618 growth suggests discounts are shifting from growth engine to defensive tool, which means retailers need to judge promotions by margin quality and repeat behavior, not traffic alone."
+        },
+        "facebook": {
+          "headline": "When a shopping festival slows, the discount tells a different story.",
+          "angle": "China\u2019s 618 growth has cooled sharply; JD.com can still attract shoppers with deals, but if consumers are only moving when prices drop, how much demand is actually being created?"
+        },
+        "instagram": {
+          "headline": "Discounts Are Now Defensive Signals",
+          "angle": "618\u2019s slower growth shows how promotions can move inventory and protect share while quietly exposing weaker consumer confidence and thinner commercial room."
+        },
+        "threads": {
+          "thread_hook": "When discounts stop creating demand, they start revealing it.",
+          "angle": "The thread shows how 618\u2019s slower growth turns promotional retail from a demand accelerator into a test of margin discipline, loyalty, and consumer trust."
+        },
+        "stories": {
+          "story_question": "Are discounts driving demand, or just defending share?",
+          "angle": "This story explores the pressure on retailers like JD.com to keep sales moving without making the business more dependent on promotions."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          }
+        },
+        "new_images": 0,
+        "reused_images": 6,
+        "reuse_rate": "100%",
+        "image_method": "reused",
+        "reuse_source": "most_recent_never_blank"
+      }
+    },
+    {
+      "SIGNAL_ID": "5843417cbaa9706a",
+      "HEADLINE": "US Tech Stocks Set to Slide as AI Rout Hits Global Peers",
+      "prepared_at": "2026-06-23 11:31 UTC",
+      "content": {
+        "blog": {
+          "headline": "AI Stocks Are Not Being Rejected. They Are Being Repriced.",
+          "angle": "A selloff in global tech names signals the gap between AI adoption and AI monetization, forcing founders to see that market trust holds only when expectation is matched by earnings proof."
+        },
+        "linkedin": {
+          "headline": "The uncomfortable part of the AI selloff is that the story still works \u2014 the math just doesn\u2019t yet.",
+          "angle": "Investors are not abandoning AI; they are questioning how long companies can defend premium valuations before the return on capital becomes visible."
+        },
+        "facebook": {
+          "headline": "AI optimism just ran into valuation discipline.",
+          "angle": "Weakness in Korean chipmakers pulled pressure onto U.S. tech stocks, raising the founder question: when does a strong market narrative need hard earnings proof to keep its price?"
+        },
+        "instagram": {
+          "headline": "Hype Meets The Earnings Test",
+          "angle": "The AI rout shows that attention can lift a category, but only proof of monetization protects the multiple."
+        },
+        "threads": {
+          "thread_hook": "The AI selloff is not a technology problem. It is a timing problem.",
+          "angle": "The sequence reveals why markets can believe in long-term adoption while still punishing companies for delayed earnings, stretched valuations, and unclear returns."
+        },
+        "stories": {
+          "story_question": "If the AI story is still strong, why are tech stocks sliding?",
+          "angle": "The tension between believing in the technology and trusting the valuation before monetization is proven."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          }
+        },
+        "new_images": 0,
+        "reused_images": 6,
+        "reuse_rate": "100%",
+        "image_method": "reused",
+        "reuse_source": "most_recent_never_blank"
+      }
+    },
+    {
+      "SIGNAL_ID": "4f15b49a685b1a1d",
+      "HEADLINE": "Abu Dhabi\u2019s MGX Raises About $50 Billion to Accelerate AI Deals",
+      "prepared_at": "2026-06-23 11:31 UTC",
+      "content": {
+        "blog": {
+          "headline": "AI Is Becoming a Balance-Sheet Contest",
+          "angle": "MGX\u2019s reported $50 billion raise signals capital moving upstream into AI infrastructure, exposing the tension between massive compute demand and uncertain monetization, forcing founders to treat compute, data-center access, and power as strategic dependencies, not background services."
+        },
+        "linkedin": {
+          "headline": "The uncomfortable part of the AI boom: the winners may be decided by balance sheets before products.",
+          "angle": "MGX\u2019s raise shows that serious capital is shifting from AI applications to infrastructure control, which means founders building on AI may be competing inside someone else\u2019s capacity strategy."
+        },
+        "facebook": {
+          "headline": "AI demand is rising, but the real fight may be over who owns the pipes.",
+          "angle": "MGX has reportedly raised about $50 billion to accelerate AI infrastructure and technology deals \u2014 if compute, power, and data centers become scarce, should founders still think of AI infrastructure as a vendor line item?"
+        },
+        "instagram": {
+          "headline": "AI\u2019s Real Bottleneck Is Capacity",
+          "angle": "MGX\u2019s $50 billion raise points to a sharper AI reality: the model gets attention, but infrastructure control may decide who can actually scale."
+        },
+        "threads": {
+          "thread_hook": "The AI boom is starting to look less like a software race and more like a balance-sheet race.",
+          "angle": "The thread shows why capital is moving upstream into compute, energy, and data-center assets \u2014 and why founders cannot afford to treat AI infrastructure as invisible plumbing."
+        },
+        "stories": {
+          "story_question": "If compute gets scarce, who really controls your AI business?",
+          "angle": "This story explores the tension between AI adoption as a growth opportunity and infrastructure access as a strategic risk for founders."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+            "reused": true
+          }
+        },
+        "new_images": 0,
+        "reused_images": 6,
+        "reuse_rate": "100%",
+        "image_method": "reused",
+        "reuse_source": "most_recent_never_blank"
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "9d9ccd0845aefe5c",
+      "headline": "China's 618 shopping festival growth slows sharply as consumer spending malaise persists",
+      "published_at": "2026-06-23 11:33 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "d746a790-842d-4506-b820-308fb0aebc73",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7475148966041477120/",
+          "external_id": "urn:li:share:7475148966041477120",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122111382321356169",
+          "external_id": "1219637131228622_122111382321356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DZ7UclGEifd/",
+          "external_id": "18157750777460835",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18026681945828520",
+          "external_id": "18026681945828520",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/10",
+          "external_id": "10",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      }
+    }
+  ]
+}

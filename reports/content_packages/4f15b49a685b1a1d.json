@@ -1,0 +1,70 @@
+{
+  "SIGNAL_ID": "4f15b49a685b1a1d",
+  "HEADLINE": "Abu Dhabi’s MGX Raises About $50 Billion to Accelerate AI Deals",
+  "prepared_at": "2026-06-23 11:31 UTC",
+  "content": {
+    "blog": {
+      "headline": "AI Is Becoming a Balance-Sheet Contest",
+      "angle": "MGX’s reported $50 billion raise signals capital moving upstream into AI infrastructure, exposing the tension between massive compute demand and uncertain monetization, forcing founders to treat compute, data-center access, and power as strategic dependencies, not background services."
+    },
+    "linkedin": {
+      "headline": "The uncomfortable part of the AI boom: the winners may be decided by balance sheets before products.",
+      "angle": "MGX’s raise shows that serious capital is shifting from AI applications to infrastructure control, which means founders building on AI may be competing inside someone else’s capacity strategy."
+    },
+    "facebook": {
+      "headline": "AI demand is rising, but the real fight may be over who owns the pipes.",
+      "angle": "MGX has reportedly raised about $50 billion to accelerate AI infrastructure and technology deals — if compute, power, and data centers become scarce, should founders still think of AI infrastructure as a vendor line item?"
+    },
+    "instagram": {
+      "headline": "AI’s Real Bottleneck Is Capacity",
+      "angle": "MGX’s $50 billion raise points to a sharper AI reality: the model gets attention, but infrastructure control may decide who can actually scale."
+    },
+    "threads": {
+      "thread_hook": "The AI boom is starting to look less like a software race and more like a balance-sheet race.",
+      "angle": "The thread shows why capital is moving upstream into compute, energy, and data-center assets — and why founders cannot afford to treat AI infrastructure as invisible plumbing."
+    },
+    "stories": {
+      "story_question": "If compute gets scarce, who really controls your AI business?",
+      "angle": "This story explores the tension between AI adoption as a growth opportunity and infrastructure access as a strategic risk for founders."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      }
+    },
+    "new_images": 0,
+    "reused_images": 6,
+    "reuse_rate": "100%",
+    "image_method": "reused",
+    "reuse_source": "most_recent_never_blank"
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "SIGNAL_ID": "9d9ccd0845aefe5c",
+  "HEADLINE": "China's 618 shopping festival growth slows sharply as consumer spending malaise persists",
+  "prepared_at": "2026-06-23 11:30 UTC",
+  "content": {
+    "blog": {
+      "headline": "618 Shows the Cost of Buying Demand",
+      "angle": "China’s slowing 618 growth shows retailers leaning harder on promotions as consumer confidence weakens → the tension is whether discounts are driving new demand or simply defending share → JD.com and peers must protect volume without training shoppers to wait → the lesson is that in a slowdown, promotional success can hide margin, loyalty, and inventory risk."
+    },
+    "linkedin": {
+      "headline": "JD.com can still pull customers into 618, but it may be paying more for less conviction.",
+      "angle": "Slower 618 growth suggests discounts are shifting from growth engine to defensive tool, which means retailers need to judge promotions by margin quality and repeat behavior, not traffic alone."
+    },
+    "facebook": {
+      "headline": "When a shopping festival slows, the discount tells a different story.",
+      "angle": "China’s 618 growth has cooled sharply; JD.com can still attract shoppers with deals, but if consumers are only moving when prices drop, how much demand is actually being created?"
+    },
+    "instagram": {
+      "headline": "Discounts Are Now Defensive Signals",
+      "angle": "618’s slower growth shows how promotions can move inventory and protect share while quietly exposing weaker consumer confidence and thinner commercial room."
+    },
+    "threads": {
+      "thread_hook": "When discounts stop creating demand, they start revealing it.",
+      "angle": "The thread shows how 618’s slower growth turns promotional retail from a demand accelerator into a test of margin discipline, loyalty, and consumer trust."
+    },
+    "stories": {
+      "story_question": "Are discounts driving demand, or just defending share?",
+      "angle": "This story explores the pressure on retailers like JD.com to keep sales moving without making the business more dependent on promotions."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782162548/never-blank/posts/research/86a52b35ed6b2618/1782162547.png",
+        "reused": true
+      }
+    },
+    "new_images": 0,
+    "reused_images": 6,
+    "reuse_rate": "100%",
+    "image_method": "reused",
+    "reuse_source": "most_recent_never_blank"
+  }
+}
