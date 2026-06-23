@@ -70,17 +70,25 @@ class WixPublisher(BasePublisher):
         }
 
         nodes = _md_to_rich_nodes(draft.blog_body)
-        draft_body = json.dumps({
-            "draftPost": {
-                "title":       draft.blog_title,
-                "memberId":    owner_id,
-                "slug":        draft.wix_slug,
-                "categoryIds": [draft.wix_category_id] if draft.wix_category_id else [],
-                "tagIds":      draft.wix_tags,
-                "excerpt":     draft.blog_meta.get("meta_description", "")[:500],
-                "richContent": {"nodes": nodes},
-            }
-        }).encode()
+
+        # Wix Blog v3 cover image: requires a Wix Media Manager image ID (wix:image://...).
+        # External URLs (Cloudinary) are not accepted by the media field directly.
+        # To attach a cover image, the image would first need to be uploaded to Wix Media
+        # Manager via the Media Manager API, then the returned wixMediaId used here.
+        # This is not implemented — posts are published without a cover image.
+        # See: https://dev.wix.com/docs/rest/business-solutions/blog/draft-posts/create-draft-post
+        cover_image_attached = False
+
+        post_payload: dict = {
+            "title":       draft.blog_title,
+            "memberId":    owner_id,
+            "slug":        draft.wix_slug,
+            "categoryIds": [draft.wix_category_id] if draft.wix_category_id else [],
+            "tagIds":      draft.wix_tags,
+            "excerpt":     draft.blog_meta.get("meta_description", "")[:500],
+            "richContent": {"nodes": nodes},
+        }
+        draft_body = json.dumps({"draftPost": post_payload}).encode()
 
         if mode == "dry_run":
             node_count = len(nodes)
@@ -89,7 +97,8 @@ class WixPublisher(BasePublisher):
                 status=PublishStatus.SKIPPED,
                 error_message=(
                     f"dry_run: payload valid — title={draft.blog_title!r} "
-                    f"slug={draft.wix_slug!r} nodes={node_count}"
+                    f"slug={draft.wix_slug!r} nodes={node_count} "
+                    f"cover_image=not_supported_via_external_url"
                 ),
             )
 
@@ -128,4 +137,7 @@ class WixPublisher(BasePublisher):
         post = resp2.get("post", {})
         post_id  = post.get("id", draft_id)
         post_url = post.get("url", "")
-        return self._published(external_id=post_id, url=post_url)
+        result = self._published(external_id=post_id, url=post_url)
+        if not cover_image_attached:
+            result.error_message = "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL"
+        return result

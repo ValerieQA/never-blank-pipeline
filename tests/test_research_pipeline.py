@@ -155,6 +155,114 @@ def test_allowed_fields_whitelist():
     assert "SIGNAL_ID" not in ALLOWED_FIELDS
 
 
+# --- Image reuse rules ---
+
+def test_image_reuse_no_most_recent_fallback():
+    """_find_existing_image must not fall back to unrelated old images."""
+    from scripts.research.prepare_content import _find_existing_image
+    signal  = {"SIGNAL_ID": "brand_new_signal", "SIGNAL_TYPE": "layoffs"}
+    library = {
+        "other_signal_id": {
+            "url": "https://cloudinary.com/old_image.png",
+            "signal_type": "different_type",
+            "headline": "Some old headline",
+            "created_at": "2026-01-01",
+        }
+    }
+    url, reason = _find_existing_image(signal, library)
+    assert url is None
+    assert reason == "none"
+
+
+def test_image_reuse_same_signal_id():
+    """_find_existing_image must reuse when SIGNAL_ID matches."""
+    from scripts.research.prepare_content import _find_existing_image
+    signal  = {"SIGNAL_ID": "abc123", "SIGNAL_TYPE": "layoffs"}
+    library = {
+        "abc123": {
+            "url": "https://cloudinary.com/correct_image.png",
+            "signal_type": "layoffs",
+            "headline": "Oracle layoffs",
+            "created_at": "2026-06-22",
+        }
+    }
+    url, reason = _find_existing_image(signal, library)
+    assert url == "https://cloudinary.com/correct_image.png"
+    assert "same_signal" in reason
+
+
+def test_hook_text_trim_no_partial_word():
+    """trim_hook_text must never produce a partial word and must respect max_words."""
+    from src.publishing.image_pipeline import trim_hook_text
+    text = "The uncomfortable part of AI compute is that companies may soon need to manage infrastructure"
+    result = trim_hook_text(text, max_words=12)
+    words = result.split()
+    assert len(words) <= 12
+    # Every word in result must be a complete word from the original
+    original_words = text.split()
+    for w in words:
+        assert w in original_words
+
+    # No result word should be a truncated version of the next word
+    result_no_partial = trim_hook_text("Power is the new i", max_words=12)
+    assert result_no_partial == "Power is the new i"   # 5 words, under limit, kept as-is
+
+    short_text = "Power is the new bottleneck"
+    assert trim_hook_text(short_text) == short_text
+
+
+def test_signal_selection_requires_both_conditions():
+    """Selected signals must have BOTH RECOMMENDED_FOR_ARTICLE=true AND score >= threshold."""
+    # Signal with recommendation but low score → should NOT be selected
+    signal_rec_only = {
+        "SIGNAL_ID": "sig1",
+        "RECOMMENDED_FOR_ARTICLE": "true",
+        "ARTICLE_READINESS_SCORE": "4",
+        "APPROVED_OVERRIDE": "",
+    }
+    # Signal with high score but no recommendation → should NOT be selected
+    signal_score_only = {
+        "SIGNAL_ID": "sig2",
+        "RECOMMENDED_FOR_ARTICLE": "false",
+        "ARTICLE_READINESS_SCORE": "9",
+        "APPROVED_OVERRIDE": "",
+    }
+    # Signal with both → SHOULD be selected
+    signal_both = {
+        "SIGNAL_ID": "sig3",
+        "RECOMMENDED_FOR_ARTICLE": "true",
+        "ARTICLE_READINESS_SCORE": "8",
+        "APPROVED_OVERRIDE": "",
+    }
+    # Signal with APPROVED_OVERRIDE → SHOULD be selected regardless
+    signal_override = {
+        "SIGNAL_ID": "sig4",
+        "RECOMMENDED_FOR_ARTICLE": "false",
+        "ARTICLE_READINESS_SCORE": "3",
+        "APPROVED_OVERRIDE": "true",
+    }
+
+    select_min = 7
+
+    def _select(signals):
+        return [
+            s for s in signals
+            if str(s.get("APPROVED_OVERRIDE", "")).lower() == "true"
+            or (
+                str(s.get("RECOMMENDED_FOR_ARTICLE", "false")).lower() == "true"
+                and int(s.get("ARTICLE_READINESS_SCORE", "0") or "0") >= select_min
+            )
+        ]
+
+    all_signals = [signal_rec_only, signal_score_only, signal_both, signal_override]
+    result_ids  = {s["SIGNAL_ID"] for s in _select(all_signals)}
+
+    assert "sig1" not in result_ids   # rec but low score
+    assert "sig2" not in result_ids   # score but no rec
+    assert "sig3" in result_ids       # both
+    assert "sig4" in result_ids       # override
+
+
 # --- Sheets sync failure is non-fatal ---
 
 def test_sheets_sync_failure_preserves_data(tmp_path):

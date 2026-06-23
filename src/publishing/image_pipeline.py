@@ -39,8 +39,19 @@ REGISTRY_PATH  = REPO_ROOT / "data" / "memory" / "visual_registry.json"
 VISUAL_SYSTEM  = REPO_ROOT / "config" / "visual_system.yaml"
 IMG_GEN_PROMPT = REPO_ROOT / "config" / "prompts" / "image_generation.yaml"
 
-IMAGE_SIZE   = (1080, 1080)
-HOOK_MAX_CHARS = 80
+IMAGE_SIZE     = (1080, 1080)
+HOOK_MAX_WORDS = 12        # preferred max words on image
+HOOK_MAX_WORDS_HARD = 16   # absolute ceiling — never exceed
+
+# Platform export sizes (W×H)
+PLATFORM_SIZES: dict[str, tuple[int, int]] = {
+    "blog":      (1920, 1080),  # 16:9
+    "linkedin":  (1200, 628),   # 1.91:1
+    "facebook":  (1200, 628),   # 1.91:1
+    "instagram": (1080, 1350),  # 4:5
+    "threads":   (1080, 1080),  # 1:1
+    "stories":   (1080, 1920),  # 9:16
+}
 
 # Electric Blue accent for compositing
 ELECTRIC_BLUE = (66, 160, 255)
@@ -57,6 +68,45 @@ def _load_visual_system() -> dict:
 def _load_img_gen_prompt() -> dict:
     with open(IMG_GEN_PROMPT) as f:
         return yaml.safe_load(f)
+
+
+# ── Hook text helpers ─────────────────────────────────────────────────────────
+
+def trim_hook_text(text: str, max_words: int = HOOK_MAX_WORDS) -> str:
+    """
+    Trim hook text to at most max_words words.
+    Never cuts mid-word. Never returns a partial word.
+    If still too long at HOOK_MAX_WORDS_HARD, hard-clips at that boundary.
+    """
+    words = text.strip().split()
+    if len(words) <= max_words:
+        return " ".join(words)
+    # Prefer the preferred max
+    trimmed = words[:max_words]
+    # Only go up to hard max if the preferred result is missing critical meaning
+    # (here we just use the preferred max — callers can pass max_words=HOOK_MAX_WORDS_HARD)
+    return " ".join(trimmed)
+
+
+def resize_for_platform(image: "Image.Image", platform: str) -> "Image.Image":
+    """
+    Resize/crop a square (1080×1080) composite to the platform's target size.
+    Uses cover-fit scaling (scale to fill, then center-crop).
+    Brand navy (#050B16) is used as background for any padding needed.
+    """
+    target_w, target_h = PLATFORM_SIZES.get(platform, IMAGE_SIZE)
+    src_w, src_h = image.size
+
+    # Scale to cover: scale until both dimensions >= target
+    scale = max(target_w / src_w, target_h / src_h)
+    scaled_w = max(int(src_w * scale), target_w)
+    scaled_h = max(int(src_h * scale), target_h)
+    scaled = image.resize((scaled_w, scaled_h), Image.LANCZOS)
+
+    # Center crop to exact target
+    left = (scaled_w - target_w) // 2
+    top  = (scaled_h - target_h) // 2
+    return scaled.crop((left, top, left + target_w, top + target_h))
 
 
 # ── Visual registry ────────────────────────────────────────────────────────────
@@ -307,11 +357,7 @@ def choose_visual_family(
         family, title, observation, dominant_palette, vs, img_gen
     )
 
-    # Hook: use observation truncated cleanly
-    hook = observation.strip()
-    # Trim to word boundary at max chars
-    if len(hook) > HOOK_MAX_CHARS:
-        hook = hook[:HOOK_MAX_CHARS].rsplit(" ", 1)[0]
+    hook = trim_hook_text(observation)
 
     log(f"  Visual family (deterministic): {family}")
     return {
@@ -656,7 +702,7 @@ def composite_image(base_bytes: bytes, hook_text: str) -> Image.Image:
     Logo is overlaid from LOGO_PATH — never drawn by the image model.
     """
     W, H = IMAGE_SIZE
-    hook = hook_text[:HOOK_MAX_CHARS].strip()
+    hook = trim_hook_text(hook_text, max_words=HOOK_MAX_WORDS_HARD)
 
     base   = Image.open(BytesIO(base_bytes)).convert("RGBA").resize((W, H), Image.LANCZOS)
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 255))

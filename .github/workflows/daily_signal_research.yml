@@ -159,6 +159,24 @@ jobs:
                           print(f"- ⏭️ **{platform.title()}** skipped — {err}")
                       else:
                           print(f"- ❌ **{platform.title()}** FAILED — {err}")
+                  print(f"")
+                  wix_cover = report.get("wix_cover_image", False)
+                  tg_sig    = report.get("telegram_signature_included", False)
+                  gen_file  = report.get("generated_file", "")
+                  print(f"- Wix cover image: {'⚠️ not attached' if wix_cover else 'n/a'}")
+                  print(f"- Telegram signature: {'✅ included' if tg_sig else '❌ missing'}")
+                  if gen_file:
+                      print(f"- Generated content: `{gen_file}`")
+                  # Platform image sizes
+                  pimgs = report.get("platform_images", {})
+                  if pimgs:
+                      print("")
+                      print("**Platform images:**")
+                      for p, info in pimgs.items():
+                          url2 = info.get("url", "")
+                          sz   = info.get("size", "")
+                          icon = "✅" if url2 else "❌"
+                          print(f"- {icon} {p} ({sz}): {url2[:70] if url2 else 'no URL'}")
                   print("")
 
           # Content packages from per-signal JSON files

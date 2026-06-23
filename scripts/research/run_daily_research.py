@@ -143,8 +143,14 @@ def run() -> dict:
 
     selected = [
         s for s in final_signals
-        if str(s.get("RECOMMENDED_FOR_ARTICLE", "false")).lower() == "true"
-        or int(s.get("ARTICLE_READINESS_SCORE", "0") or "0") >= select_min
+        if (
+            # APPROVED_OVERRIDE bypasses quality gates entirely
+            str(s.get("APPROVED_OVERRIDE", "")).lower() == "true"
+        ) or (
+            # Both conditions required — recommendation AND minimum score
+            str(s.get("RECOMMENDED_FOR_ARTICLE", "false")).lower() == "true"
+            and int(s.get("ARTICLE_READINESS_SCORE", "0") or "0") >= select_min
+        )
     ][:top_n_sel]
 
     if selected:
@@ -163,9 +169,11 @@ def run() -> dict:
             total_reused = sum(p["images"].get("reused_images", 0) for p in content_packages)
             summary["images_new"]    = total_new
             summary["images_reused"] = total_reused
+            visual_families = [p.get("images", {}).get("visual_family", "") for p in content_packages if p.get("images", {}).get("visual_family")]
             log.info(
-                "Content packages prepared: %d | new images: %d | reused: %d",
+                "Content packages: %d | new images: %d | reused: %d | families: %s",
                 len(content_packages), total_new, total_reused,
+                ", ".join(visual_families) or "n/a",
             )
         except Exception as exc:
             log.error("Content package preparation failed: %s", exc)
