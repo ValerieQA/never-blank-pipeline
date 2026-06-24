@@ -1,0 +1,429 @@
+{
+  "date": "2026-06-24",
+  "candidates_found": 21,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "CFTC sues Kentucky over actions against prediction markets, making it first red ",
+    "Meta is building a prediction markets app. These stocks fell in response",
+    "U.S. fights with Brazil for China's giant soybean market"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "777bd4362fa0f14e",
+      "headline": "CFTC sues Kentucky over actions against prediction markets, making it first red state to face federal scrutiny",
+      "published_at": "2026-06-24 10:59 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "3bdd704f-5069-4f66-afae-80c3684df9fd",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7475502655138603008/",
+          "external_id": "urn:li:share:7475502655138603008",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "HTTP 400: Confirm your identity before you can publish as this Page. Open the Facebook app on your phone and follow the instructions.",
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DZ91TMPEvl3/",
+          "external_id": "18115251907854771",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18087628169103357",
+          "external_id": "18087628169103357",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/11",
+          "external_id": "11",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/777bd4362fa0f14e_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298586/never-blank/posts/research/777bd4362fa0f14e/blog/1782298585.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298587/never-blank/posts/research/777bd4362fa0f14e/linkedin/1782298586.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298587/never-blank/posts/research/777bd4362fa0f14e/facebook/1782298587.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298589/never-blank/posts/research/777bd4362fa0f14e/instagram/1782298588.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298589/never-blank/posts/research/777bd4362fa0f14e/threads/1782298589.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298590/never-blank/posts/research/777bd4362fa0f14e/stories/1782298590.png",
+          "size": "1080x1920"
+        }
+      },
+      "telegram_signature_included": true,
+      "wix_cover_image": true
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "777bd4362fa0f14e",
+      "HEADLINE": "CFTC sues Kentucky over actions against prediction markets, making it first red state to face federal scrutiny",
+      "prepared_at": "2026-06-24 10:56 UTC",
+      "content": {
+        "blog": {
+          "headline": "Kalshi, Kentucky, and the Cost of Being Renamed by Regulators",
+          "angle": "The CFTC\u2019s lawsuit against Kentucky signals a federal push to protect regulated prediction markets, but the tension between derivatives law and state gambling powers means firms like KalshiEX LLC need more than registration \u2014 they need category control, product governance, and state-by-state operating plans."
+        },
+        "linkedin": {
+          "headline": "Kalshi\u2019s problem is not whether people want prediction markets; it is whether every state gets to rename the product.",
+          "angle": "A federally registered market can still face state-level friction, which means founders building in contested categories need to treat legal classification as a distribution risk, not a back-office detail."
+        },
+        "facebook": {
+          "headline": "A license is not a distribution strategy.",
+          "angle": "The CFTC suing Kentucky over actions against prediction markets puts KalshiEX LLC at the center of a bigger question: if a product looks like finance to Washington but gambling to a state regulator, who controls the market?"
+        },
+        "instagram": {
+          "headline": "When Regulators Rename Your Product",
+          "angle": "KalshiEX LLC shows why founders in legally gray categories need to build for enforcement drag before national scale turns every state into a separate operating problem."
+        },
+        "threads": {
+          "thread_hook": "Prediction markets are trying to scale like exchanges. States are treating them like betting shops.",
+          "angle": "The thread shows how the CFTC\u2019s action against Kentucky turns Kalshi\u2019s fight into a broader lesson on category control, federal preemption, and the hidden operating cost of regulatory ambiguity."
+        },
+        "stories": {
+          "story_question": "If Washington says you\u2019re regulated finance, can a state still call you gambling?",
+          "angle": "This story explores the tension between federal registration and state enforcement, and why founders cannot assume one license clears the path to national distribution."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298586/never-blank/posts/research/777bd4362fa0f14e/blog/1782298585.png",
+            "path": "reports/content_packages/images/777bd4362fa0f14e_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298587/never-blank/posts/research/777bd4362fa0f14e/linkedin/1782298586.png",
+            "path": "reports/content_packages/images/777bd4362fa0f14e_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298587/never-blank/posts/research/777bd4362fa0f14e/facebook/1782298587.png",
+            "path": "reports/content_packages/images/777bd4362fa0f14e_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298589/never-blank/posts/research/777bd4362fa0f14e/instagram/1782298588.png",
+            "path": "reports/content_packages/images/777bd4362fa0f14e_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298589/never-blank/posts/research/777bd4362fa0f14e/threads/1782298589.png",
+            "path": "reports/content_packages/images/777bd4362fa0f14e_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298590/never-blank/posts/research/777bd4362fa0f14e/stories/1782298590.png",
+            "path": "reports/content_packages/images/777bd4362fa0f14e_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "States in the shadows of federal oversight."
+      }
+    },
+    {
+      "SIGNAL_ID": "1afbf235708b1763",
+      "HEADLINE": "Meta is building a prediction markets app. These stocks fell in response",
+      "prepared_at": "2026-06-24 10:56 UTC",
+      "content": {
+        "blog": {
+          "headline": "Meta\u2019s Prediction Markets Rumor Was Enough to Move the Market",
+          "angle": "CNBC reported Meta is developing an internal prediction-markets app called Arena \u2192 incumbents tied to the category sold off before any launch \u2192 investors priced distribution as a competitive weapon ahead of regulation, trust, liquidity, or product design \u2192 founders should remember that perceived access to demand can revalue a market before the actual product exists."
+        },
+        "linkedin": {
+          "headline": "The product was still internal, but the incumbents were already being marked down.",
+          "angle": "Meta\u2019s reported move into prediction markets shows how a dominant platform can change investor expectations before launch, because distribution often gets priced before execution risk is resolved."
+        },
+        "facebook": {
+          "headline": "A rumor about Meta was enough to hit prediction-market stocks.",
+          "angle": "CNBC reported that Meta is building an internal prediction-markets app called Arena, stocks tied to existing operators fell, and the question for founders is simple: how much of your moat survives when a platform with massive distribution enters the conversation?"
+        },
+        "instagram": {
+          "headline": "The Rumor Moved First",
+          "angle": "Meta\u2019s reported prediction-markets app shows how distribution can reshape a category\u2019s perceived future before the product, regulation, trust, or liquidity has been tested."
+        },
+        "threads": {
+          "thread_hook": "Meta didn\u2019t need to launch a prediction-markets app to move the category.",
+          "angle": "The thread shows why investors reacted to Meta\u2019s reported internal app as a threat to incumbents: not because the product is proven, but because distribution can change the competitive math before the market sees the product."
+        },
+        "stories": {
+          "story_question": "If Meta enters your category, what gets repriced first: your product, your moat, or investor confidence?",
+          "angle": "The story explores the tension between specialist advantages and platform distribution when a regulated fintech-adjacent market suddenly attracts a dominant consumer player."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298604/never-blank/posts/research/1afbf235708b1763/blog/1782298604.png",
+            "path": "reports/content_packages/images/1afbf235708b1763_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298605/never-blank/posts/research/1afbf235708b1763/linkedin/1782298604.png",
+            "path": "reports/content_packages/images/1afbf235708b1763_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298606/never-blank/posts/research/1afbf235708b1763/facebook/1782298606.png",
+            "path": "reports/content_packages/images/1afbf235708b1763_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298607/never-blank/posts/research/1afbf235708b1763/instagram/1782298607.png",
+            "path": "reports/content_packages/images/1afbf235708b1763_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298608/never-blank/posts/research/1afbf235708b1763/threads/1782298607.png",
+            "path": "reports/content_packages/images/1afbf235708b1763_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298609/never-blank/posts/research/1afbf235708b1763/stories/1782298608.png",
+            "path": "reports/content_packages/images/1afbf235708b1763_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Patterns emerge before the noise."
+      }
+    },
+    {
+      "SIGNAL_ID": "5fd45b316544e8d7",
+      "HEADLINE": "U.S. fights with Brazil for China's giant soybean market",
+      "prepared_at": "2026-06-24 10:57 UTC",
+      "content": {
+        "blog": {
+          "headline": "China Doesn\u2019t Have to Reject U.S. Soybeans to Pressure the Price",
+          "angle": "China\u2019s ability to shift demand between U.S. and Brazilian soybeans exposes a hard commodity-market tension: quality matters, but sourcing flexibility gives the buyer negotiating power, forcing exporters to respond with reliability, logistics, and origin optionality rather than product claims alone."
+        },
+        "linkedin": {
+          "headline": "The uncomfortable part for U.S. soybean exporters is that China doesn\u2019t need to reject their product to weaken their price.",
+          "angle": "When a buyer can compare two credible origins at scale, differentiation loses force and the commercial advantage shifts toward whoever controls more sourcing options."
+        },
+        "facebook": {
+          "headline": "Better soybeans don\u2019t always win the better deal.",
+          "angle": "U.S. exporters are defending China demand against Brazil\u2019s scale and pricing, ADM shows why multi-origin access matters, and the founder question is simple: are you selling from one position or negotiating from several?"
+        },
+        "instagram": {
+          "headline": "The Buyer Controls The Comparison",
+          "angle": "U.S. soybean pressure shows how fast quality claims weaken when the customer has another credible supplier with better price, availability, or policy treatment."
+        },
+        "threads": {
+          "thread_hook": "China doesn\u2019t have to walk away from U.S. soybeans to make them cheaper.",
+          "angle": "The sequence reveals how commodity buyers use origin flexibility to pressure sellers, and why companies with assets across multiple producing regions can profit from disruption while single-origin sellers absorb concessions."
+        },
+        "stories": {
+          "story_question": "If your buyer has an easy alternative, how strong is your differentiation really?",
+          "angle": "The story explores the tension between product quality and buyer optionality, using U.S.-Brazil soybean competition to show why control over supply choices can matter more than being the better seller."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298621/never-blank/posts/research/5fd45b316544e8d7/blog/1782298621.png",
+            "path": "reports/content_packages/images/5fd45b316544e8d7_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298622/never-blank/posts/research/5fd45b316544e8d7/linkedin/1782298622.png",
+            "path": "reports/content_packages/images/5fd45b316544e8d7_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298623/never-blank/posts/research/5fd45b316544e8d7/facebook/1782298623.png",
+            "path": "reports/content_packages/images/5fd45b316544e8d7_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298624/never-blank/posts/research/5fd45b316544e8d7/instagram/1782298624.png",
+            "path": "reports/content_packages/images/5fd45b316544e8d7_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298625/never-blank/posts/research/5fd45b316544e8d7/threads/1782298625.png",
+            "path": "reports/content_packages/images/5fd45b316544e8d7_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298626/never-blank/posts/research/5fd45b316544e8d7/stories/1782298626.png",
+            "path": "reports/content_packages/images/5fd45b316544e8d7_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Competing signals in a global market."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "777bd4362fa0f14e",
+      "headline": "CFTC sues Kentucky over actions against prediction markets, making it first red state to face federal scrutiny",
+      "published_at": "2026-06-24 10:59 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "3bdd704f-5069-4f66-afae-80c3684df9fd",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7475502655138603008/",
+          "external_id": "urn:li:share:7475502655138603008",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "HTTP 400: Confirm your identity before you can publish as this Page. Open the Facebook app on your phone and follow the instructions.",
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DZ91TMPEvl3/",
+          "external_id": "18115251907854771",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18087628169103357",
+          "external_id": "18087628169103357",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/11",
+          "external_id": "11",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/777bd4362fa0f14e_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298586/never-blank/posts/research/777bd4362fa0f14e/blog/1782298585.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298587/never-blank/posts/research/777bd4362fa0f14e/linkedin/1782298586.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298587/never-blank/posts/research/777bd4362fa0f14e/facebook/1782298587.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298589/never-blank/posts/research/777bd4362fa0f14e/instagram/1782298588.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298589/never-blank/posts/research/777bd4362fa0f14e/threads/1782298589.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298590/never-blank/posts/research/777bd4362fa0f14e/stories/1782298590.png",
+          "size": "1080x1920"
+        }
+      },
+      "telegram_signature_included": true,
+      "wix_cover_image": true
+    }
+  ]
+}

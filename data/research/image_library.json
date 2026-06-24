@@ -5,5 +5,29 @@
     "headline": "The new oil? Inside the effort to turn AI computing power into a tradeable commodity",
     "created_at": "2026-06-22",
     "method": "generated:programmatic:particle_flow"
+  },
+  "777bd4362fa0f14e": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298586/never-blank/posts/research/777bd4362fa0f14e/blog/1782298585.png",
+    "signal_type": "regulation",
+    "headline": "CFTC sues Kentucky over actions against prediction markets, making it first red state to face federal scrutiny",
+    "created_at": "2026-06-24",
+    "method": "programmatic",
+    "visual_family": "constellation_networks"
+  },
+  "1afbf235708b1763": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298604/never-blank/posts/research/1afbf235708b1763/blog/1782298604.png",
+    "signal_type": "platform changes",
+    "headline": "Meta is building a prediction markets app. These stocks fell in response",
+    "created_at": "2026-06-24",
+    "method": "programmatic",
+    "visual_family": "constellation_networks"
+  },
+  "5fd45b316544e8d7": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782298621/never-blank/posts/research/5fd45b316544e8d7/blog/1782298621.png",
+    "signal_type": "pricing pressure",
+    "headline": "U.S. fights with Brazil for China's giant soybean market",
+    "created_at": "2026-06-24",
+    "method": "programmatic",
+    "visual_family": "constellation_networks"
   }
 }
