@@ -29,5 +29,29 @@
     "created_at": "2026-06-24",
     "method": "programmatic",
     "visual_family": "constellation_networks"
+  },
+  "55e704dc0f45b73a": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384587/never-blank/posts/research/55e704dc0f45b73a/blog/1782384587.png",
+    "signal_type": "business trust",
+    "headline": "JPMorgan Chase unveils $50 billion buyback, Goldman Sachs raises dividend after Fed stress test",
+    "created_at": "2026-06-25",
+    "method": "programmatic",
+    "visual_family": "constellation_networks"
+  },
+  "41f1bab1feb72923": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384596/never-blank/posts/research/41f1bab1feb72923/blog/1782384596.png",
+    "signal_type": "regulation",
+    "headline": "Federal Reserve says U.S. banks can withstand $708 billion in losses amid overhaul of capital rules",
+    "created_at": "2026-06-25",
+    "method": "programmatic",
+    "visual_family": "contrast_waves"
+  },
+  "4afe95470abef02a": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384606/never-blank/posts/research/4afe95470abef02a/blog/1782384606.png",
+    "signal_type": "consumer behavior",
+    "headline": "Toyota gains on General Motors in new U.S. sales forecast: 'GM may be looking over their shoulder'",
+    "created_at": "2026-06-25",
+    "method": "programmatic",
+    "visual_family": "contrast_waves"
   }
 }

@@ -1,0 +1,379 @@
+{
+  "date": "2026-06-25",
+  "candidates_found": 22,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "JPMorgan Chase unveils $50 billion buyback, Goldman Sachs raises dividend after ",
+    "Federal Reserve says U.S. banks can withstand $708 billion in losses amid overha",
+    "Toyota gains on General Motors in new U.S. sales forecast: 'GM may be looking ov"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "55e704dc0f45b73a",
+      "headline": "JPMorgan Chase unveils $50 billion buyback, Goldman Sachs raises dividend after Fed stress test",
+      "published_at": "2026-06-25 10:50 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "545109a3-5697-444b-9122-db60efa1c3a2",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "linkedin.txt is empty",
+          "raw_response_path": null
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "facebook.txt is empty",
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "instagram.txt is empty",
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "threads.json has no sequence posts",
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/12",
+          "external_id": "12",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/55e704dc0f45b73a_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384587/never-blank/posts/research/55e704dc0f45b73a/blog/1782384587.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384588/never-blank/posts/research/55e704dc0f45b73a/linkedin/1782384588.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384588/never-blank/posts/research/55e704dc0f45b73a/facebook/1782384588.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384589/never-blank/posts/research/55e704dc0f45b73a/instagram/1782384589.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384590/never-blank/posts/research/55e704dc0f45b73a/threads/1782384590.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384591/never-blank/posts/research/55e704dc0f45b73a/stories/1782384591.png",
+          "size": "1080x1920"
+        }
+      },
+      "telegram_signature_included": true,
+      "wix_cover_image": true
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "55e704dc0f45b73a",
+      "HEADLINE": "JPMorgan Chase unveils $50 billion buyback, Goldman Sachs raises dividend after Fed stress test",
+      "prepared_at": "2026-06-25 10:49 UTC",
+      "content": {
+        "blog": {
+          "headline": "JPMorgan\u2019s $50 Billion Buyback Shows What Regulatory Trust Is Worth",
+          "angle": "A hypothetical recession test gave banks room to act, but JPMorgan\u2019s rapid buyback announcement exposed the real tension between capital caution and market confidence \u2014 the lesson for founders is that credibility only becomes commercially useful when it expands your strategic options."
+        },
+        "linkedin": {
+          "headline": "The recession scenario was hypothetical. The $50 billion buyback was not.",
+          "angle": "JPMorgan turned a clean stress-test result into immediate shareholder action, showing founders that institutional trust is not just defensive cover \u2014 it can become permission to move."
+        },
+        "facebook": {
+          "headline": "Passing the test was only the first move.",
+          "angle": "After all 32 large banks cleared the Fed\u2019s stress test, JPMorgan announced a $50 billion buyback and Goldman raised its dividend \u2014 when does compliance stop being a cost and start becoming a commercial asset?"
+        },
+        "instagram": {
+          "headline": "Trust turned into capital action",
+          "angle": "JPMorgan\u2019s post-stress-test buyback shows how credibility with regulators can quickly become confidence with markets."
+        },
+        "threads": {
+          "thread_hook": "JPMorgan didn\u2019t just pass a stress test. It converted permission into a $50 billion signal.",
+          "angle": "The thread shows how regulated companies can turn credibility, restraint, and timing into strategic capital moves."
+        },
+        "stories": {
+          "story_question": "What happens when compliance gives you room to act?",
+          "angle": "The story explores the tension between preserving capital in uncertain conditions and using proven resilience to reinforce market confidence."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384587/never-blank/posts/research/55e704dc0f45b73a/blog/1782384587.png",
+            "path": "reports/content_packages/images/55e704dc0f45b73a_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384588/never-blank/posts/research/55e704dc0f45b73a/linkedin/1782384588.png",
+            "path": "reports/content_packages/images/55e704dc0f45b73a_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384588/never-blank/posts/research/55e704dc0f45b73a/facebook/1782384588.png",
+            "path": "reports/content_packages/images/55e704dc0f45b73a_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384589/never-blank/posts/research/55e704dc0f45b73a/instagram/1782384589.png",
+            "path": "reports/content_packages/images/55e704dc0f45b73a_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384590/never-blank/posts/research/55e704dc0f45b73a/threads/1782384590.png",
+            "path": "reports/content_packages/images/55e704dc0f45b73a_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384591/never-blank/posts/research/55e704dc0f45b73a/stories/1782384591.png",
+            "path": "reports/content_packages/images/55e704dc0f45b73a_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Financial resilience reveals hidden connections."
+      }
+    },
+    {
+      "SIGNAL_ID": "41f1bab1feb72923",
+      "HEADLINE": "Federal Reserve says U.S. banks can withstand $708 billion in losses amid overhaul of capital rules",
+      "prepared_at": "2026-06-25 10:50 UTC",
+      "content": {},
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384596/never-blank/posts/research/41f1bab1feb72923/blog/1782384596.png",
+            "path": "reports/content_packages/images/41f1bab1feb72923_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384597/never-blank/posts/research/41f1bab1feb72923/linkedin/1782384597.png",
+            "path": "reports/content_packages/images/41f1bab1feb72923_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384598/never-blank/posts/research/41f1bab1feb72923/facebook/1782384598.png",
+            "path": "reports/content_packages/images/41f1bab1feb72923_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384599/never-blank/posts/research/41f1bab1feb72923/instagram/1782384599.png",
+            "path": "reports/content_packages/images/41f1bab1feb72923_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384600/never-blank/posts/research/41f1bab1feb72923/threads/1782384600.png",
+            "path": "reports/content_packages/images/41f1bab1feb72923_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384601/never-blank/posts/research/41f1bab1feb72923/stories/1782384601.png",
+            "path": "reports/content_packages/images/41f1bab1feb72923_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "The signal says the Federal Reserve\u2019s 2026 annual stress test"
+      }
+    },
+    {
+      "SIGNAL_ID": "4afe95470abef02a",
+      "HEADLINE": "Toyota gains on General Motors in new U.S. sales forecast: 'GM may be looking over their shoulder'",
+      "prepared_at": "2026-06-25 10:50 UTC",
+      "content": {},
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384606/never-blank/posts/research/4afe95470abef02a/blog/1782384606.png",
+            "path": "reports/content_packages/images/4afe95470abef02a_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384607/never-blank/posts/research/4afe95470abef02a/linkedin/1782384607.png",
+            "path": "reports/content_packages/images/4afe95470abef02a_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384608/never-blank/posts/research/4afe95470abef02a/facebook/1782384608.png",
+            "path": "reports/content_packages/images/4afe95470abef02a_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384609/never-blank/posts/research/4afe95470abef02a/instagram/1782384609.png",
+            "path": "reports/content_packages/images/4afe95470abef02a_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384611/never-blank/posts/research/4afe95470abef02a/threads/1782384611.png",
+            "path": "reports/content_packages/images/4afe95470abef02a_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384612/never-blank/posts/research/4afe95470abef02a/stories/1782384612.png",
+            "path": "reports/content_packages/images/4afe95470abef02a_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Toyota is a real-world example of an automaker benefiting from"
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "55e704dc0f45b73a",
+      "headline": "JPMorgan Chase unveils $50 billion buyback, Goldman Sachs raises dividend after Fed stress test",
+      "published_at": "2026-06-25 10:50 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "545109a3-5697-444b-9122-db60efa1c3a2",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "linkedin.txt is empty",
+          "raw_response_path": null
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "facebook.txt is empty",
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "instagram.txt is empty",
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "threads.json has no sequence posts",
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/12",
+          "external_id": "12",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/55e704dc0f45b73a_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384587/never-blank/posts/research/55e704dc0f45b73a/blog/1782384587.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384588/never-blank/posts/research/55e704dc0f45b73a/linkedin/1782384588.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384588/never-blank/posts/research/55e704dc0f45b73a/facebook/1782384588.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384589/never-blank/posts/research/55e704dc0f45b73a/instagram/1782384589.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384590/never-blank/posts/research/55e704dc0f45b73a/threads/1782384590.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782384591/never-blank/posts/research/55e704dc0f45b73a/stories/1782384591.png",
+          "size": "1080x1920"
+        }
+      },
+      "telegram_signature_included": true,
+      "wix_cover_image": true
+    }
+  ]
+}
