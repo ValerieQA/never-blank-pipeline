@@ -18,7 +18,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
-from src.utils.llm_client import chat
+from src.utils.llm_client import chat, model_discovery
 
 log = get_logger("research.discover")
 
@@ -112,7 +112,7 @@ Where the numbers are indices from the input list. If nothing qualifies, return 
     user = f"Select relevant items from this list:\n\n{batch_text}"
 
     try:
-        raw = chat(system, user, json_mode=True)
+        raw = chat(system, user, json_mode=True, model=model_discovery())
         parsed = json.loads(raw) if isinstance(raw, str) else raw
         if isinstance(parsed, dict):
             indices = parsed.get("selected", [])
@@ -149,7 +149,7 @@ Respond with: {{"signals": [{{...}}, {{...}}]}}"""
     user = f"Enrich these {len(items)} items:\n\n{batch_text}"
 
     try:
-        raw = chat(system, user, json_mode=True)
+        raw = chat(system, user, json_mode=True, model=model_discovery())
         parsed = json.loads(raw) if isinstance(raw, str) else raw
         if isinstance(parsed, dict):
             for v in parsed.values():

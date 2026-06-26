@@ -37,6 +37,14 @@ jobs:
       - name: Run research pipeline
         env:
           NB_OPENAI_API_KEY:                 ${{ secrets.NB_OPENAI_API_KEY }}
+          # Per-stage model configuration — each stage can use a different model
+          NB_DISCOVERY_MODEL:                ${{ secrets.NB_DISCOVERY_MODEL }}
+          NB_SCORING_MODEL:                  ${{ secrets.NB_SCORING_MODEL }}
+          NB_ENRICH_MODEL:                   ${{ secrets.NB_ENRICH_MODEL }}
+          NB_ARTICLE_MODEL:                  ${{ secrets.NB_ARTICLE_MODEL }}
+          NB_SOCIAL_MODEL:                   ${{ secrets.NB_SOCIAL_MODEL }}
+          NB_IMAGE_MODEL:                    ${{ secrets.NB_IMAGE_MODEL }}
+          # Legacy fallback — used only when stage-specific model secrets above are not set
           NB_OPENAI_CHAT_MODEL:              ${{ secrets.NB_OPENAI_CHAT_MODEL }}
           NB_OPENAI_TEMPERATURE:             "0.3"
           NB_GOOGLE_SERVICE_ACCOUNT_JSON:    ${{ secrets.NB_GOOGLE_SERVICE_ACCOUNT_JSON }}

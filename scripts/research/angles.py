@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
-from src.utils.llm_client import chat
+from src.utils.llm_client import chat, model_enrich
 
 log = get_logger("research.angles")
 
@@ -54,7 +54,7 @@ WHY_THIS_CASE_IS_INTERESTING: {signal.get('WHY_THIS_CASE_IS_INTERESTING', '')}
 SIGNAL_TYPE: {signal.get('SIGNAL_TYPE', '')}"""
 
     try:
-        raw = chat(ANGLES_SYSTEM, user, json_mode=True)
+        raw = chat(ANGLES_SYSTEM, user, json_mode=True, model=model_enrich())
         angles = json.loads(raw) if isinstance(raw, str) else raw
         if not isinstance(angles, dict):
             angles = {}

@@ -778,8 +778,14 @@ def _generate_ai_image(prompt: str, negative_prompt: str = "", log=print) -> tup
     from openai import OpenAI
     client = OpenAI(api_key=os.environ["NB_OPENAI_API_KEY"])
 
+    # NB_IMAGE_MODEL selects primary model; fallback chain preserves existing behaviour.
+    primary = os.environ.get("NB_IMAGE_MODEL", "gpt-image-1")
+    candidates = [(primary, "b64_json")]
+    if primary != "dall-e-3":
+        candidates.append(("dall-e-3", "url"))
+
     errors: dict = {}
-    for model, fmt in [("gpt-image-1", "b64_json"), ("dall-e-3", "url")]:
+    for model, fmt in candidates:
         try:
             kwargs: dict = dict(model=model, prompt=prompt, size="1024x1024", n=1)
             if fmt == "b64_json":
@@ -795,9 +801,8 @@ def _generate_ai_image(prompt: str, negative_prompt: str = "", log=print) -> tup
             errors[model] = str(exc)[:120]
 
     raise RuntimeError(
-        f"OpenAI image generation unavailable. "
-        f"gpt-image-1: {errors.get('gpt-image-1', '?')} | "
-        f"dall-e-3: {errors.get('dall-e-3', '?')}"
+        f"OpenAI image generation unavailable. Tried: {list(errors.keys())}. "
+        + " | ".join(f"{m}: {e}" for m, e in errors.items())
     )
 
 

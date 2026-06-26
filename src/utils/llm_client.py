@@ -27,23 +27,54 @@ def _qc_temperature() -> float:
     return float(os.environ.get("NB_OPENAI_QC_TEMPERATURE", "0.2"))
 
 
-def _model() -> str:
-    return os.environ.get("NB_OPENAI_CHAT_MODEL", "gpt-4o")
+def _model(stage_var: str | None = None) -> str:
+    """
+    Return the model for a given pipeline stage.
+    Stage-specific var takes precedence; falls back to NB_OPENAI_CHAT_MODEL, then gpt-4o.
+    """
+    fallback = os.environ.get("NB_OPENAI_CHAT_MODEL", "gpt-4o")
+    if stage_var:
+        return os.environ.get(stage_var, fallback)
+    return fallback
 
+
+def model_discovery() -> str:
+    return _model("NB_DISCOVERY_MODEL")
+
+
+def model_scoring() -> str:
+    return _model("NB_SCORING_MODEL")
+
+
+def model_enrich() -> str:
+    return _model("NB_ENRICH_MODEL")
+
+
+def model_article() -> str:
+    return _model("NB_ARTICLE_MODEL")
+
+
+def model_social() -> str:
+    return _model("NB_SOCIAL_MODEL")
+
+
+def model_image() -> str:
+    return os.environ.get("NB_IMAGE_MODEL", "gpt-image-1")
 
 
 def _embedding_model() -> str:
     return os.environ.get("NB_OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
 
-def chat(system: str, user: str, json_mode: bool = False) -> str:
+def chat(system: str, user: str, json_mode: bool = False, model: str | None = None) -> str:
     """
     Call OpenAI Chat Completions.
     If json_mode=True, requests JSON output and validates it parses.
+    model: explicit model override; if None, falls back to NB_OPENAI_CHAT_MODEL / gpt-4o.
     Returns the content string.
     """
     client = _get_client()
-    model = _model()
+    model = model or _model()
     kwargs: dict[str, Any] = {
         "model": model,
         "temperature": _temperature(),
@@ -82,13 +113,13 @@ def chat_json(system: str, user: str) -> dict:
     return json.loads(raw)
 
 
-def chat_qc(system: str, user: str, json_mode: bool = False) -> str:
+def chat_qc(system: str, user: str, json_mode: bool = False, model: str | None = None) -> str:
     """
     Same as chat() but uses NB_OPENAI_QC_TEMPERATURE (default 0.2).
     Use for factuality checks and voice scoring — low temp for consistency.
     """
     client = _get_client()
-    model = _model()
+    model = model or _model()
     kwargs: dict[str, Any] = {
         "model": model,
         "temperature": _qc_temperature(),

@@ -25,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
-from src.utils.llm_client import chat
+from src.utils.llm_client import chat, model_social
 
 log = get_logger("research.prepare_content")
 
@@ -84,7 +84,7 @@ POTENTIAL_HOOK: {signal.get('POTENTIAL_HOOK', '')}
 TARGET_AUDIENCE: {signal.get('TARGET_AUDIENCE', 'founder')}"""
 
     try:
-        raw  = chat(CONTENT_SYSTEM, user, json_mode=True)
+        raw  = chat(CONTENT_SYSTEM, user, json_mode=True, model=model_social())
         data = json.loads(raw) if isinstance(raw, str) else raw
         return data if isinstance(data, dict) else {}
     except Exception as exc:

@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
-from src.utils.llm_client import chat
+from src.utils.llm_client import chat, model_enrich
 
 log = get_logger("research.enrich")
 
@@ -51,7 +51,7 @@ INDUSTRY: {signal.get('INDUSTRY', '')}
 If no real company case is identifiable, set REAL_COMPANY_EXAMPLE to null."""
 
     try:
-        raw = chat(ENRICH_SYSTEM, user, json_mode=True)
+        raw = chat(ENRICH_SYSTEM, user, json_mode=True, model=model_enrich())
         enriched = json.loads(raw) if isinstance(raw, str) else raw
         if not isinstance(enriched, dict):
             enriched = {}

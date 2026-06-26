@@ -26,7 +26,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.utils.logger import get_logger
-from src.utils.llm_client import chat
+from src.utils.llm_client import chat, model_article, model_social
 from src.publishing.base import DraftPackage
 from src.publishing.result import PublishResult, PublishStatus
 from src.publishing.wix import WixPublisher
@@ -146,7 +146,7 @@ SIGNAL DATA:
 - BLOG_ANGLE: {angle}"""
 
     try:
-        return chat(system, user, json_mode=False)
+        return chat(system, user, json_mode=False, model=model_article())
     except Exception as exc:
         log.error("Blog generation failed for %s: %s", signal.get("SIGNAL_ID"), exc)
         return (
@@ -199,7 +199,7 @@ def _generate_linkedin_post(signal: dict, blog_body: str, wix_url: str = "") -> 
         blog_body             = blog_body[:3000],
     ) + f"\n\n{_research_context(signal)}"
     try:
-        raw    = chat(prompt["system"], user, json_mode=True)
+        raw    = chat(prompt["system"], user, json_mode=True, model=model_social())
         parsed = json.loads(raw) if isinstance(raw, str) else raw
         return parsed.get("text", "") if isinstance(parsed, dict) else ""
     except Exception as exc:
@@ -222,7 +222,7 @@ def _generate_facebook_post(signal: dict, blog_body: str, wix_url: str = "") -> 
         blog_body             = blog_body[:2000],
     ) + f"\n\n{_research_context(signal)}"
     try:
-        raw    = chat(prompt["system"], user, json_mode=True)
+        raw    = chat(prompt["system"], user, json_mode=True, model=model_social())
         parsed = json.loads(raw) if isinstance(raw, str) else raw
         text   = parsed.get("text", "") if isinstance(parsed, dict) else ""
         return _cap_words(text, max_words=220)
@@ -244,7 +244,7 @@ def _generate_instagram_caption(signal: dict) -> str:
         content_goal          = "challenge",
     ) + f"\n\n{_research_context(signal)}"
     try:
-        raw    = chat(prompt["system"], user, json_mode=True)
+        raw    = chat(prompt["system"], user, json_mode=True, model=model_social())
         parsed = json.loads(raw) if isinstance(raw, str) else raw
         if isinstance(parsed, dict):
             caption  = parsed.get("caption", "")
@@ -271,7 +271,7 @@ def _generate_threads_sequence(signal: dict, blog_body: str) -> list[str]:
         blog_body             = blog_body[:2000],
     ) + f"\n\n{_research_context(signal)}"
     try:
-        raw    = chat(prompt["system"], user, json_mode=True)
+        raw    = chat(prompt["system"], user, json_mode=True, model=model_social())
         parsed = json.loads(raw) if isinstance(raw, str) else raw
         if isinstance(parsed, dict):
             seq = parsed.get("sequence", [])
@@ -293,7 +293,7 @@ def _generate_telegram_text(signal: dict, wix_url: str = "") -> str:
         wix_url               = wix_url or "",
     ) + f"\n\n{_research_context(signal)}"
     try:
-        raw    = chat(prompt["system"], user, json_mode=True)
+        raw    = chat(prompt["system"], user, json_mode=True, model=model_social())
         parsed = json.loads(raw) if isinstance(raw, str) else raw
         text   = parsed.get("text", "") if isinstance(parsed, dict) else ""
     except Exception as exc:

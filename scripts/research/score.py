@@ -11,7 +11,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
-from src.utils.llm_client import chat
+from src.utils.llm_client import chat, model_scoring
 
 log = get_logger("research.score")
 
@@ -52,7 +52,7 @@ One object per input signal, in order."""
     user = f"Score these {len(candidates)} signals:\n\n{batch_text}"
 
     try:
-        raw = chat(system, user, json_mode=True)
+        raw = chat(system, user, json_mode=True, model=model_scoring())
         parsed = json.loads(raw) if isinstance(raw, str) else raw
         if isinstance(parsed, dict):
             for v in parsed.values():
