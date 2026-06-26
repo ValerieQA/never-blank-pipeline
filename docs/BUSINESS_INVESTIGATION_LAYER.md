@@ -1,6 +1,8 @@
-# Business Investigation Layer — Specification
+# Curiosity Engine — Specification
 
-**Version:** 0.1 (architecture only — no implementation)
+_formerly "Business Investigation Layer"_
+
+**Version:** 0.2 (architecture only — no implementation)
 **Status:** Draft
 **Branch:** feature/business-investigation-layer
 
@@ -8,13 +10,17 @@
 
 ## Purpose
 
-The Business Investigation Layer sits between signal discovery and content generation.
+> **Never Blank teaches AI to be curious before it becomes confident.**
+
+The Curiosity Engine is the first active layer in the Never Blank pipeline.
+It sits between signal discovery and content generation.
 
 Its only responsibility: determine what must be understood before a conclusion is
-even possible — and collect enough evidence to make that conclusion trustworthy.
+even possible — and produce a structured investigation plan based on questions,
+not on available APIs.
 
-It does not write articles. It does not produce opinions.
-It builds the evidentiary foundation on which the Decision Lens and Editorial Engine operate.
+It does not write articles. It does not produce opinions. It does not start from
+what sources are accessible. It starts from what must be known.
 
 > **Core principle:** Never Blank does not rush to explain events.
 > First, it investigates what decisions, constraints, alternatives, and consequences
@@ -23,23 +29,52 @@ It builds the evidentiary foundation on which the Decision Lens and Editorial En
 **The governing question of this layer:**
 > *"What must be investigated before we have the right to draw a conclusion?"*
 
+**The critical ordering principle:**
+The engine moves from questions to sources — never the reverse.
+
+```
+Question
+    ↓
+Evidence Needed
+    ↓
+Possible Sources
+    ↓
+Evidence Collected
+    ↓
+Decision Lens
+```
+
+Starting from "what sources do we have access to?" is an engineering shortcut
+that produces source-constrained thinking. Starting from "what do we need to know?"
+produces investigation-driven thinking. The difference determines output quality.
+
 ---
 
 ## Where this layer fits
 
 ```
-News / RSS Signal
+Business Signal (RSS / manual)
         ↓
-  [ Stage 1–9 ]  Current research pipeline (discovery → score → enrich → angles)
+  [ Stage 1–9 ]   Current pipeline (discovery → score → enrich → angles)
         ↓
-  [ Stage 10 ]  BUSINESS INVESTIGATION LAYER  ← this document
+  [ Stage 10 ]    CURIOSITY ENGINE            ← this document
+                  "What should we investigate?"
         ↓
-  [ Stage 11 ]  Decision Lens (hidden tension + systemic insight)
+  [ Stage 10b ]   EVIDENCE COLLECTOR
+                  "What can we actually verify?"
         ↓
-  [ Stage 12 ]  Editorial Engine (hook → article → Never Blank voice)
+  [ Stage 11 ]    DECISION LENS
+                  "What does it mean?"
         ↓
-  [ Stage 13 ]  Platform Adaptation (LinkedIn, Instagram, Threads, Telegram, Wix)
+  [ Stage 12 ]    EDITORIAL ENGINE
+                  "How do we explain it?"
+        ↓
+  [ Stage 13 ]    Platform Adaptation (LinkedIn, Instagram, Threads, Telegram, Wix)
 ```
+
+Note: the Curiosity Engine (Stage 10) and Evidence Collector (Stage 10b) are two
+distinct responsibilities. This document covers Stage 10 — the question-generation
+and investigation-planning step. The Evidence Collector will be specified separately.
 
 The current pipeline is preserved in full. Stages 1–9 continue to operate as-is.
 This layer receives their output and enriches it before passing to content generation.
@@ -224,7 +259,14 @@ Each template defines:
 
 ## Source hierarchy
 
-Sources are ranked by reliability. Investigation should attempt higher tiers first.
+Sources are a consequence of questions, not the starting point.
+Once the Curiosity Engine produces an investigation plan, the Evidence Collector
+attempts to answer each question by consulting sources in reliability order.
+
+The hierarchy below is used by the Evidence Collector (Stage 10b).
+It is listed here because it shapes how the Curiosity Engine marks
+evidence requirements — a question that can only be answered by Tier 3 sources
+is flagged as lower-confidence from the start.
 
 **Tier 1 — Primary evidence (strongly preferred):**
 - Earnings call transcripts (verbatim)
@@ -432,7 +474,7 @@ if investigation["investigation_status"] == "INSUFFICIENT":
 
 ## Open questions (to be resolved before implementation)
 
-1. **Source access in GitHub Actions** — the layer needs to query external sources (Glassdoor, LinkedIn, earnings transcripts). Current pipeline runs in GitHub Actions with DNS restrictions. What sources are reachable, and which need a dedicated fetch step?
+1. **Source access strategy** — the Curiosity Engine defines *what* must be found; the Evidence Collector defines *how*. The open question is not "which APIs are available" but "what is the minimum viable evidence set that can realistically be collected at runtime?" This must be resolved during Evidence Collector specification, not here. The Curiosity Engine should never downgrade its questions based on source availability.
 
 2. **Real-time vs. cached investigation** — should the layer attempt live web queries per run, or should a pre-fetch step cache evidence before the investigation runs? Live queries add latency and failure modes; cached evidence may be stale.
 
