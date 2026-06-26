@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "20b5cbbaa4e74f80",
+  "HEADLINE": "Darden Restaurants earnings beat estimates but Olive Garden growth weakens",
+  "prepared_at": "2026-06-26 18:48 UTC",
+  "content": {
+    "blog": {
+      "headline": "Darden’s Earnings Beat Masks Olive Garden’s Slowing Growth: What Founders Should Watch",
+      "angle": "Darden’s strong overall earnings clash with Olive Garden’s weakening sales, forcing a reckoning on managing core brand softness amid aggregate success."
+    },
+    "linkedin": {
+      "headline": "Darden’s earnings beat was the headline—Olive Garden’s slowdown was the story.",
+      "angle": "Strong overall results can hide cracks in flagship brands, signaling shifts founders can’t afford to ignore."
+    },
+    "facebook": {
+      "headline": "Darden Restaurants beat earnings estimates, but Olive Garden’s growth is faltering.",
+      "angle": "When a company posts strong numbers but its core brand stumbles, how should founders respond?"
+    },
+    "instagram": {
+      "headline": "Strong Numbers, Weak Core Signals",
+      "angle": "Darden’s earnings highlight the tension between celebrating wins and addressing flagship brand slowdowns."
+    },
+    "threads": {
+      "thread_hook": "Darden’s headline earnings beat hides a deeper story: Olive Garden’s growth is stalling.",
+      "angle": "This thread breaks down why founders must look beyond aggregate wins to spot early signs of brand fatigue and adapt accordingly."
+    },
+    "stories": {
+      "story_question": "Can strong earnings mask trouble in your core brand?",
+      "angle": "Exploring the risk of ignoring underperformance in flagship segments despite overall financial success."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499701/never-blank/posts/research/20b5cbbaa4e74f80/blog/1782499701.png",
+        "path": "reports/content_packages/images/20b5cbbaa4e74f80_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499703/never-blank/posts/research/20b5cbbaa4e74f80/linkedin/1782499702.png",
+        "path": "reports/content_packages/images/20b5cbbaa4e74f80_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499704/never-blank/posts/research/20b5cbbaa4e74f80/facebook/1782499704.png",
+        "path": "reports/content_packages/images/20b5cbbaa4e74f80_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499705/never-blank/posts/research/20b5cbbaa4e74f80/instagram/1782499705.png",
+        "path": "reports/content_packages/images/20b5cbbaa4e74f80_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499706/never-blank/posts/research/20b5cbbaa4e74f80/threads/1782499706.png",
+        "path": "reports/content_packages/images/20b5cbbaa4e74f80_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499707/never-blank/posts/research/20b5cbbaa4e74f80/stories/1782499707.png",
+        "path": "reports/content_packages/images/20b5cbbaa4e74f80_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "programmatic",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Earnings rise, growth falters."
+  }
+}

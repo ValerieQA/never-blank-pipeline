@@ -1,11 +1,439 @@
 {
   "date": "2026-06-26",
-  "candidates_found": 0,
+  "candidates_found": 15,
   "duplicates_skipped": 0,
-  "new_signals_added": 0,
-  "selected_for_content": 0,
-  "sheet_sync": "not_run",
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
   "archived": 0,
-  "top_signals": [],
-  "publish_reports": []
+  "top_signals": [
+    "Polymarket annualized revenue surpasses $1 billion six weeks after its U.S. exch",
+    "Rise in memory chip costs puts pressure on retailers of laptops and smartphones",
+    "Darden Restaurants earnings beat estimates but Olive Garden growth weakens"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "e54cb3b6bbe2f61a",
+      "headline": "Polymarket annualized revenue surpasses $1 billion six weeks after its U.S. exchange launch",
+      "published_at": "2026-06-26 18:49 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "ef376a8b-6862-42c8-bc5c-869b165218e0",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7476345748779888641/",
+          "external_id": "urn:li:share:7476345748779888641",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122112751893356169",
+          "external_id": "1219637131228622_122112751893356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaD0r4pmqVT/",
+          "external_id": "17978108049029313",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18120646948685329",
+          "external_id": "18120646948685329",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/13",
+          "external_id": "13",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/e54cb3b6bbe2f61a_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499671/never-blank/posts/research/e54cb3b6bbe2f61a/blog/1782499671.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499672/never-blank/posts/research/e54cb3b6bbe2f61a/linkedin/1782499672.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499674/never-blank/posts/research/e54cb3b6bbe2f61a/facebook/1782499674.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499675/never-blank/posts/research/e54cb3b6bbe2f61a/instagram/1782499675.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499676/never-blank/posts/research/e54cb3b6bbe2f61a/threads/1782499676.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499677/never-blank/posts/research/e54cb3b6bbe2f61a/stories/1782499677.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Signals of success emerge from structured chaos.",
+      "image_visual_family": "particle_flow",
+      "image_method": "programmatic"
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "e54cb3b6bbe2f61a",
+      "HEADLINE": "Polymarket annualized revenue surpasses $1 billion six weeks after its U.S. exchange launch",
+      "prepared_at": "2026-06-26 18:47 UTC",
+      "content": {
+        "blog": {
+          "headline": "How Polymarket Hit $1 Billion in Six Weeks by Timing User Access with the World Cup",
+          "angle": "Polymarket\u2019s explosive revenue growth exposed the tension between rapid scaling and regulatory hurdles, showing founders that removing onboarding friction during peak cultural moments can accelerate adoption and revenue faster than product tweaks alone."
+        },
+        "linkedin": {
+          "headline": "Polymarket made $1 billion in six weeks \u2014 not by building a better product, but by opening the doors at the perfect moment.",
+          "angle": "When user onboarding friction meets peak cultural attention, revenue growth can skyrocket \u2014 but founders must also navigate regulatory and platform stability challenges."
+        },
+        "facebook": {
+          "headline": "Polymarket\u2019s $1 billion revenue in six weeks wasn\u2019t luck \u2014 it was timing and removing barriers.",
+          "angle": "Polymarket removed its U.S. waitlist during the World Cup, fueling massive trading volumes. How can your startup reduce friction to capture peak attention moments?"
+        },
+        "instagram": {
+          "headline": "Explosive Growth Is About Perfect Timing",
+          "angle": "Polymarket\u2019s $1B in six weeks proves that opening access when attention peaks beats just building a better product."
+        },
+        "threads": {
+          "thread_hook": "Polymarket didn\u2019t just build a better product \u2014 they opened the floodgates at the exact right moment.",
+          "angle": "This thread breaks down how removing onboarding friction during a global event like the World Cup drove $1 billion in annualized revenue in six weeks, and what founders can learn about timing, compliance, and platform stability."
+        },
+        "stories": {
+          "story_question": "What\u2019s more powerful: a better product or perfect timing?",
+          "angle": "Exploring how Polymarket\u2019s revenue surge reveals the tension between rapid growth and regulatory compliance when user attention peaks."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499671/never-blank/posts/research/e54cb3b6bbe2f61a/blog/1782499671.png",
+            "path": "reports/content_packages/images/e54cb3b6bbe2f61a_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499672/never-blank/posts/research/e54cb3b6bbe2f61a/linkedin/1782499672.png",
+            "path": "reports/content_packages/images/e54cb3b6bbe2f61a_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499674/never-blank/posts/research/e54cb3b6bbe2f61a/facebook/1782499674.png",
+            "path": "reports/content_packages/images/e54cb3b6bbe2f61a_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499675/never-blank/posts/research/e54cb3b6bbe2f61a/instagram/1782499675.png",
+            "path": "reports/content_packages/images/e54cb3b6bbe2f61a_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499676/never-blank/posts/research/e54cb3b6bbe2f61a/threads/1782499676.png",
+            "path": "reports/content_packages/images/e54cb3b6bbe2f61a_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499677/never-blank/posts/research/e54cb3b6bbe2f61a/stories/1782499677.png",
+            "path": "reports/content_packages/images/e54cb3b6bbe2f61a_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "particle_flow",
+        "hook_text": "Signals of success emerge from structured chaos."
+      }
+    },
+    {
+      "SIGNAL_ID": "76cddc4be3a57826",
+      "HEADLINE": "Rise in memory chip costs puts pressure on retailers of laptops and smartphones",
+      "prepared_at": "2026-06-26 18:48 UTC",
+      "content": {
+        "blog": {
+          "headline": "When Memory Chips Spike, Retailers Get Squeezed: How Samsung\u2019s Vertical Play Offers a Blueprint",
+          "angle": "Rising memory chip costs create a squeeze on retailers \u2192 The tension between preserving margins and market share intensifies \u2192 Companies like Samsung show vertical integration as a buffer \u2192 Lesson: Owning your supply chain bottleneck is the only way to stay ahead."
+        },
+        "linkedin": {
+          "headline": "Retailers are about to learn what happens when their supply chain is someone else\u2019s profit center.",
+          "angle": "Memory chip shortages driven by AI demand are pushing costs up, forcing retailers to rethink pricing and product strategies or risk margin erosion."
+        },
+        "facebook": {
+          "headline": "Memory chip prices are climbing\u2014what does that mean for your laptop or smartphone purchase?",
+          "angle": "As Samsung leans into vertical integration to shield itself from chip shortages, retailers face tough choices: absorb costs or pass them on. How will your favorite brands respond?"
+        },
+        "instagram": {
+          "headline": "When Supply Chains Control Your Margins",
+          "angle": "Rising memory chip costs are squeezing retailers\u2014only those owning the bottleneck can keep prices steady and shelves stocked."
+        },
+        "threads": {
+          "thread_hook": "Memory chip shortages aren\u2019t just a supply issue\u2014they\u2019re a profit center battle.",
+          "angle": "This thread breaks down why retailers get crushed when they don\u2019t control their supply chain and how vertical integration can flip the script."
+        },
+        "stories": {
+          "story_question": "What happens when your supply chain decides your profit margin?",
+          "angle": "Exploring how rising memory chip costs force retailers to choose between margin and market share during supply disruptions."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499687/never-blank/posts/research/76cddc4be3a57826/blog/1782499687.png",
+            "path": "reports/content_packages/images/76cddc4be3a57826_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499688/never-blank/posts/research/76cddc4be3a57826/linkedin/1782499688.png",
+            "path": "reports/content_packages/images/76cddc4be3a57826_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499689/never-blank/posts/research/76cddc4be3a57826/facebook/1782499689.png",
+            "path": "reports/content_packages/images/76cddc4be3a57826_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499691/never-blank/posts/research/76cddc4be3a57826/instagram/1782499690.png",
+            "path": "reports/content_packages/images/76cddc4be3a57826_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499692/never-blank/posts/research/76cddc4be3a57826/threads/1782499692.png",
+            "path": "reports/content_packages/images/76cddc4be3a57826_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499693/never-blank/posts/research/76cddc4be3a57826/stories/1782499693.png",
+            "path": "reports/content_packages/images/76cddc4be3a57826_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "particle_flow",
+        "hook_text": "Patterns of demand shape the future of tech."
+      }
+    },
+    {
+      "SIGNAL_ID": "20b5cbbaa4e74f80",
+      "HEADLINE": "Darden Restaurants earnings beat estimates but Olive Garden growth weakens",
+      "prepared_at": "2026-06-26 18:48 UTC",
+      "content": {
+        "blog": {
+          "headline": "Darden\u2019s Earnings Beat Masks Olive Garden\u2019s Slowing Growth: What Founders Should Watch",
+          "angle": "Darden\u2019s strong overall earnings clash with Olive Garden\u2019s weakening sales, forcing a reckoning on managing core brand softness amid aggregate success."
+        },
+        "linkedin": {
+          "headline": "Darden\u2019s earnings beat was the headline\u2014Olive Garden\u2019s slowdown was the story.",
+          "angle": "Strong overall results can hide cracks in flagship brands, signaling shifts founders can\u2019t afford to ignore."
+        },
+        "facebook": {
+          "headline": "Darden Restaurants beat earnings estimates, but Olive Garden\u2019s growth is faltering.",
+          "angle": "When a company posts strong numbers but its core brand stumbles, how should founders respond?"
+        },
+        "instagram": {
+          "headline": "Strong Numbers, Weak Core Signals",
+          "angle": "Darden\u2019s earnings highlight the tension between celebrating wins and addressing flagship brand slowdowns."
+        },
+        "threads": {
+          "thread_hook": "Darden\u2019s headline earnings beat hides a deeper story: Olive Garden\u2019s growth is stalling.",
+          "angle": "This thread breaks down why founders must look beyond aggregate wins to spot early signs of brand fatigue and adapt accordingly."
+        },
+        "stories": {
+          "story_question": "Can strong earnings mask trouble in your core brand?",
+          "angle": "Exploring the risk of ignoring underperformance in flagship segments despite overall financial success."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499701/never-blank/posts/research/20b5cbbaa4e74f80/blog/1782499701.png",
+            "path": "reports/content_packages/images/20b5cbbaa4e74f80_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499703/never-blank/posts/research/20b5cbbaa4e74f80/linkedin/1782499702.png",
+            "path": "reports/content_packages/images/20b5cbbaa4e74f80_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499704/never-blank/posts/research/20b5cbbaa4e74f80/facebook/1782499704.png",
+            "path": "reports/content_packages/images/20b5cbbaa4e74f80_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499705/never-blank/posts/research/20b5cbbaa4e74f80/instagram/1782499705.png",
+            "path": "reports/content_packages/images/20b5cbbaa4e74f80_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499706/never-blank/posts/research/20b5cbbaa4e74f80/threads/1782499706.png",
+            "path": "reports/content_packages/images/20b5cbbaa4e74f80_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499707/never-blank/posts/research/20b5cbbaa4e74f80/stories/1782499707.png",
+            "path": "reports/content_packages/images/20b5cbbaa4e74f80_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Earnings rise, growth falters."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "e54cb3b6bbe2f61a",
+      "headline": "Polymarket annualized revenue surpasses $1 billion six weeks after its U.S. exchange launch",
+      "published_at": "2026-06-26 18:49 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "ef376a8b-6862-42c8-bc5c-869b165218e0",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7476345748779888641/",
+          "external_id": "urn:li:share:7476345748779888641",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122112751893356169",
+          "external_id": "1219637131228622_122112751893356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaD0r4pmqVT/",
+          "external_id": "17978108049029313",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18120646948685329",
+          "external_id": "18120646948685329",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/13",
+          "external_id": "13",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/e54cb3b6bbe2f61a_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499671/never-blank/posts/research/e54cb3b6bbe2f61a/blog/1782499671.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499672/never-blank/posts/research/e54cb3b6bbe2f61a/linkedin/1782499672.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499674/never-blank/posts/research/e54cb3b6bbe2f61a/facebook/1782499674.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499675/never-blank/posts/research/e54cb3b6bbe2f61a/instagram/1782499675.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499676/never-blank/posts/research/e54cb3b6bbe2f61a/threads/1782499676.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499677/never-blank/posts/research/e54cb3b6bbe2f61a/stories/1782499677.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Signals of success emerge from structured chaos.",
+      "image_visual_family": "particle_flow",
+      "image_method": "programmatic"
+    }
+  ]
 }

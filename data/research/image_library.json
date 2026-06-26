@@ -53,5 +53,35 @@
     "created_at": "2026-06-25",
     "method": "programmatic",
     "visual_family": "contrast_waves"
+  },
+  "e54cb3b6bbe2f61a": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499671/never-blank/posts/research/e54cb3b6bbe2f61a/blog/1782499671.png",
+    "signal_type": "consumer behavior",
+    "headline": "Polymarket annualized revenue surpasses $1 billion six weeks after its U.S. exchange launch",
+    "created_at": "2026-06-26",
+    "method": "programmatic",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "Signals of success emerge from structured chaos."
+  },
+  "76cddc4be3a57826": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499687/never-blank/posts/research/76cddc4be3a57826/blog/1782499687.png",
+    "signal_type": "pricing pressure",
+    "headline": "Rise in memory chip costs puts pressure on retailers of laptops and smartphones",
+    "created_at": "2026-06-26",
+    "method": "programmatic",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "Patterns of demand shape the future of tech."
+  },
+  "20b5cbbaa4e74f80": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782499701/never-blank/posts/research/20b5cbbaa4e74f80/blog/1782499701.png",
+    "signal_type": "consumer behavior",
+    "headline": "Darden Restaurants earnings beat estimates but Olive Garden growth weakens",
+    "created_at": "2026-06-26",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Earnings rise, growth falters."
   }
 }
