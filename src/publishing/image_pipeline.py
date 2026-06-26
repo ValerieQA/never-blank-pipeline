@@ -40,8 +40,11 @@ VISUAL_SYSTEM  = REPO_ROOT / "config" / "visual_system.yaml"
 IMG_GEN_PROMPT = REPO_ROOT / "config" / "prompts" / "image_generation.yaml"
 
 IMAGE_SIZE     = (1080, 1080)
-HOOK_MAX_WORDS = 12        # preferred max words on image
-HOOK_MAX_WORDS_HARD = 16   # absolute ceiling — never exceed
+HOOK_MAX_WORDS      = 7    # preferred max words on image
+HOOK_MAX_WORDS_HARD = 10   # absolute ceiling — never exceed
+
+# Increment when the image design changes to force regeneration of old library entries
+CURRENT_DESIGN_VERSION = "3"
 
 # Platform export sizes (W×H)
 PLATFORM_SIZES: dict[str, tuple[int, int]] = {
@@ -75,17 +78,14 @@ def _load_img_gen_prompt() -> dict:
 def trim_hook_text(text: str, max_words: int = HOOK_MAX_WORDS) -> str:
     """
     Trim hook text to at most max_words words.
-    Never cuts mid-word. Never returns a partial word.
-    If still too long at HOOK_MAX_WORDS_HARD, hard-clips at that boundary.
+    Never cuts mid-word. Trims at preferred max (HOOK_MAX_WORDS = 7).
+    Hard ceiling: HOOK_MAX_WORDS_HARD = 10.
     """
     words = text.strip().split()
-    if len(words) <= max_words:
+    cap   = min(max_words, HOOK_MAX_WORDS_HARD)
+    if len(words) <= cap:
         return " ".join(words)
-    # Prefer the preferred max
-    trimmed = words[:max_words]
-    # Only go up to hard max if the preferred result is missing critical meaning
-    # (here we just use the preferred max — callers can pass max_words=HOOK_MAX_WORDS_HARD)
-    return " ".join(trimmed)
+    return " ".join(words[:cap])
 
 
 def resize_for_platform(image: "Image.Image", platform: str) -> "Image.Image":
@@ -420,6 +420,138 @@ def _wrap_text(text: str, font: ImageFont.FreeTypeFont, max_w: int) -> list[str]
     if current:
         lines.append(" ".join(current))
     return lines or [text]
+
+
+# ── Dynamic font fitting ──────────────────────────────────────────────────────
+
+def _fit_text_dynamic(
+    text: str,
+    max_w: int,
+    max_h: int,
+    font_start: int = 80,
+    font_min: int = 28,
+    max_lines: int = 3,
+) -> tuple["ImageFont.FreeTypeFont", list[str]]:
+    """
+    Find the largest font size where `text` wraps into ≤ max_lines lines
+    and fits inside max_w × max_h pixels.
+    Steps down by 4px until it fits or hits font_min.
+    Never crops text.
+    """
+    for size in range(font_start, font_min - 1, -4):
+        font  = _find_font(size)
+        lines = _wrap_text(text, font, max_w)
+        if len(lines) <= max_lines:
+            line_h    = int(size * 1.30)
+            total_h   = len(lines) * line_h
+            if total_h <= max_h:
+                return font, lines
+    # Hard fallback — use minimum font, take first max_lines lines
+    font  = _find_font(font_min)
+    lines = _wrap_text(text, font, max_w)[:max_lines]
+    return font, lines
+
+
+# ── Per-platform image composition ────────────────────────────────────────────
+
+def composite_for_platform(
+    base_bytes: bytes,
+    hook_text: str,
+    platform: str,
+) -> "Image.Image":
+    """
+    Correct composition order:
+      1. Resize/crop base to platform dimensions
+      2. Overlay gradient + hook text + logo sized for that platform
+
+    This ensures text and logo are never distorted by post-composition crop.
+    """
+    target_w, target_h = PLATFORM_SIZES.get(platform, IMAGE_SIZE)
+    hook = trim_hook_text(hook_text)
+
+    # ── Step 1: resize base to platform size ──────────────────────────────────
+    base = Image.open(BytesIO(base_bytes)).convert("RGBA")
+    src_w, src_h = base.size
+    scale    = max(target_w / src_w, target_h / src_h)
+    scaled_w = max(int(src_w * scale), target_w)
+    scaled_h = max(int(src_h * scale), target_h)
+    base     = base.resize((scaled_w, scaled_h), Image.LANCZOS)
+    left     = (scaled_w - target_w) // 2
+    top      = (scaled_h - target_h) // 2
+    base     = base.crop((left, top, left + target_w, top + target_h))
+
+    canvas = Image.new("RGBA", (target_w, target_h), (0, 0, 0, 255))
+    canvas.paste(base, (0, 0))
+
+    # ── Step 2: gradient overlay ──────────────────────────────────────────────
+    grad      = Image.new("RGBA", (target_w, target_h), (0, 0, 0, 0))
+    grad_draw = ImageDraw.Draw(grad)
+    for y in range(target_h):
+        if y < target_h * 0.55:
+            alpha = int(200 * (y / (target_h * 0.55)) ** 0.55)
+        else:
+            frac  = (y - target_h * 0.55) / (target_h * 0.45)
+            alpha = int(110 + 110 * frac)
+        grad_draw.line([(0, y), (target_w, y)], fill=(0, 0, 0, alpha))
+    canvas = Image.alpha_composite(canvas, grad)
+
+    draw = ImageDraw.Draw(canvas)
+    padding  = max(40, int(target_w * 0.06))
+    max_tw   = target_w - padding * 2
+    # Reserve top 55% height for text block
+    max_th   = int(target_h * 0.45)
+    font_start = max(28, int(target_w * 0.055))
+
+    # ── Step 3: dynamic font — fit hook text ─────────────────────────────────
+    font, lines = _fit_text_dynamic(hook, max_tw, max_th, font_start=font_start)
+    line_h  = int(font.size * 1.30)
+    block_h = len(lines) * line_h
+    y_start = int(target_h * 0.38) - block_h // 2
+
+    for i, line in enumerate(lines):
+        bbox   = draw.textbbox((0, 0), line, font=font)
+        line_w = bbox[2] - bbox[0]
+        x      = (target_w - line_w) // 2
+        y      = y_start + i * line_h
+        draw.text((x + 2, y + 2), line, font=font, fill=(0, 0, 0, 160))
+        draw.text((x, y), line, font=font, fill=(255, 255, 255, 255))
+
+    # Thin Electric Blue separator
+    sep_y = y_start + block_h + max(16, int(target_h * 0.022))
+    sep_w = min(int(target_w * 0.22), 220)
+    draw.line(
+        [(target_w // 2 - sep_w // 2, sep_y), (target_w // 2 + sep_w // 2, sep_y)],
+        fill=ELECTRIC_BLUE + (160,),
+        width=2,
+    )
+
+    # "Never Blank" label
+    label_size = max(18, int(target_w * 0.022))
+    font_label = _find_font(label_size)
+    label      = "Never Blank"
+    lbbox      = draw.textbbox((0, 0), label, font=font_label)
+    lw         = lbbox[2] - lbbox[0]
+    draw.text(
+        ((target_w - lw) // 2, sep_y + max(10, int(target_h * 0.012))),
+        label,
+        font=font_label,
+        fill=(200, 210, 230, 200),
+    )
+
+    # ── Step 4: logo — bottom right, scaled to platform ───────────────────────
+    if LOGO_PATH.exists():
+        vs         = _load_visual_system()
+        size_ratio = vs.get("logo", {}).get("size_ratio", 0.20)
+        margin     = max(24, int(min(target_w, target_h) * vs.get("logo", {}).get("margin_px", 40) / 1080))
+        logo       = Image.open(LOGO_PATH).convert("RGBA")
+        logo_w     = int(target_w * size_ratio)
+        logo_h     = int(logo.height * (logo_w / logo.width))
+        logo       = logo.resize((logo_w, logo_h), Image.LANCZOS)
+        paste_x    = target_w - logo_w - margin
+        paste_y    = target_h - logo_h - margin
+        canvas.paste(logo, (paste_x, paste_y), logo)
+
+    return canvas.convert("RGB")
 
 
 # ── Programmatic base image (Pillow only) ──────────────────────────────────────

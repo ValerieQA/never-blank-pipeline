@@ -47,6 +47,8 @@ jobs:
           NB_CLOUDINARY_CLOUD_NAME:          ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
           NB_CLOUDINARY_API_KEY:             ${{ secrets.NB_CLOUDINARY_API_KEY }}
           NB_CLOUDINARY_API_SECRET:          ${{ secrets.NB_CLOUDINARY_API_SECRET }}
+          # Image controls
+          NB_FORCE_REGENERATE_RESEARCH_IMAGES: ${{ secrets.NB_FORCE_REGENERATE_RESEARCH_IMAGES }}
           # Publishing guards
           NB_RESEARCH_PUBLISH_ENABLED:       ${{ secrets.NB_RESEARCH_PUBLISH_ENABLED }}
           NB_RESEARCH_MAX_PUBLISH_SIGNALS_PER_RUN: ${{ secrets.NB_RESEARCH_MAX_PUBLISH_SIGNALS_PER_RUN }}
@@ -160,11 +162,19 @@ jobs:
                       else:
                           print(f"- ❌ **{platform.title()}** FAILED — {err}")
                   print(f"")
-                  wix_cover = report.get("wix_cover_image", False)
-                  tg_sig    = report.get("telegram_signature_included", False)
-                  gen_file  = report.get("generated_file", "")
-                  print(f"- Wix cover image: {'⚠️ not attached' if wix_cover else 'n/a'}")
+                  ig_sig   = report.get("instagram_signature", False)
+                  tg_sig   = report.get("telegram_signature", False)
+                  wix_cov  = report.get("wix_cover_image_attached", False)
+                  gen_file = report.get("generated_file", "")
+                  dv       = report.get("image_design_version", "—")
+                  hook     = report.get("image_hook_text", "—")
+                  family   = report.get("image_visual_family", "—")
+                  method   = report.get("image_method", "—")
+                  print(f"**Image:** design_version={dv} | visual={family} | method={method}")
+                  print(f"**Hook text:** {hook}")
+                  print(f"- Instagram signature: {'✅ included' if ig_sig else '❌ missing'}")
                   print(f"- Telegram signature: {'✅ included' if tg_sig else '❌ missing'}")
+                  print(f"- Wix cover image: {'✅ attached' if wix_cov else '⚠️ not attached (see Wix Media Manager)'}")
                   if gen_file:
                       print(f"- Generated content: `{gen_file}`")
                   # Platform image sizes

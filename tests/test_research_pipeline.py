@@ -175,15 +175,17 @@ def test_image_reuse_no_most_recent_fallback():
 
 
 def test_image_reuse_same_signal_id():
-    """_find_existing_image must reuse when SIGNAL_ID matches."""
+    """_find_existing_image must reuse when SIGNAL_ID matches AND design_version is current."""
     from scripts.research.prepare_content import _find_existing_image
+    from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
     signal  = {"SIGNAL_ID": "abc123", "SIGNAL_TYPE": "layoffs"}
     library = {
         "abc123": {
-            "url": "https://cloudinary.com/correct_image.png",
-            "signal_type": "layoffs",
-            "headline": "Oracle layoffs",
-            "created_at": "2026-06-22",
+            "url":            "https://cloudinary.com/correct_image.png",
+            "signal_type":    "layoffs",
+            "headline":       "Oracle layoffs",
+            "created_at":     "2026-06-22",
+            "design_version": CURRENT_DESIGN_VERSION,
         }
     }
     url, reason = _find_existing_image(signal, library)
@@ -281,3 +283,94 @@ def test_sheets_sync_failure_preserves_data(tmp_path):
     assert active.exists()
     lines = [json.loads(l) for l in open(active) if l.strip()]
     assert len(lines) == 1
+
+
+# --- design_version reuse ---
+
+def test_image_reuse_requires_matching_design_version():
+    """_find_existing_image must NOT reuse when design_version is outdated."""
+    from scripts.research.prepare_content import _find_existing_image
+    from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
+
+    signal  = {"SIGNAL_ID": "sig_old", "SIGNAL_TYPE": "layoffs"}
+    # Library entry with a stale design version
+    library = {
+        "sig_old": {
+            "url":            "https://cloudinary.com/old.png",
+            "signal_type":    "layoffs",
+            "headline":       "Old Headline",
+            "created_at":     "2026-01-01",
+            "design_version": "0",   # outdated
+        }
+    }
+    url, reason = _find_existing_image(signal, library)
+    assert url is None
+    assert reason == "none"
+
+
+def test_image_reuse_same_signal_id_same_design_version():
+    """_find_existing_image reuses when SIGNAL_ID matches AND design_version is current."""
+    from scripts.research.prepare_content import _find_existing_image
+    from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
+
+    signal  = {"SIGNAL_ID": "sig_cur", "SIGNAL_TYPE": "layoffs"}
+    library = {
+        "sig_cur": {
+            "url":            "https://cloudinary.com/current.png",
+            "signal_type":    "layoffs",
+            "headline":       "Current Headline",
+            "created_at":     "2026-06-26",
+            "design_version": CURRENT_DESIGN_VERSION,
+        }
+    }
+    url, reason = _find_existing_image(signal, library)
+    assert url == "https://cloudinary.com/current.png"
+    assert "same_signal" in reason
+
+
+# --- ensure_never_blank_signature ---
+
+def test_ensure_never_blank_signature_no_double_prefix():
+    """ensure_never_blank_signature must not produce 'Never Blank: Never Blank: ...'"""
+    from scripts.research.publish_packages import ensure_never_blank_signature
+
+    signal = {"POSSIBLE_SIGNATURE_LINE": "Never Blank: The signal is rarely the event itself."}
+    text   = "Some post content here."
+    result = ensure_never_blank_signature(text, signal)
+
+    import re
+    matches = re.findall(r"Never\s+Blank", result, re.IGNORECASE)
+    assert len(matches) == 1, f"Expected exactly 1 'Never Blank', got {len(matches)}: {result!r}"
+
+
+def test_ensure_never_blank_signature_appended_when_missing():
+    """ensure_never_blank_signature appends signature when text has none."""
+    from scripts.research.publish_packages import ensure_never_blank_signature
+
+    signal = {"POSSIBLE_SIGNATURE_LINE": "Attention is infrastructure."}
+    text   = "Founders underestimate reach."
+    result = ensure_never_blank_signature(text, signal)
+
+    assert result.endswith("Never Blank: Attention is infrastructure.")
+
+
+def test_ensure_never_blank_signature_fallback_when_no_sig_line():
+    """ensure_never_blank_signature uses fallback when POSSIBLE_SIGNATURE_LINE is empty."""
+    from scripts.research.publish_packages import ensure_never_blank_signature
+
+    signal = {"POSSIBLE_SIGNATURE_LINE": ""}
+    result = ensure_never_blank_signature("Some text.", signal)
+    assert "Never Blank: The signal is rarely the event itself." in result
+
+
+# --- Sheets canonical columns ---
+
+def test_canonical_columns_count():
+    """CANONICAL_COLUMNS must have exactly 42 entries (agreed schema)."""
+    from scripts.research.sync_to_sheets import CANONICAL_COLUMNS
+    assert len(CANONICAL_COLUMNS) == 42
+
+
+def test_canonical_columns_starts_with_signal_id():
+    from scripts.research.sync_to_sheets import CANONICAL_COLUMNS
+    assert CANONICAL_COLUMNS[0] == "SIGNAL_ID"

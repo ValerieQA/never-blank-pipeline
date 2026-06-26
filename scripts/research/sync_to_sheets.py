@@ -15,6 +15,22 @@ log = get_logger("research.sync_to_sheets")
 
 ACTIVE_FILE = Path("data/research/signals_active.jsonl")
 
+# Canonical column order — never inferred from JSON key order
+CANONICAL_COLUMNS: list[str] = [
+    "SIGNAL_ID", "DATE_FOUND", "SOURCE_DATE", "SOURCE_NAME", "SOURCE_URL",
+    "HEADLINE", "REGION", "INDUSTRY", "SIGNAL_TYPE",
+    "CORE_FACT", "WHY_IT_MATTERS_TO_BUSINESS", "BUSINESS_RESPONSES_OBSERVED",
+    "REAL_COMPANY_EXAMPLE", "PROBLEM_FACED", "RESPONSE_TAKEN", "OUTCOME_IF_KNOWN",
+    "SOURCE_FOR_CASE", "BUSINESS_LESSON", "DID_IT_WORK", "EVIDENCE_OF_OUTCOME",
+    "TIME_HORIZON", "COUNTER_EXAMPLE", "WHY_THIS_CASE_IS_INTERESTING",
+    "ARTICLE_READINESS_SCORE", "TARGET_AUDIENCE", "PRIMARY_CHANNEL",
+    "CORE_TENSION", "LINKEDIN_ANGLE", "BLOG_ANGLE", "THREADS_ANGLE", "STORY_ANGLE",
+    "DISCUSSION_POTENTIAL", "SIGNAL_STRENGTH", "CHANNEL_FIT_SCORE",
+    "POTENTIAL_HOOK", "INTERESTING_QUESTION", "NEVER_BLANK_ANGLE",
+    "POSSIBLE_SIGNATURE_LINE", "SOURCE_QUALITY", "CONFIDENCE",
+    "RECOMMENDED_FOR_ARTICLE", "NOTES",
+]
+
 
 def _get_creds():
     import json as _json
@@ -61,13 +77,8 @@ def sync_to_sheets() -> bool:
         tab     = os.environ.get("NB_RESEARCH_SHEET_TAB", "Signals")
         service = _get_service()
 
-        all_keys: list[str] = []
-        seen_keys: set[str] = set()
-        for s in signals:
-            for k in s:
-                if k not in seen_keys and not k.startswith("_"):
-                    all_keys.append(k)
-                    seen_keys.add(k)
+        # Use the canonical column list — order is fixed, not inferred from JSON keys
+        all_keys = CANONICAL_COLUMNS
 
         meta = service.spreadsheets().get(spreadsheetId=sid).execute()
         existing_tabs = [sh["properties"]["title"] for sh in meta.get("sheets", [])]

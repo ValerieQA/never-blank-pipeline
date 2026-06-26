@@ -105,14 +105,30 @@ def _save_image_library(lib: dict) -> None:
 
 def _find_existing_image(signal: dict, library: dict) -> tuple[str | None, str]:
     """
-    Return a reusable image URL only if it is for the SAME signal ID.
-    Does NOT reuse images from unrelated signals.
-    Returns (url_or_None, reason).
+    Return a reusable image URL only if:
+      - SIGNAL_ID matches, AND
+      - design_version in library matches CURRENT_DESIGN_VERSION, AND
+      - NB_FORCE_REGENERATE_RESEARCH_IMAGES != 'true'
+
+    Old entries with missing or outdated design_version are ignored
+    so that improved image designs are not blocked by stale library entries.
     """
+    from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
+
+    force = os.environ.get("NB_FORCE_REGENERATE_RESEARCH_IMAGES", "false").lower() == "true"
+    if force:
+        return None, "force_regenerate"
+
     sig_id = signal.get("SIGNAL_ID", "")
     if sig_id in library:
         entry = library[sig_id]
-        return entry["url"], f"same_signal ({entry.get('headline', '')[:40]})"
+        if entry.get("design_version") == CURRENT_DESIGN_VERSION:
+            return entry["url"], f"same_signal ({entry.get('headline', '')[:40]})"
+        # Entry exists but design version is outdated — regenerate
+        log.info(
+            "Signal %s: image_library entry has design_version=%r, current=%s — regenerating",
+            sig_id, entry.get("design_version"), CURRENT_DESIGN_VERSION,
+        )
     return None, "none"
 
 
@@ -125,14 +141,12 @@ def _generate_signal_image(signal: dict) -> dict:
     from src.publishing.image_pipeline import (
         choose_visual_family,
         load_registry,
-        save_registry,
-        register_post,
         _generate_base_image,
-        composite_image,
+        composite_for_platform,
         upload_to_cloudinary,
         trim_hook_text,
-        resize_for_platform,
         PLATFORM_SIZES,
+        CURRENT_DESIGN_VERSION,
     )
 
     sig_id   = signal.get("SIGNAL_ID", "unknown")
@@ -168,21 +182,19 @@ def _generate_signal_image(signal: dict) -> dict:
         image_prompt, visual_family, negative_prompt, log=log.info
     )
 
-    # Composite: logo + hook text at 1080×1080
-    composite = composite_image(base_bytes, hook_text)
-
-    # Save per-platform sized images and upload to Cloudinary
+    # ── Per-platform composition: base → resize → overlay (correct order) ──────
+    # Each platform gets its own composite with text/logo sized for that canvas.
     out_dir = PACKAGES_DIR / "images"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     platform_images: dict[str, dict] = {}
     master_url: str = ""
-    master_path: Path | None = None
 
     for platform in PLATFORMS:
-        sized = resize_for_platform(composite, platform)
-        img_path = out_dir / f"{sig_id}_{platform}.png"
-        sized.save(str(img_path), "PNG", optimize=True)
+        sized_img = composite_for_platform(base_bytes, hook_text, platform)
+        w, h      = PLATFORM_SIZES.get(platform, (1080, 1080))
+        img_path  = out_dir / f"{sig_id}_{platform}.png"
+        sized_img.save(str(img_path), "PNG", optimize=True)
 
         try:
             url = upload_to_cloudinary(img_path, slug=f"research/{sig_id}/{platform}")
@@ -191,25 +203,25 @@ def _generate_signal_image(signal: dict) -> dict:
             url = str(img_path)
 
         platform_images[platform] = {
-            "url":       url,
-            "path":      str(img_path),
-            "size":      "x".join(str(d) for d in PLATFORM_SIZES.get(platform, (1080, 1080))),
-            "reused":    False,
+            "url":    url,
+            "path":   str(img_path),
+            "size":   f"{w}x{h}",
+            "reused": False,
         }
-
         if platform == "blog":
-            master_url  = url
-            master_path = img_path
+            master_url = url
 
-    # Update image library with the blog (master) URL
+    # Update image library with blog URL + design_version
     if master_url:
         registry_lib_entry = {
-            "url":         master_url,
-            "signal_type": signal.get("SIGNAL_TYPE", ""),
-            "headline":    headline,
-            "created_at":  datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-            "method":      method,
-            "visual_family": visual_family,
+            "url":            master_url,
+            "signal_type":    signal.get("SIGNAL_TYPE", ""),
+            "headline":       headline,
+            "created_at":     datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "method":         method,
+            "visual_family":  visual_family,
+            "design_version": CURRENT_DESIGN_VERSION,
+            "hook_text":      hook_text,
         }
         return {
             "platform_images": platform_images,
@@ -253,13 +265,14 @@ def _build_image_plan(signal: dict, library: dict) -> tuple[dict, dict | None]:
     existing_url, reuse_source = _find_existing_image(signal, library)
 
     if existing_url:
-        log.info("Image reused (same signal) for %s", signal.get("SIGNAL_ID"))
-        from src.publishing.image_pipeline import PLATFORM_SIZES
+        log.info("Image reused (same signal, same design_version) for %s", signal.get("SIGNAL_ID"))
+        from src.publishing.image_pipeline import PLATFORM_SIZES, CURRENT_DESIGN_VERSION
+        lib_entry = library.get(signal.get("SIGNAL_ID", ""), {})
         platform_images = {
             p: {
                 "url":    existing_url,
                 "path":   existing_url,
-                "size":   "x".join(str(d) for d in PLATFORM_SIZES.get(p, (1080, 1080))),
+                "size":   "%dx%d" % PLATFORM_SIZES.get(p, (1080, 1080)),
                 "reused": True,
             }
             for p in PLATFORMS
@@ -271,8 +284,9 @@ def _build_image_plan(signal: dict, library: dict) -> tuple[dict, dict | None]:
             "reuse_rate":      "100%",
             "image_method":    "reused",
             "reuse_source":    reuse_source,
-            "visual_family":   library.get(signal["SIGNAL_ID"], {}).get("visual_family", ""),
-            "hook_text":       "",
+            "visual_family":   lib_entry.get("visual_family", ""),
+            "hook_text":       lib_entry.get("hook_text", ""),
+            "design_version":  lib_entry.get("design_version", ""),
         }, None
 
     log.info("Generating new image for signal %s", signal.get("SIGNAL_ID"))
