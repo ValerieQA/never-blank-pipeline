@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "8752fff095e06f8c",
+  "HEADLINE": "Robotaxis drive miles just to get cleaned and charged; this new startup wants to fix that",
+  "prepared_at": "2026-06-27 10:09 UTC",
+  "content": {
+    "blog": {
+      "headline": "Robotaxis Drive Extra Miles for Cleaning and Charging—Here’s Why That’s a Problem",
+      "angle": "Robotaxi fleets expand rapidly → operational inefficiencies in support services create hidden costs → startups like Aseon Labs develop dedicated pitstops → founders should watch support infrastructure to improve fleet economics"
+    },
+    "linkedin": {
+      "headline": "Robotaxis are racking up miles just to find a place to get wiped down and recharged.",
+      "angle": "As autonomous fleets scale, inefficient cleaning and charging routines inflate costs and reduce uptime."
+    },
+    "facebook": {
+      "headline": "Robotaxis spend more time driving to get cleaned and charged than you might expect.",
+      "angle": "Aseon Labs is tackling this hidden inefficiency—could your startup be missing similar operational bottlenecks?"
+    },
+    "instagram": {
+      "headline": "Robotaxis: Miles for a Wash and Charge",
+      "angle": "Behind every autonomous fleet, the real challenge is managing the messy, costly support tasks."
+    },
+    "threads": {
+      "thread_hook": "Robotaxis aren’t just driving passengers—they’re driving extra miles just to get cleaned and charged.",
+      "angle": "This thread breaks down why support infrastructure is the overlooked bottleneck in autonomous mobility and how startups like Aseon Labs are turning it into opportunity."
+    },
+    "stories": {
+      "story_question": "What if your robotaxi spends more time finding a charger than carrying passengers?",
+      "angle": "Exploring how operational inefficiencies in cleaning and charging threaten the economics of autonomous vehicle fleets."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554984/never-blank/posts/research/8752fff095e06f8c/blog/1782554983.png",
+        "path": "reports/content_packages/images/8752fff095e06f8c_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554986/never-blank/posts/research/8752fff095e06f8c/linkedin/1782554985.png",
+        "path": "reports/content_packages/images/8752fff095e06f8c_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554987/never-blank/posts/research/8752fff095e06f8c/facebook/1782554987.png",
+        "path": "reports/content_packages/images/8752fff095e06f8c_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554988/never-blank/posts/research/8752fff095e06f8c/instagram/1782554988.png",
+        "path": "reports/content_packages/images/8752fff095e06f8c_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554989/never-blank/posts/research/8752fff095e06f8c/threads/1782554989.png",
+        "path": "reports/content_packages/images/8752fff095e06f8c_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554990/never-blank/posts/research/8752fff095e06f8c/stories/1782554990.png",
+        "path": "reports/content_packages/images/8752fff095e06f8c_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "programmatic",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Efficiency emerges from hidden patterns."
+  }
+}

@@ -83,5 +83,35 @@
     "visual_family": "contrast_waves",
     "design_version": "3",
     "hook_text": "Earnings rise, growth falters."
+  },
+  "73035a9f1e61abd0": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554967/never-blank/posts/research/73035a9f1e61abd0/blog/1782554967.png",
+    "signal_type": "operational change",
+    "headline": "GM reveals 2027 GMC Sierra pickup with new V-8 engines, redesigned styling",
+    "created_at": "2026-06-27",
+    "method": "programmatic",
+    "visual_family": "mountains_depth_layers",
+    "design_version": "3",
+    "hook_text": "Power hidden in the layers."
+  },
+  "8752fff095e06f8c": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554984/never-blank/posts/research/8752fff095e06f8c/blog/1782554983.png",
+    "signal_type": "operational change",
+    "headline": "Robotaxis drive miles just to get cleaned and charged; this new startup wants to fix that",
+    "created_at": "2026-06-27",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Efficiency emerges from hidden patterns."
+  },
+  "c9ea289e8960ed65": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782555001/never-blank/posts/research/c9ea289e8960ed65/blog/1782555001.png",
+    "signal_type": "pricing pressure",
+    "headline": "Estrogen patches are hard to find, and it may not be resolved any time soon",
+    "created_at": "2026-06-27",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Supply chains reveal unseen patterns."
   }
 }

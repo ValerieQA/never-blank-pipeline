@@ -1,0 +1,439 @@
+{
+  "date": "2026-06-27",
+  "candidates_found": 22,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "GM reveals 2027 GMC Sierra pickup with new V-8 engines, redesigned styling",
+    "Robotaxis drive miles just to get cleaned and charged; this new startup wants to",
+    "Estrogen patches are hard to find, and it may not be resolved any time soon"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "73035a9f1e61abd0",
+      "headline": "GM reveals 2027 GMC Sierra pickup with new V-8 engines, redesigned styling",
+      "published_at": "2026-06-27 10:11 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "a777662b-c5d8-496b-a056-745b5840273e",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7476577677974429710/",
+          "external_id": "urn:li:share:7476577677974429710",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122112955581356169",
+          "external_id": "1219637131228622_122112955581356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaFeJl4kodw/",
+          "external_id": "18120400927695642",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18105632846105384",
+          "external_id": "18105632846105384",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/14",
+          "external_id": "14",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/73035a9f1e61abd0_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554967/never-blank/posts/research/73035a9f1e61abd0/blog/1782554967.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554968/never-blank/posts/research/73035a9f1e61abd0/linkedin/1782554968.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554969/never-blank/posts/research/73035a9f1e61abd0/facebook/1782554969.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554971/never-blank/posts/research/73035a9f1e61abd0/instagram/1782554971.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554972/never-blank/posts/research/73035a9f1e61abd0/threads/1782554972.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554973/never-blank/posts/research/73035a9f1e61abd0/stories/1782554973.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Power hidden in the layers.",
+      "image_visual_family": "mountains_depth_layers",
+      "image_method": "programmatic"
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "73035a9f1e61abd0",
+      "HEADLINE": "GM reveals 2027 GMC Sierra pickup with new V-8 engines, redesigned styling",
+      "prepared_at": "2026-06-27 10:09 UTC",
+      "content": {
+        "blog": {
+          "headline": "GM\u2019s 2027 Sierra: Why Upgrading ICE Trucks Still Matters Amid the EV Rush",
+          "angle": "GM\u2019s reveal of a redesigned 2027 Sierra with new V-8 engines highlights the tension between industry electrification and legacy product demand, showing that steady innovation in core offerings remains essential for market dominance."
+        },
+        "linkedin": {
+          "headline": "GM just doubled down on the V-8 while everyone else is busy selling the electric dream.",
+          "angle": "While the auto industry races toward EVs, GM\u2019s investment in its bestselling ICE truck signals that refining proven products still drives profitability and market share."
+        },
+        "facebook": {
+          "headline": "GM\u2019s 2027 Sierra pickup gets new V-8 engines and a fresh look\u2014why does this matter?",
+          "angle": "As the industry shifts to electric vehicles, GM\u2019s move to upgrade its core ICE truck challenges the assumption that only EVs can win customers\u2014what does this mean for traditional automakers?"
+        },
+        "instagram": {
+          "headline": "V-8 Power Meets Fresh Design",
+          "angle": "GM\u2019s 2027 Sierra proves that even as EVs dominate headlines, refining classic trucks keeps the cash flowing."
+        },
+        "threads": {
+          "thread_hook": "While everyone\u2019s chasing electric vehicles, GM just bet big on V-8s.",
+          "angle": "This thread breaks down how GM\u2019s 2027 Sierra redesign exposes the ongoing value of legacy ICE products in a market obsessed with electrification."
+        },
+        "stories": {
+          "story_question": "Can legacy V-8 trucks still compete in an EV world?",
+          "angle": "Exploring the tension between innovation in electric vehicles and the steady demand for improved internal combustion engines."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554967/never-blank/posts/research/73035a9f1e61abd0/blog/1782554967.png",
+            "path": "reports/content_packages/images/73035a9f1e61abd0_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554968/never-blank/posts/research/73035a9f1e61abd0/linkedin/1782554968.png",
+            "path": "reports/content_packages/images/73035a9f1e61abd0_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554969/never-blank/posts/research/73035a9f1e61abd0/facebook/1782554969.png",
+            "path": "reports/content_packages/images/73035a9f1e61abd0_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554971/never-blank/posts/research/73035a9f1e61abd0/instagram/1782554971.png",
+            "path": "reports/content_packages/images/73035a9f1e61abd0_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554972/never-blank/posts/research/73035a9f1e61abd0/threads/1782554972.png",
+            "path": "reports/content_packages/images/73035a9f1e61abd0_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554973/never-blank/posts/research/73035a9f1e61abd0/stories/1782554973.png",
+            "path": "reports/content_packages/images/73035a9f1e61abd0_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "mountains_depth_layers",
+        "hook_text": "Power hidden in the layers."
+      }
+    },
+    {
+      "SIGNAL_ID": "8752fff095e06f8c",
+      "HEADLINE": "Robotaxis drive miles just to get cleaned and charged; this new startup wants to fix that",
+      "prepared_at": "2026-06-27 10:09 UTC",
+      "content": {
+        "blog": {
+          "headline": "Robotaxis Drive Extra Miles for Cleaning and Charging\u2014Here\u2019s Why That\u2019s a Problem",
+          "angle": "Robotaxi fleets expand rapidly \u2192 operational inefficiencies in support services create hidden costs \u2192 startups like Aseon Labs develop dedicated pitstops \u2192 founders should watch support infrastructure to improve fleet economics"
+        },
+        "linkedin": {
+          "headline": "Robotaxis are racking up miles just to find a place to get wiped down and recharged.",
+          "angle": "As autonomous fleets scale, inefficient cleaning and charging routines inflate costs and reduce uptime."
+        },
+        "facebook": {
+          "headline": "Robotaxis spend more time driving to get cleaned and charged than you might expect.",
+          "angle": "Aseon Labs is tackling this hidden inefficiency\u2014could your startup be missing similar operational bottlenecks?"
+        },
+        "instagram": {
+          "headline": "Robotaxis: Miles for a Wash and Charge",
+          "angle": "Behind every autonomous fleet, the real challenge is managing the messy, costly support tasks."
+        },
+        "threads": {
+          "thread_hook": "Robotaxis aren\u2019t just driving passengers\u2014they\u2019re driving extra miles just to get cleaned and charged.",
+          "angle": "This thread breaks down why support infrastructure is the overlooked bottleneck in autonomous mobility and how startups like Aseon Labs are turning it into opportunity."
+        },
+        "stories": {
+          "story_question": "What if your robotaxi spends more time finding a charger than carrying passengers?",
+          "angle": "Exploring how operational inefficiencies in cleaning and charging threaten the economics of autonomous vehicle fleets."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554984/never-blank/posts/research/8752fff095e06f8c/blog/1782554983.png",
+            "path": "reports/content_packages/images/8752fff095e06f8c_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554986/never-blank/posts/research/8752fff095e06f8c/linkedin/1782554985.png",
+            "path": "reports/content_packages/images/8752fff095e06f8c_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554987/never-blank/posts/research/8752fff095e06f8c/facebook/1782554987.png",
+            "path": "reports/content_packages/images/8752fff095e06f8c_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554988/never-blank/posts/research/8752fff095e06f8c/instagram/1782554988.png",
+            "path": "reports/content_packages/images/8752fff095e06f8c_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554989/never-blank/posts/research/8752fff095e06f8c/threads/1782554989.png",
+            "path": "reports/content_packages/images/8752fff095e06f8c_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554990/never-blank/posts/research/8752fff095e06f8c/stories/1782554990.png",
+            "path": "reports/content_packages/images/8752fff095e06f8c_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Efficiency emerges from hidden patterns."
+      }
+    },
+    {
+      "SIGNAL_ID": "c9ea289e8960ed65",
+      "HEADLINE": "Estrogen patches are hard to find, and it may not be resolved any time soon",
+      "prepared_at": "2026-06-27 10:10 UTC",
+      "content": {
+        "blog": {
+          "headline": "When Estrogen Patches Disappear: Managing Supply Silence in Pharma",
+          "angle": "The surge in demand for estrogen patches exposes the tension between urgent supply needs and pharmaceutical constraints, revealing that transparent communication and proactive planning are the only ways to maintain trust and market position."
+        },
+        "linkedin": {
+          "headline": "The estrogen patch shortage isn\u2019t just a supply problem\u2014it\u2019s a trust problem.",
+          "angle": "Pharmaceutical supply chain breakdowns don\u2019t just disrupt availability; they erode customer trust and brand credibility."
+        },
+        "facebook": {
+          "headline": "Estrogen patches are hard to find\u2014and it could take a year to fix.",
+          "angle": "With Novartis and Viatris struggling to meet demand, how should pharma brands handle prolonged shortages without losing trust?"
+        },
+        "instagram": {
+          "headline": "When Supply Goes Silent, Trust Is at Risk",
+          "angle": "Pharma shortages like the estrogen patch crisis show that managing communication is as critical as managing inventory."
+        },
+        "threads": {
+          "thread_hook": "Estrogen patches are vanishing from shelves, and the silence from manufacturers is deafening.",
+          "angle": "This thread breaks down why pharma supply chains buckle under demand surges and why the real battle is managing the communication gap to protect brand trust."
+        },
+        "stories": {
+          "story_question": "What happens when a critical medicine runs out for a year?",
+          "angle": "Exploring how pharma companies must balance production limits with the urgent need to keep customers informed and confident."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782555001/never-blank/posts/research/c9ea289e8960ed65/blog/1782555001.png",
+            "path": "reports/content_packages/images/c9ea289e8960ed65_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782555003/never-blank/posts/research/c9ea289e8960ed65/linkedin/1782555002.png",
+            "path": "reports/content_packages/images/c9ea289e8960ed65_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782555004/never-blank/posts/research/c9ea289e8960ed65/facebook/1782555003.png",
+            "path": "reports/content_packages/images/c9ea289e8960ed65_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782555005/never-blank/posts/research/c9ea289e8960ed65/instagram/1782555004.png",
+            "path": "reports/content_packages/images/c9ea289e8960ed65_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782555006/never-blank/posts/research/c9ea289e8960ed65/threads/1782555006.png",
+            "path": "reports/content_packages/images/c9ea289e8960ed65_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782555007/never-blank/posts/research/c9ea289e8960ed65/stories/1782555007.png",
+            "path": "reports/content_packages/images/c9ea289e8960ed65_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Supply chains reveal unseen patterns."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "73035a9f1e61abd0",
+      "headline": "GM reveals 2027 GMC Sierra pickup with new V-8 engines, redesigned styling",
+      "published_at": "2026-06-27 10:11 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "a777662b-c5d8-496b-a056-745b5840273e",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7476577677974429710/",
+          "external_id": "urn:li:share:7476577677974429710",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122112955581356169",
+          "external_id": "1219637131228622_122112955581356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaFeJl4kodw/",
+          "external_id": "18120400927695642",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18105632846105384",
+          "external_id": "18105632846105384",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/14",
+          "external_id": "14",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/73035a9f1e61abd0_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554967/never-blank/posts/research/73035a9f1e61abd0/blog/1782554967.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554968/never-blank/posts/research/73035a9f1e61abd0/linkedin/1782554968.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554969/never-blank/posts/research/73035a9f1e61abd0/facebook/1782554969.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554971/never-blank/posts/research/73035a9f1e61abd0/instagram/1782554971.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554972/never-blank/posts/research/73035a9f1e61abd0/threads/1782554972.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782554973/never-blank/posts/research/73035a9f1e61abd0/stories/1782554973.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Power hidden in the layers.",
+      "image_visual_family": "mountains_depth_layers",
+      "image_method": "programmatic"
+    }
+  ]
+}
