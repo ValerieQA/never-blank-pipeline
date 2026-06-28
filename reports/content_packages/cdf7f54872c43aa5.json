@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "cdf7f54872c43aa5",
+  "HEADLINE": "How Kohl's lost its way — and is trying to become relevant again",
+  "prepared_at": "2026-06-28 10:28 UTC",
+  "content": {
+    "blog": {
+      "headline": "How Kohl’s Lost Its Way and What Founders Can Learn from It",
+      "angle": "Kohl’s chase for new customers fractured its core base → the tension between legacy loyalty and new appeal → the company’s repositioning efforts → founders must prioritize internal clarity over surface-level pivots."
+    },
+    "linkedin": {
+      "headline": "Kohl’s spent years chasing new shoppers—and woke up to find its old ones gone.",
+      "angle": "When brands lose sight of their original customers, they risk eroding their foundation and market value."
+    },
+    "facebook": {
+      "headline": "Kohl’s tried to attract new customers but ended up alienating the ones who built the brand.",
+      "angle": "Kohl’s decline shows what happens when a brand loses its core audience—how can businesses balance growth with loyalty?"
+    },
+    "instagram": {
+      "headline": "When chasing new, you lose the old",
+      "angle": "Kohl’s struggle reveals why brands must stay true to their original customers while evolving."
+    },
+    "threads": {
+      "thread_hook": "Kohl’s lost relevance by forgetting who made it matter in the first place.",
+      "angle": "This thread breaks down how chasing new markets without internal clarity leads to brand erosion—and what founders should do instead."
+    },
+    "stories": {
+      "story_question": "Is your brand losing old customers while chasing new ones?",
+      "angle": "Exploring the risk of alienating loyal customers during growth attempts and why internal focus matters."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642527/never-blank/posts/research/cdf7f54872c43aa5/blog/1782642527.png",
+        "path": "reports/content_packages/images/cdf7f54872c43aa5_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642528/never-blank/posts/research/cdf7f54872c43aa5/linkedin/1782642528.png",
+        "path": "reports/content_packages/images/cdf7f54872c43aa5_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642529/never-blank/posts/research/cdf7f54872c43aa5/facebook/1782642529.png",
+        "path": "reports/content_packages/images/cdf7f54872c43aa5_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642530/never-blank/posts/research/cdf7f54872c43aa5/instagram/1782642530.png",
+        "path": "reports/content_packages/images/cdf7f54872c43aa5_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642531/never-blank/posts/research/cdf7f54872c43aa5/threads/1782642531.png",
+        "path": "reports/content_packages/images/cdf7f54872c43aa5_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642532/never-blank/posts/research/cdf7f54872c43aa5/stories/1782642532.png",
+        "path": "reports/content_packages/images/cdf7f54872c43aa5_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "programmatic",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Navigating the currents of retail relevance."
+  }
+}

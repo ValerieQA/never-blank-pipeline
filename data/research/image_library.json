@@ -113,5 +113,35 @@
     "visual_family": "contrast_waves",
     "design_version": "3",
     "hook_text": "Supply chains reveal unseen patterns."
+  },
+  "cdf7f54872c43aa5": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642527/never-blank/posts/research/cdf7f54872c43aa5/blog/1782642527.png",
+    "signal_type": "consumer behavior",
+    "headline": "How Kohl's lost its way — and is trying to become relevant again",
+    "created_at": "2026-06-28",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Navigating the currents of retail relevance."
+  },
+  "78a8da4a2666ec52": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642542/never-blank/posts/research/78a8da4a2666ec52/blog/1782642542.png",
+    "signal_type": "consumer behavior",
+    "headline": "Luxury spending now driven by experiences and 'inheritourism'",
+    "created_at": "2026-06-28",
+    "method": "programmatic",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "Experiences illuminate the future of luxury."
+  },
+  "e50049142b7a234c": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642557/never-blank/posts/research/e50049142b7a234c/blog/1782642557.png",
+    "signal_type": "visibility",
+    "headline": "SpaceX to join the Nasdaq-100 in a fast-tracked process that will drive huge ETF buying demand",
+    "created_at": "2026-06-28",
+    "method": "programmatic",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "Visibility compounds in systems."
   }
 }

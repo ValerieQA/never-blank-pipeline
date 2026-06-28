@@ -1,0 +1,439 @@
+{
+  "date": "2026-06-28",
+  "candidates_found": 14,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "How Kohl's lost its way \u2014 and is trying to become relevant again",
+    "Luxury spending now driven by experiences and 'inheritourism'",
+    "SpaceX to join the Nasdaq-100 in a fast-tracked process that will drive huge ETF"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "cdf7f54872c43aa5",
+      "headline": "How Kohl's lost its way \u2014 and is trying to become relevant again",
+      "published_at": "2026-06-28 10:30 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "30a80095-da02-41f5-9db8-8516862c554b",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7476944886928207872/",
+          "external_id": "urn:li:share:7476944886928207872",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122113331871356169",
+          "external_id": "1219637131228622_122113331871356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaIFIoTDMQ3/",
+          "external_id": "18107579021071612",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/17944526583213148",
+          "external_id": "17944526583213148",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/15",
+          "external_id": "15",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/cdf7f54872c43aa5_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642527/never-blank/posts/research/cdf7f54872c43aa5/blog/1782642527.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642528/never-blank/posts/research/cdf7f54872c43aa5/linkedin/1782642528.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642529/never-blank/posts/research/cdf7f54872c43aa5/facebook/1782642529.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642530/never-blank/posts/research/cdf7f54872c43aa5/instagram/1782642530.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642531/never-blank/posts/research/cdf7f54872c43aa5/threads/1782642531.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642532/never-blank/posts/research/cdf7f54872c43aa5/stories/1782642532.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Navigating the currents of retail relevance.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "programmatic"
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "cdf7f54872c43aa5",
+      "HEADLINE": "How Kohl's lost its way \u2014 and is trying to become relevant again",
+      "prepared_at": "2026-06-28 10:28 UTC",
+      "content": {
+        "blog": {
+          "headline": "How Kohl\u2019s Lost Its Way and What Founders Can Learn from It",
+          "angle": "Kohl\u2019s chase for new customers fractured its core base \u2192 the tension between legacy loyalty and new appeal \u2192 the company\u2019s repositioning efforts \u2192 founders must prioritize internal clarity over surface-level pivots."
+        },
+        "linkedin": {
+          "headline": "Kohl\u2019s spent years chasing new shoppers\u2014and woke up to find its old ones gone.",
+          "angle": "When brands lose sight of their original customers, they risk eroding their foundation and market value."
+        },
+        "facebook": {
+          "headline": "Kohl\u2019s tried to attract new customers but ended up alienating the ones who built the brand.",
+          "angle": "Kohl\u2019s decline shows what happens when a brand loses its core audience\u2014how can businesses balance growth with loyalty?"
+        },
+        "instagram": {
+          "headline": "When chasing new, you lose the old",
+          "angle": "Kohl\u2019s struggle reveals why brands must stay true to their original customers while evolving."
+        },
+        "threads": {
+          "thread_hook": "Kohl\u2019s lost relevance by forgetting who made it matter in the first place.",
+          "angle": "This thread breaks down how chasing new markets without internal clarity leads to brand erosion\u2014and what founders should do instead."
+        },
+        "stories": {
+          "story_question": "Is your brand losing old customers while chasing new ones?",
+          "angle": "Exploring the risk of alienating loyal customers during growth attempts and why internal focus matters."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642527/never-blank/posts/research/cdf7f54872c43aa5/blog/1782642527.png",
+            "path": "reports/content_packages/images/cdf7f54872c43aa5_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642528/never-blank/posts/research/cdf7f54872c43aa5/linkedin/1782642528.png",
+            "path": "reports/content_packages/images/cdf7f54872c43aa5_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642529/never-blank/posts/research/cdf7f54872c43aa5/facebook/1782642529.png",
+            "path": "reports/content_packages/images/cdf7f54872c43aa5_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642530/never-blank/posts/research/cdf7f54872c43aa5/instagram/1782642530.png",
+            "path": "reports/content_packages/images/cdf7f54872c43aa5_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642531/never-blank/posts/research/cdf7f54872c43aa5/threads/1782642531.png",
+            "path": "reports/content_packages/images/cdf7f54872c43aa5_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642532/never-blank/posts/research/cdf7f54872c43aa5/stories/1782642532.png",
+            "path": "reports/content_packages/images/cdf7f54872c43aa5_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Navigating the currents of retail relevance."
+      }
+    },
+    {
+      "SIGNAL_ID": "78a8da4a2666ec52",
+      "HEADLINE": "Luxury spending now driven by experiences and 'inheritourism'",
+      "prepared_at": "2026-06-28 10:29 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why Luxury\u2019s Future Lies in Experiences, Not Just Objects",
+          "angle": "Luxury spending shifts from heritage goods to experience-driven offers \u2192 Brands face the tension of honoring legacy while innovating \u2192 LVMH\u2019s move into hospitality shows how to capture growth \u2192 Reinventing the luxury offer is essential to stay relevant."
+        },
+        "linkedin": {
+          "headline": "You can\u2019t pass down a vacation, but you can inherit the taste for one.",
+          "angle": "Luxury buyers are moving from collecting objects to collecting moments, forcing brands to rethink growth strategies beyond traditional goods."
+        },
+        "facebook": {
+          "headline": "Luxury is no longer just about owning rare items.",
+          "angle": "Luxury spending is shifting toward experiences and inheritourism, as LVMH expands into hospitality\u2014how is your brand adapting to this shift?"
+        },
+        "instagram": {
+          "headline": "When Legacy Meets Experience Economy",
+          "angle": "Luxury brands that blend heritage with immersive experiences tap into evolving consumer desires and unlock new growth."
+        },
+        "threads": {
+          "thread_hook": "Luxury buyers are done collecting things. Now, they collect moments.",
+          "angle": "This thread breaks down how the shift to experience-driven luxury forces brands to reinvent themselves or risk obsolescence."
+        },
+        "stories": {
+          "story_question": "Is your luxury brand stuck selling objects while customers crave experiences?",
+          "angle": "Explores the tension luxury brands face balancing heritage products with the rising demand for experience-based offerings."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642542/never-blank/posts/research/78a8da4a2666ec52/blog/1782642542.png",
+            "path": "reports/content_packages/images/78a8da4a2666ec52_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642543/never-blank/posts/research/78a8da4a2666ec52/linkedin/1782642543.png",
+            "path": "reports/content_packages/images/78a8da4a2666ec52_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642543/never-blank/posts/research/78a8da4a2666ec52/facebook/1782642543.png",
+            "path": "reports/content_packages/images/78a8da4a2666ec52_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642544/never-blank/posts/research/78a8da4a2666ec52/instagram/1782642544.png",
+            "path": "reports/content_packages/images/78a8da4a2666ec52_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642545/never-blank/posts/research/78a8da4a2666ec52/threads/1782642545.png",
+            "path": "reports/content_packages/images/78a8da4a2666ec52_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642546/never-blank/posts/research/78a8da4a2666ec52/stories/1782642546.png",
+            "path": "reports/content_packages/images/78a8da4a2666ec52_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Experiences illuminate the future of luxury."
+      }
+    },
+    {
+      "SIGNAL_ID": "e50049142b7a234c",
+      "HEADLINE": "SpaceX to join the Nasdaq-100 in a fast-tracked process that will drive huge ETF buying demand",
+      "prepared_at": "2026-06-28 10:29 UTC",
+      "content": {
+        "blog": {
+          "headline": "SpaceX\u2019s Nasdaq-100 Inclusion: More Than Just a Capital Influx",
+          "angle": "SpaceX\u2019s fast-tracked Nasdaq-100 entry promises ETF-driven liquidity but also exposes the company to volatility and scrutiny, forcing founders to prioritize operational readiness over the allure of capital."
+        },
+        "linkedin": {
+          "headline": "The ETF money will flood in, but so will the questions you\u2019re not ready to answer.",
+          "angle": "Index inclusion boosts visibility and liquidity but also escalates volatility and scrutiny, demanding founders build robust investor relations and operational resilience."
+        },
+        "facebook": {
+          "headline": "SpaceX is about to join the Nasdaq-100\u2014and the ETF buying spree is just the start.",
+          "angle": "SpaceX\u2019s fast-track to the Nasdaq-100 mirrors Tesla\u2019s journey: big liquidity gains paired with intense operational pressure. Is your startup ready for the spotlight?"
+        },
+        "instagram": {
+          "headline": "Index Inclusion: Visibility Is a Liability",
+          "angle": "When your company hits a major index, the real test isn\u2019t the capital\u2014it\u2019s handling the operational chaos that follows."
+        },
+        "threads": {
+          "thread_hook": "SpaceX\u2019s Nasdaq-100 debut isn\u2019t just about money\u2014it\u2019s a stress test for the entire operation.",
+          "angle": "This thread breaks down how index inclusion drives ETF demand, spikes volatility, and forces companies into a new operational reality, with Tesla as the blueprint."
+        },
+        "stories": {
+          "story_question": "Can your startup handle the spotlight that comes with index inclusion?",
+          "angle": "Exploring the tension between the liquidity boost from index inclusion and the operational challenges it exposes."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642557/never-blank/posts/research/e50049142b7a234c/blog/1782642557.png",
+            "path": "reports/content_packages/images/e50049142b7a234c_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642558/never-blank/posts/research/e50049142b7a234c/linkedin/1782642558.png",
+            "path": "reports/content_packages/images/e50049142b7a234c_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642559/never-blank/posts/research/e50049142b7a234c/facebook/1782642559.png",
+            "path": "reports/content_packages/images/e50049142b7a234c_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642560/never-blank/posts/research/e50049142b7a234c/instagram/1782642560.png",
+            "path": "reports/content_packages/images/e50049142b7a234c_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642561/never-blank/posts/research/e50049142b7a234c/threads/1782642561.png",
+            "path": "reports/content_packages/images/e50049142b7a234c_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642561/never-blank/posts/research/e50049142b7a234c/stories/1782642561.png",
+            "path": "reports/content_packages/images/e50049142b7a234c_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Visibility compounds in systems."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "cdf7f54872c43aa5",
+      "headline": "How Kohl's lost its way \u2014 and is trying to become relevant again",
+      "published_at": "2026-06-28 10:30 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "30a80095-da02-41f5-9db8-8516862c554b",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7476944886928207872/",
+          "external_id": "urn:li:share:7476944886928207872",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122113331871356169",
+          "external_id": "1219637131228622_122113331871356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaIFIoTDMQ3/",
+          "external_id": "18107579021071612",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/17944526583213148",
+          "external_id": "17944526583213148",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/15",
+          "external_id": "15",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/cdf7f54872c43aa5_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642527/never-blank/posts/research/cdf7f54872c43aa5/blog/1782642527.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642528/never-blank/posts/research/cdf7f54872c43aa5/linkedin/1782642528.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642529/never-blank/posts/research/cdf7f54872c43aa5/facebook/1782642529.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642530/never-blank/posts/research/cdf7f54872c43aa5/instagram/1782642530.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642531/never-blank/posts/research/cdf7f54872c43aa5/threads/1782642531.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782642532/never-blank/posts/research/cdf7f54872c43aa5/stories/1782642532.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Navigating the currents of retail relevance.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "programmatic"
+    }
+  ]
+}
