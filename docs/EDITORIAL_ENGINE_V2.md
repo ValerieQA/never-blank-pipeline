@@ -369,6 +369,64 @@ But: "Never Blank — Getty didn't stop suing because it lost. It stopped becaus
 
 ---
 
+### Module 7 — Compression Engine
+
+**Question:** How short can this article get before it loses the moment of discovery?
+
+The Compression Engine does not edit. It does not improve. It removes everything that does not earn its place — and produces three versions of the same article from one pass.
+
+**The core principle:** Each new module increases depth of thought, not length of article. More architecture should produce denser writing, not longer writing.
+
+**What may never be compressed:**
+
+- The Narrative Spine sentence — it appears once, unchanged, in all three versions
+- The puzzle — the single fact that breaks the first explanation
+- The Aha setup — the last piece of evidence before the reader flips
+- The Never Blank signature line
+- Any `remaining_uncertainty` item where `would_change_conclusion_if_resolved: true`
+
+**What gets compressed first:**
+
+Before cutting, ask per sentence:
+1. Does this give the reader new information — or repeat what the previous sentence already established?
+2. Can two paragraphs become one without losing the discovery sequence?
+3. Is this context the reader needs *now*, or could it arrive later (or not at all)?
+4. Does this sentence exist to explain the previous one? If so, rewrite the previous one instead.
+
+**The three formats:**
+
+| Format | Words | Platform | What stays | What goes |
+|---|---|---|---|---|
+| Long | 900–1200 | Blog, newsletter | Full investigation reveal, remaining uncertainty, business translation in full | Nothing — this is the master version |
+| Medium | 450–650 | LinkedIn | Hook, puzzle, Aha, surviving explanation, Spine, signature line | Most context, some investigation reveal, compressed business translation |
+| Short | 180–300 | Facebook, Telegram, carousel | Hook, puzzle, one sentence that delivers the Aha, Spine | Everything else |
+
+**The compression is not a summary.** A summary extracts conclusions. Compression removes scaffolding while keeping the structure of discovery intact.
+
+Wrong compression of Getty Medium:
+> Getty Images sued Stability AI, then partnered with OpenAI. This was a strategic move to become the licensed source of AI image training data, not a capitulation.
+
+This is a summary. The discovery is gone.
+
+Right compression of Getty Medium:
+> I thought Getty had blinked. The lawsuit is still active — a company that ran out of options doesn't keep the case open. I went back to the timeline: ban first, then lawsuit, then partnership. That's not a reaction. That's a sequence. The CEO's exact words when the deal closed: "We want to be part of the solution, not just the opposition." Companies that run out of options don't frame themselves as having previously been the opposition. Getty didn't stop suing because it lost. It stopped because winning the wrong war is still losing.
+
+Same discovery. 96 words instead of 430.
+
+**Output format:**
+
+```json
+{
+  "signal_id": "string",
+  "narrative_spine": "string — unchanged across all formats",
+  "long": { "word_count": 0, "body": "string" },
+  "medium": { "word_count": 0, "body": "string" },
+  "short": { "word_count": 0, "body": "string" }
+}
+```
+
+---
+
 ## 4. The Full Flow
 
 ```
@@ -409,7 +467,11 @@ investigation_evidence_report
   │ Never Blank Voice │  → checks article earns the Spine by the last line
   └───────────────────┘
           ↓
-       Article
+  ┌───────────────────┐
+  │Compression Engine │  → Long → Medium → Short (Spine never changes)
+  └───────────────────┘
+          ↓
+  Long (900–1200) / Medium (450–650) / Short (180–300)
 ```
 
 ---
@@ -426,6 +488,7 @@ investigation_evidence_report
 | Evidence Reveal | full_article_sequence, safe_conclusions, inferences, hypothesis_history | article_body (draft) |
 | Business Translation | narrative_spine, business_lesson, article_body | article_body + lesson_paragraph |
 | Never Blank Voice | article_body (complete), narrative_spine, target_feeling | final_article, signature_line, checklist_pass (bool) |
+| Compression Engine | final_article, narrative_spine | long (900–1200w), medium (450–650w), short (180–300w) |
 
 ---
 
@@ -441,6 +504,7 @@ The Editorial Engine may not produce a final article if:
 6. `Business Translation` lesson applies to all companies without qualification
 7. `Never Blank Voice` checklist has any item marked false
 8. `remaining_uncertainty` item with `would_change_conclusion_if_resolved: true` was omitted from the article
+9. `Compression Engine` Medium or Short removed the puzzle or the Aha setup
 
 If any gate fails, the module returns to the relevant stage — not to the beginning.
 
