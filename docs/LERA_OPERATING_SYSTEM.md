@@ -147,92 +147,193 @@ It is the question that turns a news analysis into a Never Blank insight.
 
 ---
 
-## 6. Evidence Completeness
+## 6. The Evidence Problem
 
-The system may not proceed to Decision Lens unless the following conditions are met.
+Q1–Q6 are a question framework, not a research output.
 
-**Minimum threshold:** The investigation has produced defensible answers to at least 4 of the 6 questions Q1–Q6.
+A system that answers Q1–Q6 from internal model knowledge produces well-formatted guesses. That is not investigation. That is plausible confabulation with structure.
 
-**Required threshold:** Q3 (constraint) and Q6 (who pays) must always be answered. These two cannot be substituted or skipped. If either is unanswerable, the evidence is insufficient.
+**The critical distinction:**
 
-**Prohibited states:**
+```
+WRONG:  Q1–Q6 → answers
+RIGHT:  Q1–Q6 → hypotheses → evidence search → confirmed / contradicted / unclear → conclusion
+```
 
-| State | Action |
-|---|---|
-| Fewer than 4 questions answered | Block. Return to evidence collection. |
-| Q3 unanswered | Block. The insight cannot exist without it. |
-| Q6 unanswered | Block. The analysis is incomplete without consequence. |
-| Q4 answered with "no alternative existed" | Flag for human review. This is almost never true. |
-| Q1 answered only with official narrative | Flag. Require second hypothesis before proceeding. |
+Every answer to Q1–Q6 must be backed by an external source or explicitly labeled as inference. If a hypothesis is contradicted by evidence, the contradiction must be preserved — not rewritten into a cleaner answer.
+
+**Example of correct behavior:**
+
+> Hypothesis: Toyota avoided full EV transition because it lacked capital.  
+> Evidence found: Toyota was simultaneously investing billions into EV battery plants.  
+> Status: **contradicted**  
+> Correct conclusion: Lack of capital is not the explanation. Evidence points toward a deliberate multi-pathway strategy instead.
+
+The contradiction is more valuable than a clean narrative. It eliminates a wrong answer and forces the investigation toward the real one.
 
 ---
 
-## 7. What the System Is Prohibited From Doing
+## 7. Source Hierarchy
+
+Not all sources are equal. The tier determines what a source can do.
+
+| Tier | Source Types | What It Can Do |
+|---|---|---|
+| **Tier 1** | Company filings, earnings calls, official statements, investor presentations, regulatory filings | Confirm facts and stated company positions |
+| **Tier 2** | Reuters, AP, Bloomberg, WSJ, Financial Times, CNBC, TechCrunch, industry-specific reputable media | Confirm reported facts; contextualize events |
+| **Tier 3** | Analyst reports, expert commentary, trade publications | Support interpretation; cannot confirm primary facts alone |
+| **Tier 4** | Glassdoor, Blind, Reddit, X/Twitter, employee reviews, founder interviews, podcasts | Generate hypotheses only; cannot confirm facts |
+
+**Rule:** Tier 4 sources can raise a question. They cannot close one.
+
+**Rule:** A claim confirmed only by Tier 3 or Tier 4 must be labeled as inferred, not stated.
+
+---
+
+## 8. Motive Classification
+
+Every claim about why a company or person acted must be labeled with one of three epistemic statuses:
+
+| Status | Definition | Example |
+|---|---|---|
+| **stated** | The company or a named representative explicitly said this | "Toyota CEO stated they believe hybrid is the right transition path" (earnings call) |
+| **supported inference** | Multiple independent sources and the available evidence point in this direction | "Toyota's continued hybrid investment while competitors pivoted suggests deliberate multi-pathway strategy" |
+| **speculation** | Plausible but not supported by available evidence | "Toyota may have wanted to preserve supplier relationships" |
+
+**Rule:** Speculation cannot appear in the final article as fact.  
+**Rule:** Supported inferences must be labeled as such in the investigation record, even if stated as conclusions in editorial output.  
+**Rule:** Q4 (rejected alternatives) is almost always inferred. It must be labeled as such unless the company explicitly disclosed its alternatives.
+
+---
+
+## 9. INVESTIGATION_EVIDENCE_GATE
+
+This gate sits between the Curiosity Engine and Decision Lens. Decision Lens cannot activate until the gate passes.
+
+### Gate Rules
+
+1. At least 4 of Q1–Q6 must have `evidence_status = confirmed` or `supported`.
+2. Q3 ("constraint they saw") must have at least one Tier 1 or Tier 2 source.
+3. Q4 ("rejected alternative") must be labeled `inferred` unless directly evidenced.
+4. No motive claim with status `speculation` may pass to Decision Lens as a conclusion.
+5. Contradicted hypotheses must be logged, not discarded.
+6. If `evidence_status = contradicted` for Q3 or Q6, the investigation is BLOCKED until an alternative hypothesis is formed and tested.
+
+### Gate Outcomes
+
+| Outcome | Condition |
+|---|---|
+| **PROCEED** | ≥4 questions confirmed/supported; Q3 and Q6 have Tier 1–2 sources |
+| **PROCEED_WITH_CAVEATS** | ≥4 questions confirmed/supported; Q3 or Q6 is inference-only (Tier 3–4) |
+| **INSUFFICIENT** | 3 or fewer questions confirmed; investigation must continue |
+| **BLOCKED** | Q3 or Q6 contradicted; or active speculation in core conclusions |
+
+---
+
+## 10. Output: Investigation Evidence Report
+
+The Curiosity Engine delivers this object to Decision Lens. Decision Lens may not request modifications — it works with what it receives, including gaps and contradictions.
+
+```json
+{
+  "signal_id": "...",
+  "headline": "...",
+  "investigation_status": "proceed | proceed_with_caveats | insufficient | blocked",
+
+  "questions": [
+    {
+      "question_id": "Q1",
+      "question": "Why now?",
+      "initial_hypothesis": "...",
+      "second_hypothesis": "...",
+      "evidence_found": "...",
+      "source_url": "...",
+      "source_type": "tier_1 | tier_2 | tier_3 | tier_4",
+      "evidence_status": "confirmed | contradicted | unclear | inferred",
+      "motive_status": "stated | supported_inference | speculation | not_applicable",
+      "confidence": "high | medium | low",
+      "notes": "..."
+    }
+  ],
+
+  "timeline": [...],
+
+  "contradicted_hypotheses": [
+    {
+      "hypothesis": "...",
+      "contradicting_evidence": "...",
+      "source_url": "...",
+      "implication": "..."
+    }
+  ],
+
+  "unsupported_claims": ["..."],
+  "safe_conclusions": ["..."],
+  "blocked_conclusions": ["..."],
+
+  "unknowns": ["..."],
+  "proceed": "PROCEED | PROCEED_WITH_CAVEATS | INSUFFICIENT | BLOCKED"
+}
+```
+
+**Decision Lens receives this and may not:**
+- Request additional research
+- Discard contradicted hypotheses
+- Treat `speculation` as `supported_inference`
+- Generate conclusions from `blocked_conclusions`
+
+The unknowns, contradictions, and gaps are part of the output. They shape the editorial layer — honest caveats are a feature, not a failure.
+
+---
+
+## 11. What the System Is Prohibited From Doing
 
 These are not style guidelines. They are hard constraints on the investigation layer.
 
 **The system may not:**
 
-1. **Explain an event without reconstructing the decision chain.**  
-   Describing what happened is not analysis. It is summarization.
+1. **Answer Q1–Q6 from model intuition without evidence.**  
+   A plausible answer without a source is a hypothesis. It must be labeled as such and tested before it can pass the Evidence Gate.
 
-2. **Accept the first explanation of "Why now?"**  
-   The first explanation is the press release. The investigation is not complete until a second hypothesis has been generated and tested.
+2. **Rewrite a contradicted hypothesis into a clean answer.**  
+   If evidence contradicts the hypothesis, the contradiction is the finding. It goes into `contradicted_hypotheses`, not the trash.
 
-3. **Invent motives for individuals.**  
-   The investigation operates at the level of organizational logic, not personal intent. "The CEO wanted to" is not evidence. "The organization was constrained by X and chose Y over Z" is.
+3. **Explain an event without reconstructing the decision chain.**  
+   Describing what happened is summarization. The system reconstructs decisions, not events.
 
-4. **Treat the absence of evidence as evidence of absence.**  
-   If a question cannot be answered, the system must name what is unknown — not fill the gap with inference.
+4. **Accept the first explanation of "Why now?"**  
+   Q1 requires a second hypothesis. The first answer is almost always the official narrative.
 
-5. **Confuse the event with the decision.**  
-   The layoff is not the decision. The layoff is the outcome. The decision was made months earlier, under different circumstances, by people who could not see this moment coming.
+5. **Invent motives for individuals.**  
+   The investigation works at organizational logic level. "The CEO wanted to" requires Tier 1 evidence or must be labeled speculation.
 
-6. **Stop at the first coherent narrative.**  
-   A narrative that explains everything is usually wrong. The investigation is complete only when it has found the constraint that explains why no other choice was available — not just why this choice was made.
+6. **Treat absence of evidence as evidence of absence.**  
+   If a question cannot be answered, the system names what is unknown. It does not fill the gap.
 
----
+7. **Confuse the event with the decision.**  
+   The event is the outcome. The decisions that produced it were made earlier, under different information.
 
-## 8. The Contract With Decision Lens
-
-The Investigation Layer (Curiosity Engine + Evidence Collector) delivers exactly one thing to Decision Lens:
-
-**A structured investigation record containing:**
-
-```
-signal_id:          [identifier]
-headline:           [as received]
-core_fact:          [as received]
-
-timeline:           [reconstructed sequence of prior decisions]
-decisions:          [identified choices with dates if known]
-constraints:        [what limited the option space]
-rejected:           [alternatives not taken, with rationale]
-protected:          [the priority they preserved]
-cost_bearer:        [who pays, and when]
-next_signal:        [observable prediction for 6–18 months]
-
-q1_why_now:         [answer + second hypothesis]
-q2_what_changed:    [answer]
-q3_constraint:      [answer — REQUIRED]
-q4_rejected:        [answer]
-q5_protected:       [answer]
-q6_who_pays:        [answer — REQUIRED]
-q7_what_next:       [answer]
-
-unknowns:           [what could not be determined]
-confidence:         [0.0–1.0 per question]
-evidence_complete:  [true/false]
-proceed:            [PROCEED | PROCEED_WITH_CAVEATS | INSUFFICIENT | BLOCKED]
-```
-
-Decision Lens receives this record and **may not request additional research.** It works with what the investigation produced — including the unknowns. The unknowns are part of the output, not an error condition.
-
-If `evidence_complete` is false or `proceed` is BLOCKED, Decision Lens returns the signal to the investigation layer with a specific gap description. It does not generate an interpretation.
+8. **Stop at the first coherent narrative.**  
+   A narrative that explains everything is usually wrong. Investigation is complete only when it has identified the constraint that made other choices unavailable.
 
 ---
 
-## 9. What This Layer Does Not Do
+## 12. The Contract With Decision Lens
+
+The Investigation Layer delivers exactly one thing: `investigation_evidence_report` (see Section 10).
+
+Decision Lens receives this record and operates under the following constraints:
+
+- **May use:** `safe_conclusions`, confirmed/supported Q-answers, timeline, unknowns
+- **May not use as fact:** `blocked_conclusions`, speculation-labeled claims, contradicted hypotheses
+- **Must acknowledge in output:** any `proceed_with_caveats` condition, any material unknown
+- **Must log:** all `contradicted_hypotheses` for future signal pattern analysis
+
+If `proceed = BLOCKED`, Decision Lens returns the signal to Curiosity Engine with a specific gap description. It does not generate interpretation from a blocked investigation.
+
+---
+
+## 13. What This Layer Does Not Do
 
 The Investigation Layer:
 
@@ -249,7 +350,7 @@ The Investigation Layer has one job: reconstruct what happened and why, with evi
 
 ---
 
-## 10. Why This Matters
+## 14. Why This Matters
 
 Most business content starts from the event and asks: *What does this mean?*
 
@@ -261,6 +362,11 @@ And it is the reason Never Blank content doesn't sound like news analysis.
 
 It sounds like someone who read the organization, not the headline.
 
+The Evidence Gate is what enforces this. Without it, the system produces plausible-sounding analysis built on unverified assumptions. With it, the system either finds real evidence or names what it doesn't know.
+
+Both are acceptable outputs.  
+Confident analysis built on guesses is not.
+
 ---
 
 ## Appendix: Failure Modes to Monitor
@@ -269,12 +375,14 @@ As this layer is implemented, watch for these failure patterns:
 
 | Failure Mode | Symptom | Fix |
 |---|---|---|
-| Timeline collapse | Investigation skips directly to Q1 without reconstructing prior decisions | Enforce Reconstruct Timeline as a separate, logged step |
-| First-hypothesis lock | Q1 is answered once and never questioned | Require explicit second hypothesis before Q1 is marked complete |
-| Constraint invention | Q3 answer contains "they believed" without evidence | Q3 requires external evidence, not inference |
-| Missing rejection | Q4 answered as "there were no alternatives" | Flag and require human review — this answer is almost always wrong |
-| Cost displacement | Q6 answered as "costs are shared" | Force specificity: who, how much, when |
-| Premature proceed | `evidence_complete: true` despite Q3 or Q6 being empty | Hard block in pipeline logic |
+| Timeline collapse | Investigation skips Reconstruct Timeline and goes directly to Q1 | Enforce Timeline Reconstruction as a separate, logged step |
+| First-hypothesis lock | Q1 answered once, second hypothesis never generated | Require `second_hypothesis` field before Q1 marked complete |
+| Constraint invention | Q3 answer asserts company belief without Tier 1–2 source | Q3 requires external evidence; inference must be labeled |
+| Missing rejection | Q4 answered as "no alternatives existed" | Flag; this answer is almost never supported by evidence |
+| Cost displacement | Q6 answered as "costs are shared broadly" | Force specificity: who, how much, when, which source |
+| Premature proceed | Gate passes despite Q3 or Q6 empty | Hard block in pipeline; gate rules are not advisory |
+| Speculation laundering | Speculation labeled as inference in successive passes | Motive status is immutable once assigned; cannot be upgraded without new Tier 1–2 evidence |
+| Contradiction erasure | Contradicted hypothesis rewritten into coherent narrative | `contradicted_hypotheses` is append-only; items cannot be removed, only annotated |
 
 ---
 
