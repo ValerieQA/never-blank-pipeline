@@ -138,37 +138,122 @@ That last clause is not decorative. It is the reason the OpenAI deal matters. Re
 
 ---
 
-### Module 3 — Story Builder
+### Module 3 — Discovery Builder
 
-**Question:** In what order should the reader encounter the information?
+**Question:** How does the reader experience the moment of discovery — not the conclusion?
 
-The Story Builder decides the sequence of revelation. Its job is not to present conclusions — it is to create the experience of reaching them.
+The Discovery Builder constructs the investigation experience for the reader. Its job is not to deliver the surviving explanation — it is to make the reader arrive at it themselves, one step ahead of the article confirming it.
 
-**The core principle:** The reader should arrive at the insight one step behind the investigation. Not five steps behind (confusing) and not simultaneously (no tension).
+The difference from Story Builder is the voice:
 
-**Standard revelation sequence:**
+- Story Builder: *Here is the correct interpretation.*
+- Discovery Builder: *Here is why I stopped believing the first interpretation.*
+
+The reader is not a student receiving analysis. They are a co-investigator watching the obvious explanation break.
+
+**The four beats:**
+
+**Beat 1 — The First Wrong Explanation**
+
+Name the interpretation everyone held, including the narrator, before the investigation.
+
+Not a straw man. Not "critics said." The actual obvious conclusion.
+
+> *I thought Getty had blinked.*
+
+This is the starting position. The reader holds it too.
+
+**Beat 2 — The Puzzle**
+
+One specific fact that does not fit the first explanation. Not a "crack" — a contradiction.
+
+A crack invites qualification. A contradiction forces a new explanation.
+
+> *Except the lawsuit wasn't dropped. It's still active. A company that ran out of options doesn't keep the case open.*
+
+The reader stops. The first explanation no longer holds. They don't yet have a replacement.
+
+**Beat 3 — Investigation Reveal**
+
+Walk through the evidence in the order it narrowed the space. Not conclusion-first. Sequence-first.
+
+Each piece of evidence eliminates one possible explanation. The reader watches the field narrow.
+
+> *So I went back to the timeline.*  
+> *Getty banned AI-generated images from its own platform — September 2022.*  
+> *The lawsuit came after.*  
+> *The deal came after the lawsuit.*  
+> *That's not the sequence of a company reacting. It's the sequence of a company setting terms.*
+
+The surviving explanation is not stated here. The reader can see it forming.
+
+**Beat 4 — The Aha**
+
+The moment the reader's model flips. The article does not announce it. The article presents the last piece of evidence, and the reader arrives one sentence ahead of the text.
+
+> *Here's what the CEO said when the deal closed:*  
+> *"We want to be part of the solution, not just the opposition."*  
+> *Companies that run out of options don't frame themselves as having previously been the opposition.*
+
+The article does not then say "therefore Getty planned this." The reader already knows.
+
+**Rules:**
+
+The first explanation must be one the reader genuinely held — not a weak position set up to be knocked down.
+
+The puzzle must be a single fact, not a list of concerns. One contradiction is stronger than five doubts.
+
+The investigation reveal must show sequence, not summary. "The timeline shows X" is summary. "First this happened. Then this. Then this." is sequence.
+
+The Aha must arrive before the article states the conclusion. If the article has to explain the Aha, the Aha didn't land.
+
+**What Discovery Builder receives:**
+
+- `hook` — from Hook Engine
+- `hypothesis_history` — which explanations were contradicted and why
+- `narrative_spine` — the conclusion the reader is being built toward
+- `contradicted_hypotheses` — the first wrong explanation and the specific fact that broke it
+- `safe_conclusions` — the evidence sequence
+
+**What Discovery Builder returns:**
+
+- `first_wrong_explanation` — the obvious interpretation, stated directly
+- `puzzle` — the single fact that breaks it
+- `investigation_sequence` — ordered evidence beats (3–5 items)
+- `aha_setup` — the last piece of evidence before the reader flips, without stating the conclusion
+
+---
+
+### Module 4 — Story Builder
+
+**Question:** In what order should the full article be assembled?
+
+The Story Builder receives Discovery Builder output and assembles the complete article sequence. Its job is to place the discovery experience within the full arc — what comes before it, and what comes after.
+
+**Full article sequence:**
 
 ```
-1. Hook — the unexpected entry point
-2. Context — what the reader needs to follow
-3. The visible event — what everyone saw
-4. The first obvious interpretation — what most people concluded
-5. The crack in that interpretation — the evidence that doesn't fit
-6. The real question — what the investigation actually asked
-7. The surviving explanation — what the evidence supports
-8. The remaining uncertainty — what is still open (if material)
-9. The business lesson — what this means beyond this company
-10. Never Blank line — the observation that doesn't expire
+1. Hook
+2. Context (0–2 sentences, or skip)
+3. Discovery Builder output
+   a. First wrong explanation
+   b. Puzzle
+   c. Investigation reveal
+   d. Aha setup
+4. Surviving explanation (stated — reader already has it)
+5. Remaining uncertainty (if would_change_conclusion_if_resolved = true)
+6. Business meaning — what this decision reveals beyond this company
+7. Never Blank line
 ```
 
 **Story Builder decisions:**
 
-- How many steps to include (not all articles need all 10)
-- Where to place the `remaining_uncertainty` (before or after the surviving explanation)
-- Whether the `contradicted_hypotheses` should appear explicitly or only inform the framing
-- Where tension is introduced and when it is released
+- Whether to include Reader Context (Module 2) before or after the hook
+- How much of `hypothesis_history` to surface explicitly vs. let inform framing
+- Where to place `remaining_uncertainty` — before or after surviving explanation
+- Length: which beats to compress and which to expand
 
-**Rule:** The surviving explanation must not appear before step 5. If the reader gets the answer in paragraph two, there is no story — only a press release with a byline.
+**Rule:** The surviving explanation (step 4) arrives after the Aha setup. The reader has the answer. The article confirms it.
 
 **Rule:** `blocked_conclusions` cannot appear as narrative beats. They can only shape what is *not* claimed.
 
@@ -303,8 +388,13 @@ investigation_evidence_report
   │  Reader Context   │  → 0–2 sentences (or skip)
   └───────────────────┘
           ↓
+  ┌───────────────────────────┐
+  │    Discovery Builder      │  → first wrong explanation → puzzle →
+  │                           │    investigation reveal → aha setup
+  └───────────────────────────┘
+          ↓
   ┌───────────────────┐
-  │  Story Builder    │  → sequence of revelation toward the Spine
+  │  Story Builder    │  → assembles full article sequence around discovery
   └───────────────────┘
           ↓
   ┌───────────────────┐
@@ -331,8 +421,9 @@ investigation_evidence_report
 | Narrative Spine | Decision Lens output | core_decision, narrative_spine, target_feeling, company_as_evidence_of |
 | Hook Engine | safe_conclusions, narrative_spine, never_blank_insight | hook_candidates[], selected_hook |
 | Reader Context | headline, company name, signal type | context_line (string or null) |
-| Story Builder | hook, context, safe_conclusions, hypothesis_history, remaining_uncertainty, narrative_spine | revelation_sequence[] |
-| Evidence Reveal | revelation_sequence, safe_conclusions, inferences, hypothesis_history | article_body (draft) |
+| Discovery Builder | hook, hypothesis_history, contradicted_hypotheses, safe_conclusions, narrative_spine | first_wrong_explanation, puzzle, investigation_sequence[], aha_setup |
+| Story Builder | discovery_builder output, remaining_uncertainty, business_lesson, narrative_spine | full_article_sequence[] |
+| Evidence Reveal | full_article_sequence, safe_conclusions, inferences, hypothesis_history | article_body (draft) |
 | Business Translation | narrative_spine, business_lesson, article_body | article_body + lesson_paragraph |
 | Never Blank Voice | article_body (complete), narrative_spine, target_feeling | final_article, signature_line, checklist_pass (bool) |
 
@@ -343,10 +434,13 @@ investigation_evidence_report
 The Editorial Engine may not produce a final article if:
 
 1. `Hook Engine` selected a hook that could have been written from the headline alone
-2. `Evidence Reveal` contains a claim not traceable to `safe_conclusions`
-3. `Business Translation` lesson applies to all companies without qualification
-4. `Never Blank Voice` checklist has any item marked false
-5. `remaining_uncertainty` item with `would_change_conclusion_if_resolved: true` was omitted from the article
+2. `Discovery Builder` first_wrong_explanation is a straw man — an interpretation nobody actually held
+3. `Discovery Builder` puzzle is a list of doubts rather than a single contradiction
+4. `Discovery Builder` Aha is stated by the article rather than arrived at by the reader
+5. `Evidence Reveal` contains a claim not traceable to `safe_conclusions`
+6. `Business Translation` lesson applies to all companies without qualification
+7. `Never Blank Voice` checklist has any item marked false
+8. `remaining_uncertainty` item with `would_change_conclusion_if_resolved: true` was omitted from the article
 
 If any gate fails, the module returns to the relevant stage — not to the beginning.
 
