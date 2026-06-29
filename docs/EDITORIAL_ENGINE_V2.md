@@ -371,59 +371,85 @@ But: "Never Blank — Getty didn't stop suing because it lost. It stopped becaus
 
 ### Module 7 — Compression Engine
 
-**Question:** How short can this article get before it loses the moment of discovery?
+**Question:** How short can each block get before it loses its cognitive function?
 
-The Compression Engine does not edit. It does not improve. It removes everything that does not earn its place — and produces three versions of the same article from one pass.
+The Compression Engine is not a text editor. It does not receive an article and cut sentences. It receives a structured JSON of named blocks and compresses each block independently to a per-format word limit.
 
-**The core principle:** Each new module increases depth of thought, not length of article. More architecture should produce denser writing, not longer writing.
+This makes it structurally impossible to remove Discovery, or collapse Aha into Business Translation, or lose the puzzle. Each block is a named object. The pipeline can verify its presence.
 
-**What may never be compressed:**
+**The core principle:** Preserve every cognitive step. Compress only exposition.
 
-- The Narrative Spine sentence — it appears once, unchanged, in all three versions
-- The puzzle — the single fact that breaks the first explanation
-- The Aha setup — the last piece of evidence before the reader flips
-- The Never Blank signature line
-- Any `remaining_uncertainty` item where `would_change_conclusion_if_resolved: true`
+Cognitive steps are: the first wrong explanation, the puzzle, the evidence sequence, the Aha, the business meaning, the Spine. These are the moves that make the reader think. They can be shorter — they cannot be absent.
 
-**What gets compressed first:**
+Exposition is: context that restates what the reader already knows, explanation of evidence the reader already drew the right conclusion from, qualifications that don't change what the reader does with the information.
 
-Before cutting, ask per sentence:
-1. Does this give the reader new information — or repeat what the previous sentence already established?
-2. Can two paragraphs become one without losing the discovery sequence?
-3. Is this context the reader needs *now*, or could it arrive later (or not at all)?
-4. Does this sentence exist to explain the previous one? If so, rewrite the previous one instead.
+**What the Compression Engine receives:**
 
-**The three formats:**
+Never Blank Voice outputs a structured article object — not a flat body string:
 
-| Format | Words | Platform | What stays | What goes |
-|---|---|---|---|---|
-| Long | 900–1200 | Blog, newsletter | Full investigation reveal, remaining uncertainty, business translation in full | Nothing — this is the master version |
-| Medium | 450–650 | LinkedIn | Hook, puzzle, Aha, surviving explanation, Spine, signature line | Most context, some investigation reveal, compressed business translation |
-| Short | 180–300 | Facebook, Telegram, carousel | Hook, puzzle, one sentence that delivers the Aha, Spine | Everything else |
+```json
+{
+  "signal_id": "string",
+  "narrative_spine": "string",
+  "hook": "string",
+  "reader_context": "string | null",
+  "discovery": {
+    "first_wrong_explanation": "string",
+    "puzzle": "string",
+    "investigation_sequence": ["string"],
+    "aha_setup": "string"
+  },
+  "surviving_explanation": "string",
+  "remaining_uncertainty": "string | null",
+  "business_translation": "string",
+  "signature": "string"
+}
+```
 
-**The compression is not a summary.** A summary extracts conclusions. Compression removes scaffolding while keeping the structure of discovery intact.
+**Per-block word limits by format:**
 
-Wrong compression of Getty Medium:
-> Getty Images sued Stability AI, then partnered with OpenAI. This was a strategic move to become the licensed source of AI image training data, not a capitulation.
+| Block | Long | Medium | Short |
+|---|---|---|---|
+| `hook` | 50 | 35 | 20 |
+| `reader_context` | 30 | skip | skip |
+| `discovery.first_wrong_explanation` | 20 | 15 | 10 |
+| `discovery.puzzle` | 30 | 20 | 15 |
+| `discovery.investigation_sequence` | 120 | 50 | skip |
+| `discovery.aha_setup` | 60 | 40 | 30 |
+| `surviving_explanation` | 80 | 40 | skip |
+| `remaining_uncertainty` | 60 | skip | skip |
+| `business_translation` | 120 | 60 | skip |
+| `signature` | 25 | 25 | 25 |
 
-This is a summary. The discovery is gone.
+Blocks marked `skip` are omitted from that format entirely. Blocks with word limits are compressed to fit — never summarized, never merged with adjacent blocks.
 
-Right compression of Getty Medium:
-> I thought Getty had blinked. The lawsuit is still active — a company that ran out of options doesn't keep the case open. I went back to the timeline: ban first, then lawsuit, then partnership. That's not a reaction. That's a sequence. The CEO's exact words when the deal closed: "We want to be part of the solution, not just the opposition." Companies that run out of options don't frame themselves as having previously been the opposition. Getty didn't stop suing because it lost. It stopped because winning the wrong war is still losing.
+**The rule for compressing a block:**
 
-Same discovery. 96 words instead of 430.
+Remove sentences that explain what the previous sentence already showed. Do not remove sentences that move the reader to the next cognitive position.
+
+Wrong compression of `discovery.investigation_sequence`:
+> Getty's timeline shows a deliberate strategy: ban, then lawsuit, then partnership.
+
+That is a summary. The sequence is gone — the reader receives the conclusion without walking the steps.
+
+Right compression:
+> Ban first. Then lawsuit. Then partnership. That sequence only makes sense one way.
+
+Same cognitive move. Half the words.
 
 **Output format:**
 
 ```json
 {
   "signal_id": "string",
-  "narrative_spine": "string — unchanged across all formats",
-  "long": { "word_count": 0, "body": "string" },
+  "narrative_spine": "string — identical across all formats",
+  "long":   { "word_count": 0, "body": "string" },
   "medium": { "word_count": 0, "body": "string" },
-  "short": { "word_count": 0, "body": "string" }
+  "short":  { "word_count": 0, "body": "string" }
 }
 ```
+
+The `body` fields are assembled from compressed blocks in sequence. The Compression Engine does not rewrite the article — it selects and compresses blocks, then concatenates.
 
 ---
 
@@ -487,8 +513,8 @@ investigation_evidence_report
 | Story Builder | discovery_builder output, remaining_uncertainty, business_lesson, narrative_spine | full_article_sequence[] |
 | Evidence Reveal | full_article_sequence, safe_conclusions, inferences, hypothesis_history | article_body (draft) |
 | Business Translation | narrative_spine, business_lesson, article_body | article_body + lesson_paragraph |
-| Never Blank Voice | article_body (complete), narrative_spine, target_feeling | final_article, signature_line, checklist_pass (bool) |
-| Compression Engine | final_article, narrative_spine | long (900–1200w), medium (450–650w), short (180–300w) |
+| Never Blank Voice | article_body (complete), narrative_spine, target_feeling | structured_article (hook, discovery, aha, business_translation, signature, …), checklist_pass (bool) |
+| Compression Engine | structured_article JSON | long (900–1200w), medium (450–650w), short (180–300w) |
 
 ---
 
