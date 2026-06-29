@@ -371,17 +371,22 @@ But: "Never Blank — Getty didn't stop suing because it lost. It stopped becaus
 
 ### Module 7 — Compression Engine
 
-**Question:** How short can each block get before it loses its cognitive function?
+**Question:** How does each platform's reading behavior change what the article needs to do?
 
-The Compression Engine is not a text editor. It does not receive an article and cut sentences. It receives a structured JSON of named blocks and compresses each block independently to a per-format word limit.
+The Compression Engine is not a text editor. It does not receive an article and cut sentences. It receives a structured JSON of named blocks from Never Blank Voice and produces five platform-specific versions — each optimized for how that audience actually reads, not just for length.
 
-This makes it structurally impossible to remove Discovery, or collapse Aha into Business Translation, or lose the puzzle. Each block is a named object. The pipeline can verify its presence.
+Word count is a consequence of reading behavior. It is not the target.
 
-**The core principle:** Preserve every cognitive step. Compress only exposition.
+**The core principle:** Preserve every cognitive step. Compress only exposition. Optimize for reading behavior.
 
-Cognitive steps are: the first wrong explanation, the puzzle, the evidence sequence, the Aha, the business meaning, the Spine. These are the moves that make the reader think. They can be shorter — they cannot be absent.
+The invariant across all five formats:
+- Narrative Spine — identical in every version
+- Hook — present in every version
+- Discovery moment — present in every version
+- Aha moment — present in every version
+- Never Blank signature — present in every version
 
-Exposition is: context that restates what the reader already knows, explanation of evidence the reader already drew the right conclusion from, qualifications that don't change what the reader does with the information.
+Only investigation depth changes between formats. The business insight must remain identical.
 
 **What the Compression Engine receives:**
 
@@ -408,39 +413,51 @@ Never Blank Voice outputs a structured article object — not a flat body string
 
 **Format → platform mapping:**
 
-| Format | Word count | Platforms |
-|---|---|---|
-| Long | 900–1200 | Blog, newsletter, Telegram |
-| Medium | 450–650 | LinkedIn |
-| Short | 180–300 | Facebook, carousel |
-
-Telegram reads long-form. Long is the correct format there — do not compress for Telegram.
-
-**Per-block word limits by format:**
-
-| Block | Long | Medium | Short |
+| Format | Platforms | Words | Reading behavior |
 |---|---|---|---|
-| `hook` | 50 | 35 | 20 |
-| `reader_context` | 30 | skip | skip |
-| `discovery.first_wrong_explanation` | 20 | 15 | 10 |
-| `discovery.puzzle` | 30 | 20 | 15 |
-| `discovery.investigation_sequence` | 120 | 50 | skip |
-| `discovery.aha_setup` | 60 | 40 | 30 |
-| `surviving_explanation` | 80 | 40 | skip |
-| `remaining_uncertainty` | 60 | skip | skip |
-| `business_translation` | 120 | 60 | skip |
-| `signature` | 25 | 25 | 25 |
+| Long | Blog | 700–1000 | Reads at a desk. Wants full evidence, timeline, uncertainty. |
+| Reading | Telegram | 350–600 | Reads the whole thing. Wants narrative and discovery, not evidence density. |
+| Medium | LinkedIn, Facebook | 120–220 | Reads in a feed. Needs a complete standalone arc: Hook → Discovery → Aha → Lesson → Signature. |
+| Instagram | Instagram | 80–150 | Reads on a phone, one screen at a time. Shorter paragraphs, stronger rhythm, one dominant insight. Not a shortened LinkedIn post. |
+| Short | Threads | 40–80 | Reads one idea. Hook or Spine only. Does not summarize the investigation. |
 
-Blocks marked `skip` are omitted from that format entirely. Blocks with word limits are compressed to fit — never summarized, never merged with adjacent blocks.
+**Per-block behavior by format:**
+
+| Block | Long | Reading | Medium | Instagram | Short |
+|---|---|---|---|---|---|
+| `hook` | full | full | compressed | compressed | compressed |
+| `reader_context` | full | skip | skip | skip | skip |
+| `discovery.first_wrong_explanation` | full | full | compressed | compressed | skip |
+| `discovery.puzzle` | full | full | compressed | compressed | skip |
+| `discovery.investigation_sequence` | full | compressed | skip | skip | skip |
+| `discovery.aha_setup` | full | full | compressed | compressed | skip |
+| `surviving_explanation` | full | compressed | skip | skip | skip |
+| `remaining_uncertainty` | full | skip | skip | skip | skip |
+| `business_translation` | full | compressed | compressed | skip | skip |
+| `signature` | full | full | full | full | full |
+
+`skip` — block is omitted entirely.
+`compressed` — block is present, reduced to its cognitive minimum. Never summarized, never merged.
+`full` — block appears as written by Never Blank Voice.
+
+**Format-specific constraints:**
+
+*Reading (Telegram):* Preserve the narrative arc. Remove evidence citations and analytical qualifications that slow reading pace. A reader should feel the investigation without cataloguing the evidence. Target: readable in 2–4 minutes without stopping.
+
+*Medium (LinkedIn, Facebook):* Must be a complete standalone text. A reader who has never heard of the company must reach the Aha and the Spine without needing the Long version. No dangling references to evidence not present in this version.
+
+*Instagram:* Rewrite for mobile rhythm. Paragraphs are 1–2 sentences. One blank line between each. Less analytical density, more emotional pacing. The insight is the same — the delivery is lighter. This is not a shortened LinkedIn post.
+
+*Short (Threads):* One idea. Either the Hook that opens the gap, or the Spine that closes it. Does not attempt to compress the investigation into 60 words — that produces summaries, not insights.
 
 **The rule for compressing a block:**
 
 Remove sentences that explain what the previous sentence already showed. Do not remove sentences that move the reader to the next cognitive position.
 
-Wrong compression of `discovery.investigation_sequence`:
+Wrong compression of `discovery.investigation_sequence` for Reading:
 > Getty's timeline shows a deliberate strategy: ban, then lawsuit, then partnership.
 
-That is a summary. The sequence is gone — the reader receives the conclusion without walking the steps.
+That is a summary. The sequence is gone.
 
 Right compression:
 > Ban first. Then lawsuit. Then partnership. That sequence only makes sense one way.
@@ -453,13 +470,15 @@ Same cognitive move. Half the words.
 {
   "signal_id": "string",
   "narrative_spine": "string — identical across all formats",
-  "long":   { "word_count": 0, "body": "string" },
-  "medium": { "word_count": 0, "body": "string" },
-  "short":  { "word_count": 0, "body": "string" }
+  "long":      { "word_count": 0, "body": "string" },
+  "reading":   { "word_count": 0, "body": "string" },
+  "medium":    { "word_count": 0, "body": "string" },
+  "instagram": { "word_count": 0, "body": "string" },
+  "short":     { "word_count": 0, "body": "string" }
 }
 ```
 
-The `body` fields are assembled from compressed blocks in sequence. The Compression Engine does not rewrite the article — it selects and compresses blocks, then concatenates.
+The Compression Engine does not rewrite the article. It selects blocks, applies format-specific constraints, and assembles. The investigation and the insight are the same in every version.
 
 ---
 
@@ -504,10 +523,10 @@ investigation_evidence_report
   └───────────────────┘
           ↓
   ┌───────────────────┐
-  │Compression Engine │  → Long → Medium → Short (Spine never changes)
+  │Compression Engine │  → 5 formats, optimized by reading behavior
   └───────────────────┘
           ↓
-  Long (900–1200) / Medium (450–650) / Short (180–300)
+  Long (blog) / Reading (Telegram) / Medium (LinkedIn+FB) / Instagram / Short (Threads)
 ```
 
 ---
@@ -524,7 +543,7 @@ investigation_evidence_report
 | Evidence Reveal | full_article_sequence, safe_conclusions, inferences, hypothesis_history | article_body (draft) |
 | Business Translation | narrative_spine, business_lesson, article_body | article_body + lesson_paragraph |
 | Never Blank Voice | article_body (complete), narrative_spine, target_feeling | structured_article (hook, discovery, aha, business_translation, signature, …), checklist_pass (bool) |
-| Compression Engine | structured_article JSON | long (900–1200w), medium (450–650w), short (180–300w) |
+| Compression Engine | structured_article JSON | long / reading / medium / instagram / short |
 
 ---
 
