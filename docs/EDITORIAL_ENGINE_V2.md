@@ -406,6 +406,16 @@ Never Blank Voice outputs a structured article object — not a flat body string
 }
 ```
 
+**Format → platform mapping:**
+
+| Format | Word count | Platforms |
+|---|---|---|
+| Long | 900–1200 | Blog, newsletter, Telegram |
+| Medium | 450–650 | LinkedIn |
+| Short | 180–300 | Facebook, carousel |
+
+Telegram reads long-form. Long is the correct format there — do not compress for Telegram.
+
 **Per-block word limits by format:**
 
 | Block | Long | Medium | Short |
