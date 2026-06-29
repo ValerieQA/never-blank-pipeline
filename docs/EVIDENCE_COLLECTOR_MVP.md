@@ -1,7 +1,7 @@
 # Evidence Collector MVP
 ## Anti-Hallucination Filter for the Investigation Layer
 
-**Version:** v0.1 — Specification Only  
+**Version:** v0.2 — Specification Only  
 **Branch:** feature/business-investigation-layer  
 **Status:** Spec. No code yet.  
 **Depends on:** LERA_OPERATING_SYSTEM.md (Evidence Gate, Section 9)
@@ -14,18 +14,31 @@ The Evidence Collector is not a research engine.
 It is an anti-hallucination filter.
 
 Its job is not to find everything.  
-Its job is to prevent the system from writing an article based on an unverified hypothesis.
+Its job is to try to destroy each hypothesis before allowing it to reach Decision Lens.
+
+**Core philosophy:**
+
+```
+WRONG: Hypothesis → Find evidence that supports it
+RIGHT: Hypothesis → Try to disprove it → If impossible, try to confirm it → If still impossible, leave Unknown
+```
+
+A hypothesis that survives a serious attempt to disprove it is fundamentally more reliable than a hypothesis that was simply confirmed. The system searches for disconfirmation first. Confirmation is the fallback.
 
 **What it must do:**
-- Generate search queries from Q1–Q6 hypotheses
-- Find Tier 1–2 sources that confirm, contradict, or fail to support each hypothesis
-- Return structured evidence status per question
+- For each question: generate a hypothesis space (5–10 candidates), not a single hypothesis
+- Rank candidates by plausibility, take the top 2–3
+- Attempt to disprove each — strongest first
+- If disproof fails, attempt confirmation
+- If both fail, mark Unknown
+- Preserve the full `hypothesis_history` — not just survivors
+- Separate Evidence from Inference as distinct objects
 - Block conclusions that have no source
 
 **What it must not do:**
-- Attempt exhaustive research
-- Replace Q1–Q6 reasoning with raw search results
-- Accept Tier 4 sources as confirmation
+- Generate only 1–2 hypotheses and immediately seek confirmation
+- Discard contradicted hypotheses from the record
+- Treat model-generated inference as evidence
 - Continue searching once the Evidence Gate already passes
 
 The system is done when it knows enough — not when it has found everything.
@@ -38,67 +51,192 @@ The system is done when it knows enough — not when it has found everything.
 Business Signal (HEADLINE + CORE_FACT)
       ↓
 Curiosity Engine
-(generates Q1–Q6 hypotheses + second hypotheses)
+(generates Q1–Q6 investigation questions)
+      ↓
+Hypothesis Generator  ← NEW MICRO-STAGE
+(generates hypothesis space: 5–10 candidates per question)
       ↓
 Evidence Collector  ← THIS DOCUMENT
-(tests hypotheses against sources)
+(tries to disprove each hypothesis; preserves full history)
+      ↓
+Inference Layer  ← EXPLICIT SEPARATION
+(labels what is concluded vs. what is evidenced)
       ↓
 INVESTIGATION_EVIDENCE_GATE
 (proceed / proceed_with_caveats / insufficient / blocked)
       ↓
 Decision Lens
-(interprets confirmed evidence only)
+(receives hypothesis_history + surviving hypotheses + inference labels)
       ↓
 Editorial Engine
 ```
 
-Evidence Collector receives: `evidence_query_plan`  
-Evidence Collector returns: `investigation_evidence_report`  
+Evidence Collector receives: `hypothesis_space` (from Hypothesis Generator)  
+Evidence Collector returns: `investigation_evidence_report` with `hypothesis_history`  
 Decision Lens receives: `investigation_evidence_report` only — it cannot request more research.
 
 ---
 
-## 3. Workflow
+## 3. Hypothesis Generator (New Micro-Stage)
 
-For each signal:
+**Purpose:** Expand the hypothesis space before any evidence search begins.
+
+The quality of the investigation is not determined by how well hypotheses are confirmed.  
+It is determined by how many possible explanations were considered before the search started.
+
+A narrow hypothesis space produces narrow conclusions — even with excellent evidence collection.
+
+**Process:**
 
 ```
-Step 1: Receive hypotheses
-  ← Q1–Q6: initial_hypothesis + second_hypothesis (from Curiosity Engine)
+Step 1: Receive question (e.g., Q1: "Why now?")
 
-Step 2: Generate search queries
-  → 1–3 queries per hypothesis
-  → Prioritize Tier 1–2 search targets first
+Step 2: Generate hypothesis space
+  → Generate 5–10 distinct possible explanations
+  → Do not rank yet
+  → Include obvious, contrarian, and structural explanations
+  → Include explanations that would be uncomfortable for the company
 
-Step 3: Execute searches
-  → Search Tier 1 first (company filings, official statements)
-  → If insufficient, search Tier 2 (major media)
-  → If still unclear, search Tier 3 (analyst/trade)
-  → Use Tier 4 only to refine hypothesis — never to confirm
+Step 3: Cluster similar hypotheses
+  → Group hypotheses that would be confirmed or denied by the same evidence
+  → Merge duplicates
 
-Step 4: Evaluate each result
-  → confirmed: source directly supports hypothesis
-  → contradicted: source contradicts hypothesis — log to contradicted_hypotheses
-  → unclear: source found but does not resolve the question
-  → no_source: no relevant source found
+Step 4: Rank by prior plausibility
+  → Most likely given available HEADLINE + CORE_FACT
+  → Do not use NB pipeline fields (CORE_TENSION, BUSINESS_LESSON) at this stage
 
-Step 5: Run Evidence Gate
-  → Check gate rules (see LERA_OPERATING_SYSTEM.md Section 9)
-  → Assign: PROCEED / PROCEED_WITH_CAVEATS / INSUFFICIENT / BLOCKED
-
-Step 6: Compile output
-  → investigation_evidence_report (see Section 7)
-  → safe_conclusions
-  → blocked_conclusions
-  → contradicted_hypotheses
+Step 5: Select top 2–3 for testing
+  → Strongest plausibility first
+  → Include at least one contrarian or uncomfortable hypothesis if present
 ```
 
-**Stop condition:** Stop searching as soon as the Evidence Gate passes (`PROCEED`).  
-Do not collect more sources after the gate condition is satisfied.
+**Toyota Q1 example — before (v0.1):**
+
+```
+initial_hypothesis: "BEV adoption slower than forecast"
+second_hypothesis:  "Competitor EV production problems"
+```
+
+Two hypotheses, both generated in one pass, both moderately plausible.
+
+**Toyota Q1 example — after (v0.2):**
+
+```
+Hypothesis space generated (unranked):
+1. BEV adoption fell below 2021 forecasts (infrastructure gap)
+2. Toyota lacked capital to fund full EV pivot
+3. Competitor EV production failures let Toyota win by default
+4. Toyota's manufacturing lock-in made pivot structurally impossible
+5. Toyota CEO personally opposed BEV and imposed strategy top-down
+6. Toyota was protecting supplier relationships (keiretsu)
+7. Toyota's internal research predicted infrastructure gap years earlier
+8. Toyota misjudged and got lucky — hybrid demand was not forecasted correctly
+9. Toyota's deliberate multi-pathway strategy anticipated multiple consumer segments
+
+Ranked by plausibility: 9 > 1 > 3 > 7 > 2 > 4 > 5 > 6 > 8
+
+Selected for testing: 9, 1, 2 (includes one potentially embarrassing: 2 — "lacked capital")
+```
+
+The difference: hypothesis 2 ("lacked capital") and 4 ("manufacturing lock-in") were explicitly generated and then tested — and both were contradicted by evidence. This made the surviving hypothesis (9 + 1) demonstrably stronger.
 
 ---
 
-## 4. Query Generation Rules
+## 4. Evidence Collection Workflow
+
+For each signal, after Hypothesis Generator has produced the ranked hypothesis space:
+
+```
+Step 1: Attempt to DISPROVE strongest hypothesis
+  → Generate 1–2 disconfirmation queries specifically
+  → Search Tier 1–2 for evidence that would make the hypothesis false
+  → If found: hypothesis is contradicted — log to hypothesis_history, move to next
+
+Step 2: If disproof fails, attempt to CONFIRM
+  → Generate 1–2 confirmation queries
+  → Search Tier 1–2 for supporting evidence
+  → If found: hypothesis is confirmed — log to hypothesis_history as "survived"
+
+Step 3: If both fail
+  → Mark hypothesis as "unclear"
+  → Do not promote to safe_conclusions
+  → Log to hypothesis_history as "unresolved"
+
+Step 4: Repeat for hypotheses #2 and #3
+
+Step 5: Construct Inference (see Section 5)
+  → From confirmed/survived hypotheses, derive what can be concluded
+  → Label every conclusion: Evidence vs. Inference
+  → Evidence = directly stated in source
+  → Inference = concluded from evidence + reasoning
+
+Step 6: Run Evidence Gate
+  → Check rules (see LERA_OPERATING_SYSTEM.md Section 9)
+  → Assign: PROCEED / PROCEED_WITH_CAVEATS / INSUFFICIENT / BLOCKED
+
+Step 7: Compile investigation_evidence_report
+```
+
+**Search escalation:**
+- Search Tier 1 first
+- Only escalate to Tier 2 if Tier 1 returns nothing relevant
+- Only use Tier 3 for historical context or supporting inference
+- Tier 4: generates new hypotheses only, never confirms
+
+**Stop condition:** Stop as soon as Evidence Gate reaches `PROCEED`.  
+Do not collect additional sources after gate is satisfied.
+
+---
+
+## 5. Evidence vs. Inference — Explicit Separation
+
+This is one of the most important distinctions in the entire architecture.
+
+**Evidence** is what a source directly states.  
+**Inference** is what the system concludes from evidence plus reasoning.
+
+They are not the same. They must never be merged silently.
+
+```
+Evidence:
+  Akio Toyoda, Japan Automobile Manufacturers Association, Dec 2021:
+  "If we are asked whether BEVs alone can achieve carbon neutrality, I believe the answer is no."
+  Source: Reuters, Tier 2.
+
+Inference derived from this evidence:
+  Toyota's leadership had publicly committed to a multi-pathway strategy before most competitors.
+  Motive status: supported_inference (evidence does not state "we chose multi-pathway"; it states a belief)
+```
+
+**Rules:**
+
+1. Every `safe_conclusion` must state whether it is Evidence or Inference
+2. Evidence requires a source URL — always
+3. Inference requires the evidence it was derived from — always
+4. An inference cannot be upgraded to evidence by restating it more confidently
+5. An inference cannot be derived from another inference (no inference chains)
+6. If the only support for an inference is Tier 4, it is `speculation`
+
+**The Inference object:**
+
+```json
+{
+  "inference_id": "I-Q3-01",
+  "derived_from_evidence": ["E-Q3-01", "E-Q3-02"],
+  "inference_text": "Toyota's leadership viewed BEV-only transition as premature given infrastructure constraints",
+  "motive_status": "supported_inference",
+  "confidence": "high",
+  "alternative_inference": "Toyota maintained hybrid because internal manufacturing economics made pivot unattractive",
+  "alternative_status": "contradicted",
+  "alternative_contradicted_by": "E-Q3-03"
+}
+```
+
+Decision Lens receives both the evidence objects and the inference objects, labeled distinctly. It knows what was said versus what was concluded.
+
+---
+
+## 6. Query Generation Rules
 
 For each Q1–Q6 hypothesis, generate 1–3 search queries.
 
@@ -179,9 +317,9 @@ Once assigned, motive status cannot be upgraded without a new Tier 1–2 source 
 
 ## 7. JSON Schema
 
-### 7a. evidence_query_plan
+### 7a. hypothesis_space
 
-Generated by Curiosity Engine, consumed by Evidence Collector.
+Generated by Hypothesis Generator, consumed by Evidence Collector.
 
 ```json
 {
@@ -192,12 +330,17 @@ Generated by Curiosity Engine, consumed by Evidence Collector.
     {
       "question_id": "Q1",
       "question": "Why now?",
-      "initial_hypothesis": "string",
-      "second_hypothesis": "string",
-      "search_queries": [
-        "string",
-        "string"
+      "hypothesis_space": [
+        {
+          "hypothesis_id": "H-Q1-01",
+          "hypothesis": "string",
+          "plausibility_rank": 1,
+          "type": "structural | behavioral | circumstantial | contrarian"
+        }
       ],
+      "selected_for_testing": ["H-Q1-01", "H-Q1-02", "H-Q1-03"],
+      "disconfirmation_queries": ["string", "string"],
+      "confirmation_queries": ["string", "string"],
       "tier_priority": ["tier_1", "tier_2", "tier_3"]
     }
   ]
@@ -218,8 +361,8 @@ Generated by Evidence Collector, consumed by Decision Lens.
     {
       "question_id": "Q1",
       "question": "Why now?",
-      "initial_hypothesis": "string",
-      "second_hypothesis": "string",
+      "surviving_hypothesis": "string | null",
+      "surviving_hypothesis_id": "H-Q1-03",
       "evidence_found": "string",
       "source_url": "string | null",
       "source_type": "tier_1 | tier_2 | tier_3 | tier_4 | none",
@@ -234,19 +377,43 @@ Generated by Evidence Collector, consumed by Decision Lens.
     }
   ],
 
-  "timeline": ["string"],
-
-  "contradicted_hypotheses": [
+  "hypothesis_history": [
     {
       "question_id": "Q1",
+      "hypothesis_id": "H-Q1-01",
       "hypothesis": "string",
-      "contradicting_evidence": "string",
-      "source_url": "string",
-      "implication": "string"
+      "test_type": "disconfirmation_first",
+      "status": "contradicted | survived | unresolved",
+      "evidence": "string",
+      "source_url": "string | null",
+      "implication": "string — what this contradiction or survival means for the investigation"
     }
   ],
 
-  "safe_conclusions": ["string"],
+  "inferences": [
+    {
+      "inference_id": "I-Q3-01",
+      "question_id": "Q3",
+      "derived_from_evidence": ["E-Q3-01"],
+      "inference_text": "string",
+      "motive_status": "stated | supported_inference | speculation",
+      "confidence": "high | medium | low",
+      "alternative_inference": "string | null",
+      "alternative_status": "contradicted | unresolved | null"
+    }
+  ],
+
+  "timeline": ["string"],
+
+  "safe_conclusions": [
+    {
+      "conclusion": "string",
+      "type": "evidence | inference",
+      "source_url": "string | null",
+      "inference_id": "string | null"
+    }
+  ],
+
   "blocked_conclusions": ["string"],
   "unsupported_claims": ["string"],
   "unknowns": ["string"],
@@ -259,21 +426,26 @@ Generated by Evidence Collector, consumed by Decision Lens.
 ### 7c. safe_conclusions
 
 A conclusion is safe if:
-- It is derived from a `confirmed` or `supported_inference` finding
-- Its source is Tier 1 or Tier 2
-- Its motive status is `stated` or `supported_inference`
+- `type: evidence` — has a source URL, Tier 1 or Tier 2
+- `type: inference` — derived from confirmed evidence, motive_status is `stated` or `supported_inference`, no inference chains
 
-Format: plain string — one conclusion per entry. No hedges added by the system. Decision Lens adds appropriate framing.
+Decision Lens adds appropriate framing and hedging. The system does not add hedges — it labels.
 
 ### 7d. blocked_conclusions
 
 A conclusion is blocked if:
-- It is derived from an `unclear` or `contradicted` finding
+- Derived from an `unresolved` or `contradicted` hypothesis
 - Its only source is Tier 4
 - Its motive status is `speculation`
 - Q3 is unanswered and this conclusion depends on the constraint
 
-Blocked conclusions are logged and passed to Decision Lens as reference. They cannot appear in the final article as fact.
+Blocked conclusions are logged and passed to Decision Lens as reference. They cannot appear in the final article as stated fact.
+
+### 7e. hypothesis_history
+
+`hypothesis_history` is append-only and includes every hypothesis that was tested — contradicted, survived, and unresolved.
+
+Decision Lens receives the full history. It sees not just what the system concluded, but which explanations were considered and eliminated. This makes surviving hypotheses demonstrably stronger — they are not simply plausible, they are what remains after alternatives were actively rejected.
 
 ---
 
@@ -299,41 +471,56 @@ Blocked conclusions are logged and passed to Decision Lens as reference. They ca
 ### Phase 0 — Spec only (current)
 This document. No code.
 
-### Phase 1 — Offline MVP (no live web search)
-**Goal:** Test the schema and gate logic with manually provided sources.
+### Phase 1 — Offline MVP: hypothesis space + manual sources
+**Goal:** Test the full schema including `hypothesis_history` with manually provided sources. No live search.
 
 Implementation:
-1. Curiosity Engine generates `evidence_query_plan` with hypotheses (no search yet)
-2. Human or tool provides source URLs manually per signal
-3. Evidence Collector evaluates provided sources against hypotheses
-4. Returns `investigation_evidence_report`
-5. Decision Lens operates on confirmed findings only
+1. Curiosity Engine generates Q1–Q6 questions
+2. Hypothesis Generator produces `hypothesis_space` (5–10 per question, ranked, top 3 selected)
+3. Human provides source URLs manually per signal
+4. Evidence Collector evaluates provided sources — attempts disconfirmation first, then confirmation
+5. Returns `investigation_evidence_report` with full `hypothesis_history`
+6. Inferences are labeled explicitly, separated from Evidence
+7. Evidence Gate runs
+8. Decision Lens operates on `safe_conclusions` only
 
-**What this proves:** The schema works. The gate blocks correctly. Speculation is separated from evidence.  
+**What this proves:**
+- Hypothesis space generation works and produces non-obvious candidates
+- `hypothesis_history` correctly captures contradicted hypotheses
+- Evidence/Inference separation is enforced
+- Gate blocks correctly
+
 **What this does not prove:** That automated search finds the right sources.
 
-### Phase 2 — Web search integration (one question at a time)
-**Goal:** Automate evidence search for Q3 only (the highest-value question).
+**Toyota validation test:**
+Run Toyota through Phase 1. Verify that hypotheses "lacked capital" and "manufacturing lock-in" are generated in hypothesis space, tested, contradicted, and logged — before "deliberate multi-pathway strategy" is promoted as the surviving hypothesis.
+
+### Phase 2 — Web search for Q3 only
+**Goal:** Automate evidence search for Q3 (gate-critical question).
 
 Implementation:
-1. For Q3 hypothesis, generate 2 search queries
-2. Execute search via available tool (WebSearch or similar)
-3. Evaluate top 3 results
+1. For each Q3 hypothesis (top 2): generate 1 disconfirmation query + 1 confirmation query
+2. Execute search (WebSearch or equivalent)
+3. Evaluate top 3 results per query
 4. Return `evidence_status` for Q3
-5. All other questions remain manual or hypothesis-only
+5. All other questions: Phase 1 manual flow
 
-**Why Q3 first:** Q3 is the gate-critical question. If Q3 evidence is missing, no article is possible. Automating Q3 alone already prevents the most common failure: publishing a constraint claim with no source.
+**Why Q3 first:** Q3 is the gate-critical question. If Q3 evidence is missing, the gate cannot pass. Automating Q3 alone blocks the most common failure: writing a constraint claim with no source.
 
-### Phase 3 — Full Q1–Q6 automated search
-**Goal:** Automate all six questions.
+### Phase 3 — Full Q1–Q6 automated search with disconfirmation-first
+**Goal:** Automate all six questions with the "try to disprove first" search strategy.
 
 Implementation:
-1. Run Phase 1–2 logic for all questions
-2. Apply cost controls (max 18 queries, early stop)
-3. Full `investigation_evidence_report` generated automatically
+1. Hypothesis Generator runs for all questions
+2. For each selected hypothesis: disconfirmation queries run first
+3. If disconfirmation fails: confirmation queries run
+4. Cost controls applied (max 18 queries total, early stop at PROCEED)
+5. Full `investigation_evidence_report` + `hypothesis_history` generated automatically
 
 ### Phase 4 — Decision Lens integration
-**Goal:** Decision Lens reads `investigation_evidence_report` and generates interpretation from `safe_conclusions` only.
+**Goal:** Decision Lens reads `investigation_evidence_report`, receives full `hypothesis_history`, generates interpretation from `safe_conclusions` + labeled `inferences` only.
+
+Decision Lens knows what was considered and eliminated — not just what survived. This allows it to reference why certain explanations were rejected, which often strengthens the surviving interpretation.
 
 ---
 
