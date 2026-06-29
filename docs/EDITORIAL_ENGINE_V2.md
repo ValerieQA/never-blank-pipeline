@@ -111,30 +111,43 @@ The Hook Engine generates **5–7 candidate hooks** before selecting one. A sing
 
 ### Module 2 — Reader Context
 
-**Question:** What does the reader need to know in two sentences to make the next five paragraphs land?
+**Question:** Does the reader know what this company fundamentally does?
 
-Not a company history. Not a market overview.  
-Two sentences, maximum. One is better.
+Reader Context is **mandatory** unless the company is universally recognizable.
 
-**When context is required:**
-- Company is not a household name
-- Event happened in an industry the target audience doesn't follow
-- The signal involves a regulatory or legal mechanism that needs a single-line definition
+Universally recognizable means: Apple, Microsoft, Google, Amazon, Meta, Tesla, Toyota, Samsung — companies where any adult in any country would immediately understand the business without explanation. Everything else requires Reader Context.
 
-**When context is not required:**
-- Company needs no introduction for the target audience
-- The hook already establishes sufficient context
-- Adding context would slow the opening
+**Rules:**
+- One sentence. Maximum 10–20 words.
+- Describe only what the company fundamentally does.
+- Never include analysis, opinion, or anything about the current story.
+- Never summarize what happened.
+- Exists only to let the investigation start immediately afterward.
 
 **Format:**
 ```
-[Company] is [one-line description of what it does and why it matters in this context].
+[Company] [does what] [for whom / in what context].
 ```
 
-Getty example:
-> Getty Images licenses photographs, illustrations, and video to media companies and advertisers worldwide — one of the last major platforms where every image comes with a documented legal history.
+**Examples:**
 
-That last clause is not decorative. It is the reason the OpenAI deal matters. Reader context must earn its place by making the next paragraph easier to understand, not by providing background for its own sake.
+> Polymarket operates a prediction market where users trade on real-world event outcomes.
+
+> Getty Images licenses photographs and video to media companies and advertisers worldwide.
+
+> Lucid Motors builds premium electric vehicles focused on maximum driving range.
+
+> Stability AI develops open-source generative AI models for image and text creation.
+
+**What Reader Context is not:**
+
+Not this — adds context that belongs in the investigation:
+> Getty Images is one of the world's largest visual content companies, known for its vast library of licensed photographs — and recently for its high-profile lawsuit against AI companies.
+
+Not this — editorializes:
+> Polymarket is a controversial prediction market that allows users to bet real money on political and world events.
+
+One sentence. What the company does. Nothing else.
 
 ---
 
@@ -446,7 +459,18 @@ Never Blank Voice outputs a structured article object — not a flat body string
 
 *Medium (LinkedIn, Facebook):* Must be a complete standalone text. A reader who has never heard of the company must reach the Aha and the Spine without needing the Long version. No dangling references to evidence not present in this version.
 
-*Instagram:* Rewrite for mobile rhythm. Paragraphs are 1–2 sentences. One blank line between each. Less analytical density, more emotional pacing. The insight is the same — the delivery is lighter. This is not a shortened LinkedIn post.
+*Instagram:* Instagram is not a compressed LinkedIn post. It is a visual narrative. Its purpose is to recreate the emotional sequence of discovery — not to explain the investigation. The reader should finish with the feeling: "I've just realized something" — not "I've just read an analysis."
+
+Rules for Instagram:
+- Keep the Hook.
+- Keep one Discovery moment — the puzzle that broke the first explanation.
+- Keep the Aha moment.
+- Keep the Narrative Spine.
+- One idea per paragraph. One paragraph per screen.
+- Use blank lines as part of the story — silence between revelations.
+- Use cinematic language, not analytical language. Prefer movement and implication over fact and qualification.
+- Do not stack facts. Do not name statistics unless they are the puzzle.
+- The investigation is the source — not the content.
 
 *Short (Threads):* One idea. Either the Hook that opens the gap, or the Spine that closes it. Does not attempt to compress the investigation into 60 words — that produces summaries, not insights.
 
