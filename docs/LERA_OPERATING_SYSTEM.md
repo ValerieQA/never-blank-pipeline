@@ -331,6 +331,32 @@ Decision Lens receives this record and operates under the following constraints:
 
 If `proceed = BLOCKED`, Decision Lens returns the signal to Curiosity Engine with a specific gap description. It does not generate interpretation from a blocked investigation.
 
+**Decision Lens output schema:**
+
+```json
+{
+  "signal_id": "string",
+  "core_decision": "string — the underlying decision the article investigates",
+  "strategic_objective": "string — what the organization was actually trying to preserve or capture",
+  "strategic_objective_evidence": ["string — safe_conclusions that support this reading"],
+  "strategic_objective_confidence": "high | medium | low",
+  "business_lesson": "string — what this decision reveals about organizational logic",
+  "never_blank_insight": "string — the specific observation that is non-obvious"
+}
+```
+
+`strategic_objective` answers: *What objective function explains every move?* Not what the company did — what it was optimizing for. The decision is the event. The strategic objective is the logic.
+
+Examples:
+- Toyota: `"Protect long-term manufacturing capability over short-term market approval"`
+- Getty: `"Own the licensing layer rather than win the litigation layer"`
+- Polymarket: `"Capture the distribution window before competitive arrival, ahead of regulatory certainty"`
+- Lucid: `"Maximize engineering differentiation at the expense of addressable market size"`
+
+`strategic_objective_confidence` is `low` when the evidence supports the decision but leaves the objective ambiguous — when two different objectives could produce the same observed moves. This must be surfaced in the article as `remaining_uncertainty`.
+
+This field is internal to the pipeline. It does not appear verbatim in the article. Narrative Spine uses it as the primary input alongside `core_decision`.
+
 ---
 
 ## 13. What This Layer Does Not Do

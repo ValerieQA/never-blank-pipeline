@@ -134,7 +134,9 @@ The hook creates a gap. The Spine closes it. The reader earns the Spine at the e
 If removing the company name makes the sentence meaningless, it is describing an event — not a decision pattern.
 
 **The Spine comes from Decision Lens output, not from Investigation.**  
-Investigation finds what is true. Decision Lens identifies what it means. Narrative Spine expresses what the article is for.
+Investigation finds what is true. Decision Lens identifies what it means — including `strategic_objective`, the logic that explains every move. Narrative Spine expresses what the article is for.
+
+`strategic_objective` is the primary input to Question 2. The Spine sentence is how `strategic_objective` becomes something a reader would want to remember. Sometimes the Spine restates the objective directly. More often it reframes it — finding the version that works without the company name and survives out of context.
 
 **One spine per article.**  
 An article with two spines has none. If two distinct patterns emerged from the investigation, they become two articles.

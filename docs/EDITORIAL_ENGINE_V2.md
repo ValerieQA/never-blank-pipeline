@@ -506,7 +506,7 @@ investigation_evidence_report
 
 | Module | Receives | Returns |
 |---|---|---|
-| Narrative Spine | Decision Lens output | core_decision, narrative_spine, target_feeling, company_as_evidence_of |
+| Narrative Spine | Decision Lens output (core_decision + strategic_objective) | narrative_spine, target_feeling, company_as_evidence_of |
 | Hook Engine | safe_conclusions, narrative_spine, never_blank_insight | hook_candidates[], selected_hook |
 | Reader Context | headline, company name, signal type | context_line (string or null) |
 | Discovery Builder | hook, hypothesis_history, contradicted_hypotheses, safe_conclusions, narrative_spine | first_wrong_explanation, puzzle, investigation_sequence[], aha_setup |
