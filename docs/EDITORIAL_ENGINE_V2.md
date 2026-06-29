@@ -33,16 +33,29 @@ The system collapsed two distinct responsibilities into one output. The result w
 ```
 Investigation Output
       ↓
+Decision Lens
+      ↓
+Narrative Spine          ← establishes what the article is actually about
+      ↓
 Editorial Engine (6 modules)
       ↓
 Article
 ```
 
-The Editorial Engine receives `investigation_evidence_report` and produces a publishable article. It does not re-investigate. It does not add conclusions. It takes what the investigation found and builds a path for a reader through it.
+The Editorial Engine receives `investigation_evidence_report`, Decision Lens output, and the Narrative Spine. It does not re-investigate. It does not add conclusions. It takes what the investigation found and builds a path for a reader through it — toward the Spine.
+
+See: [NARRATIVE_SPINE.md](NARRATIVE_SPINE.md)
 
 ---
 
 ## 2. What the Editorial Engine Receives
+
+From `narrative_spine` (NARRATIVE_SPINE.md — run before any module):
+
+- `core_decision` — the underlying decision the article investigates
+- `narrative_spine` — the one sentence the article is built to earn
+- `target_feeling` — the emotional register the last line must produce
+- `company_as_evidence_of` — what the company proves, not what it did
 
 From `investigation_evidence_report`:
 
@@ -279,7 +292,11 @@ investigation_evidence_report
     Decision Lens output
           ↓
   ┌───────────────────┐
-  │   Hook Engine     │  → 5–7 candidates → select 1
+  │  Narrative Spine  │  → core_decision + spine sentence + target_feeling
+  └───────────────────┘
+          ↓
+  ┌───────────────────┐
+  │   Hook Engine     │  → 5–7 candidates → select hook that earns the Spine
   └───────────────────┘
           ↓
   ┌───────────────────┐
@@ -287,7 +304,7 @@ investigation_evidence_report
   └───────────────────┘
           ↓
   ┌───────────────────┐
-  │  Story Builder    │  → sequence of revelation
+  │  Story Builder    │  → sequence of revelation toward the Spine
   └───────────────────┘
           ↓
   ┌───────────────────┐
@@ -295,11 +312,11 @@ investigation_evidence_report
   └───────────────────┘
           ↓
   ┌───────────────────┐
-  │Business Translation│ → universal lesson from specific decision
+  │Business Translation│ → translates the Spine into universal terms
   └───────────────────┘
           ↓
   ┌───────────────────┐
-  │ Never Blank Voice │  → final quality pass
+  │ Never Blank Voice │  → checks article earns the Spine by the last line
   └───────────────────┘
           ↓
        Article
@@ -311,12 +328,13 @@ investigation_evidence_report
 
 | Module | Receives | Returns |
 |---|---|---|
-| Hook Engine | safe_conclusions, decision, never_blank_insight | hook_candidates[], selected_hook |
+| Narrative Spine | Decision Lens output | core_decision, narrative_spine, target_feeling, company_as_evidence_of |
+| Hook Engine | safe_conclusions, narrative_spine, never_blank_insight | hook_candidates[], selected_hook |
 | Reader Context | headline, company name, signal type | context_line (string or null) |
-| Story Builder | hook, context, safe_conclusions, hypothesis_history, remaining_uncertainty | revelation_sequence[] |
+| Story Builder | hook, context, safe_conclusions, hypothesis_history, remaining_uncertainty, narrative_spine | revelation_sequence[] |
 | Evidence Reveal | revelation_sequence, safe_conclusions, inferences, hypothesis_history | article_body (draft) |
-| Business Translation | decision, business_lesson, article_body | article_body + lesson_paragraph |
-| Never Blank Voice | article_body (complete) | final_article, signature_line, checklist_pass (bool) |
+| Business Translation | narrative_spine, business_lesson, article_body | article_body + lesson_paragraph |
+| Never Blank Voice | article_body (complete), narrative_spine, target_feeling | final_article, signature_line, checklist_pass (bool) |
 
 ---
 
