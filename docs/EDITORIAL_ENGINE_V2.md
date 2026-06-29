@@ -111,18 +111,47 @@ The Hook Engine generates **5–7 candidate hooks** before selecting one. A sing
 
 ### Module 2 — Reader Context
 
-**Question:** Does the reader know what this company fundamentally does?
+**Question:** Does the reader know what this company fundamentally does — and does the Hook work without knowing?
 
 Reader Context is **mandatory** unless the company is universally recognizable.
 
 Universally recognizable means: Apple, Microsoft, Google, Amazon, Meta, Tesla, Toyota, Samsung — companies where any adult in any country would immediately understand the business without explanation. Everything else requires Reader Context.
+
+**Placement — this is determined by the Hook, not by the company:**
+
+**Hook-first** (default): The Hook works without knowing the company. Reader Context follows immediately after.
+```
+Hook
+↓
+Reader Context
+↓
+Discovery
+```
+> *Getty filed one of the biggest copyright suits in AI history. Then it partnered with the defendant.*
+> *Getty Images licenses photographs and video to media companies and advertisers worldwide.*
+
+The hook lands on its own. Context arrives to make the next paragraph make sense.
+
+**Context-first**: The Hook is impossible to understand without knowing what the company does.
+```
+Reader Context
+↓
+Hook
+↓
+Discovery
+```
+> *Polymarket operates a prediction market where users trade on real-world event outcomes.*
+> *For three years, it blocked US users. Then it quietly reopened. The press couldn't explain why now.*
+
+Without the first sentence, "Polymarket blocked US users" has no weight. The reader doesn't know why they should care.
+
+The test: read only the Hook. If a reader unfamiliar with the company would understand why it matters — Hook-first. If not — Context-first.
 
 **Rules:**
 - One sentence. Maximum 10–20 words.
 - Describe only what the company fundamentally does.
 - Never include analysis, opinion, or anything about the current story.
 - Never summarize what happened.
-- Exists only to let the investigation start immediately afterward.
 
 **Format:**
 ```
@@ -138,14 +167,6 @@ Universally recognizable means: Apple, Microsoft, Google, Amazon, Meta, Tesla, T
 > Lucid Motors builds premium electric vehicles focused on maximum driving range.
 
 > Stability AI develops open-source generative AI models for image and text creation.
-
-**What Reader Context is not:**
-
-Not this — adds context that belongs in the investigation:
-> Getty Images is one of the world's largest visual content companies, known for its vast library of licensed photographs — and recently for its high-profile lawsuit against AI companies.
-
-Not this — editorializes:
-> Polymarket is a controversial prediction market that allows users to bet real money on political and world events.
 
 One sentence. What the company does. Nothing else.
 
@@ -382,11 +403,20 @@ But: "Never Blank — Getty didn't stop suing because it lost. It stopped becaus
 
 ---
 
-### Module 7 — Compression Engine
+### Module 7 — Platform Composer
+
+**Each platform has one job:**
+- Blog — prove it.
+- Telegram — tell it.
+- LinkedIn / Facebook — explain it.
+- Instagram — make them feel it.
+- Threads — leave a thought that lives on its own.
+
+
 
 **Question:** How does each platform's reading behavior change what the article needs to do?
 
-The Compression Engine is not a text editor. It does not receive an article and cut sentences. It receives a structured JSON of named blocks from Never Blank Voice and produces five platform-specific versions — each optimized for how that audience actually reads, not just for length.
+The Platform Composer is not a text editor. It does not receive an article and cut sentences. It receives a structured JSON of named blocks from Never Blank Voice and produces five platform-specific versions — each optimized for how that audience actually reads, not just for length.
 
 Word count is a consequence of reading behavior. It is not the target.
 
@@ -401,7 +431,7 @@ The invariant across all five formats:
 
 Only investigation depth changes between formats. The business insight must remain identical.
 
-**What the Compression Engine receives:**
+**What the Platform Composer receives:**
 
 Never Blank Voice outputs a structured article object — not a flat body string:
 
@@ -459,18 +489,23 @@ Never Blank Voice outputs a structured article object — not a flat body string
 
 *Medium (LinkedIn, Facebook):* Must be a complete standalone text. A reader who has never heard of the company must reach the Aha and the Spine without needing the Long version. No dangling references to evidence not present in this version.
 
-*Instagram:* Instagram is not a compressed LinkedIn post. It is a visual narrative. Its purpose is to recreate the emotional sequence of discovery — not to explain the investigation. The reader should finish with the feeling: "I've just realized something" — not "I've just read an analysis."
+*Instagram:* Instagram is the most literary format in the system. Its job is not to explain the investigation — it is to make the reader feel the moment the first explanation broke.
+
+No analysis. No qualifications. No stacked facts. Only the emotional sequence: something was true, then one thing changed, then nothing was the same.
 
 Rules for Instagram:
-- Keep the Hook.
-- Keep one Discovery moment — the puzzle that broke the first explanation.
-- Keep the Aha moment.
-- Keep the Narrative Spine.
-- One idea per paragraph. One paragraph per screen.
-- Use blank lines as part of the story — silence between revelations.
-- Use cinematic language, not analytical language. Prefer movement and implication over fact and qualification.
-- Do not stack facts. Do not name statistics unless they are the puzzle.
-- The investigation is the source — not the content.
+- Keep the Hook — compressed to its sharpest form.
+- Keep the moment the first explanation broke — not as analysis, as sensation.
+- Keep the Aha — as implication, not as statement.
+- Keep the Narrative Spine — the one sentence the post is built to earn.
+- One idea per paragraph. Blank lines are part of the storytelling.
+- Prefer movement and implication over fact and qualification.
+- Never name a statistic unless it is the puzzle itself.
+- Never write a sentence that could appear in a LinkedIn post.
+
+The reader should finish thinking: *I just realized something* — not *I just read an analysis.*
+
+The investigation is the source. It is not the content.
 
 *Short (Threads):* One idea. Either the Hook that opens the gap, or the Spine that closes it. Does not attempt to compress the investigation into 60 words — that produces summaries, not insights.
 
@@ -502,7 +537,7 @@ Same cognitive move. Half the words.
 }
 ```
 
-The Compression Engine does not rewrite the article. It selects blocks, applies format-specific constraints, and assembles. The investigation and the insight are the same in every version.
+The Platform Composer does not rewrite the article. It selects blocks, applies format-specific constraints, and assembles. The investigation and the insight are the same in every version.
 
 ---
 
@@ -547,7 +582,7 @@ investigation_evidence_report
   └───────────────────┘
           ↓
   ┌───────────────────┐
-  │Compression Engine │  → 5 formats, optimized by reading behavior
+  │Platform Composer │  → 5 formats, optimized by reading behavior
   └───────────────────┘
           ↓
   Long (blog) / Reading (Telegram) / Medium (LinkedIn+FB) / Instagram / Short (Threads)
@@ -567,7 +602,7 @@ investigation_evidence_report
 | Evidence Reveal | full_article_sequence, safe_conclusions, inferences, hypothesis_history | article_body (draft) |
 | Business Translation | narrative_spine, business_lesson, article_body | article_body + lesson_paragraph |
 | Never Blank Voice | article_body (complete), narrative_spine, target_feeling | structured_article (hook, discovery, aha, business_translation, signature, …), checklist_pass (bool) |
-| Compression Engine | structured_article JSON | long / reading / medium / instagram / short |
+| Platform Composer | structured_article JSON | long / reading / medium / instagram / short |
 
 ---
 
@@ -583,7 +618,7 @@ The Editorial Engine may not produce a final article if:
 6. `Business Translation` lesson applies to all companies without qualification
 7. `Never Blank Voice` checklist has any item marked false
 8. `remaining_uncertainty` item with `would_change_conclusion_if_resolved: true` was omitted from the article
-9. `Compression Engine` Medium or Short removed the puzzle or the Aha setup
+9. `Platform Composer` Medium or Short removed the puzzle or the Aha setup
 
 If any gate fails, the module returns to the relevant stage — not to the beginning.
 
