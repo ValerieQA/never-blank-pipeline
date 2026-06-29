@@ -101,13 +101,16 @@ Step 3: Cluster similar hypotheses
   → Group hypotheses that would be confirmed or denied by the same evidence
   → Merge duplicates
 
-Step 4: Rank by prior plausibility
-  → Most likely given available HEADLINE + CORE_FACT
-  → Do not use NB pipeline fields (CORE_TENSION, BUSINESS_LESSON) at this stage
+Step 4: Assign explicit priority to each hypothesis
+  → Priority is NOT a plausibility ranking by the model
+  → Priority is assigned using two auditable criteria (see Section 3b)
+  → Every hypothesis must have a priority_reason field
+  → No hypothesis enters Evidence Collector without priority_reason
 
 Step 5: Select top 2–3 for testing
-  → Strongest plausibility first
-  → Include at least one contrarian or uncomfortable hypothesis if present
+  → Ordered by test_priority (1 = test first)
+  → Always include the highest-impact hypothesis (if_true_impact = destroys_main_narrative)
+  → Always include the hypothesis closest to signal facts (distance_from_signal = low)
 ```
 
 **Toyota Q1 example — before (v0.1):**
@@ -117,28 +120,104 @@ initial_hypothesis: "BEV adoption slower than forecast"
 second_hypothesis:  "Competitor EV production problems"
 ```
 
-Two hypotheses, both generated in one pass, both moderately plausible.
+Two hypotheses. Ranking opaque — model decided.
 
-**Toyota Q1 example — after (v0.2):**
+**Toyota Q3 example — after (v0.3):**
 
 ```
-Hypothesis space generated (unranked):
-1. BEV adoption fell below 2021 forecasts (infrastructure gap)
-2. Toyota lacked capital to fund full EV pivot
-3. Competitor EV production failures let Toyota win by default
-4. Toyota's manufacturing lock-in made pivot structurally impossible
-5. Toyota CEO personally opposed BEV and imposed strategy top-down
-6. Toyota was protecting supplier relationships (keiretsu)
-7. Toyota's internal research predicted infrastructure gap years earlier
-8. Toyota misjudged and got lucky — hybrid demand was not forecasted correctly
-9. Toyota's deliberate multi-pathway strategy anticipated multiple consumer segments
+Hypothesis space (unranked):
+H-Q3-01  Toyota could not afford full EV transition
+H-Q3-02  Manufacturing lock-in forced Toyota to stay with hybrids
+H-Q3-03  Toyota believed BEV adoption was infrastructure-constrained
+H-Q3-04  Toyota was protecting keiretsu supplier relationships
+H-Q3-05  Toyota's internal research predicted infrastructure gap years earlier
+H-Q3-06  Toyota misjudged and got lucky
+H-Q3-07  Toyota CEO personally opposed BEV and imposed strategy top-down
+H-Q3-08  Toyota waited for solid-state batteries before committing to BEV
 
-Ranked by plausibility: 9 > 1 > 3 > 7 > 2 > 4 > 5 > 6 > 8
-
-Selected for testing: 9, 1, 2 (includes one potentially embarrassing: 2 — "lacked capital")
+After prioritization (see Section 3b):
+  test_priority 1: H-Q3-01 — if_true_impact: destroys_main_narrative
+  test_priority 2: H-Q3-02 — if_true_impact: weakens_main_narrative
+  test_priority 3: H-Q3-03 — distance_from_signal: low (directly stated in CORE_FACT)
 ```
 
-The difference: hypothesis 2 ("lacked capital") and 4 ("manufacturing lock-in") were explicitly generated and then tested — and both were contradicted by evidence. This made the surviving hypothesis (9 + 1) demonstrably stronger.
+The ranking is now auditable. Anyone reading the `priority_reason` fields can verify that priority 1 was assigned to H-Q3-01 because it would invalidate the deliberate-strategy claim — not because the model found it most likely.
+
+---
+
+## 3b. Hypothesis Prioritization Rules
+
+**Ranking is not a creative task for the model. It is an auditable decision based on two explicit criteria.**
+
+### Criterion 1 — Impact if true (`if_true_impact`)
+
+Assign based on what happens to the main candidate explanation if this hypothesis is correct.
+
+| Value | Meaning | Test priority |
+|---|---|---|
+| `destroys_main_narrative` | If true, the primary surviving explanation is invalid | **1 — test first** |
+| `weakens_main_narrative` | If true, the primary explanation requires significant qualification | 2 |
+| `orthogonal` | If true, does not affect the primary explanation | 3 |
+| `supports_main_narrative` | If true, strengthens the primary explanation | test last or skip |
+
+**Why Criterion 1 comes first:** A hypothesis that could destroy the main narrative must be tested before that narrative is treated as a candidate conclusion. If it is not tested, the conclusion is built on an untested assumption.
+
+### Criterion 2 — Distance from signal facts (`distance_from_signal`)
+
+Assign based on how directly the hypothesis can be derived from the HEADLINE + CORE_FACT of the original signal, without additional inference.
+
+| Value | Meaning |
+|---|---|
+| `low` | Directly derivable from HEADLINE or CORE_FACT; requires minimal inference |
+| `medium` | Requires one inference step from available facts |
+| `high` | Requires multiple inference steps; speculative without external evidence |
+
+**Why Criterion 2 breaks ties:** Between two hypotheses with equal impact, test the one closer to the signal first. It is cheaper to resolve and grounds the investigation in observable facts.
+
+### Combined priority rule
+
+```
+test_priority = 1  →  if_true_impact = destroys_main_narrative
+test_priority = 2  →  if_true_impact = weakens_main_narrative
+test_priority = 3  →  if_true_impact = orthogonal, distance_from_signal = low
+test_priority = 4  →  if_true_impact = orthogonal, distance_from_signal = medium/high
+skip or last      →  if_true_impact = supports_main_narrative
+```
+
+**Cost (`distance_from_signal`) is a tiebreaker within the same impact level — not a primary sort key.**  
+This is a deliberate choice. Testing cheap hypotheses first optimizes for speed, not for investigative quality. The expensive hypothesis that could destroy the conclusion must be tested first, regardless of cost.
+
+### Required fields per hypothesis
+
+Every hypothesis entering Evidence Collector must include:
+
+```json
+{
+  "hypothesis_id": "H-Q3-01",
+  "hypothesis": "Toyota could not afford full EV transition",
+  "origin_type": "common_business_explanation | structural | contrarian | circumstantial | derived_from_signal",
+  "if_true_impact": "destroys_main_narrative | weakens_main_narrative | orthogonal | supports_main_narrative",
+  "distance_from_signal": "low | medium | high",
+  "test_priority": 1,
+  "priority_reason": "If true, this would invalidate the claim that Toyota made a deliberate strategic choice. The deliberate-strategy narrative depends on Toyota having had a real choice. Lack of capital removes that choice."
+}
+```
+
+**Rule: No hypothesis may enter Evidence Collector without `priority_reason`.**  
+A priority_reason that says "model judged this most likely" is invalid. It must reference `if_true_impact` or `distance_from_signal` explicitly.
+
+### Toyota Q3 — full prioritized hypothesis space
+
+| ID | Hypothesis | if_true_impact | distance | priority | priority_reason |
+|---|---|---|---|---|---|
+| H-Q3-01 | Toyota lacked capital | destroys_main_narrative | medium | 1 | Lack of capital makes "deliberate strategic choice" impossible — removes agency from the explanation |
+| H-Q3-02 | Manufacturing lock-in | weakens_main_narrative | medium | 2 | Lock-in means the choice was partly forced — qualifies but does not eliminate strategic framing |
+| H-Q3-03 | Infrastructure constraint belief | orthogonal | low | 3 | Directly derivable from Toyoda's public statements in CORE_FACT context; testable cheaply |
+| H-Q3-04 | Keiretsu supplier protection | orthogonal | high | 4 | Plausible but requires significant inference; does not threaten main narrative |
+| H-Q3-05 | Internal research predicted gap | supports_main_narrative | high | last | Would strengthen deliberate-strategy claim; test only after threats eliminated |
+| H-Q3-06 | Toyota misjudged, got lucky | destroys_main_narrative | medium | 1 (tie) | If true, outcome is random not strategic — test together with H-Q3-01 |
+| H-Q3-07 | CEO personal opposition | weakens_main_narrative | medium | 2 (tie) | Reduces organizational logic to individual preference; qualifies strategic framing |
+| H-Q3-08 | Waiting for solid-state | orthogonal | high | 4 | Interesting but speculative; does not affect main narrative if unconfirmed |
 
 ---
 
