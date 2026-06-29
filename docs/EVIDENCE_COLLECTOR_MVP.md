@@ -1,7 +1,7 @@
 # Evidence Collector MVP
 ## Anti-Hallucination Filter for the Investigation Layer
 
-**Version:** v0.2 — Specification Only  
+**Version:** v0.4 — Specification Only  
 **Branch:** feature/business-investigation-layer  
 **Status:** Spec. No code yet.  
 **Depends on:** LERA_OPERATING_SYSTEM.md (Evidence Gate, Section 9)
@@ -243,17 +243,30 @@ Step 3: If both fail
 
 Step 4: Repeat for hypotheses #2 and #3
 
-Step 5: Construct Inference (see Section 5)
+Step 5: Hypothesis Exhaustion Check  ← NEW
+  → Ask: "Is there a materially different explanation that has not been tested?"
+  → "Materially different" means: would require different evidence, different sources,
+    and would produce a different conclusion if true
+  → If yes: generate it, assign priority, run through Steps 1–4
+  → Repeat until no materially different explanation remains OR max_iterations reached
+  → Log result: exhausted | iteration_limit_reached | blocked_by_cost
+
+Step 6: Construct Inference (see Section 5)
   → From confirmed/survived hypotheses, derive what can be concluded
   → Label every conclusion: Evidence vs. Inference
   → Evidence = directly stated in source
   → Inference = concluded from evidence + reasoning
 
-Step 6: Run Evidence Gate
+Step 7: Compile Remaining Uncertainty  ← NEW
+  → For every unresolved hypothesis: assign unknown_reason (see Section 4b)
+  → For every surviving hypothesis: note what would change the conclusion if discovered
+  → Compile remaining_uncertainty object (see Section 7f)
+
+Step 8: Run Evidence Gate
   → Check rules (see LERA_OPERATING_SYSTEM.md Section 9)
   → Assign: PROCEED / PROCEED_WITH_CAVEATS / INSUFFICIENT / BLOCKED
 
-Step 7: Compile investigation_evidence_report
+Step 9: Compile investigation_evidence_report
 ```
 
 **Search escalation:**
@@ -264,6 +277,100 @@ Step 7: Compile investigation_evidence_report
 
 **Stop condition:** Stop as soon as Evidence Gate reaches `PROCEED`.  
 Do not collect additional sources after gate is satisfied.
+
+---
+
+## 4a. Hypothesis Exhaustion Check
+
+**Purpose:** Ensure the system has not missed a materially different explanation — one that would require different evidence and produce a different conclusion if true.
+
+This check runs after all prioritized hypotheses have been tested (Step 5 in Section 4). It is not about finding more evidence for existing hypotheses. It is about asking whether the investigation has been looking at the right story.
+
+**The question the system must ask:**
+
+> "Is there an explanation for this signal that is materially different from every hypothesis already tested — and that, if true, would change the conclusion?"
+
+**"Materially different" means all three of the following:**
+1. Would require different sources to confirm or contradict
+2. Would not be resolved by any evidence already collected
+3. Would produce a different conclusion in the `investigation_evidence_report`
+
+An explanation that is just a rephrasing of an existing hypothesis is not materially different.
+
+**Process:**
+
+```
+After all prioritized hypotheses tested:
+  → Ask the exhaustion question
+  → If a materially different explanation exists:
+      → Add it to hypothesis_space with origin_type = "exhaustion_check"
+      → Assign priority using standard rules (Section 3b)
+      → Run through disconfirmation → confirmation → unresolved
+      → Log to hypothesis_history
+      → Repeat exhaustion check
+  → If no materially different explanation found:
+      → Log: exhaustion_status = "exhausted"
+  → If max_iterations reached before exhaustion:
+      → Log: exhaustion_status = "iteration_limit_reached"
+      → Note in remaining_uncertainty
+```
+
+**Max iterations:** 2 exhaustion check passes per question (configurable).  
+After 2 passes, stop and log `iteration_limit_reached` — do not loop indefinitely.
+
+**Getty example — exhaustion check:**
+
+After testing H-Q3-01 through H-Q3-04, the exhaustion check asks:
+
+> "Is there an explanation for Getty's OpenAI deal that we have not tested?"
+
+New hypothesis generated: *"Getty's largest corporate clients (Fortune 500 companies with strict IP compliance requirements) began demanding fully licensed AI training datasets — making a partnership the only way to serve this segment."*
+
+This is materially different from H-Q3-01 through H-Q3-04:
+- Requires different evidence (enterprise client communications, industry compliance reports)
+- Would not be resolved by any evidence already collected
+- If true, changes the conclusion from "Getty responded to AI threat" to "Getty responded to client demand"
+
+→ Added as H-Q3-09, origin_type = "exhaustion_check", test_priority = 2 (weakens: reframes motivation from defensive to demand-driven).
+
+This is exactly the kind of hypothesis that a CEO interview could reveal six months later. The system cannot always find it — but it must always ask.
+
+---
+
+## 4b. Unknown Reason Classification
+
+Not all `unresolved` hypotheses are unresolved for the same reason.
+
+**The distinction matters** because:
+- Some unknowns are permanently unknowable (private company financials)
+- Some are temporarily unknowable (paywall, search limit)
+- Some signal a gap in the investigation (search not attempted)
+- Some are structurally unknowable (requires primary interview)
+
+Treating all unknowns as equivalent obscures the quality of the investigation and prevents learning from patterns across signals.
+
+**`unknown_reason` values:**
+
+| Value | Meaning | Implication |
+|---|---|---|
+| `information_not_public` | Company is private, or information is confidential by nature | Permanently unknowable via public research. Do not retry. |
+| `conflicting_sources` | Two or more Tier 1–2 sources directly contradict each other | Not an absence of information — an unresolved conflict. Flag for human review. |
+| `search_limit_reached` | Max queries for this signal were reached before this hypothesis was fully tested | May be resolvable with additional search budget. |
+| `paywall` | Relevant source exists but is inaccessible | Source URL known; content not readable. Snippet may partially inform. |
+| `requires_primary_interview` | Hypothesis can only be confirmed by an insider, employee, or direct company statement not yet public | Structurally unknowable via public research alone. |
+| `historical_record_missing` | Events occurred before digital records; no reliable source exists | Permanently unknowable via current public research methods. |
+| `search_failed` | API error, timeout, or technical failure prevented search | Retry in next run. Not an epistemic limitation — a technical one. |
+| `outside_investigation_scope` | Hypothesis was generated but determined to be out of scope for this signal | Note what would be needed to bring it in scope. |
+
+**Rule:** Every `unresolved` hypothesis in `hypothesis_history` must have an `unknown_reason`.  
+"Unknown" without a reason is not an acceptable final state.
+
+**Value for future analysis:**
+
+`unknown_reason` data across many signals reveals patterns:
+- If 70% of `unresolved` entries are `information_not_public`, the system has a structural blind spot on private companies
+- If 40% are `search_limit_reached`, the cost controls are too tight
+- If 20% are `conflicting_sources`, the signal type is genuinely contested and requires caveats by default
 
 ---
 
@@ -461,13 +568,22 @@ Generated by Evidence Collector, consumed by Decision Lens.
       "question_id": "Q1",
       "hypothesis_id": "H-Q1-01",
       "hypothesis": "string",
-      "test_type": "disconfirmation_first",
+      "origin_type": "initial | exhaustion_check",
+      "test_type": "disconfirmation_first | confirmation | skipped",
       "status": "contradicted | survived | unresolved",
+      "unknown_reason": "information_not_public | conflicting_sources | search_limit_reached | paywall | requires_primary_interview | historical_record_missing | search_failed | outside_investigation_scope | null",
       "evidence": "string",
       "source_url": "string | null",
       "implication": "string — what this contradiction or survival means for the investigation"
     }
   ],
+
+  "exhaustion_check": {
+    "status": "exhausted | iteration_limit_reached | skipped",
+    "passes_completed": 1,
+    "new_hypotheses_generated": ["H-Q3-09"],
+    "notes": "string"
+  },
 
   "inferences": [
     {
@@ -497,6 +613,19 @@ Generated by Evidence Collector, consumed by Decision Lens.
   "unsupported_claims": ["string"],
   "unknowns": ["string"],
 
+  "remaining_uncertainty": {
+    "summary": "string — one paragraph, plain language, what we still do not know and why",
+    "items": [
+      {
+        "uncertainty": "string — specific unknown",
+        "unknown_reason": "information_not_public | conflicting_sources | search_limit_reached | paywall | requires_primary_interview | historical_record_missing | search_failed",
+        "would_change_conclusion_if_resolved": true,
+        "hypothesis_id": "H-Q3-02"
+      }
+    ],
+    "exhaustion_status": "exhausted | iteration_limit_reached"
+  },
+
   "proceed": "PROCEED | PROCEED_WITH_CAVEATS | INSUFFICIENT | BLOCKED",
   "gate_notes": "string"
 }
@@ -522,9 +651,60 @@ Blocked conclusions are logged and passed to Decision Lens as reference. They ca
 
 ### 7e. hypothesis_history
 
-`hypothesis_history` is append-only and includes every hypothesis that was tested — contradicted, survived, and unresolved.
+`hypothesis_history` is append-only and includes every hypothesis that was tested — contradicted, survived, and unresolved. Every `unresolved` entry must have `unknown_reason` assigned (see Section 4b). An `unresolved` entry without `unknown_reason` is a schema error.
 
 Decision Lens receives the full history. It sees not just what the system concluded, but which explanations were considered and eliminated. This makes surviving hypotheses demonstrably stronger — they are not simply plausible, they are what remains after alternatives were actively rejected.
+
+### 7f. remaining_uncertainty
+
+`remaining_uncertainty` is a first-class output of the investigation — not a footnote.
+
+It answers: *what do we still not know, why don't we know it, and would knowing it change the conclusion?*
+
+**Three levels:**
+
+| Level | Meaning |
+|---|---|
+| `would_change_conclusion_if_resolved: true` | This unknown, if resolved, would materially change `safe_conclusions`. Decision Lens must surface it explicitly in the article. |
+| `would_change_conclusion_if_resolved: false` | This unknown does not affect current conclusions. Logged for transparency, not surfaced in editorial. |
+| `exhaustion_status: iteration_limit_reached` | Investigation was stopped before all hypotheses were exhausted. The article must acknowledge this. |
+
+**What Decision Lens does with it:**
+
+- `remaining_uncertainty.summary` is passed verbatim to Editorial Engine
+- Editorial Engine may include it in the article — or frame conclusions with appropriate epistemic hedging
+- The system never silently drops uncertainties that `would_change_conclusion_if_resolved: true`
+
+**Getty example — remaining_uncertainty:**
+
+```json
+{
+  "summary": "We cannot establish whether financial pressure accelerated the timing of Getty's OpenAI deal. Getty Images is privately held (Carlyle Group) and does not publish financial statements. This unknown does not invalidate the strategic-choice conclusion, but it prevents us from claiming the decision was purely opportunistic rather than partly defensive.",
+  "items": [
+    {
+      "uncertainty": "Whether Getty faced financial pressure to monetize rather than litigate",
+      "unknown_reason": "information_not_public",
+      "would_change_conclusion_if_resolved": false,
+      "hypothesis_id": "H-Q3-02"
+    },
+    {
+      "uncertainty": "Whether enterprise client compliance demands drove the deal (H-Q3-09, exhaustion check hypothesis)",
+      "unknown_reason": "search_limit_reached",
+      "would_change_conclusion_if_resolved": true,
+      "hypothesis_id": "H-Q3-09"
+    }
+  ],
+  "exhaustion_status": "iteration_limit_reached"
+}
+```
+
+Note: H-Q3-09 (enterprise compliance demand) has `would_change_conclusion_if_resolved: true`. If confirmed in a future CEO interview, the conclusion shifts from "Getty responded to AI threat" to "Getty responded to client demand." The article must acknowledge this as an open question.
+
+**Why this matters:**
+
+A system that sometimes says "we don't know" is more credible when it says "we do know."
+
+Every `remaining_uncertainty.summary` that is surfaced in the final article is a signal to readers that Never Blank investigated the question before concluding — and found the edges of what can be known. That is what separates a research-backed conclusion from a plausible-sounding paragraph.
 
 ---
 
