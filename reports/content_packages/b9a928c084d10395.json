@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "b9a928c084d10395",
+  "HEADLINE": "Wayve launches $85M employee tender offer at $8.5B valuation",
+  "prepared_at": "2026-07-01 11:25 UTC",
+  "content": {
+    "blog": {
+      "headline": "Wayve’s $85M Tender Offer: Rethinking Employee Liquidity Before IPO",
+      "angle": "Wayve’s move to offer $85M in employee liquidity highlights the tension between employee cash needs and preserving control, showing founders how pre-IPO tender offers can retain top talent without sacrificing long-term incentives."
+    },
+    "linkedin": {
+      "headline": "The best AI engineers don’t want to wait five years for a payday—and now, they don’t have to.",
+      "angle": "When startups stall on exits, offering employee liquidity through tender offers can keep top talent engaged and reduce turnover risk."
+    },
+    "facebook": {
+      "headline": "Wayve just gave employees a chance to cash out $85M before going public.",
+      "angle": "Wayve’s $85M employee tender offer at an $8.5B valuation raises a key question: How can startups balance employee liquidity needs with preserving control and incentives?"
+    },
+    "instagram": {
+      "headline": "Liquidity Isn’t Just for Founders",
+      "angle": "Wayve’s $85M tender offer shows how early liquidity can be a retention tool, not just an exit event."
+    },
+    "threads": {
+      "thread_hook": "When exits stall, founders face a choice: watch talent leave or rethink liquidity.",
+      "angle": "This thread breaks down how Wayve’s $85M employee tender offer at an $8.5B valuation turns liquidity into a retention weapon, balancing employee demands with company control."
+    },
+    "stories": {
+      "story_question": "What happens when your best engineers want cash now, not in five years?",
+      "angle": "Exploring the tension between employee liquidity desires and founders’ need to preserve control and incentives in fast-growing startups."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905131/never-blank/posts/research/b9a928c084d10395/blog/1782905131.png",
+        "path": "reports/content_packages/images/b9a928c084d10395_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905132/never-blank/posts/research/b9a928c084d10395/linkedin/1782905132.png",
+        "path": "reports/content_packages/images/b9a928c084d10395_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905133/never-blank/posts/research/b9a928c084d10395/facebook/1782905133.png",
+        "path": "reports/content_packages/images/b9a928c084d10395_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905134/never-blank/posts/research/b9a928c084d10395/instagram/1782905134.png",
+        "path": "reports/content_packages/images/b9a928c084d10395_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905135/never-blank/posts/research/b9a928c084d10395/threads/1782905135.png",
+        "path": "reports/content_packages/images/b9a928c084d10395_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905136/never-blank/posts/research/b9a928c084d10395/stories/1782905136.png",
+        "path": "reports/content_packages/images/b9a928c084d10395_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "programmatic",
+    "reuse_source": "n/a",
+    "visual_family": "constellation_networks",
+    "hook_text": "Liquidity emerges from hidden connections."
+  }
+}

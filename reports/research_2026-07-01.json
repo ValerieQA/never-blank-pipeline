@@ -1,0 +1,439 @@
+{
+  "date": "2026-07-01",
+  "candidates_found": 16,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Nike results top estimates even as China sales drop 12%; retailer expects $986 m",
+    "Medicare will start covering obesity drugs for the first time. Here's what patie",
+    "Wayve launches $85M employee tender offer at $8.5B valuation"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "7742fa5ee5f21221",
+      "headline": "Nike results top estimates even as China sales drop 12%; retailer expects $986 million tariff refund",
+      "published_at": "2026-07-01 11:26 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "e5c6691c-f4f0-4859-9ae0-3949b4e567fe",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7478046224932282369/",
+          "external_id": "urn:li:share:7478046224932282369",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122114277087356169",
+          "external_id": "1219637131228622_122114277087356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaP59kCFiOu/",
+          "external_id": "18186656836385053",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18055553135513075",
+          "external_id": "18055553135513075",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/16",
+          "external_id": "16",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/7742fa5ee5f21221_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905104/never-blank/posts/research/7742fa5ee5f21221/blog/1782905103.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905105/never-blank/posts/research/7742fa5ee5f21221/linkedin/1782905105.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905106/never-blank/posts/research/7742fa5ee5f21221/facebook/1782905105.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905106/never-blank/posts/research/7742fa5ee5f21221/instagram/1782905106.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905107/never-blank/posts/research/7742fa5ee5f21221/threads/1782905107.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905109/never-blank/posts/research/7742fa5ee5f21221/stories/1782905109.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Earnings exceed, but signals shift.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "programmatic"
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "7742fa5ee5f21221",
+      "HEADLINE": "Nike results top estimates even as China sales drop 12%; retailer expects $986 million tariff refund",
+      "prepared_at": "2026-07-01 11:25 UTC",
+      "content": {
+        "blog": {
+          "headline": "Nike\u2019s China Sales Drop 12%, Yet Earnings Beat Estimates: How Global Diversity Shields Profit",
+          "angle": "Nike\u2019s 12% sales decline in China creates pressure \u2192 The tension of balancing regional volatility with global financial targets \u2192 Nike\u2019s use of tariff refunds and diversified markets \u2192 Lesson: Founders must build financial flexibility beyond growth in any single market."
+        },
+        "linkedin": {
+          "headline": "Nike\u2019s China sales tanked 12%\u2014but Wall Street cheered anyway.",
+          "angle": "When a key regional market stumbles, brands that rely on global diversity and smart financial moves can still deliver strong results."
+        },
+        "facebook": {
+          "headline": "Nike\u2019s China sales dropped 12%, yet quarterly earnings beat estimates. How?",
+          "angle": "Nike\u2019s regional sales hit turbulence, but a $986 million tariff refund and global revenue streams kept profits afloat\u2014what\u2019s your plan when a market dips?"
+        },
+        "instagram": {
+          "headline": "When One Market Falls, Others Carry Weight",
+          "angle": "Nike\u2019s 12% China sales drop didn\u2019t derail earnings thanks to global diversity and financial strategy."
+        },
+        "threads": {
+          "thread_hook": "Nike\u2019s China sales fell 12%, but earnings still beat estimates. Here\u2019s why that matters.",
+          "angle": "This thread breaks down how Nike\u2019s global footprint and financial tactics offset regional setbacks, offering a blueprint for founders managing market volatility."
+        },
+        "stories": {
+          "story_question": "What happens when your biggest market tanks?",
+          "angle": "Exploring how founders can prepare for regional sales shocks by diversifying revenue and activating financial levers."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905104/never-blank/posts/research/7742fa5ee5f21221/blog/1782905103.png",
+            "path": "reports/content_packages/images/7742fa5ee5f21221_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905105/never-blank/posts/research/7742fa5ee5f21221/linkedin/1782905105.png",
+            "path": "reports/content_packages/images/7742fa5ee5f21221_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905106/never-blank/posts/research/7742fa5ee5f21221/facebook/1782905105.png",
+            "path": "reports/content_packages/images/7742fa5ee5f21221_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905106/never-blank/posts/research/7742fa5ee5f21221/instagram/1782905106.png",
+            "path": "reports/content_packages/images/7742fa5ee5f21221_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905107/never-blank/posts/research/7742fa5ee5f21221/threads/1782905107.png",
+            "path": "reports/content_packages/images/7742fa5ee5f21221_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905109/never-blank/posts/research/7742fa5ee5f21221/stories/1782905109.png",
+            "path": "reports/content_packages/images/7742fa5ee5f21221_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Earnings exceed, but signals shift."
+      }
+    },
+    {
+      "SIGNAL_ID": "f2789a9a34d3b2f1",
+      "HEADLINE": "Medicare will start covering obesity drugs for the first time. Here's what patients should know",
+      "prepared_at": "2026-07-01 11:25 UTC",
+      "content": {
+        "blog": {
+          "headline": "Medicare\u2019s Obesity Drug Coverage: Why Operational Muscle Beats Product Innovation",
+          "angle": "Medicare\u2019s new coverage expands demand for obesity drugs \u2192 supply chain and spending pressures mount \u2192 companies must rethink operations and strategy \u2192 winning requires execution, not just innovation"
+        },
+        "linkedin": {
+          "headline": "Medicare just opened the floodgates for obesity drugs. Is your supply chain ready?",
+          "angle": "Regulatory shifts can create sudden demand surges, forcing companies to prioritize operational readiness over product features"
+        },
+        "facebook": {
+          "headline": "Medicare will cover obesity drugs starting 2026. Novo Nordisk\u2019s supply chain is under new pressure. What\u2019s your plan?",
+          "angle": "Medicare\u2019s coverage expansion signals a surge in demand; Novo Nordisk\u2019s example shows the operational risks\u2014how will your business handle it?"
+        },
+        "instagram": {
+          "headline": "Medicare Coverage = Supply Chain Stress",
+          "angle": "Medicare\u2019s new obesity drug coverage is a market opportunity that demands operational excellence, not just product innovation"
+        },
+        "threads": {
+          "thread_hook": "Medicare\u2019s obesity drug coverage isn\u2019t just a market shift\u2014it\u2019s a supply chain stress test.",
+          "angle": "This thread breaks down how regulatory changes create demand spikes that expose operational weaknesses and why founders must prioritize delivery capabilities"
+        },
+        "stories": {
+          "story_question": "Medicare\u2019s new obesity drug coverage: Opportunity or operational headache?",
+          "angle": "Exploring the tension between expanded market access and the operational challenges companies face to meet new demand"
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905117/never-blank/posts/research/f2789a9a34d3b2f1/blog/1782905117.png",
+            "path": "reports/content_packages/images/f2789a9a34d3b2f1_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905118/never-blank/posts/research/f2789a9a34d3b2f1/linkedin/1782905118.png",
+            "path": "reports/content_packages/images/f2789a9a34d3b2f1_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905119/never-blank/posts/research/f2789a9a34d3b2f1/facebook/1782905119.png",
+            "path": "reports/content_packages/images/f2789a9a34d3b2f1_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905120/never-blank/posts/research/f2789a9a34d3b2f1/instagram/1782905120.png",
+            "path": "reports/content_packages/images/f2789a9a34d3b2f1_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905121/never-blank/posts/research/f2789a9a34d3b2f1/threads/1782905121.png",
+            "path": "reports/content_packages/images/f2789a9a34d3b2f1_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905122/never-blank/posts/research/f2789a9a34d3b2f1/stories/1782905122.png",
+            "path": "reports/content_packages/images/f2789a9a34d3b2f1_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Access to health transforms with new signals."
+      }
+    },
+    {
+      "SIGNAL_ID": "b9a928c084d10395",
+      "HEADLINE": "Wayve launches $85M employee tender offer at $8.5B valuation",
+      "prepared_at": "2026-07-01 11:25 UTC",
+      "content": {
+        "blog": {
+          "headline": "Wayve\u2019s $85M Tender Offer: Rethinking Employee Liquidity Before IPO",
+          "angle": "Wayve\u2019s move to offer $85M in employee liquidity highlights the tension between employee cash needs and preserving control, showing founders how pre-IPO tender offers can retain top talent without sacrificing long-term incentives."
+        },
+        "linkedin": {
+          "headline": "The best AI engineers don\u2019t want to wait five years for a payday\u2014and now, they don\u2019t have to.",
+          "angle": "When startups stall on exits, offering employee liquidity through tender offers can keep top talent engaged and reduce turnover risk."
+        },
+        "facebook": {
+          "headline": "Wayve just gave employees a chance to cash out $85M before going public.",
+          "angle": "Wayve\u2019s $85M employee tender offer at an $8.5B valuation raises a key question: How can startups balance employee liquidity needs with preserving control and incentives?"
+        },
+        "instagram": {
+          "headline": "Liquidity Isn\u2019t Just for Founders",
+          "angle": "Wayve\u2019s $85M tender offer shows how early liquidity can be a retention tool, not just an exit event."
+        },
+        "threads": {
+          "thread_hook": "When exits stall, founders face a choice: watch talent leave or rethink liquidity.",
+          "angle": "This thread breaks down how Wayve\u2019s $85M employee tender offer at an $8.5B valuation turns liquidity into a retention weapon, balancing employee demands with company control."
+        },
+        "stories": {
+          "story_question": "What happens when your best engineers want cash now, not in five years?",
+          "angle": "Exploring the tension between employee liquidity desires and founders\u2019 need to preserve control and incentives in fast-growing startups."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905131/never-blank/posts/research/b9a928c084d10395/blog/1782905131.png",
+            "path": "reports/content_packages/images/b9a928c084d10395_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905132/never-blank/posts/research/b9a928c084d10395/linkedin/1782905132.png",
+            "path": "reports/content_packages/images/b9a928c084d10395_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905133/never-blank/posts/research/b9a928c084d10395/facebook/1782905133.png",
+            "path": "reports/content_packages/images/b9a928c084d10395_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905134/never-blank/posts/research/b9a928c084d10395/instagram/1782905134.png",
+            "path": "reports/content_packages/images/b9a928c084d10395_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905135/never-blank/posts/research/b9a928c084d10395/threads/1782905135.png",
+            "path": "reports/content_packages/images/b9a928c084d10395_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905136/never-blank/posts/research/b9a928c084d10395/stories/1782905136.png",
+            "path": "reports/content_packages/images/b9a928c084d10395_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Liquidity emerges from hidden connections."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "7742fa5ee5f21221",
+      "headline": "Nike results top estimates even as China sales drop 12%; retailer expects $986 million tariff refund",
+      "published_at": "2026-07-01 11:26 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "e5c6691c-f4f0-4859-9ae0-3949b4e567fe",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7478046224932282369/",
+          "external_id": "urn:li:share:7478046224932282369",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122114277087356169",
+          "external_id": "1219637131228622_122114277087356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaP59kCFiOu/",
+          "external_id": "18186656836385053",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18055553135513075",
+          "external_id": "18055553135513075",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/16",
+          "external_id": "16",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/7742fa5ee5f21221_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905104/never-blank/posts/research/7742fa5ee5f21221/blog/1782905103.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905105/never-blank/posts/research/7742fa5ee5f21221/linkedin/1782905105.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905106/never-blank/posts/research/7742fa5ee5f21221/facebook/1782905105.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905106/never-blank/posts/research/7742fa5ee5f21221/instagram/1782905106.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905107/never-blank/posts/research/7742fa5ee5f21221/threads/1782905107.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905109/never-blank/posts/research/7742fa5ee5f21221/stories/1782905109.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Earnings exceed, but signals shift.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "programmatic"
+    }
+  ]
+}

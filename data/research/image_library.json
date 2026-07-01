@@ -143,5 +143,35 @@
     "visual_family": "constellation_networks",
     "design_version": "3",
     "hook_text": "Visibility compounds in systems."
+  },
+  "7742fa5ee5f21221": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905104/never-blank/posts/research/7742fa5ee5f21221/blog/1782905103.png",
+    "signal_type": "pricing pressure",
+    "headline": "Nike results top estimates even as China sales drop 12%; retailer expects $986 million tariff refund",
+    "created_at": "2026-07-01",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Earnings exceed, but signals shift."
+  },
+  "f2789a9a34d3b2f1": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905117/never-blank/posts/research/f2789a9a34d3b2f1/blog/1782905117.png",
+    "signal_type": "regulation",
+    "headline": "Medicare will start covering obesity drugs for the first time. Here's what patients should know",
+    "created_at": "2026-07-01",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Access to health transforms with new signals."
+  },
+  "b9a928c084d10395": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905131/never-blank/posts/research/b9a928c084d10395/blog/1782905131.png",
+    "signal_type": "hiring changes",
+    "headline": "Wayve launches $85M employee tender offer at $8.5B valuation",
+    "created_at": "2026-07-01",
+    "method": "programmatic",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "Liquidity emerges from hidden connections."
   }
 }

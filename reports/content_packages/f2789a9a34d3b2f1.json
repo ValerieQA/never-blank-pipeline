@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "f2789a9a34d3b2f1",
+  "HEADLINE": "Medicare will start covering obesity drugs for the first time. Here's what patients should know",
+  "prepared_at": "2026-07-01 11:25 UTC",
+  "content": {
+    "blog": {
+      "headline": "Medicare’s Obesity Drug Coverage: Why Operational Muscle Beats Product Innovation",
+      "angle": "Medicare’s new coverage expands demand for obesity drugs → supply chain and spending pressures mount → companies must rethink operations and strategy → winning requires execution, not just innovation"
+    },
+    "linkedin": {
+      "headline": "Medicare just opened the floodgates for obesity drugs. Is your supply chain ready?",
+      "angle": "Regulatory shifts can create sudden demand surges, forcing companies to prioritize operational readiness over product features"
+    },
+    "facebook": {
+      "headline": "Medicare will cover obesity drugs starting 2026. Novo Nordisk’s supply chain is under new pressure. What’s your plan?",
+      "angle": "Medicare’s coverage expansion signals a surge in demand; Novo Nordisk’s example shows the operational risks—how will your business handle it?"
+    },
+    "instagram": {
+      "headline": "Medicare Coverage = Supply Chain Stress",
+      "angle": "Medicare’s new obesity drug coverage is a market opportunity that demands operational excellence, not just product innovation"
+    },
+    "threads": {
+      "thread_hook": "Medicare’s obesity drug coverage isn’t just a market shift—it’s a supply chain stress test.",
+      "angle": "This thread breaks down how regulatory changes create demand spikes that expose operational weaknesses and why founders must prioritize delivery capabilities"
+    },
+    "stories": {
+      "story_question": "Medicare’s new obesity drug coverage: Opportunity or operational headache?",
+      "angle": "Exploring the tension between expanded market access and the operational challenges companies face to meet new demand"
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905117/never-blank/posts/research/f2789a9a34d3b2f1/blog/1782905117.png",
+        "path": "reports/content_packages/images/f2789a9a34d3b2f1_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905118/never-blank/posts/research/f2789a9a34d3b2f1/linkedin/1782905118.png",
+        "path": "reports/content_packages/images/f2789a9a34d3b2f1_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905119/never-blank/posts/research/f2789a9a34d3b2f1/facebook/1782905119.png",
+        "path": "reports/content_packages/images/f2789a9a34d3b2f1_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905120/never-blank/posts/research/f2789a9a34d3b2f1/instagram/1782905120.png",
+        "path": "reports/content_packages/images/f2789a9a34d3b2f1_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905121/never-blank/posts/research/f2789a9a34d3b2f1/threads/1782905121.png",
+        "path": "reports/content_packages/images/f2789a9a34d3b2f1_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782905122/never-blank/posts/research/f2789a9a34d3b2f1/stories/1782905122.png",
+        "path": "reports/content_packages/images/f2789a9a34d3b2f1_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "programmatic",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Access to health transforms with new signals."
+  }
+}
