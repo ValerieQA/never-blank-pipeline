@@ -1,0 +1,439 @@
+{
+  "date": "2026-07-02",
+  "candidates_found": 17,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Automakers report mixed U.S. sales results as hybrid vehicles drive market",
+    "U.S. auto industry faces increased uncertainty without extension of USMCA trade ",
+    "Alibaba-affiliate Ant Group rushes into humanoid robots with a dozen deals in 18"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "ed1257c641eae675",
+      "headline": "Automakers report mixed U.S. sales results as hybrid vehicles drive market",
+      "published_at": "2026-07-02 10:43 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "91819ed8-d846-4257-8f39-842f8c5c125d",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7478397745964244992/",
+          "external_id": "urn:li:share:7478397745964244992",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122114563929356169",
+          "external_id": "1219637131228622_122114563929356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaSZ04rkjpp/",
+          "external_id": "18113632255920674",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18024077300839430",
+          "external_id": "18024077300839430",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/17",
+          "external_id": "17",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/ed1257c641eae675_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988888/never-blank/posts/research/ed1257c641eae675/blog/1782988888.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988889/never-blank/posts/research/ed1257c641eae675/linkedin/1782988889.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988890/never-blank/posts/research/ed1257c641eae675/facebook/1782988890.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988892/never-blank/posts/research/ed1257c641eae675/instagram/1782988891.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988893/never-blank/posts/research/ed1257c641eae675/threads/1782988893.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988894/never-blank/posts/research/ed1257c641eae675/stories/1782988894.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Consumer preferences shift toward hybrid vehicles.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "programmatic"
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "ed1257c641eae675",
+      "HEADLINE": "Automakers report mixed U.S. sales results as hybrid vehicles drive market",
+      "prepared_at": "2026-07-02 10:41 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why Toyota\u2019s Hybrid Bet Is Leaving Rivals in the Dust",
+          "angle": "Automakers face a split between legacy models and hybrids \u2192 consumer demand shifts rapidly \u2192 those with hybrid lineups see sales growth \u2192 stocking the right products early wins market share."
+        },
+        "linkedin": {
+          "headline": "Toyota\u2019s hybrid sales surge while competitors stumble\u2014what\u2019s their secret?",
+          "angle": "Automakers with hybrid vehicles are capturing market growth, exposing the risk of clinging to outdated product lines."
+        },
+        "facebook": {
+          "headline": "Why are Toyota\u2019s hybrids outselling rivals in the U.S. market?",
+          "angle": "Automakers with hybrid offerings like Toyota are growing sales while others lag\u2014how prepared is your product lineup for shifting consumer demand?"
+        },
+        "instagram": {
+          "headline": "Hybrid Sales: Who\u2019s Ready, Who\u2019s Not",
+          "angle": "The companies that stocked hybrids early are now reaping the rewards as consumer preferences shift."
+        },
+        "threads": {
+          "thread_hook": "The hybrid vehicle market isn\u2019t just growing\u2014it\u2019s exposing who planned ahead and who didn\u2019t.",
+          "angle": "This thread breaks down how early investment in hybrid technology translates directly to sales growth and competitive positioning."
+        },
+        "stories": {
+          "story_question": "Is your product lineup ready for the hybrid shift?",
+          "angle": "Exploring the tension between legacy product investments and the need to adapt quickly to changing consumer preferences."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988888/never-blank/posts/research/ed1257c641eae675/blog/1782988888.png",
+            "path": "reports/content_packages/images/ed1257c641eae675_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988889/never-blank/posts/research/ed1257c641eae675/linkedin/1782988889.png",
+            "path": "reports/content_packages/images/ed1257c641eae675_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988890/never-blank/posts/research/ed1257c641eae675/facebook/1782988890.png",
+            "path": "reports/content_packages/images/ed1257c641eae675_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988892/never-blank/posts/research/ed1257c641eae675/instagram/1782988891.png",
+            "path": "reports/content_packages/images/ed1257c641eae675_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988893/never-blank/posts/research/ed1257c641eae675/threads/1782988893.png",
+            "path": "reports/content_packages/images/ed1257c641eae675_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988894/never-blank/posts/research/ed1257c641eae675/stories/1782988894.png",
+            "path": "reports/content_packages/images/ed1257c641eae675_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Consumer preferences shift toward hybrid vehicles."
+      }
+    },
+    {
+      "SIGNAL_ID": "b1b4f60a5914240f",
+      "HEADLINE": "U.S. auto industry faces increased uncertainty without extension of USMCA trade deal",
+      "prepared_at": "2026-07-02 10:41 UTC",
+      "content": {
+        "blog": {
+          "headline": "USMCA\u2019s Uncertain Future: How GM and the Auto Industry Brace for Trade Turbulence",
+          "angle": "The looming USMCA expiration threatens the auto sector\u2019s cost and compliance balance, forcing companies like GM to rethink supply chains before policy shifts dictate the rules."
+        },
+        "linkedin": {
+          "headline": "GM\u2019s supply chain was built for a trade deal that might vanish next year. What now?",
+          "angle": "When trade agreements waver, auto manufacturers face unpredictable costs and regulatory hurdles that demand agile supply chain strategies."
+        },
+        "facebook": {
+          "headline": "The USMCA trade deal might not get extended\u2014what does that mean for the U.S. auto industry?",
+          "angle": "With GM already optimizing for a deal that could disappear, how can auto companies manage the risk of sudden trade policy changes?"
+        },
+        "instagram": {
+          "headline": "When Trade Deals Disappear, Supply Chains Flex",
+          "angle": "Auto giants like GM are rewriting their supply chains to survive the fallout of uncertain trade agreements."
+        },
+        "threads": {
+          "thread_hook": "The USMCA trade deal might end. Here\u2019s why GM\u2019s supply chain is already on edge.",
+          "angle": "This thread breaks down how the potential loss of tariff-free trade under USMCA forces automakers to build flexible supply chains and engage policymakers to stay ahead."
+        },
+        "stories": {
+          "story_question": "What happens if the USMCA trade deal isn\u2019t extended?",
+          "angle": "Exploring how uncertainty in trade policy puts pressure on auto supply chains and why flexibility is the only safeguard."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988907/never-blank/posts/research/b1b4f60a5914240f/blog/1782988907.png",
+            "path": "reports/content_packages/images/b1b4f60a5914240f_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988909/never-blank/posts/research/b1b4f60a5914240f/linkedin/1782988909.png",
+            "path": "reports/content_packages/images/b1b4f60a5914240f_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988910/never-blank/posts/research/b1b4f60a5914240f/facebook/1782988910.png",
+            "path": "reports/content_packages/images/b1b4f60a5914240f_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988911/never-blank/posts/research/b1b4f60a5914240f/instagram/1782988911.png",
+            "path": "reports/content_packages/images/b1b4f60a5914240f_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988912/never-blank/posts/research/b1b4f60a5914240f/threads/1782988912.png",
+            "path": "reports/content_packages/images/b1b4f60a5914240f_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988913/never-blank/posts/research/b1b4f60a5914240f/stories/1782988913.png",
+            "path": "reports/content_packages/images/b1b4f60a5914240f_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Uncertainty ripples through the auto industry."
+      }
+    },
+    {
+      "SIGNAL_ID": "d44acbb47d1c304c",
+      "HEADLINE": "Alibaba-affiliate Ant Group rushes into humanoid robots with a dozen deals in 18 months",
+      "prepared_at": "2026-07-02 10:42 UTC",
+      "content": {
+        "blog": {
+          "headline": "Ant Group\u2019s Humanoid Robot Blitz: Defining Risk in an Unproven Market",
+          "angle": "Ant Group\u2019s rapid deal-making in humanoid robotics exposes the tension between aggressive investment and the unpredictable tech-commercial landscape, revealing how early movers shape market dynamics but face execution and integration hurdles."
+        },
+        "linkedin": {
+          "headline": "Ant Group just placed a dozen bets on humanoid robots\u2014before the market even exists.",
+          "angle": "When a fintech titan rushes into robotics, it signals a high-stakes gamble that will force competitors to recalibrate their risk and strategy."
+        },
+        "facebook": {
+          "headline": "Ant Group is sprinting into humanoid robotics with a dozen deals in 18 months. But can speed outpace uncertainty?",
+          "angle": "Ant Group\u2019s aggressive investments in humanoid robots highlight the tension between moving fast and navigating an unproven market\u2014what does this mean for other founders watching from the sidelines?"
+        },
+        "instagram": {
+          "headline": "Ant Group\u2019s Robot Rush: Defining the Unknown",
+          "angle": "When established giants rush into new tech, they don\u2019t just invest\u2014they set the terms for risk and reward in emerging markets."
+        },
+        "threads": {
+          "thread_hook": "Ant Group just made a dozen bets on humanoid robots\u2014before anyone knows if the market will even exist.",
+          "angle": "This thread breaks down how Ant Group\u2019s aggressive robotics investments force the industry to confront the tension between speed and uncertainty, and what founders should watch as this market unfolds."
+        },
+        "stories": {
+          "story_question": "Can rushing into humanoid robots pay off when the market is still a question mark?",
+          "angle": "Exploring the tension founders face between moving fast to lead emerging tech and the risks of betting on uncertain markets."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988928/never-blank/posts/research/d44acbb47d1c304c/blog/1782988928.png",
+            "path": "reports/content_packages/images/d44acbb47d1c304c_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988929/never-blank/posts/research/d44acbb47d1c304c/linkedin/1782988929.png",
+            "path": "reports/content_packages/images/d44acbb47d1c304c_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988929/never-blank/posts/research/d44acbb47d1c304c/facebook/1782988929.png",
+            "path": "reports/content_packages/images/d44acbb47d1c304c_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988930/never-blank/posts/research/d44acbb47d1c304c/instagram/1782988930.png",
+            "path": "reports/content_packages/images/d44acbb47d1c304c_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988931/never-blank/posts/research/d44acbb47d1c304c/threads/1782988931.png",
+            "path": "reports/content_packages/images/d44acbb47d1c304c_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988932/never-blank/posts/research/d44acbb47d1c304c/stories/1782988932.png",
+            "path": "reports/content_packages/images/d44acbb47d1c304c_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "particle_flow",
+        "hook_text": "Signals of innovation in robotics."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "ed1257c641eae675",
+      "headline": "Automakers report mixed U.S. sales results as hybrid vehicles drive market",
+      "published_at": "2026-07-02 10:43 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "91819ed8-d846-4257-8f39-842f8c5c125d",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7478397745964244992/",
+          "external_id": "urn:li:share:7478397745964244992",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122114563929356169",
+          "external_id": "1219637131228622_122114563929356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaSZ04rkjpp/",
+          "external_id": "18113632255920674",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18024077300839430",
+          "external_id": "18024077300839430",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/17",
+          "external_id": "17",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/ed1257c641eae675_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988888/never-blank/posts/research/ed1257c641eae675/blog/1782988888.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988889/never-blank/posts/research/ed1257c641eae675/linkedin/1782988889.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988890/never-blank/posts/research/ed1257c641eae675/facebook/1782988890.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988892/never-blank/posts/research/ed1257c641eae675/instagram/1782988891.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988893/never-blank/posts/research/ed1257c641eae675/threads/1782988893.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988894/never-blank/posts/research/ed1257c641eae675/stories/1782988894.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Consumer preferences shift toward hybrid vehicles.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "programmatic"
+    }
+  ]
+}

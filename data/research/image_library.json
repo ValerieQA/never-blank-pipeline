@@ -173,5 +173,35 @@
     "visual_family": "constellation_networks",
     "design_version": "3",
     "hook_text": "Liquidity emerges from hidden connections."
+  },
+  "ed1257c641eae675": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988888/never-blank/posts/research/ed1257c641eae675/blog/1782988888.png",
+    "signal_type": "consumer behavior",
+    "headline": "Automakers report mixed U.S. sales results as hybrid vehicles drive market",
+    "created_at": "2026-07-02",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Consumer preferences shift toward hybrid vehicles."
+  },
+  "b1b4f60a5914240f": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988907/never-blank/posts/research/b1b4f60a5914240f/blog/1782988907.png",
+    "signal_type": "regulation",
+    "headline": "U.S. auto industry faces increased uncertainty without extension of USMCA trade deal",
+    "created_at": "2026-07-02",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Uncertainty ripples through the auto industry."
+  },
+  "d44acbb47d1c304c": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988928/never-blank/posts/research/d44acbb47d1c304c/blog/1782988928.png",
+    "signal_type": "technology adoption",
+    "headline": "Alibaba-affiliate Ant Group rushes into humanoid robots with a dozen deals in 18 months",
+    "created_at": "2026-07-02",
+    "method": "programmatic",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "Signals of innovation in robotics."
   }
 }

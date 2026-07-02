@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "ed1257c641eae675",
+  "HEADLINE": "Automakers report mixed U.S. sales results as hybrid vehicles drive market",
+  "prepared_at": "2026-07-02 10:41 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why Toyota’s Hybrid Bet Is Leaving Rivals in the Dust",
+      "angle": "Automakers face a split between legacy models and hybrids → consumer demand shifts rapidly → those with hybrid lineups see sales growth → stocking the right products early wins market share."
+    },
+    "linkedin": {
+      "headline": "Toyota’s hybrid sales surge while competitors stumble—what’s their secret?",
+      "angle": "Automakers with hybrid vehicles are capturing market growth, exposing the risk of clinging to outdated product lines."
+    },
+    "facebook": {
+      "headline": "Why are Toyota’s hybrids outselling rivals in the U.S. market?",
+      "angle": "Automakers with hybrid offerings like Toyota are growing sales while others lag—how prepared is your product lineup for shifting consumer demand?"
+    },
+    "instagram": {
+      "headline": "Hybrid Sales: Who’s Ready, Who’s Not",
+      "angle": "The companies that stocked hybrids early are now reaping the rewards as consumer preferences shift."
+    },
+    "threads": {
+      "thread_hook": "The hybrid vehicle market isn’t just growing—it’s exposing who planned ahead and who didn’t.",
+      "angle": "This thread breaks down how early investment in hybrid technology translates directly to sales growth and competitive positioning."
+    },
+    "stories": {
+      "story_question": "Is your product lineup ready for the hybrid shift?",
+      "angle": "Exploring the tension between legacy product investments and the need to adapt quickly to changing consumer preferences."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988888/never-blank/posts/research/ed1257c641eae675/blog/1782988888.png",
+        "path": "reports/content_packages/images/ed1257c641eae675_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988889/never-blank/posts/research/ed1257c641eae675/linkedin/1782988889.png",
+        "path": "reports/content_packages/images/ed1257c641eae675_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988890/never-blank/posts/research/ed1257c641eae675/facebook/1782988890.png",
+        "path": "reports/content_packages/images/ed1257c641eae675_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988892/never-blank/posts/research/ed1257c641eae675/instagram/1782988891.png",
+        "path": "reports/content_packages/images/ed1257c641eae675_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988893/never-blank/posts/research/ed1257c641eae675/threads/1782988893.png",
+        "path": "reports/content_packages/images/ed1257c641eae675_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1782988894/never-blank/posts/research/ed1257c641eae675/stories/1782988894.png",
+        "path": "reports/content_packages/images/ed1257c641eae675_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "programmatic",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Consumer preferences shift toward hybrid vehicles."
+  }
+}
