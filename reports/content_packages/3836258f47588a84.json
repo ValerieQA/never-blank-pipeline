@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "3836258f47588a84",
+  "HEADLINE": "Americans are paying record prices for steak. Here's why demand isn't cracking",
+  "prepared_at": "2026-07-03 10:37 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why Americans Keep Paying More for Steak Despite Record Prices",
+      "angle": "Record-high beef prices → Risk of losing price-sensitive customers → Texas Roadhouse doubled down on experience → Emotional value sustains demand even as costs climb"
+    },
+    "linkedin": {
+      "headline": "Americans are swallowing record steak prices—and coming back for seconds.",
+      "angle": "When input costs spike, businesses usually cut corners or chase volume; Texas Roadhouse proves that doubling down on emotional value keeps customers loyal despite higher prices."
+    },
+    "facebook": {
+      "headline": "Steak prices are at an all-time high — yet demand isn’t dropping. Why?",
+      "angle": "Record beef prices + Texas Roadhouse’s focus on experience = consumers willing to pay more for perceived value. How is your brand managing rising costs without losing customers?"
+    },
+    "instagram": {
+      "headline": "Why We Pay More for Steak",
+      "angle": "Consumers tolerate higher steak prices when the experience and emotional value remain intact, turning an expensive cut into an affordable luxury."
+    },
+    "threads": {
+      "thread_hook": "Steak prices are soaring, but Americans aren’t backing off. Here’s why.",
+      "angle": "The thread breaks down how Texas Roadhouse’s focus on experience over discounts shows that emotional value can outmuscle price hikes and keep demand steady."
+    },
+    "stories": {
+      "story_question": "Can you raise prices without losing customers?",
+      "angle": "Exploring how brands like Texas Roadhouse maintain demand by emphasizing emotional value and experience amid rising costs."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075041/never-blank/posts/research/3836258f47588a84/blog/1783075041.png",
+        "path": "reports/content_packages/images/3836258f47588a84_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075042/never-blank/posts/research/3836258f47588a84/linkedin/1783075042.png",
+        "path": "reports/content_packages/images/3836258f47588a84_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075043/never-blank/posts/research/3836258f47588a84/facebook/1783075043.png",
+        "path": "reports/content_packages/images/3836258f47588a84_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075044/never-blank/posts/research/3836258f47588a84/instagram/1783075044.png",
+        "path": "reports/content_packages/images/3836258f47588a84_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075044/never-blank/posts/research/3836258f47588a84/threads/1783075044.png",
+        "path": "reports/content_packages/images/3836258f47588a84_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075045/never-blank/posts/research/3836258f47588a84/stories/1783075045.png",
+        "path": "reports/content_packages/images/3836258f47588a84_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "programmatic",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Demand for steak defies record prices."
+  }
+}

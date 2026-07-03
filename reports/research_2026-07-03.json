@@ -1,0 +1,439 @@
+{
+  "date": "2026-07-03",
+  "candidates_found": 10,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Ford Q2 sales drop 10.3% due to F-Series supplier issue, falling EV demand",
+    "Rivian raises 2026 delivery outlook while Lucid misses Wall Street expectations ",
+    "Americans are paying record prices for steak. Here's why demand isn't cracking"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "f21c58bec0a7b182",
+      "headline": "Ford Q2 sales drop 10.3% due to F-Series supplier issue, falling EV demand",
+      "published_at": "2026-07-03 10:38 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "a281b895-efea-4296-8612-2c7441894a32",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7478758890604556288/",
+          "external_id": "urn:li:share:7478758890604556288",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122114845155356169",
+          "external_id": "1219637131228622_122114845155356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaU-DPDmpqB/",
+          "external_id": "17871834312622149",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18011867087915027",
+          "external_id": "18011867087915027",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/18",
+          "external_id": "18",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/f21c58bec0a7b182_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075014/never-blank/posts/research/f21c58bec0a7b182/blog/1783075014.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075015/never-blank/posts/research/f21c58bec0a7b182/linkedin/1783075015.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075016/never-blank/posts/research/f21c58bec0a7b182/facebook/1783075016.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075017/never-blank/posts/research/f21c58bec0a7b182/instagram/1783075017.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075018/never-blank/posts/research/f21c58bec0a7b182/threads/1783075018.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075019/never-blank/posts/research/f21c58bec0a7b182/stories/1783075019.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Supply chains ripple through unseen forces.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "programmatic"
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "f21c58bec0a7b182",
+      "HEADLINE": "Ford Q2 sales drop 10.3% due to F-Series supplier issue, falling EV demand",
+      "prepared_at": "2026-07-03 10:37 UTC",
+      "content": {
+        "blog": {
+          "headline": "Ford\u2019s Q2 Sales Drop Exposes the Double-Edged Sword of Legacy and EV Markets",
+          "angle": "Ford\u2019s 10.3% sales decline reveals the tension between maintaining profitable legacy trucks amid supplier disruptions and navigating a steep EV demand drop, underscoring the need for automakers to aggressively manage supply chains and adapt to shifting consumer preferences."
+        },
+        "linkedin": {
+          "headline": "Ford\u2019s F-Series trucks hit a supply chain pothole\u2014just as their EV sales tanked by 40%.",
+          "angle": "Legacy product reliability issues combined with plunging EV demand expose how fragile supply chains and market shifts can derail even industry giants."
+        },
+        "facebook": {
+          "headline": "Ford\u2019s Q2 sales fell 10.3%\u2014a supplier snag on F-Series trucks and a 40% drop in EV sales hit hard.",
+          "angle": "When a supplier issue disrupts your best-selling trucks and EV demand collapses, how do you balance legacy profits with emerging market risks?"
+        },
+        "instagram": {
+          "headline": "Legacy Trucks vs. EV Market Collapse",
+          "angle": "Ford\u2019s sales stumble shows the tightrope automakers walk between old cash cows and unpredictable EV demand."
+        },
+        "threads": {
+          "thread_hook": "Ford\u2019s latest sales report isn\u2019t just numbers\u2014it\u2019s a story of supply chain cracks and EV market turbulence.",
+          "angle": "This thread breaks down how Ford\u2019s supplier issues and plummeting EV sales reveal the brutal balancing act legacy automakers face between established products and emerging technologies."
+        },
+        "stories": {
+          "story_question": "Can legacy automakers survive when supply chains and EV demand both falter?",
+          "angle": "Exploring the pressure on automakers to juggle dependable legacy production with volatile EV market shifts amid fragile supply chains."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075014/never-blank/posts/research/f21c58bec0a7b182/blog/1783075014.png",
+            "path": "reports/content_packages/images/f21c58bec0a7b182_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075015/never-blank/posts/research/f21c58bec0a7b182/linkedin/1783075015.png",
+            "path": "reports/content_packages/images/f21c58bec0a7b182_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075016/never-blank/posts/research/f21c58bec0a7b182/facebook/1783075016.png",
+            "path": "reports/content_packages/images/f21c58bec0a7b182_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075017/never-blank/posts/research/f21c58bec0a7b182/instagram/1783075017.png",
+            "path": "reports/content_packages/images/f21c58bec0a7b182_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075018/never-blank/posts/research/f21c58bec0a7b182/threads/1783075018.png",
+            "path": "reports/content_packages/images/f21c58bec0a7b182_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075019/never-blank/posts/research/f21c58bec0a7b182/stories/1783075019.png",
+            "path": "reports/content_packages/images/f21c58bec0a7b182_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Supply chains ripple through unseen forces."
+      }
+    },
+    {
+      "SIGNAL_ID": "14119f6b40f45475",
+      "HEADLINE": "Rivian raises 2026 delivery outlook while Lucid misses Wall Street expectations for second quarter",
+      "prepared_at": "2026-07-03 10:37 UTC",
+      "content": {
+        "blog": {
+          "headline": "Rivian Raises 2026 Delivery Targets as Lucid Stumbles: What EV Founders Need to Learn",
+          "angle": "Rivian\u2019s upward revision clashes with Lucid\u2019s missed targets \u2192 exposes the tension between growth ambition and production realities \u2192 shows why precise forecasting and communication are non-negotiable \u2192 founders must build operational agility to protect investor trust."
+        },
+        "linkedin": {
+          "headline": "Investors don\u2019t punish missed numbers\u2014they punish missed credibility.",
+          "angle": "EV makers chasing aggressive delivery goals face brutal scrutiny; missing targets damages trust more than the shortfall itself."
+        },
+        "facebook": {
+          "headline": "Rivian just raised its 2026 delivery outlook while Lucid missed Wall Street\u2019s expectations. What\u2019s really at stake?",
+          "angle": "When Rivian beats its own guidance and Lucid falls short, it\u2019s not just numbers\u2014it\u2019s a test of operational discipline and investor confidence. How are you managing your growth promises?"
+        },
+        "instagram": {
+          "headline": "Delivery Targets Are Promises, Not Projections",
+          "angle": "In EV manufacturing, missing delivery goals costs more than revenue\u2014it costs credibility. Precision and communication matter."
+        },
+        "threads": {
+          "thread_hook": "Rivian\u2019s bold delivery upgrade vs. Lucid\u2019s miss reveals a harsh truth about scaling EVs.",
+          "angle": "This thread breaks down why hitting delivery targets isn\u2019t just about production\u2014it\u2019s about maintaining investor trust through clear communication and operational flexibility."
+        },
+        "stories": {
+          "story_question": "Can your delivery promises survive the pressure of scaling?",
+          "angle": "Exploring how EV startups must balance ambitious targets with the reality of production challenges to keep investor confidence intact."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075028/never-blank/posts/research/14119f6b40f45475/blog/1783075027.png",
+            "path": "reports/content_packages/images/14119f6b40f45475_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075028/never-blank/posts/research/14119f6b40f45475/linkedin/1783075028.png",
+            "path": "reports/content_packages/images/14119f6b40f45475_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075029/never-blank/posts/research/14119f6b40f45475/facebook/1783075029.png",
+            "path": "reports/content_packages/images/14119f6b40f45475_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075030/never-blank/posts/research/14119f6b40f45475/instagram/1783075030.png",
+            "path": "reports/content_packages/images/14119f6b40f45475_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075031/never-blank/posts/research/14119f6b40f45475/threads/1783075031.png",
+            "path": "reports/content_packages/images/14119f6b40f45475_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075032/never-blank/posts/research/14119f6b40f45475/stories/1783075032.png",
+            "path": "reports/content_packages/images/14119f6b40f45475_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Signals of success and struggle in the EV landscape."
+      }
+    },
+    {
+      "SIGNAL_ID": "3836258f47588a84",
+      "HEADLINE": "Americans are paying record prices for steak. Here's why demand isn't cracking",
+      "prepared_at": "2026-07-03 10:37 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why Americans Keep Paying More for Steak Despite Record Prices",
+          "angle": "Record-high beef prices \u2192 Risk of losing price-sensitive customers \u2192 Texas Roadhouse doubled down on experience \u2192 Emotional value sustains demand even as costs climb"
+        },
+        "linkedin": {
+          "headline": "Americans are swallowing record steak prices\u2014and coming back for seconds.",
+          "angle": "When input costs spike, businesses usually cut corners or chase volume; Texas Roadhouse proves that doubling down on emotional value keeps customers loyal despite higher prices."
+        },
+        "facebook": {
+          "headline": "Steak prices are at an all-time high \u2014 yet demand isn\u2019t dropping. Why?",
+          "angle": "Record beef prices + Texas Roadhouse\u2019s focus on experience = consumers willing to pay more for perceived value. How is your brand managing rising costs without losing customers?"
+        },
+        "instagram": {
+          "headline": "Why We Pay More for Steak",
+          "angle": "Consumers tolerate higher steak prices when the experience and emotional value remain intact, turning an expensive cut into an affordable luxury."
+        },
+        "threads": {
+          "thread_hook": "Steak prices are soaring, but Americans aren\u2019t backing off. Here\u2019s why.",
+          "angle": "The thread breaks down how Texas Roadhouse\u2019s focus on experience over discounts shows that emotional value can outmuscle price hikes and keep demand steady."
+        },
+        "stories": {
+          "story_question": "Can you raise prices without losing customers?",
+          "angle": "Exploring how brands like Texas Roadhouse maintain demand by emphasizing emotional value and experience amid rising costs."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075041/never-blank/posts/research/3836258f47588a84/blog/1783075041.png",
+            "path": "reports/content_packages/images/3836258f47588a84_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075042/never-blank/posts/research/3836258f47588a84/linkedin/1783075042.png",
+            "path": "reports/content_packages/images/3836258f47588a84_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075043/never-blank/posts/research/3836258f47588a84/facebook/1783075043.png",
+            "path": "reports/content_packages/images/3836258f47588a84_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075044/never-blank/posts/research/3836258f47588a84/instagram/1783075044.png",
+            "path": "reports/content_packages/images/3836258f47588a84_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075044/never-blank/posts/research/3836258f47588a84/threads/1783075044.png",
+            "path": "reports/content_packages/images/3836258f47588a84_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075045/never-blank/posts/research/3836258f47588a84/stories/1783075045.png",
+            "path": "reports/content_packages/images/3836258f47588a84_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Demand for steak defies record prices."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "f21c58bec0a7b182",
+      "headline": "Ford Q2 sales drop 10.3% due to F-Series supplier issue, falling EV demand",
+      "published_at": "2026-07-03 10:38 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "a281b895-efea-4296-8612-2c7441894a32",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7478758890604556288/",
+          "external_id": "urn:li:share:7478758890604556288",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122114845155356169",
+          "external_id": "1219637131228622_122114845155356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaU-DPDmpqB/",
+          "external_id": "17871834312622149",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18011867087915027",
+          "external_id": "18011867087915027",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/18",
+          "external_id": "18",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/f21c58bec0a7b182_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075014/never-blank/posts/research/f21c58bec0a7b182/blog/1783075014.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075015/never-blank/posts/research/f21c58bec0a7b182/linkedin/1783075015.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075016/never-blank/posts/research/f21c58bec0a7b182/facebook/1783075016.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075017/never-blank/posts/research/f21c58bec0a7b182/instagram/1783075017.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075018/never-blank/posts/research/f21c58bec0a7b182/threads/1783075018.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075019/never-blank/posts/research/f21c58bec0a7b182/stories/1783075019.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Supply chains ripple through unseen forces.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "programmatic"
+    }
+  ]
+}

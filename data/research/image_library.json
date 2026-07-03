@@ -203,5 +203,35 @@
     "visual_family": "particle_flow",
     "design_version": "3",
     "hook_text": "Signals of innovation in robotics."
+  },
+  "f21c58bec0a7b182": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075014/never-blank/posts/research/f21c58bec0a7b182/blog/1783075014.png",
+    "signal_type": "consumer behavior",
+    "headline": "Ford Q2 sales drop 10.3% due to F-Series supplier issue, falling EV demand",
+    "created_at": "2026-07-03",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Supply chains ripple through unseen forces."
+  },
+  "14119f6b40f45475": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075028/never-blank/posts/research/14119f6b40f45475/blog/1783075027.png",
+    "signal_type": "consumer behavior",
+    "headline": "Rivian raises 2026 delivery outlook while Lucid misses Wall Street expectations for second quarter",
+    "created_at": "2026-07-03",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Signals of success and struggle in the EV landscape."
+  },
+  "3836258f47588a84": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075041/never-blank/posts/research/3836258f47588a84/blog/1783075041.png",
+    "signal_type": "consumer behavior",
+    "headline": "Americans are paying record prices for steak. Here's why demand isn't cracking",
+    "created_at": "2026-07-03",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Demand for steak defies record prices."
   }
 }

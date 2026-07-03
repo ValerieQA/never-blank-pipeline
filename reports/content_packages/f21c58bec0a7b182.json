@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "f21c58bec0a7b182",
+  "HEADLINE": "Ford Q2 sales drop 10.3% due to F-Series supplier issue, falling EV demand",
+  "prepared_at": "2026-07-03 10:37 UTC",
+  "content": {
+    "blog": {
+      "headline": "Ford’s Q2 Sales Drop Exposes the Double-Edged Sword of Legacy and EV Markets",
+      "angle": "Ford’s 10.3% sales decline reveals the tension between maintaining profitable legacy trucks amid supplier disruptions and navigating a steep EV demand drop, underscoring the need for automakers to aggressively manage supply chains and adapt to shifting consumer preferences."
+    },
+    "linkedin": {
+      "headline": "Ford’s F-Series trucks hit a supply chain pothole—just as their EV sales tanked by 40%.",
+      "angle": "Legacy product reliability issues combined with plunging EV demand expose how fragile supply chains and market shifts can derail even industry giants."
+    },
+    "facebook": {
+      "headline": "Ford’s Q2 sales fell 10.3%—a supplier snag on F-Series trucks and a 40% drop in EV sales hit hard.",
+      "angle": "When a supplier issue disrupts your best-selling trucks and EV demand collapses, how do you balance legacy profits with emerging market risks?"
+    },
+    "instagram": {
+      "headline": "Legacy Trucks vs. EV Market Collapse",
+      "angle": "Ford’s sales stumble shows the tightrope automakers walk between old cash cows and unpredictable EV demand."
+    },
+    "threads": {
+      "thread_hook": "Ford’s latest sales report isn’t just numbers—it’s a story of supply chain cracks and EV market turbulence.",
+      "angle": "This thread breaks down how Ford’s supplier issues and plummeting EV sales reveal the brutal balancing act legacy automakers face between established products and emerging technologies."
+    },
+    "stories": {
+      "story_question": "Can legacy automakers survive when supply chains and EV demand both falter?",
+      "angle": "Exploring the pressure on automakers to juggle dependable legacy production with volatile EV market shifts amid fragile supply chains."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075014/never-blank/posts/research/f21c58bec0a7b182/blog/1783075014.png",
+        "path": "reports/content_packages/images/f21c58bec0a7b182_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075015/never-blank/posts/research/f21c58bec0a7b182/linkedin/1783075015.png",
+        "path": "reports/content_packages/images/f21c58bec0a7b182_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075016/never-blank/posts/research/f21c58bec0a7b182/facebook/1783075016.png",
+        "path": "reports/content_packages/images/f21c58bec0a7b182_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075017/never-blank/posts/research/f21c58bec0a7b182/instagram/1783075017.png",
+        "path": "reports/content_packages/images/f21c58bec0a7b182_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075018/never-blank/posts/research/f21c58bec0a7b182/threads/1783075018.png",
+        "path": "reports/content_packages/images/f21c58bec0a7b182_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783075019/never-blank/posts/research/f21c58bec0a7b182/stories/1783075019.png",
+        "path": "reports/content_packages/images/f21c58bec0a7b182_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "programmatic",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Supply chains ripple through unseen forces."
+  }
+}
