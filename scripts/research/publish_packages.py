@@ -3,9 +3,9 @@ Stage 11 — Live publishing.
 For each selected signal + its content package, generate full platform content
 and publish to all channels.
 
-Voice system: docs/NEVER_BLANK_EDITORIAL_STYLE.md + config/prompts/*.yaml
-Research fields: all enriched signal fields used in generation.
-Structure enforced: Signal → Tension → Real response → Outcome → Lesson → NB signature → Source.
+Voice system: docs/EDITORIAL_ENGINE_V2.md + docs/NARRATIVE_SPINE.md, via
+src.editorial.pipeline.generate_article(). See that module for the full
+Decision Lens Lite -> Narrative Spine -> ... -> Platform Composer sequence.
 
 Guards:
   NB_RESEARCH_PUBLISH_ENABLED              must be 'true' to publish (default: false)
@@ -21,12 +21,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-import yaml
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.utils.logger import get_logger
-from src.utils.llm_client import chat, model_article, model_social
+from src.editorial.pipeline import generate_article, ArticleGenerationError
 from src.publishing.base import DraftPackage
 from src.publishing.result import PublishResult, PublishStatus
 from src.publishing.wix import WixPublisher
@@ -38,9 +36,7 @@ from src.publishing.telegram import TelegramPublisher
 
 log = get_logger("research.publish_packages")
 
-PACKAGES_DIR   = Path("reports/content_packages")
-PROMPTS_DIR    = Path("config/prompts")
-EDITORIAL_PATH = Path("docs/NEVER_BLANK_EDITORIAL_STYLE.md")
+PACKAGES_DIR = Path("reports/content_packages")
 
 _PUBLISHERS = [
     ("wix",       WixPublisher()),
@@ -52,21 +48,6 @@ _PUBLISHERS = [
 ]
 
 
-# ── Editorial style loader ─────────────────────────────────────────────────────
-
-def _load_editorial_style() -> str:
-    if EDITORIAL_PATH.exists():
-        return EDITORIAL_PATH.read_text(encoding="utf-8")
-    return ""
-
-
-def _load_prompt(name: str) -> dict:
-    path = PROMPTS_DIR / f"{name}.yaml"
-    if not path.exists():
-        raise FileNotFoundError(f"Prompt file not found: {path}")
-    return yaml.safe_load(path.read_text(encoding="utf-8"))
-
-
 def _slugify(text: str) -> str:
     slug = text.lower().strip()
     slug = re.sub(r"[^\w\s-]", "", slug)
@@ -74,12 +55,12 @@ def _slugify(text: str) -> str:
     return slug[:80]
 
 
-def _cap_words(text: str, max_words: int) -> str:
-    words = text.split()
-    return text if len(words) <= max_words else " ".join(words[:max_words])
-
-
 # ── Never Blank signature helper ───────────────────────────────────────────────
+#
+# Not called from publish_packages() anymore — Platform Composer guarantees
+# signature presence per format itself, keyed to the Editorial Engine's freshly
+# generated signature rather than the (now unused for this purpose) signal field
+# POSSIBLE_SIGNATURE_LINE. Kept as a tested utility (tests/test_research_pipeline.py).
 
 def ensure_never_blank_signature(text: str, signal: dict) -> str:
     """
@@ -101,206 +82,32 @@ def ensure_never_blank_signature(text: str, signal: dict) -> str:
     return text + f"\n\n{signature}"
 
 
-# ── Blog article ───────────────────────────────────────────────────────────────
+# ── Editorial Engine V2 generation ─────────────────────────────────────────────
+#
+# All body text (blog + 5 platform adaptations) is produced by a single call to
+# src.editorial.pipeline.generate_article(), which runs Decision Lens Lite ->
+# Narrative Spine -> Hook Engine -> Reader Context -> Discovery Builder ->
+# Story Assembly -> Never Blank Voice -> Platform Composer. See
+# docs/EDITORIAL_ENGINE_V2.md and docs/NARRATIVE_SPINE.md.
+#
+# Note: hashtags are intentionally not generated here. EDITORIAL_ENGINE_V2.md does
+# not define a hashtag concept for any platform — the old per-platform prompts
+# added them ad hoc. Revisit if visibility data shows this matters.
 
-def _generate_blog_article(signal: dict, package: dict) -> str:
-    editorial = _load_editorial_style()
-
-    system = f"""You write articles for Never Blank, a content practice for founders.
-
-EDITORIAL STYLE (mandatory — follow exactly):
-{editorial}
-
-STRUCTURE (must follow in order):
-1. Signal — what happened, with the core fact
-2. Tension — the hidden business tension this reveals
-3. Real business response — what businesses actually did (use BUSINESS_RESPONSES_OBSERVED)
-4. Company example — REAL_COMPANY_EXAMPLE: what they faced, what they did (RESPONSE_TAKEN), what resulted (OUTCOME_IF_KNOWN)
-5. Business lesson — the transferable insight (BUSINESS_LESSON)
-6. Never Blank signature — one line, max 10% of article. Format: "Never Blank: [POSSIBLE_SIGNATURE_LINE]"
-7. Source — hyperlinked citation using SOURCE_NAME and SOURCE_URL
-
-Format: Markdown with ## subheadings. 600–900 words. No fluff.
-Return only the article — no preamble, no JSON wrapper."""
-
-    angle = package.get("content", {}).get("blog", {}).get("angle", "")
-
-    user = f"""Write a Never Blank article for this signal.
-
-SIGNAL DATA:
-- HEADLINE: {signal.get('HEADLINE', '')}
-- SOURCE_NAME: {signal.get('SOURCE_NAME', '')}
-- SOURCE_URL: {signal.get('SOURCE_URL', '')}
-- CORE_FACT: {signal.get('CORE_FACT', '')}
-- CORE_TENSION: {signal.get('CORE_TENSION', '')}
-- BUSINESS_RESPONSES_OBSERVED: {signal.get('BUSINESS_RESPONSES_OBSERVED', '')}
-- REAL_COMPANY_EXAMPLE: {signal.get('REAL_COMPANY_EXAMPLE', 'none')}
-- PROBLEM_FACED: {signal.get('PROBLEM_FACED', '')}
-- RESPONSE_TAKEN: {signal.get('RESPONSE_TAKEN', '')}
-- OUTCOME_IF_KNOWN: {signal.get('OUTCOME_IF_KNOWN', '')}
-- BUSINESS_LESSON: {signal.get('BUSINESS_LESSON', '')}
-- WHY_THIS_CASE_IS_INTERESTING: {signal.get('WHY_THIS_CASE_IS_INTERESTING', '')}
-- NEVER_BLANK_ANGLE: {signal.get('NEVER_BLANK_ANGLE', '')}
-- POSSIBLE_SIGNATURE_LINE: {signal.get('POSSIBLE_SIGNATURE_LINE', '')}
-- TARGET_AUDIENCE: {signal.get('TARGET_AUDIENCE', 'founders')}
-- BLOG_ANGLE: {angle}"""
-
-    try:
-        return chat(system, user, json_mode=False, model=model_article())
-    except Exception as exc:
-        log.error("Blog generation failed for %s: %s", signal.get("SIGNAL_ID"), exc)
-        return (
-            f"## {signal.get('HEADLINE', '')}\n\n"
-            f"{signal.get('CORE_FACT', '')}\n\n"
-            f"**Tension:** {signal.get('CORE_TENSION', '')}\n\n"
-            f"**Example:** {signal.get('REAL_COMPANY_EXAMPLE', '')} — {signal.get('OUTCOME_IF_KNOWN', '')}\n\n"
-            f"**Lesson:** {signal.get('BUSINESS_LESSON', '')}\n\n"
-            f"Never Blank: {signal.get('POSSIBLE_SIGNATURE_LINE', '')}\n\n"
-            f"Source: [{signal.get('SOURCE_NAME', '')}]({signal.get('SOURCE_URL', '')})"
-        )
-
-
-# ── Social content generators ─────────────────────────────────────────────────
-
-def _research_context(signal: dict) -> str:
-    """Shared research table context block injected into every social prompt."""
-    return f"""RESEARCH TABLE DATA (use all fields — do not ignore):
-- CORE_FACT: {signal.get('CORE_FACT', '')}
-- CORE_TENSION: {signal.get('CORE_TENSION', '')}
-- BUSINESS_RESPONSES_OBSERVED: {signal.get('BUSINESS_RESPONSES_OBSERVED', '')}
-- REAL_COMPANY_EXAMPLE: {signal.get('REAL_COMPANY_EXAMPLE', 'none')}
-- PROBLEM_FACED: {signal.get('PROBLEM_FACED', '')}
-- RESPONSE_TAKEN: {signal.get('RESPONSE_TAKEN', '')}
-- OUTCOME_IF_KNOWN: {signal.get('OUTCOME_IF_KNOWN', '')}
-- BUSINESS_LESSON: {signal.get('BUSINESS_LESSON', '')}
-- WHY_THIS_CASE_IS_INTERESTING: {signal.get('WHY_THIS_CASE_IS_INTERESTING', '')}
-- NEVER_BLANK_ANGLE: {signal.get('NEVER_BLANK_ANGLE', '')}
-- POSSIBLE_SIGNATURE_LINE: {signal.get('POSSIBLE_SIGNATURE_LINE', '')}
-- SOURCE_NAME: {signal.get('SOURCE_NAME', '')}
-- SOURCE_URL: {signal.get('SOURCE_URL', '')}
-
-REQUIRED STRUCTURE: Signal → Tension → Real business response → Outcome → Lesson → Never Blank signature"""
-
-
-def _generate_linkedin_post(signal: dict, blog_body: str, wix_url: str = "") -> str:
-    prompt = _load_prompt("linkedin_post")
-    user = prompt["user"].format(
-        core_idea             = signal.get("BUSINESS_LESSON", ""),
-        mechanism             = signal.get("CORE_TENSION", ""),
-        cost_of_ignoring      = signal.get("WHY_IT_MATTERS_TO_BUSINESS", ""),
-        strategic_question    = signal.get("INTERESTING_QUESTION", ""),
-        primary_hook          = signal.get("POTENTIAL_HOOK", signal.get("HEADLINE", "")),
-        linkedin_angle        = signal.get("LINKEDIN_ANGLE", ""),
-        soft_cta              = "",
-        sales_angle           = "",
-        observation_statement = signal.get("CORE_FACT", ""),
-        content_goal          = "challenge",
-        wix_url               = wix_url,
-        blog_body             = blog_body[:3000],
-    ) + f"\n\n{_research_context(signal)}"
-    try:
-        raw    = chat(prompt["system"], user, json_mode=True, model=model_social())
-        parsed = json.loads(raw) if isinstance(raw, str) else raw
-        return parsed.get("text", "") if isinstance(parsed, dict) else ""
-    except Exception as exc:
-        log.error("LinkedIn generation failed: %s", exc)
+def _source_footer(signal: dict) -> str:
+    source_name = signal.get("SOURCE_NAME", "")
+    source_url  = signal.get("SOURCE_URL", "")
+    if not source_url:
         return ""
+    return f"\n\n## Source\n\n[{source_name or source_url}]({source_url})"
 
 
-def _generate_facebook_post(signal: dict, blog_body: str, wix_url: str = "") -> str:
-    prompt = _load_prompt("facebook_post")
-    user = prompt["user"].format(
-        core_idea             = signal.get("BUSINESS_LESSON", ""),
-        observation           = signal.get("CORE_FACT", ""),
-        cost_of_ignoring      = signal.get("WHY_IT_MATTERS_TO_BUSINESS", ""),
-        facebook_angle        = signal.get("BLOG_ANGLE", ""),
-        supporting_points     = signal.get("CORE_TENSION", ""),
-        soft_cta              = "",
-        observation_statement = signal.get("CORE_FACT", ""),
-        content_goal          = "challenge",
-        wix_url               = wix_url,
-        blog_body             = blog_body[:2000],
-    ) + f"\n\n{_research_context(signal)}"
-    try:
-        raw    = chat(prompt["system"], user, json_mode=True, model=model_social())
-        parsed = json.loads(raw) if isinstance(raw, str) else raw
-        text   = parsed.get("text", "") if isinstance(parsed, dict) else ""
-        return _cap_words(text, max_words=220)
-    except Exception as exc:
-        log.error("Facebook generation failed: %s", exc)
-        return ""
-
-
-def _generate_instagram_caption(signal: dict) -> str:
-    prompt = _load_prompt("instagram_caption")
-    user = prompt["user"].format(
-        core_idea             = signal.get("BUSINESS_LESSON", ""),
-        primary_hook          = signal.get("POTENTIAL_HOOK", signal.get("HEADLINE", "")),
-        visual_anchor         = signal.get("POSSIBLE_SIGNATURE_LINE", ""),
-        instagram_angle       = signal.get("STORY_ANGLE", ""),
-        supporting_points     = signal.get("CORE_TENSION", ""),
-        soft_cta              = "",
-        observation_statement = signal.get("CORE_FACT", ""),
-        content_goal          = "challenge",
-    ) + f"\n\n{_research_context(signal)}"
-    try:
-        raw    = chat(prompt["system"], user, json_mode=True, model=model_social())
-        parsed = json.loads(raw) if isinstance(raw, str) else raw
-        if isinstance(parsed, dict):
-            caption  = parsed.get("caption", "")
-            hashtags = parsed.get("hashtags", [])
-            tag_line = " ".join(f"#{t.lstrip('#')}" for t in hashtags)
-            text     = f"{caption}\n\n{tag_line}" if tag_line else caption
-            return ensure_never_blank_signature(text, signal)
-        return ""
-    except Exception as exc:
-        log.error("Instagram generation failed: %s", exc)
-        return ""
-
-
-def _generate_threads_sequence(signal: dict, blog_body: str) -> list[str]:
-    prompt = _load_prompt("threads_post")
-    user = prompt["user"].format(
-        primary_hook          = signal.get("POTENTIAL_HOOK", signal.get("HEADLINE", "")),
-        mechanism             = signal.get("CORE_TENSION", ""),
-        cost_of_ignoring      = signal.get("WHY_IT_MATTERS_TO_BUSINESS", ""),
-        threads_angle         = signal.get("THREADS_ANGLE", ""),
-        supporting_points     = signal.get("BUSINESS_LESSON", ""),
-        observation_statement = signal.get("CORE_FACT", ""),
-        content_goal          = "challenge",
-        blog_body             = blog_body[:2000],
-    ) + f"\n\n{_research_context(signal)}"
-    try:
-        raw    = chat(prompt["system"], user, json_mode=True, model=model_social())
-        parsed = json.loads(raw) if isinstance(raw, str) else raw
-        if isinstance(parsed, dict):
-            seq = parsed.get("sequence", [])
-            return [s for s in seq if isinstance(s, str) and s.strip()]
-        return []
-    except Exception as exc:
-        log.error("Threads generation failed: %s", exc)
-        return []
-
-
-def _generate_telegram_text(signal: dict, wix_url: str = "") -> str:
-    prompt = _load_prompt("telegram_post")
-    user = prompt["user"].format(
-        primary_hook          = signal.get("POTENTIAL_HOOK", signal.get("HEADLINE", "")),
-        telegram_angle        = signal.get("THREADS_ANGLE", ""),
-        cost_of_ignoring      = signal.get("WHY_IT_MATTERS_TO_BUSINESS", ""),
-        soft_cta              = "",
-        observation_statement = signal.get("CORE_FACT", ""),
-        wix_url               = wix_url or "",
-    ) + f"\n\n{_research_context(signal)}"
-    try:
-        raw    = chat(prompt["system"], user, json_mode=True, model=model_social())
-        parsed = json.loads(raw) if isinstance(raw, str) else raw
-        text   = parsed.get("text", "") if isinstance(parsed, dict) else ""
-    except Exception as exc:
-        log.error("Telegram generation failed: %s", exc)
-        text = signal.get("CORE_FACT", signal.get("HEADLINE", ""))
-
-    return ensure_never_blank_signature(text, signal)
+def _insert_wix_url(text: str, wix_url: str, signature: str) -> str:
+    """Insert the published Wix URL just before the signature line, or append
+    at the end if the signature text isn't found verbatim in `text`."""
+    if signature and signature in text:
+        return text.replace(signature, f"{wix_url}\n\n{signature}", 1)
+    return f"{text}\n\n{wix_url}"
 
 
 # ── DraftPackage assembly ─────────────────────────────────────────────────────
@@ -386,16 +193,24 @@ def publish_packages(
 
         log.info("Publishing signal: %s", headline[:60])
 
-        # Blog article first — used as source material for social posts
-        blog_body = _generate_blog_article(signal, package)
+        # Editorial Engine V2 — single generation pass for all 6 outputs.
+        # See src/editorial/pipeline.py.
+        try:
+            article = generate_article(signal)
+        except ArticleGenerationError as exc:
+            log.error("Editorial generation failed for %s (stage=%s): %s", sig_id, exc.stage, exc)
+            continue  # do not publish degraded content — skip this signal this run
 
-        # Social content — using config/prompts/*.yaml + research table fields
+        platforms = article["platforms"]
+        signature = article["structured_article"].get("signature", "")
+
         wix_url        = ""
-        linkedin_text  = _generate_linkedin_post(signal, blog_body, wix_url)
-        facebook_text  = _generate_facebook_post(signal, blog_body, wix_url)
-        instagram_text = _generate_instagram_caption(signal)
-        threads_seq    = _generate_threads_sequence(signal, blog_body)
-        telegram_text  = _generate_telegram_text(signal, wix_url)
+        blog_body      = platforms["long"]["body"] + _source_footer(signal)
+        linkedin_text  = platforms["medium"]["body"]
+        facebook_text  = platforms["medium"]["body"]
+        instagram_text = platforms["instagram"]["body"]
+        threads_seq    = [platforms["short"]["body"]]
+        telegram_text  = platforms["reading"]["body"]
 
         image_url_blog = pimgs.get("blog", {}).get("url") or None
         draft = _build_draft(
@@ -432,9 +247,9 @@ def publish_packages(
 
                 if name == "wix" and result.ok() and result.url:
                     wix_url = result.url
-                    # Regenerate Telegram text with the now-known Wix URL so
-                    # TelegramPublisher receives the final version
-                    telegram_text = _generate_telegram_text(signal, wix_url)
+                    # Insert the now-known Wix URL deterministically (mechanical,
+                    # not creative — no need to re-run the Editorial Engine).
+                    telegram_text = _insert_wix_url(telegram_text, wix_url, signature)
                     draft.telegram_text = telegram_text
                     _save_generated(generated_path, sig_id, headline, blog_body,
                                     linkedin_text, facebook_text, instagram_text,
