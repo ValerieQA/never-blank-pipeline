@@ -33,6 +33,8 @@ output_schema:
       The full prompt sent to the image generation model.
       Must be specific, visual, and brand-aligned.
       Must NOT instruct the model to draw text, typography, or logos.
+      Must NOT name any real company, brand, product, or individual — describe
+      only the abstract business mechanism (see IMAGE PROMPT RULES below).
 
   hook_text:
     type: string
@@ -113,6 +115,17 @@ selection_prompt: |
   - Be specific about lighting, atmosphere, and composition
   - Cinematic, editorial, dark, intelligent
   - Output must be a full image generation prompt string
+  - HARD REQUIREMENT: the image_prompt must never name the real company, brand,
+    product, or any real named individual (executive, founder, public figure)
+    that the topic is about — image models reliably reject prompts that pair a
+    real company/person with specific (especially negative) claims about them.
+    Describe the abstract situation instead: e.g. write "a company facing a
+    sudden drop in customer trust" instead of naming the company and quoting
+    the metric. The visual metaphor should already be abstract enough that this
+    is not a real limitation — you are never asked to depict the company itself.
+  - hook_text (below) is exempt from this rule — it is rendered as overlay text
+    locally and never sent to the image generation model, so it may reference
+    the real situation directly.
 
   HOOK TEXT RULES:
   - One short phrase only — not a quote poster

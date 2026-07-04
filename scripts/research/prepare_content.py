@@ -164,6 +164,7 @@ def _generate_signal_image(signal: dict) -> dict:
         content_goal = "challenge",
         registry     = registry,
         log          = log.info,
+        company      = signal.get("REAL_COMPANY_EXAMPLE", ""),
     )
 
     visual_family    = spec["visual_family"]
