@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "4bd4cfc0baa9e0cb",
+  "HEADLINE": "Citadel's hedge funds post broad first-half gains, top performing strategy sidesteps quant selloff",
+  "prepared_at": "2026-07-04 10:11 UTC",
+  "content": {
+    "blog": {
+      "headline": "Citadel’s Hybrid Hedge: Why Betting on Both Humans and Algorithms Pays Off",
+      "angle": "Citadel’s tactical trading fund outperformed amid market volatility → tension between rigid quant models and flexible human judgment → response: blending discretionary and quantitative strategies → lesson: hedge funds that diversify strategy types manage risk and seize gains when others falter."
+    },
+    "linkedin": {
+      "headline": "Citadel’s top hedge fund this year wasn’t just quant or just human — it was both.",
+      "angle": "When markets turn volatile, hedge funds relying solely on quantitative models risk heavy losses; Citadel’s hybrid approach shows that integrating discretionary insight with algorithms can deliver superior returns."
+    },
+    "facebook": {
+      "headline": "Citadel’s hedge funds posted broad gains in H1 2026, but their best-performing strategy wasn’t purely quant.",
+      "angle": "Citadel’s tactical trading fund, blending human discretion with quantitative models, gained 14.3% despite a quant selloff — does your fund balance efficiency with adaptability?"
+    },
+    "instagram": {
+      "headline": "When Humans and Algorithms Team Up",
+      "angle": "Citadel’s 14.3% gain shows that the smartest hedge funds don’t choose between human judgment and quant models—they combine both to navigate volatility."
+    },
+    "threads": {
+      "thread_hook": "Citadel’s best hedge fund this year wasn’t fully quant or fully human. It was both—and that’s why it thrived.",
+      "angle": "This thread breaks down how blending discretionary decision-making with quantitative models creates a resilient strategy that outperforms during market turbulence."
+    },
+    "stories": {
+      "story_question": "Can your hedge fund survive a quant selloff without human insight?",
+      "angle": "Exploring how combining human discretion with quantitative strategies helps hedge funds manage risk and capture gains when pure quant approaches stumble."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159877/never-blank/posts/research/4bd4cfc0baa9e0cb/blog/1783159877.png",
+        "path": "reports/content_packages/images/4bd4cfc0baa9e0cb_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159879/never-blank/posts/research/4bd4cfc0baa9e0cb/linkedin/1783159878.png",
+        "path": "reports/content_packages/images/4bd4cfc0baa9e0cb_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159880/never-blank/posts/research/4bd4cfc0baa9e0cb/facebook/1783159879.png",
+        "path": "reports/content_packages/images/4bd4cfc0baa9e0cb_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159880/never-blank/posts/research/4bd4cfc0baa9e0cb/instagram/1783159880.png",
+        "path": "reports/content_packages/images/4bd4cfc0baa9e0cb_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159882/never-blank/posts/research/4bd4cfc0baa9e0cb/threads/1783159881.png",
+        "path": "reports/content_packages/images/4bd4cfc0baa9e0cb_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159883/never-blank/posts/research/4bd4cfc0baa9e0cb/stories/1783159883.png",
+        "path": "reports/content_packages/images/4bd4cfc0baa9e0cb_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "programmatic",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Signals of strength amidst market turbulence."
+  }
+}

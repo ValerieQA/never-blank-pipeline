@@ -1,0 +1,439 @@
+{
+  "date": "2026-07-04",
+  "candidates_found": 20,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Sandwich chain Jersey Mike's files for IPO, reports 50% same-store sales growth ",
+    "Stock market gains minted nearly 1 million new millionaires in 2025, new UBS rep",
+    "Citadel's hedge funds post broad first-half gains, top performing strategy sides"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "de9373d13951b3da",
+      "headline": "Sandwich chain Jersey Mike's files for IPO, reports 50% same-store sales growth in recent years",
+      "published_at": "2026-07-04 10:12 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "aee59e1d-6781-4643-91ca-53dd8880622a",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7479114700677390338/",
+          "external_id": "urn:li:share:7479114700677390338",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122115123549356169",
+          "external_id": "1219637131228622_122115123549356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaXf2WvlpRT/",
+          "external_id": "18084501956648552",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/17862098853641294",
+          "external_id": "17862098853641294",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/19",
+          "external_id": "19",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/de9373d13951b3da_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159851/never-blank/posts/research/de9373d13951b3da/blog/1783159850.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159852/never-blank/posts/research/de9373d13951b3da/linkedin/1783159852.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159854/never-blank/posts/research/de9373d13951b3da/facebook/1783159854.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159855/never-blank/posts/research/de9373d13951b3da/instagram/1783159854.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159855/never-blank/posts/research/de9373d13951b3da/threads/1783159855.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159856/never-blank/posts/research/de9373d13951b3da/stories/1783159856.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Growth emerges from hidden connections.",
+      "image_visual_family": "constellation_networks",
+      "image_method": "programmatic"
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "de9373d13951b3da",
+      "HEADLINE": "Sandwich chain Jersey Mike's files for IPO, reports 50% same-store sales growth in recent years",
+      "prepared_at": "2026-07-04 10:10 UTC",
+      "content": {
+        "blog": {
+          "headline": "Jersey Mike\u2019s IPO: Why Same-Store Sales Matter More Than Store Count",
+          "angle": "Jersey Mike\u2019s rapid expansion created buzz, but the real tension lies in sustaining 50% same-store sales growth under public market scrutiny \u2014 their IPO reveals that operational discipline, not just footprint, drives lasting success."
+        },
+        "linkedin": {
+          "headline": "Everyone noticed Jersey Mike\u2019s new locations. Few saw how much more each store started selling.",
+          "angle": "Rapid expansion draws attention, but sustained same-store sales growth signals operational strength that investors demand."
+        },
+        "facebook": {
+          "headline": "Jersey Mike\u2019s just filed for IPO after a 50% jump in same-store sales. What\u2019s the real story behind the growth?",
+          "angle": "Jersey Mike\u2019s case shows that scaling isn\u2019t just about opening stores \u2014 it\u2019s about making each location perform better. Can they keep it up as a public company?"
+        },
+        "instagram": {
+          "headline": "Growth Isn\u2019t Just About New Stores",
+          "angle": "Jersey Mike\u2019s 50% same-store sales growth proves operational discipline is the real driver behind their IPO success."
+        },
+        "threads": {
+          "thread_hook": "Jersey Mike\u2019s IPO isn\u2019t just about adding locations \u2014 it\u2019s about selling more at each one.",
+          "angle": "This thread breaks down how sustained same-store sales growth underpins a successful IPO and why operational rigor beats expansion for long-term value."
+        },
+        "stories": {
+          "story_question": "Can rapid growth survive the scrutiny of public markets?",
+          "angle": "Exploring the tension between scaling fast and maintaining operational excellence as Jersey Mike\u2019s goes public."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159851/never-blank/posts/research/de9373d13951b3da/blog/1783159850.png",
+            "path": "reports/content_packages/images/de9373d13951b3da_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159852/never-blank/posts/research/de9373d13951b3da/linkedin/1783159852.png",
+            "path": "reports/content_packages/images/de9373d13951b3da_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159854/never-blank/posts/research/de9373d13951b3da/facebook/1783159854.png",
+            "path": "reports/content_packages/images/de9373d13951b3da_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159855/never-blank/posts/research/de9373d13951b3da/instagram/1783159854.png",
+            "path": "reports/content_packages/images/de9373d13951b3da_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159855/never-blank/posts/research/de9373d13951b3da/threads/1783159855.png",
+            "path": "reports/content_packages/images/de9373d13951b3da_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159856/never-blank/posts/research/de9373d13951b3da/stories/1783159856.png",
+            "path": "reports/content_packages/images/de9373d13951b3da_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Growth emerges from hidden connections."
+      }
+    },
+    {
+      "SIGNAL_ID": "c97532fee426aaa0",
+      "HEADLINE": "Stock market gains minted nearly 1 million new millionaires in 2025, new UBS report says",
+      "prepared_at": "2026-07-04 10:11 UTC",
+      "content": {
+        "blog": {
+          "headline": "A Million New Millionaires Just Crashed Your CRM: Can Your Wealth Management Keep Up?",
+          "angle": "Stock market gains created nearly 1 million new millionaires in 2025 \u2192 Financial institutions face pressure to rapidly adapt offerings amid volatile markets \u2192 Firms must embrace agile product development and targeted marketing \u2192 Speed in retooling services is the real wealth management pivot."
+        },
+        "linkedin": {
+          "headline": "A million new millionaires just crashed your CRM\u2014and your product team wasn\u2019t invited.",
+          "angle": "When markets mint nearly 1 million new millionaires overnight, financial firms that can\u2019t move fast risk losing them."
+        },
+        "facebook": {
+          "headline": "Nearly 1 million new millionaires emerged in 2025. Is your financial service ready?",
+          "angle": "UBS reports a 10.8% surge in global personal wealth creating a flood of new clients\u2014how are financial institutions adapting to capture this opportunity?"
+        },
+        "instagram": {
+          "headline": "1 Million New Millionaires. Now What?",
+          "angle": "When wealth surges overnight, financial firms must rethink speed and agility to stay relevant."
+        },
+        "threads": {
+          "thread_hook": "Markets minted nearly 1 million new millionaires in 2025. Your product team wasn\u2019t ready.",
+          "angle": "This thread breaks down why rapid wealth growth demands financial firms rethink how fast they can adjust products and marketing to capture new clients."
+        },
+        "stories": {
+          "story_question": "Can your financial service keep pace with a million new millionaires?",
+          "angle": "Exploring the pressure on financial firms to rapidly adapt offerings as wealth surges disrupt client bases."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159865/never-blank/posts/research/c97532fee426aaa0/blog/1783159865.png",
+            "path": "reports/content_packages/images/c97532fee426aaa0_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159866/never-blank/posts/research/c97532fee426aaa0/linkedin/1783159866.png",
+            "path": "reports/content_packages/images/c97532fee426aaa0_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159867/never-blank/posts/research/c97532fee426aaa0/facebook/1783159867.png",
+            "path": "reports/content_packages/images/c97532fee426aaa0_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159868/never-blank/posts/research/c97532fee426aaa0/instagram/1783159868.png",
+            "path": "reports/content_packages/images/c97532fee426aaa0_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159869/never-blank/posts/research/c97532fee426aaa0/threads/1783159869.png",
+            "path": "reports/content_packages/images/c97532fee426aaa0_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159870/never-blank/posts/research/c97532fee426aaa0/stories/1783159870.png",
+            "path": "reports/content_packages/images/c97532fee426aaa0_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Wealth emerges from unseen connections."
+      }
+    },
+    {
+      "SIGNAL_ID": "4bd4cfc0baa9e0cb",
+      "HEADLINE": "Citadel's hedge funds post broad first-half gains, top performing strategy sidesteps quant selloff",
+      "prepared_at": "2026-07-04 10:11 UTC",
+      "content": {
+        "blog": {
+          "headline": "Citadel\u2019s Hybrid Hedge: Why Betting on Both Humans and Algorithms Pays Off",
+          "angle": "Citadel\u2019s tactical trading fund outperformed amid market volatility \u2192 tension between rigid quant models and flexible human judgment \u2192 response: blending discretionary and quantitative strategies \u2192 lesson: hedge funds that diversify strategy types manage risk and seize gains when others falter."
+        },
+        "linkedin": {
+          "headline": "Citadel\u2019s top hedge fund this year wasn\u2019t just quant or just human \u2014 it was both.",
+          "angle": "When markets turn volatile, hedge funds relying solely on quantitative models risk heavy losses; Citadel\u2019s hybrid approach shows that integrating discretionary insight with algorithms can deliver superior returns."
+        },
+        "facebook": {
+          "headline": "Citadel\u2019s hedge funds posted broad gains in H1 2026, but their best-performing strategy wasn\u2019t purely quant.",
+          "angle": "Citadel\u2019s tactical trading fund, blending human discretion with quantitative models, gained 14.3% despite a quant selloff \u2014 does your fund balance efficiency with adaptability?"
+        },
+        "instagram": {
+          "headline": "When Humans and Algorithms Team Up",
+          "angle": "Citadel\u2019s 14.3% gain shows that the smartest hedge funds don\u2019t choose between human judgment and quant models\u2014they combine both to navigate volatility."
+        },
+        "threads": {
+          "thread_hook": "Citadel\u2019s best hedge fund this year wasn\u2019t fully quant or fully human. It was both\u2014and that\u2019s why it thrived.",
+          "angle": "This thread breaks down how blending discretionary decision-making with quantitative models creates a resilient strategy that outperforms during market turbulence."
+        },
+        "stories": {
+          "story_question": "Can your hedge fund survive a quant selloff without human insight?",
+          "angle": "Exploring how combining human discretion with quantitative strategies helps hedge funds manage risk and capture gains when pure quant approaches stumble."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159877/never-blank/posts/research/4bd4cfc0baa9e0cb/blog/1783159877.png",
+            "path": "reports/content_packages/images/4bd4cfc0baa9e0cb_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159879/never-blank/posts/research/4bd4cfc0baa9e0cb/linkedin/1783159878.png",
+            "path": "reports/content_packages/images/4bd4cfc0baa9e0cb_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159880/never-blank/posts/research/4bd4cfc0baa9e0cb/facebook/1783159879.png",
+            "path": "reports/content_packages/images/4bd4cfc0baa9e0cb_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159880/never-blank/posts/research/4bd4cfc0baa9e0cb/instagram/1783159880.png",
+            "path": "reports/content_packages/images/4bd4cfc0baa9e0cb_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159882/never-blank/posts/research/4bd4cfc0baa9e0cb/threads/1783159881.png",
+            "path": "reports/content_packages/images/4bd4cfc0baa9e0cb_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159883/never-blank/posts/research/4bd4cfc0baa9e0cb/stories/1783159883.png",
+            "path": "reports/content_packages/images/4bd4cfc0baa9e0cb_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Signals of strength amidst market turbulence."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "de9373d13951b3da",
+      "headline": "Sandwich chain Jersey Mike's files for IPO, reports 50% same-store sales growth in recent years",
+      "published_at": "2026-07-04 10:12 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "aee59e1d-6781-4643-91ca-53dd8880622a",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7479114700677390338/",
+          "external_id": "urn:li:share:7479114700677390338",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122115123549356169",
+          "external_id": "1219637131228622_122115123549356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaXf2WvlpRT/",
+          "external_id": "18084501956648552",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/17862098853641294",
+          "external_id": "17862098853641294",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/19",
+          "external_id": "19",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/de9373d13951b3da_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159851/never-blank/posts/research/de9373d13951b3da/blog/1783159850.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159852/never-blank/posts/research/de9373d13951b3da/linkedin/1783159852.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159854/never-blank/posts/research/de9373d13951b3da/facebook/1783159854.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159855/never-blank/posts/research/de9373d13951b3da/instagram/1783159854.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159855/never-blank/posts/research/de9373d13951b3da/threads/1783159855.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159856/never-blank/posts/research/de9373d13951b3da/stories/1783159856.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Growth emerges from hidden connections.",
+      "image_visual_family": "constellation_networks",
+      "image_method": "programmatic"
+    }
+  ]
+}

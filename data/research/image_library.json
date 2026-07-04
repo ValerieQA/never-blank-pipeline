@@ -233,5 +233,35 @@
     "visual_family": "contrast_waves",
     "design_version": "3",
     "hook_text": "Demand for steak defies record prices."
+  },
+  "de9373d13951b3da": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159851/never-blank/posts/research/de9373d13951b3da/blog/1783159850.png",
+    "signal_type": "visibility",
+    "headline": "Sandwich chain Jersey Mike's files for IPO, reports 50% same-store sales growth in recent years",
+    "created_at": "2026-07-04",
+    "method": "programmatic",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "Growth emerges from hidden connections."
+  },
+  "c97532fee426aaa0": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159865/never-blank/posts/research/c97532fee426aaa0/blog/1783159865.png",
+    "signal_type": "consumer behavior",
+    "headline": "Stock market gains minted nearly 1 million new millionaires in 2025, new UBS report says",
+    "created_at": "2026-07-04",
+    "method": "programmatic",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "Wealth emerges from unseen connections."
+  },
+  "4bd4cfc0baa9e0cb": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159877/never-blank/posts/research/4bd4cfc0baa9e0cb/blog/1783159877.png",
+    "signal_type": "consumer behavior",
+    "headline": "Citadel's hedge funds post broad first-half gains, top performing strategy sidesteps quant selloff",
+    "created_at": "2026-07-04",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Signals of strength amidst market turbulence."
   }
 }
