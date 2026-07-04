@@ -21,6 +21,7 @@ Public API:
 import json
 import math
 import os
+import re
 import time
 import urllib.request
 from io import BytesIO
@@ -230,6 +231,29 @@ def _pick_family_deterministic(
     return best
 
 
+def _generalize_company_reference(text: str, company: str) -> str:
+    """
+    Replace the real company name with a generic reference before the text
+    reaches an image-generation prompt. Real company names (especially paired
+    with specific negative business claims) are a well-documented trigger for
+    OpenAI's image-safety rejection (400 content_policy_violation) — this only
+    covers the deterministic (no-LLM) fallback path; the AI selection path is
+    instead instructed (see image_generation.yaml) to keep hook_text specific
+    but abstract the image_prompt itself, since it has the capacity to do that
+    better than a mechanical string replace.
+    """
+    if not company or not text:
+        return text
+    variants = {company}
+    first_word = company.split()[0] if company.split() else ""
+    if first_word and len(first_word) > 2:
+        variants.add(first_word)
+    result = text
+    for variant in variants:
+        result = re.sub(re.escape(variant), "the company", result, flags=re.IGNORECASE)
+    return result
+
+
 def _build_image_prompt(
     visual_family: str,
     title: str,
@@ -326,11 +350,18 @@ def choose_visual_family(
     content_goal: str,
     registry: dict,
     log=print,
+    company: str = "",
 ) -> dict:
     """
     Choose visual family and build full image spec.
     Tries AI selection first; falls back to deterministic keyword + rotation logic.
     Returns a spec dict with all fields needed by the pipeline.
+
+    `company`, if provided (the real company name from the signal), is stripped
+    from the image_prompt built by the deterministic fallback — see
+    _generalize_company_reference. hook_text always uses the real, un-stripped
+    observation, since it is only rendered as overlay text and never sent to
+    the image-generation API.
     """
     vs      = _load_visual_system()
     img_gen = _load_img_gen_prompt()
@@ -353,8 +384,9 @@ def choose_visual_family(
     # Deterministic fallback
     family          = _pick_family_deterministic(title, observation, recent, last, vs)
     dominant_palette = "midnight"   # safe dark core default
+    safe_observation = _generalize_company_reference(observation, company)
     image_prompt, neg_prompt = _build_image_prompt(
-        family, title, observation, dominant_palette, vs, img_gen
+        family, title, safe_observation, dominant_palette, vs, img_gen
     )
 
     hook = trim_hook_text(observation)
@@ -780,7 +812,11 @@ def _generate_ai_image(prompt: str, negative_prompt: str = "", log=print) -> tup
 
     # NB_IMAGE_MODEL selects primary model; fallback chain preserves existing behaviour.
     primary = os.environ.get("NB_IMAGE_MODEL", "gpt-image-1")
-    candidates = [(primary, "b64_json")]
+    # gpt-image-1 does NOT accept response_format at all (unlike dall-e-2/3) —
+    # sending it raises "400 Unknown parameter: 'response_format'" on every call.
+    # gpt-image-1 always returns b64_json regardless. dall-e-3 needs the
+    # parameter unset too (its default response is a URL).
+    candidates = [(primary, "b64_json" if primary == "gpt-image-1" else "url")]
     if primary != "dall-e-3":
         candidates.append(("dall-e-3", "url"))
 
@@ -788,17 +824,14 @@ def _generate_ai_image(prompt: str, negative_prompt: str = "", log=print) -> tup
     for model, fmt in candidates:
         try:
             kwargs: dict = dict(model=model, prompt=prompt, size="1024x1024", n=1)
-            if fmt == "b64_json":
-                kwargs["response_format"] = "b64_json"
             response = client.images.generate(**kwargs)
             item = response.data[0]
-            if fmt == "b64_json":
+            if getattr(item, "b64_json", None):
                 return base64.b64decode(item.b64_json), model
-            else:
-                with urllib.request.urlopen(item.url, timeout=30) as r:
-                    return r.read(), model
+            with urllib.request.urlopen(item.url, timeout=30) as r:
+                return r.read(), model
         except Exception as exc:
-            errors[model] = str(exc)[:120]
+            errors[model] = str(exc)[:400]
 
     raise RuntimeError(
         f"OpenAI image generation unavailable. Tried: {list(errors.keys())}. "
@@ -822,7 +855,7 @@ def _generate_base_image(
             log(f"  Base image: AI ({method})")
             return data, method
         except Exception as exc:
-            log(f"  OpenAI image unavailable ({exc.__class__.__name__}: {str(exc)[:80]})")
+            log(f"  OpenAI image unavailable ({exc.__class__.__name__}: {str(exc)[:400]})")
             log("  Falling back to programmatic base image…")
 
     data = _generate_programmatic_base(visual_family)
