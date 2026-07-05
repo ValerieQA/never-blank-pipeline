@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "9f4787a614bff63c",
+  "HEADLINE": "Anthropic is discussing a new custom chip with Samsung",
+  "prepared_at": "2026-07-05 10:13 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why Anthropic’s Bet on a Custom Chip Could Reshape AI Hardware",
+      "angle": "Anthropic’s talks with Samsung reveal the tension between costly custom chip development and the strategic edge it offers; the lesson: AI leaders who invest in bespoke silicon gain performance and cost control others can’t match."
+    },
+    "linkedin": {
+      "headline": "The fastest AI models now depend on chips no one else can buy.",
+      "angle": "AI companies investing in custom chips are rewriting hardware norms, forcing founders to rethink where competitive advantage truly lies."
+    },
+    "facebook": {
+      "headline": "Anthropic is working with Samsung on a custom AI chip—why does that matter?",
+      "angle": "As AI firms like OpenAI and Anthropic build bespoke chips to escape generic hardware limits, founders face the question: is the upfront risk worth the long-term payoff?"
+    },
+    "instagram": {
+      "headline": "Custom Chips: The New AI Frontier",
+      "angle": "Behind every breakthrough AI model is a chip designed for it—founders must weigh cost, control, and collaboration."
+    },
+    "threads": {
+      "thread_hook": "The smartest AI firms aren’t waiting for the perfect chip—they’re building it.",
+      "angle": "This thread breaks down why custom AI chips are becoming the real moat, how Anthropic’s Samsung deal fits the trend, and what founders should watch next."
+    },
+    "stories": {
+      "story_question": "Can building your own AI chip beat buying off-the-shelf?",
+      "angle": "Exploring the high stakes and potential payoff of custom silicon in AI’s race for speed and scale."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246397/never-blank/posts/research/9f4787a614bff63c/blog/1783246397.png",
+        "path": "reports/content_packages/images/9f4787a614bff63c_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246398/never-blank/posts/research/9f4787a614bff63c/linkedin/1783246398.png",
+        "path": "reports/content_packages/images/9f4787a614bff63c_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246399/never-blank/posts/research/9f4787a614bff63c/facebook/1783246398.png",
+        "path": "reports/content_packages/images/9f4787a614bff63c_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246399/never-blank/posts/research/9f4787a614bff63c/instagram/1783246399.png",
+        "path": "reports/content_packages/images/9f4787a614bff63c_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246400/never-blank/posts/research/9f4787a614bff63c/threads/1783246400.png",
+        "path": "reports/content_packages/images/9f4787a614bff63c_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246401/never-blank/posts/research/9f4787a614bff63c/stories/1783246401.png",
+        "path": "reports/content_packages/images/9f4787a614bff63c_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "programmatic",
+    "reuse_source": "n/a",
+    "visual_family": "particle_flow",
+    "hook_text": "Custom solutions drive AI evolution."
+  }
+}

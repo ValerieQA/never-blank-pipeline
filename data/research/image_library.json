@@ -263,5 +263,35 @@
     "visual_family": "contrast_waves",
     "design_version": "3",
     "hook_text": "Signals of strength amidst market turbulence."
+  },
+  "8798bcbbf9ee7090": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246383/never-blank/posts/research/8798bcbbf9ee7090/blog/1783246383.png",
+    "signal_type": "regulation",
+    "headline": "Alibaba reportedly bans employees from using Claude Code",
+    "created_at": "2026-07-05",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Signals of risk emerge in unseen patterns."
+  },
+  "9f4787a614bff63c": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246397/never-blank/posts/research/9f4787a614bff63c/blog/1783246397.png",
+    "signal_type": "technology adoption",
+    "headline": "Anthropic is discussing a new custom chip with Samsung",
+    "created_at": "2026-07-05",
+    "method": "programmatic",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "Custom solutions drive AI evolution."
+  },
+  "9d3523df1540af78": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246408/never-blank/posts/research/9d3523df1540af78/blog/1783246408.png",
+    "signal_type": "technology adoption",
+    "headline": "Nvidia Supplier Hon Hai’s Sales Beat on Continued AI Demand",
+    "created_at": "2026-07-05",
+    "method": "programmatic",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "Signals of demand emerge from structured patterns."
   }
 }

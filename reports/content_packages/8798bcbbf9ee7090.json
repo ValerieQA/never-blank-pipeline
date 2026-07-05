@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "8798bcbbf9ee7090",
+  "HEADLINE": "Alibaba reportedly bans employees from using Claude Code",
+  "prepared_at": "2026-07-05 10:13 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why Alibaba Banned Claude Code: When AI Innovation Meets Security Red Flags",
+      "angle": "Alibaba’s decision to ban Claude Code exposes the tension between chasing AI-driven productivity and safeguarding sensitive data, prompting founders to rethink how they vet and control AI tools to protect trust and intellectual property."
+    },
+    "linkedin": {
+      "headline": "The AI tool that promised productivity just got banned by Alibaba. Here’s why it matters.",
+      "angle": "When a giant like Alibaba restricts an AI tool, it signals that unchecked AI adoption can jeopardize security and compliance, forcing businesses to balance innovation with risk management."
+    },
+    "facebook": {
+      "headline": "Alibaba just banned Claude Code for being ‘high-risk’ software. What does that mean for your startup?",
+      "angle": "Alibaba’s move to block Claude Code highlights the hidden dangers of AI tools—are you prepared to handle the risks of data leaks and compliance failures in your own business?"
+    },
+    "instagram": {
+      "headline": "When AI Tools Become Security Threats",
+      "angle": "Alibaba’s ban on Claude Code shows that not all AI innovation is worth the risk—sometimes protecting your IP means saying no."
+    },
+    "threads": {
+      "thread_hook": "The AI tool boosting your team’s output might be the one leaking your next big idea.",
+      "angle": "This thread unpacks Alibaba’s ban on Claude Code to reveal how large companies must weigh AI’s productivity gains against the very real risks of data leakage, compliance breaches, and lost trust."
+    },
+    "stories": {
+      "story_question": "Is your AI tool helping or hurting your company’s security?",
+      "angle": "Exploring the tension between adopting AI for efficiency and the urgent need to control security and compliance risks in fast-moving businesses."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246383/never-blank/posts/research/8798bcbbf9ee7090/blog/1783246383.png",
+        "path": "reports/content_packages/images/8798bcbbf9ee7090_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246384/never-blank/posts/research/8798bcbbf9ee7090/linkedin/1783246384.png",
+        "path": "reports/content_packages/images/8798bcbbf9ee7090_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246385/never-blank/posts/research/8798bcbbf9ee7090/facebook/1783246385.png",
+        "path": "reports/content_packages/images/8798bcbbf9ee7090_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246386/never-blank/posts/research/8798bcbbf9ee7090/instagram/1783246386.png",
+        "path": "reports/content_packages/images/8798bcbbf9ee7090_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246387/never-blank/posts/research/8798bcbbf9ee7090/threads/1783246387.png",
+        "path": "reports/content_packages/images/8798bcbbf9ee7090_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246388/never-blank/posts/research/8798bcbbf9ee7090/stories/1783246388.png",
+        "path": "reports/content_packages/images/8798bcbbf9ee7090_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "programmatic",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Signals of risk emerge in unseen patterns."
+  }
+}
