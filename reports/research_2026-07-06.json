@@ -1,97 +1,97 @@
 {
   "date": "2026-07-06",
-  "candidates_found": 17,
+  "candidates_found": 10,
   "duplicates_skipped": 0,
   "new_signals_added": 10,
   "selected_for_content": 3,
   "sheet_sync": "success",
   "archived": 0,
   "top_signals": [
-    "Versant agrees to buy golf simulator company Full Swing for $530 million",
-    "The World Cup sends prediction market volumes soaring to record highs",
-    "Microsoft\u2019s Xbox to Cut 3,200 Jobs, Divest\u00a0Studios in Overhaul"
+    "Drone Maker Ondas Says the 'Arms Race' Has Started",
+    "Apple, Broadcom Expand Custom Chip Partnership | Bloomberg Tech 7/06/2026",
+    "Runway Expands Global AI Footprint"
   ],
   "publish_reports": [
     {
-      "signal_id": "37a503640b83be6c",
-      "headline": "Versant agrees to buy golf simulator company Full Swing for $530 million",
-      "published_at": "2026-07-06 17:40 UTC",
+      "signal_id": "20a53f6eb5aa5506",
+      "headline": "Drone Maker Ondas Says the 'Arms Race' Has Started",
+      "published_at": "2026-07-06 20:03 UTC",
       "mode": "live",
       "results": {
         "wix": {
           "platform": "wix",
           "status": "published_url_unavailable",
           "url": "",
-          "external_id": "7e33e192-00f2-49c0-bb1f-f4a8a7348054",
+          "external_id": "ec00ee93-6bcf-4a68-a9e2-dcfa1cf14fe7",
           "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
           "raw_response_path": null
         },
         "linkedin": {
           "platform": "linkedin",
           "status": "PUBLISHED",
-          "url": "https://www.linkedin.com/feed/update/urn:li:share:7479952206432194560/",
-          "external_id": "urn:li:share:7479952206432194560",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7479988396413566977/",
+          "external_id": "urn:li:share:7479988396413566977",
           "error_message": null,
           "raw_response_path": "(with image)"
         },
         "facebook": {
           "platform": "facebook",
           "status": "PUBLISHED",
-          "url": "https://www.facebook.com/1219637131228622_122115795753356169",
-          "external_id": "1219637131228622_122115795753356169",
+          "url": "https://www.facebook.com/1219637131228622_122115821445356169",
+          "external_id": "1219637131228622_122115821445356169",
           "error_message": null,
           "raw_response_path": null
         },
         "instagram": {
           "platform": "instagram",
           "status": "PUBLISHED",
-          "url": "https://www.instagram.com/p/DadctY8jyOv/",
-          "external_id": "17914418172220668",
+          "url": "https://www.instagram.com/p/DadtKY3lF40/",
+          "external_id": "18097206887209893",
           "error_message": null,
           "raw_response_path": null
         },
         "threads": {
           "platform": "threads",
           "status": "PUBLISHED",
-          "url": "https://www.threads.net/t/17955725169161095",
-          "external_id": "17955725169161095",
+          "url": "https://www.threads.net/t/18008541860744878",
+          "external_id": "18008541860744878",
           "error_message": null,
           "raw_response_path": null
         },
         "telegram": {
           "platform": "telegram",
           "status": "PUBLISHED",
-          "url": "https://t.me/never_blank_inneros/23",
-          "external_id": "23",
+          "url": "https://t.me/never_blank_inneros/24",
+          "external_id": "24",
           "error_message": null,
           "raw_response_path": null
         }
       },
       "wix_url": "",
-      "generated_file": "reports/content_packages/37a503640b83be6c_generated.json",
+      "generated_file": "reports/content_packages/20a53f6eb5aa5506_generated.json",
       "platform_images": {
         "blog": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359417/never-blank/posts/research/37a503640b83be6c/blog/1783359416.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368040/never-blank/posts/research/20a53f6eb5aa5506/blog/1783368040.png",
           "size": "1920x1080"
         },
         "linkedin": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359418/never-blank/posts/research/37a503640b83be6c/linkedin/1783359418.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368041/never-blank/posts/research/20a53f6eb5aa5506/linkedin/1783368041.png",
           "size": "1200x628"
         },
         "facebook": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359419/never-blank/posts/research/37a503640b83be6c/facebook/1783359419.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368041/never-blank/posts/research/20a53f6eb5aa5506/facebook/1783368041.png",
           "size": "1200x628"
         },
         "instagram": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359420/never-blank/posts/research/37a503640b83be6c/instagram/1783359420.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368042/never-blank/posts/research/20a53f6eb5aa5506/instagram/1783368042.png",
           "size": "1080x1350"
         },
         "threads": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359421/never-blank/posts/research/37a503640b83be6c/threads/1783359421.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368043/never-blank/posts/research/20a53f6eb5aa5506/threads/1783368043.png",
           "size": "1080x1080"
         },
         "stories": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359422/never-blank/posts/research/37a503640b83be6c/stories/1783359422.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368045/never-blank/posts/research/20a53f6eb5aa5506/stories/1783368044.png",
           "size": "1080x1920"
         }
       },
@@ -99,7 +99,7 @@
       "telegram_signature": true,
       "wix_cover_image_attached": false,
       "image_design_version": "",
-      "image_hook_text": "Versant agreed to acquire golf simulator company",
+      "image_hook_text": "Ondas just spent $875 million not to invent the future,",
       "image_visual_family": "dark_insight_card",
       "image_method": "quote_card"
     }
@@ -109,70 +109,70 @@
   "images_reused": 0,
   "_content_packages": [
     {
-      "SIGNAL_ID": "37a503640b83be6c",
-      "HEADLINE": "Versant agrees to buy golf simulator company Full Swing for $530 million",
-      "prepared_at": "2026-07-06 17:37 UTC",
+      "SIGNAL_ID": "20a53f6eb5aa5506",
+      "HEADLINE": "Drone Maker Ondas Says the 'Arms Race' Has Started",
+      "prepared_at": "2026-07-06 20:00 UTC",
       "content": {
         "blog": {
-          "headline": "Why Versant\u2019s $530M Bet on Full Swing Signals Cable TV\u2019s Quiet Retreat",
-          "angle": "Versant\u2019s acquisition of Full Swing exposes the tension between chasing innovative entertainment formats and the urgent need to replace declining cable revenues, revealing that media companies must diversify into tech-enabled assets to stay afloat."
+          "headline": "Ondas\u2019 $875M Bet: When Buying Beats Building in Defense Tech",
+          "angle": "Ondas faces a high-stakes arms race \u2192 rapid expansion risks and integration headaches mount \u2192 Ondas\u2019 acquisition of DZYNE aims to leapfrog competitors \u2192 strategic buying is the fastest route to market dominance in defense tech."
         },
         "linkedin": {
-          "headline": "A $530M golf simulator deal says more about cable TV\u2019s future than any ratings chart.",
-          "angle": "Media companies doubling down on legacy channels risk sinking; Versant\u2019s move into golf simulators shows how diversifying into tech-driven entertainment is becoming a survival strategy."
+          "headline": "Ondas just spent $875 million not to invent the future, but to assemble it before anyone else can.",
+          "angle": "In hyper-competitive tech sectors, the fastest assembler wins \u2014 Ondas\u2019 acquisition signals that building from scratch is losing to strategic buying."
         },
         "facebook": {
-          "headline": "Versant just paid $530 million for a golf simulator company. What does that say about cable TV\u2019s future?",
-          "angle": "With traditional media revenues shrinking, Versant\u2019s Full Swing acquisition joins Comcast and Sinclair\u2019s bets on nontraditional entertainment\u2014are media giants quietly building lifeboats?"
+          "headline": "Ondas is racing to dominate defense tech by buying, not building.",
+          "angle": "Ondas\u2019 $875M acquisition of DZYNE shows how rapid expansion forces companies to choose between risky internal development or costly acquisitions \u2014 which path would you take?"
         },
         "instagram": {
-          "headline": "When Cable TV Isn\u2019t Enough Anymore",
-          "angle": "Versant\u2019s $530M Full Swing deal highlights why media companies are investing in tech-driven entertainment to hedge against legacy decline."
+          "headline": "When Buying Beats Building",
+          "angle": "Ondas\u2019 massive acquisition reveals why in defense tech, speed to scale often means assembling existing pieces, not inventing new ones."
         },
         "threads": {
-          "thread_hook": "A $530 million golf simulator deal is the real story behind cable TV\u2019s fading dominance.",
-          "angle": "This thread breaks down how Versant\u2019s Full Swing acquisition reflects a broader media pivot from legacy revenue streams to tech-enabled, nontraditional entertainment assets."
+          "thread_hook": "In drone defense tech, the arms race isn\u2019t about invention anymore \u2014 it\u2019s about who can buy and integrate fastest.",
+          "angle": "This thread breaks down why Ondas\u2019 $875M acquisition of DZYNE is a textbook example of how rapid expansion and integration challenges define winners in high-stakes tech sectors."
         },
         "stories": {
-          "story_question": "Can investing $530M in golf simulators save media companies from cable\u2019s collapse?",
-          "angle": "Exploring the tension media founders face between clinging to old revenue models and betting on emerging entertainment tech to secure the future."
+          "story_question": "Can you grow fast enough without buying your way forward?",
+          "angle": "Exploring the tension between organic growth and strategic acquisitions in fast-moving, tech-driven industries like defense."
         }
       },
       "images": {
         "platform_images": {
           "blog": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359417/never-blank/posts/research/37a503640b83be6c/blog/1783359416.png",
-            "path": "reports/content_packages/images/37a503640b83be6c_blog.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368040/never-blank/posts/research/20a53f6eb5aa5506/blog/1783368040.png",
+            "path": "reports/content_packages/images/20a53f6eb5aa5506_blog.png",
             "size": "1920x1080",
             "reused": false
           },
           "linkedin": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359418/never-blank/posts/research/37a503640b83be6c/linkedin/1783359418.png",
-            "path": "reports/content_packages/images/37a503640b83be6c_linkedin.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368041/never-blank/posts/research/20a53f6eb5aa5506/linkedin/1783368041.png",
+            "path": "reports/content_packages/images/20a53f6eb5aa5506_linkedin.png",
             "size": "1200x628",
             "reused": false
           },
           "facebook": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359419/never-blank/posts/research/37a503640b83be6c/facebook/1783359419.png",
-            "path": "reports/content_packages/images/37a503640b83be6c_facebook.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368041/never-blank/posts/research/20a53f6eb5aa5506/facebook/1783368041.png",
+            "path": "reports/content_packages/images/20a53f6eb5aa5506_facebook.png",
             "size": "1200x628",
             "reused": false
           },
           "instagram": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359420/never-blank/posts/research/37a503640b83be6c/instagram/1783359420.png",
-            "path": "reports/content_packages/images/37a503640b83be6c_instagram.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368042/never-blank/posts/research/20a53f6eb5aa5506/instagram/1783368042.png",
+            "path": "reports/content_packages/images/20a53f6eb5aa5506_instagram.png",
             "size": "1080x1350",
             "reused": false
           },
           "threads": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359421/never-blank/posts/research/37a503640b83be6c/threads/1783359421.png",
-            "path": "reports/content_packages/images/37a503640b83be6c_threads.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368043/never-blank/posts/research/20a53f6eb5aa5506/threads/1783368043.png",
+            "path": "reports/content_packages/images/20a53f6eb5aa5506_threads.png",
             "size": "1080x1080",
             "reused": false
           },
           "stories": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359422/never-blank/posts/research/37a503640b83be6c/stories/1783359422.png",
-            "path": "reports/content_packages/images/37a503640b83be6c_stories.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368045/never-blank/posts/research/20a53f6eb5aa5506/stories/1783368044.png",
+            "path": "reports/content_packages/images/20a53f6eb5aa5506_stories.png",
             "size": "1080x1920",
             "reused": false
           }
@@ -183,74 +183,74 @@
         "image_method": "quote_card",
         "reuse_source": "n/a",
         "visual_family": "dark_insight_card",
-        "hook_text": "Versant agreed to acquire golf simulator company"
+        "hook_text": "Ondas just spent $875 million not to invent the future,"
       }
     },
     {
-      "SIGNAL_ID": "0ce7916fe57c4d3a",
-      "HEADLINE": "The World Cup sends prediction market volumes soaring to record highs",
-      "prepared_at": "2026-07-06 17:38 UTC",
+      "SIGNAL_ID": "d6738548792b5ccc",
+      "HEADLINE": "Apple, Broadcom Expand Custom Chip Partnership | Bloomberg Tech 7/06/2026",
+      "prepared_at": "2026-07-06 20:01 UTC",
       "content": {
         "blog": {
-          "headline": "When $2 Billion in Bets Flood Your Platform Overnight: How Prediction Markets Handle the World Cup Surge",
-          "angle": "The World Cup triggers record trading volumes on prediction platforms \u2192 rapid scaling clashes with regulatory demands \u2192 platforms must build resilient infrastructure and tailored offerings \u2192 success hinges on planning for spikes, not just the event itself."
+          "headline": "Why Apple\u2019s Five-Year Chip Deal with Broadcom Is a Masterclass in Supply Chain Control",
+          "angle": "Apple\u2019s extended chip partnership with Broadcom highlights the tension between supply chain security and supplier dependence, showing that doubling down on trusted partners can drive innovation and product edge."
         },
         "linkedin": {
-          "headline": "Prediction markets aren\u2019t just reacting to events\u2014they\u2019re engineered to capture the world\u2019s attention.",
-          "angle": "Major global events like the World Cup create unprecedented volume surges, forcing platforms to balance explosive growth with strict compliance or risk collapse."
+          "headline": "Apple just locked in its chip supplier for five more years \u2014 and with it, locked in a future of both control and dependence.",
+          "angle": "When market volatility hits, doubling down on key suppliers can secure innovation but raises risks of over-reliance."
         },
         "facebook": {
-          "headline": "When the World Cup drives $2 billion in bets, can prediction markets keep up?",
-          "angle": "Prediction platforms Kalshi, Polymarket, and newcomer Rothera saw record volumes in June 2026\u2014how do they scale fast enough without breaking compliance? What\u2019s your plan for event-driven spikes?"
+          "headline": "Apple\u2019s new chip deal with Broadcom isn\u2019t just about supply \u2014 it\u2019s about control. What happens when you bet big on one partner?",
+          "angle": "Apple\u2019s long-term chip partnership with Broadcom shows the trade-off between supply chain stability and dependence \u2014 how far would you go to control your future?"
         },
         "instagram": {
-          "headline": "Prediction Markets: Built for the Surge",
-          "angle": "World Cup betting volumes hit record highs, proving that platforms designed for rapid scaling and compliance win the race."
+          "headline": "Control Over Supply Beats Length",
+          "angle": "Apple\u2019s chip deal with Broadcom proves that owning your supply chain means choosing partners who shape your future, not just spreading bets thin."
         },
         "threads": {
-          "thread_hook": "When $2 billion floods your prediction market overnight, your biggest risk isn\u2019t losing\u2014it\u2019s breaking.",
-          "angle": "This thread breaks down how prediction platforms like Kalshi and Polymarket manage explosive event-driven volume surges while navigating regulatory hurdles."
+          "thread_hook": "Apple just extended its chip deal with Broadcom through 2031. This isn\u2019t diversification \u2014 it\u2019s doubling down.",
+          "angle": "The thread breaks down why strategic supplier partnerships can be a sharper competitive edge than chasing endless vendor options."
         },
         "stories": {
-          "story_question": "Can your platform handle a $2 billion surge without crashing?",
-          "angle": "Exploring the tension between scaling fast for major events and staying compliant under pressure."
+          "story_question": "Is locking in one supplier for years a smart move or a risky bet?",
+          "angle": "Exploring the tension between supply chain control and the dangers of dependency through Apple\u2019s Broadcom chip deal."
         }
       },
       "images": {
         "platform_images": {
           "blog": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359456/never-blank/posts/research/0ce7916fe57c4d3a/blog/1783359455.png",
-            "path": "reports/content_packages/images/0ce7916fe57c4d3a_blog.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368074/never-blank/posts/research/d6738548792b5ccc/blog/1783368074.png",
+            "path": "reports/content_packages/images/d6738548792b5ccc_blog.png",
             "size": "1920x1080",
             "reused": false
           },
           "linkedin": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359459/never-blank/posts/research/0ce7916fe57c4d3a/linkedin/1783359459.png",
-            "path": "reports/content_packages/images/0ce7916fe57c4d3a_linkedin.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368077/never-blank/posts/research/d6738548792b5ccc/linkedin/1783368077.png",
+            "path": "reports/content_packages/images/d6738548792b5ccc_linkedin.png",
             "size": "1200x628",
             "reused": false
           },
           "facebook": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359463/never-blank/posts/research/0ce7916fe57c4d3a/facebook/1783359462.png",
-            "path": "reports/content_packages/images/0ce7916fe57c4d3a_facebook.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368081/never-blank/posts/research/d6738548792b5ccc/facebook/1783368081.png",
+            "path": "reports/content_packages/images/d6738548792b5ccc_facebook.png",
             "size": "1200x628",
             "reused": false
           },
           "instagram": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359469/never-blank/posts/research/0ce7916fe57c4d3a/instagram/1783359468.png",
-            "path": "reports/content_packages/images/0ce7916fe57c4d3a_instagram.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368087/never-blank/posts/research/d6738548792b5ccc/instagram/1783368087.png",
+            "path": "reports/content_packages/images/d6738548792b5ccc_instagram.png",
             "size": "1080x1350",
             "reused": false
           },
           "threads": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359473/never-blank/posts/research/0ce7916fe57c4d3a/threads/1783359473.png",
-            "path": "reports/content_packages/images/0ce7916fe57c4d3a_threads.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368093/never-blank/posts/research/d6738548792b5ccc/threads/1783368092.png",
+            "path": "reports/content_packages/images/d6738548792b5ccc_threads.png",
             "size": "1080x1080",
             "reused": false
           },
           "stories": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359481/never-blank/posts/research/0ce7916fe57c4d3a/stories/1783359480.png",
-            "path": "reports/content_packages/images/0ce7916fe57c4d3a_stories.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368099/never-blank/posts/research/d6738548792b5ccc/stories/1783368099.png",
+            "path": "reports/content_packages/images/d6738548792b5ccc_stories.png",
             "size": "1080x1920",
             "reused": false
           }
@@ -261,74 +261,74 @@
         "image_method": "gpt-image-1",
         "reuse_source": "n/a",
         "visual_family": "particle_flow",
-        "hook_text": "Signals of engagement surge during pivotal moments."
+        "hook_text": "Custom chips extend partnership to 2031."
       }
     },
     {
-      "SIGNAL_ID": "5c32ab8a090da7e5",
-      "HEADLINE": "Microsoft\u2019s Xbox to Cut 3,200 Jobs, Divest\u00a0Studios in Overhaul",
-      "prepared_at": "2026-07-06 17:38 UTC",
+      "SIGNAL_ID": "aa7d58492eb24a85",
+      "HEADLINE": "Runway Expands Global AI Footprint",
+      "prepared_at": "2026-07-06 20:02 UTC",
       "content": {
         "blog": {
-          "headline": "Why Xbox\u2019s 3,200 Job Cuts Signal a Hard Pivot in Tech Growth Strategy",
-          "angle": "Microsoft\u2019s Xbox faces stagnation \u2192 must balance cost cuts with innovation risk \u2192 responds by slashing workforce and divesting studios \u2192 lesson: scaling back is sometimes the only way forward."
+          "headline": "Runway\u2019s $300M Global AI Bet: Why Local Hubs Trump Homegrown Tech",
+          "angle": "Runway\u2019s massive investment in global AI hubs exposes the tension between costly expansion and the race for market leadership, revealing that building local relevance is the real edge in international AI competition."
         },
         "linkedin": {
-          "headline": "3,200 jobs gone overnight\u2014because Xbox decided its own size was the real threat.",
-          "angle": "When growth stalls, even tech giants must shrink teams and portfolios to sharpen focus and protect core strengths."
+          "headline": "Runway just bet $300M that global AI hubs will matter more than homegrown breakthroughs.",
+          "angle": "AI companies expanding globally face high costs, but Runway\u2019s move shows that embedding locally is crucial to outpacing competitors and driving innovation."
         },
         "facebook": {
-          "headline": "Microsoft\u2019s Xbox just cut 20% of its workforce and sold off studios. What\u2019s the real cost of trimming down?",
-          "angle": "Xbox\u2019s massive layoffs and divestitures highlight the tension between cutting costs and risking innovation\u2014how would your company handle this?"
+          "headline": "Runway is spending nearly $300 million to open AI hubs in London, Tokyo, and Paris.",
+          "angle": "Runway\u2019s global expansion highlights the risk of high costs versus the reward of market leadership\u2014are you ready to build local relevance before your competition?"
         },
         "instagram": {
-          "headline": "Cutting Deep to Grow Stronger",
-          "angle": "When even the biggest players hit a wall, shrinking your team and portfolio might be the sharpest move."
+          "headline": "Global AI Hubs > Homegrown Breakthroughs",
+          "angle": "Runway\u2019s $300M investment proves that scaling AI means planting roots where innovation happens, not just where you started."
         },
         "threads": {
-          "thread_hook": "Xbox just cut 3,200 jobs and divested studios. Here\u2019s why size became the enemy.",
-          "angle": "This thread breaks down how stagnation forces tech giants to make brutal cuts to refocus and survive."
+          "thread_hook": "When AI companies go global, the real move isn\u2019t technology\u2014it\u2019s building local relevance before the competition does.",
+          "angle": "This thread breaks down why Runway\u2019s $300M global expansion isn\u2019t just about tech\u2014it\u2019s about owning markets through strategic local presence."
         },
         "stories": {
-          "story_question": "Can cutting your own team be the smartest growth move?",
-          "angle": "Exploring the tension between cost-cutting and innovation risk in major tech restructures."
+          "story_question": "Is your AI strategy global enough to outpace local competitors?",
+          "angle": "Exploring the tension between costly global expansion and the necessity of local relevance to lead in AI innovation."
         }
       },
       "images": {
         "platform_images": {
           "blog": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359509/never-blank/posts/research/5c32ab8a090da7e5/blog/1783359508.png",
-            "path": "reports/content_packages/images/5c32ab8a090da7e5_blog.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368129/never-blank/posts/research/aa7d58492eb24a85/blog/1783368129.png",
+            "path": "reports/content_packages/images/aa7d58492eb24a85_blog.png",
             "size": "1920x1080",
             "reused": false
           },
           "linkedin": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359513/never-blank/posts/research/5c32ab8a090da7e5/linkedin/1783359513.png",
-            "path": "reports/content_packages/images/5c32ab8a090da7e5_linkedin.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368133/never-blank/posts/research/aa7d58492eb24a85/linkedin/1783368133.png",
+            "path": "reports/content_packages/images/aa7d58492eb24a85_linkedin.png",
             "size": "1200x628",
             "reused": false
           },
           "facebook": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359517/never-blank/posts/research/5c32ab8a090da7e5/facebook/1783359516.png",
-            "path": "reports/content_packages/images/5c32ab8a090da7e5_facebook.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368137/never-blank/posts/research/aa7d58492eb24a85/facebook/1783368137.png",
+            "path": "reports/content_packages/images/aa7d58492eb24a85_facebook.png",
             "size": "1200x628",
             "reused": false
           },
           "instagram": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359522/never-blank/posts/research/5c32ab8a090da7e5/instagram/1783359522.png",
-            "path": "reports/content_packages/images/5c32ab8a090da7e5_instagram.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368143/never-blank/posts/research/aa7d58492eb24a85/instagram/1783368143.png",
+            "path": "reports/content_packages/images/aa7d58492eb24a85_instagram.png",
             "size": "1080x1350",
             "reused": false
           },
           "threads": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359527/never-blank/posts/research/5c32ab8a090da7e5/threads/1783359527.png",
-            "path": "reports/content_packages/images/5c32ab8a090da7e5_threads.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368149/never-blank/posts/research/aa7d58492eb24a85/threads/1783368149.png",
+            "path": "reports/content_packages/images/aa7d58492eb24a85_threads.png",
             "size": "1080x1080",
             "reused": false
           },
           "stories": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359534/never-blank/posts/research/5c32ab8a090da7e5/stories/1783359533.png",
-            "path": "reports/content_packages/images/5c32ab8a090da7e5_stories.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368157/never-blank/posts/research/aa7d58492eb24a85/stories/1783368156.png",
+            "path": "reports/content_packages/images/aa7d58492eb24a85_stories.png",
             "size": "1080x1920",
             "reused": false
           }
@@ -338,92 +338,92 @@
         "reuse_rate": "0%",
         "image_method": "gpt-image-1",
         "reuse_source": "n/a",
-        "visual_family": "contrast_waves",
-        "hook_text": "Signals of change in the gaming landscape."
+        "visual_family": "constellation_networks",
+        "hook_text": "$300M to connect AI hubs across continents."
       }
     }
   ],
   "_publish_reports": [
     {
-      "signal_id": "37a503640b83be6c",
-      "headline": "Versant agrees to buy golf simulator company Full Swing for $530 million",
-      "published_at": "2026-07-06 17:40 UTC",
+      "signal_id": "20a53f6eb5aa5506",
+      "headline": "Drone Maker Ondas Says the 'Arms Race' Has Started",
+      "published_at": "2026-07-06 20:03 UTC",
       "mode": "live",
       "results": {
         "wix": {
           "platform": "wix",
           "status": "published_url_unavailable",
           "url": "",
-          "external_id": "7e33e192-00f2-49c0-bb1f-f4a8a7348054",
+          "external_id": "ec00ee93-6bcf-4a68-a9e2-dcfa1cf14fe7",
           "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
           "raw_response_path": null
         },
         "linkedin": {
           "platform": "linkedin",
           "status": "PUBLISHED",
-          "url": "https://www.linkedin.com/feed/update/urn:li:share:7479952206432194560/",
-          "external_id": "urn:li:share:7479952206432194560",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7479988396413566977/",
+          "external_id": "urn:li:share:7479988396413566977",
           "error_message": null,
           "raw_response_path": "(with image)"
         },
         "facebook": {
           "platform": "facebook",
           "status": "PUBLISHED",
-          "url": "https://www.facebook.com/1219637131228622_122115795753356169",
-          "external_id": "1219637131228622_122115795753356169",
+          "url": "https://www.facebook.com/1219637131228622_122115821445356169",
+          "external_id": "1219637131228622_122115821445356169",
           "error_message": null,
           "raw_response_path": null
         },
         "instagram": {
           "platform": "instagram",
           "status": "PUBLISHED",
-          "url": "https://www.instagram.com/p/DadctY8jyOv/",
-          "external_id": "17914418172220668",
+          "url": "https://www.instagram.com/p/DadtKY3lF40/",
+          "external_id": "18097206887209893",
           "error_message": null,
           "raw_response_path": null
         },
         "threads": {
           "platform": "threads",
           "status": "PUBLISHED",
-          "url": "https://www.threads.net/t/17955725169161095",
-          "external_id": "17955725169161095",
+          "url": "https://www.threads.net/t/18008541860744878",
+          "external_id": "18008541860744878",
           "error_message": null,
           "raw_response_path": null
         },
         "telegram": {
           "platform": "telegram",
           "status": "PUBLISHED",
-          "url": "https://t.me/never_blank_inneros/23",
-          "external_id": "23",
+          "url": "https://t.me/never_blank_inneros/24",
+          "external_id": "24",
           "error_message": null,
           "raw_response_path": null
         }
       },
       "wix_url": "",
-      "generated_file": "reports/content_packages/37a503640b83be6c_generated.json",
+      "generated_file": "reports/content_packages/20a53f6eb5aa5506_generated.json",
       "platform_images": {
         "blog": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359417/never-blank/posts/research/37a503640b83be6c/blog/1783359416.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368040/never-blank/posts/research/20a53f6eb5aa5506/blog/1783368040.png",
           "size": "1920x1080"
         },
         "linkedin": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359418/never-blank/posts/research/37a503640b83be6c/linkedin/1783359418.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368041/never-blank/posts/research/20a53f6eb5aa5506/linkedin/1783368041.png",
           "size": "1200x628"
         },
         "facebook": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359419/never-blank/posts/research/37a503640b83be6c/facebook/1783359419.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368041/never-blank/posts/research/20a53f6eb5aa5506/facebook/1783368041.png",
           "size": "1200x628"
         },
         "instagram": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359420/never-blank/posts/research/37a503640b83be6c/instagram/1783359420.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368042/never-blank/posts/research/20a53f6eb5aa5506/instagram/1783368042.png",
           "size": "1080x1350"
         },
         "threads": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359421/never-blank/posts/research/37a503640b83be6c/threads/1783359421.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368043/never-blank/posts/research/20a53f6eb5aa5506/threads/1783368043.png",
           "size": "1080x1080"
         },
         "stories": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359422/never-blank/posts/research/37a503640b83be6c/stories/1783359422.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368045/never-blank/posts/research/20a53f6eb5aa5506/stories/1783368044.png",
           "size": "1080x1920"
         }
       },
@@ -431,7 +431,7 @@
       "telegram_signature": true,
       "wix_cover_image_attached": false,
       "image_design_version": "",
-      "image_hook_text": "Versant agreed to acquire golf simulator company",
+      "image_hook_text": "Ondas just spent $875 million not to invent the future,",
       "image_visual_family": "dark_insight_card",
       "image_method": "quote_card"
     }

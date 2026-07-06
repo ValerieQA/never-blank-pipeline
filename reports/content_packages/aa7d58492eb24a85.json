@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "aa7d58492eb24a85",
+  "HEADLINE": "Runway Expands Global AI Footprint",
+  "prepared_at": "2026-07-06 20:02 UTC",
+  "content": {
+    "blog": {
+      "headline": "Runway’s $300M Global AI Bet: Why Local Hubs Trump Homegrown Tech",
+      "angle": "Runway’s massive investment in global AI hubs exposes the tension between costly expansion and the race for market leadership, revealing that building local relevance is the real edge in international AI competition."
+    },
+    "linkedin": {
+      "headline": "Runway just bet $300M that global AI hubs will matter more than homegrown breakthroughs.",
+      "angle": "AI companies expanding globally face high costs, but Runway’s move shows that embedding locally is crucial to outpacing competitors and driving innovation."
+    },
+    "facebook": {
+      "headline": "Runway is spending nearly $300 million to open AI hubs in London, Tokyo, and Paris.",
+      "angle": "Runway’s global expansion highlights the risk of high costs versus the reward of market leadership—are you ready to build local relevance before your competition?"
+    },
+    "instagram": {
+      "headline": "Global AI Hubs > Homegrown Breakthroughs",
+      "angle": "Runway’s $300M investment proves that scaling AI means planting roots where innovation happens, not just where you started."
+    },
+    "threads": {
+      "thread_hook": "When AI companies go global, the real move isn’t technology—it’s building local relevance before the competition does.",
+      "angle": "This thread breaks down why Runway’s $300M global expansion isn’t just about tech—it’s about owning markets through strategic local presence."
+    },
+    "stories": {
+      "story_question": "Is your AI strategy global enough to outpace local competitors?",
+      "angle": "Exploring the tension between costly global expansion and the necessity of local relevance to lead in AI innovation."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368129/never-blank/posts/research/aa7d58492eb24a85/blog/1783368129.png",
+        "path": "reports/content_packages/images/aa7d58492eb24a85_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368133/never-blank/posts/research/aa7d58492eb24a85/linkedin/1783368133.png",
+        "path": "reports/content_packages/images/aa7d58492eb24a85_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368137/never-blank/posts/research/aa7d58492eb24a85/facebook/1783368137.png",
+        "path": "reports/content_packages/images/aa7d58492eb24a85_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368143/never-blank/posts/research/aa7d58492eb24a85/instagram/1783368143.png",
+        "path": "reports/content_packages/images/aa7d58492eb24a85_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368149/never-blank/posts/research/aa7d58492eb24a85/threads/1783368149.png",
+        "path": "reports/content_packages/images/aa7d58492eb24a85_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368157/never-blank/posts/research/aa7d58492eb24a85/stories/1783368156.png",
+        "path": "reports/content_packages/images/aa7d58492eb24a85_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "constellation_networks",
+    "hook_text": "$300M to connect AI hubs across continents."
+  }
+}

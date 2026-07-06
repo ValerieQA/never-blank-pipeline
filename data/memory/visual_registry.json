@@ -1,5 +1,36 @@
 {
   "_schema": "1.0",
   "_description": "Never Blank visual family registry. Tracks image history for rotation rules.",
-  "posts": []
+  "posts": [
+    {
+      "published_date": "2026-07-06T20:00:45Z",
+      "content_slug": "research/20a53f6eb5aa5506",
+      "visual_family": "dark_insight_card",
+      "dominant_palette": "deep_navy",
+      "hook_text": "Ondas just spent $875 million not to invent the future,",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368040/never-blank/posts/research/20a53f6eb5aa5506/blog/1783368040.png",
+      "source_topic": "Drone Maker Ondas Says the 'Arms Race' Has Started",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-06T20:01:40Z",
+      "content_slug": "research/d6738548792b5ccc",
+      "visual_family": "particle_flow",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "Custom chips extend partnership to 2031.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368074/never-blank/posts/research/d6738548792b5ccc/blog/1783368074.png",
+      "source_topic": "Apple, Broadcom Expand Custom Chip Partnership | Bloomberg Tech 7/06/2026",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-06T20:02:37Z",
+      "content_slug": "research/aa7d58492eb24a85",
+      "visual_family": "constellation_networks",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "$300M to connect AI hubs across continents.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368129/never-blank/posts/research/aa7d58492eb24a85/blog/1783368129.png",
+      "source_topic": "Runway Expands Global AI Footprint",
+      "reuse_count": 1
+    }
+  ]
 }

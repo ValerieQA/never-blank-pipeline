@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "d6738548792b5ccc",
+  "HEADLINE": "Apple, Broadcom Expand Custom Chip Partnership | Bloomberg Tech 7/06/2026",
+  "prepared_at": "2026-07-06 20:01 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why Apple’s Five-Year Chip Deal with Broadcom Is a Masterclass in Supply Chain Control",
+      "angle": "Apple’s extended chip partnership with Broadcom highlights the tension between supply chain security and supplier dependence, showing that doubling down on trusted partners can drive innovation and product edge."
+    },
+    "linkedin": {
+      "headline": "Apple just locked in its chip supplier for five more years — and with it, locked in a future of both control and dependence.",
+      "angle": "When market volatility hits, doubling down on key suppliers can secure innovation but raises risks of over-reliance."
+    },
+    "facebook": {
+      "headline": "Apple’s new chip deal with Broadcom isn’t just about supply — it’s about control. What happens when you bet big on one partner?",
+      "angle": "Apple’s long-term chip partnership with Broadcom shows the trade-off between supply chain stability and dependence — how far would you go to control your future?"
+    },
+    "instagram": {
+      "headline": "Control Over Supply Beats Length",
+      "angle": "Apple’s chip deal with Broadcom proves that owning your supply chain means choosing partners who shape your future, not just spreading bets thin."
+    },
+    "threads": {
+      "thread_hook": "Apple just extended its chip deal with Broadcom through 2031. This isn’t diversification — it’s doubling down.",
+      "angle": "The thread breaks down why strategic supplier partnerships can be a sharper competitive edge than chasing endless vendor options."
+    },
+    "stories": {
+      "story_question": "Is locking in one supplier for years a smart move or a risky bet?",
+      "angle": "Exploring the tension between supply chain control and the dangers of dependency through Apple’s Broadcom chip deal."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368074/never-blank/posts/research/d6738548792b5ccc/blog/1783368074.png",
+        "path": "reports/content_packages/images/d6738548792b5ccc_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368077/never-blank/posts/research/d6738548792b5ccc/linkedin/1783368077.png",
+        "path": "reports/content_packages/images/d6738548792b5ccc_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368081/never-blank/posts/research/d6738548792b5ccc/facebook/1783368081.png",
+        "path": "reports/content_packages/images/d6738548792b5ccc_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368087/never-blank/posts/research/d6738548792b5ccc/instagram/1783368087.png",
+        "path": "reports/content_packages/images/d6738548792b5ccc_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368093/never-blank/posts/research/d6738548792b5ccc/threads/1783368092.png",
+        "path": "reports/content_packages/images/d6738548792b5ccc_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368099/never-blank/posts/research/d6738548792b5ccc/stories/1783368099.png",
+        "path": "reports/content_packages/images/d6738548792b5ccc_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "particle_flow",
+    "hook_text": "Custom chips extend partnership to 2031."
+  }
+}
