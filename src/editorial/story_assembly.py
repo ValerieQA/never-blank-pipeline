@@ -46,6 +46,13 @@ investigation_sequence, aha_setup) and the Narrative Spine, produce:
    a reader recognizes the connection, not a generic lesson that happens to be
    nearby in topic.
 
+   LENGTH — ONE MOVE, NOT A RE-EXPLANATION: 1-2 sentences maximum. By this
+   point the reader has already understood the lesson from surviving_
+   explanation - business_translation only needs to make the single move of
+   generalizing it beyond this company. If you find yourself restating what
+   surviving_explanation already established, you are explaining twice; cut
+   the repetition and leave only the generalizing move.
+
    HARD REQUIREMENT - reject your own draft if it fails this test: read
    business_translation with the company name removed. If it would paste
    unchanged under a headline about a completely different company in a

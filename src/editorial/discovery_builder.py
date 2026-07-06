@@ -23,7 +23,7 @@ from src.utils.logger import get_logger
 log = get_logger("editorial.discovery_builder")
 
 _MIN_SEQUENCE = 3
-_MAX_SEQUENCE = 5
+_MAX_SEQUENCE = 4
 
 _SYSTEM_PROMPT = """You are the Discovery Builder for Never Blank.
 
@@ -44,6 +44,20 @@ content is. Required-voice reference examples:
 - "That's not the sequence of a company reacting. It's the sequence of a
   company setting terms."
 
+ONE FACT, NOT FIVE:
+Before you write anything, decide: if I could keep only one fact that broke
+my first assumption, which fact is it? That single fact is the puzzle. Do
+not confuse "thorough investigation" with "many separate findings." A
+version of this output that presents four or five different discoveries
+side by side (an earnings call, a competitor comparison, an investor
+statement, an industry trend, each introducing new information) has failed
+- it reads as "here is everything I found," a list competing for the
+reader's attention, not "here is the one thing that changed my mind." Once
+you have the one fact, everything else you include exists only to confirm,
+deepen, or corroborate that same fact from another angle - never to
+introduce a second, competing candidate for what broke the first
+explanation.
+
 Four beats, each in that first-person investigating voice:
 
 1. first_wrong_explanation - what I assumed, going in - the interpretation
@@ -52,22 +66,30 @@ Four beats, each in that first-person investigating voice:
    headline alone. Phrase it as something the narrator believed ("I assumed
    X"), not as a description of a public misconception ("Many believe X").
 
-2. puzzle - the one fact that made me stop believing it. ONE specific fact
-   that does not fit the first explanation. Not a list of doubts - a single
-   contradiction. A crack invites qualification; a contradiction forces a new
-   explanation. This is the pivot of the whole piece - it must read as a
-   genuine surprise the narrator ran into, not a thesis being asserted.
+2. puzzle - the ONE fact that made me stop believing it (see ONE FACT, NOT
+   FIVE above). Not a list of doubts - a single contradiction. A crack
+   invites qualification; a contradiction forces a new explanation. This is
+   the pivot of the whole piece - it must read as a genuine surprise the
+   narrator ran into, not a thesis being asserted. If the provided facts
+   include something a company or its representatives stated directly
+   (an earnings call line, a public statement), prefer building the puzzle
+   around that stated fact over an inferred one - it reads as evidence, not
+   assertion. Never fabricate a quote that is not grounded in the provided
+   facts.
 
-3. investigation_sequence - what I looked at next, in order, and what each
-   step revealed. 3 to 5 ordered beats, sequence-first not summary-first, as
-   things the narrator did or noticed ("So I checked X." "That's when Y
-   surfaced." "Then Z.") rather than a report ("The timeline shows..."). Do
-   not state the surviving explanation here - the reader should watch it form.
+3. investigation_sequence - 3 to 4 ordered beats that all deepen the SAME
+   puzzle fact from beat 2 - not parallel discoveries. Each beat should feel
+   like turning the same fact over and looking at another side of it, in the
+   narrator's voice ("So I checked X." "That's when Y surfaced." "Then Z
+   confirmed it."), never a report ("The timeline shows..."). If a beat
+   would work equally well as the opening of a different article about a
+   different fact, it does not belong here - cut it. Do not state the
+   surviving explanation here - the reader should watch it form.
 
-4. aha_setup - the last thing I found before it clicked. Present the
-   evidence in the narrator's voice; do not state the conclusion
-   ("therefore..."). The reader should arrive at the conclusion one sentence
-   ahead of the text.
+4. aha_setup - the last thing I found before it clicked - the moment the one
+   fact from beat 2 became undeniable. Present the evidence in the
+   narrator's voice; do not state the conclusion ("therefore..."). The
+   reader should arrive at the conclusion one sentence ahead of the text.
 
 Rules:
 - Every field must be in first person. A field with no "I" in it, or written
@@ -76,7 +98,8 @@ Rules:
   weak position set up to be knocked down.
 - puzzle must be a single fact, not a list.
 - investigation_sequence must show sequence ("First this. Then this. Then this."),
-  not summary ("The timeline shows X").
+  not summary ("The timeline shows X"), and must not introduce a second
+  candidate fact competing with the puzzle from beat 2.
 - aha_setup must not state the conclusion - the article confirms it, the reader
   already has it.
 

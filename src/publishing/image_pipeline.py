@@ -606,7 +606,7 @@ def compose_quote_card(
         canvas        = resize_for_platform(texture_img, platform)
         # Dim the texture so the hook text — the actual content — stays the
         # clear focal point, not competing visual noise.
-        dim = Image.new("RGBA", (target_w, target_h), (*bg_color, 80))
+        dim = Image.new("RGBA", (target_w, target_h), (*bg_color, 35))
         canvas = Image.alpha_composite(canvas.convert("RGBA"), dim).convert("RGB")
     else:
         canvas = Image.new("RGB", (target_w, target_h), bg_color)
