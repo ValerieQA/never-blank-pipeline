@@ -25,13 +25,20 @@ _MAX_WORDS = 25
 
 _SYSTEM_PROMPT = """You are the Reader Context module for Never Blank.
 
-Write exactly one sentence, 10-20 words, describing only what the company
-fundamentally does. Format: "[Company] [does what] [for whom / in what context]."
+First, identify the SUBJECT company: the one whose decision or action the
+HEADLINE and CORE_FACT are actually about. Other companies may appear in
+CORE_FACT as comparisons or precedents (e.g. "...as Varo and SoFi did before
+it") — ignore those. Describe only the subject company.
+
+Write exactly one sentence, 10-20 words, describing only what the subject
+company fundamentally does. Format: "[Company] [does what] [for whom / in
+what context]."
 
 Rules:
 - One sentence. Maximum 20 words.
 - Never include analysis, opinion, or anything about the current story.
 - Never summarize what happened.
+- Never describe a comparison/precedent company instead of the subject.
 
 Examples:
 "Polymarket operates a prediction market where users trade on real-world event outcomes."
@@ -42,8 +49,8 @@ Return ONLY valid JSON:
 {"context_line": "string"}"""
 
 
-def _is_household_name(company: str, headline: str) -> bool:
-    haystack = f"{company} {headline}".lower()
+def _is_household_name(headline: str) -> bool:
+    haystack = headline.lower()
     return any(name in haystack for name in _HOUSEHOLD_NAMES)
 
 
@@ -54,18 +61,26 @@ def build_reader_context(signal: dict) -> str | None:
 
     Raises ValueError if the LLM returns something that is not a single short
     sentence.
+
+    Note: the subject company is identified by the LLM from HEADLINE +
+    CORE_FACT, not read from REAL_COMPANY_EXAMPLE — that field frequently
+    holds a comparison/precedent company (e.g. a signal about Klarna citing
+    Varo Money as the first fintech to get a bank charter), not the subject
+    of this article. Passing it as "the company" caused Reader Context to
+    describe the wrong company in production (2026-07-06 Klarna signal).
     """
-    company = signal.get("REAL_COMPANY_EXAMPLE", "") or ""
     headline = signal.get("HEADLINE", "") or ""
 
-    if _is_household_name(company, headline):
-        log.info("Reader Context: skipped (household name) for %r", company or headline[:60])
+    if _is_household_name(headline):
+        log.info("Reader Context: skipped (household name) for %r", headline[:60])
         return None
 
-    user = f"""COMPANY: {company or 'unknown - infer from headline'}
-HEADLINE: {headline}
+    user = f"""HEADLINE: {headline}
+CORE_FACT: {signal.get('CORE_FACT', '')}
 
-Produce the Reader Context JSON."""
+Identify the subject company from the fields above (ignore any comparison or
+precedent companies mentioned in CORE_FACT) and produce the Reader Context
+JSON."""
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_enrich())
     try:

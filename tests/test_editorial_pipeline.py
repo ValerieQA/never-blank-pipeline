@@ -164,6 +164,30 @@ class TestReaderContext:
             with pytest.raises(ValueError, match="words"):
                 build_reader_context(SIGNAL)
 
+    def test_real_company_example_is_a_precedent_not_the_subject(self):
+        """
+        Regression test for a production bug (2026-07-06 Klarna signal):
+        REAL_COMPANY_EXAMPLE frequently holds a comparison/precedent company
+        (e.g. "Varo Money" cited as the first fintech to get a bank charter),
+        not the subject of the article. build_reader_context must not treat
+        REAL_COMPANY_EXAMPLE as "the company" — it must not appear in the
+        prompt sent to the LLM at all, and the household-name check must be
+        driven by HEADLINE only, not by REAL_COMPANY_EXAMPLE.
+        """
+        signal = {
+            **SIGNAL,
+            "HEADLINE": "Klarna seeks U.S. bank charter in latest push beyond buy now, pay later",
+            "CORE_FACT": "Klarna is seeking a U.S. bank charter to expand its services beyond BNPL.",
+            "REAL_COMPANY_EXAMPLE": "Varo Money",
+        }
+        data = {"context_line": "Klarna offers buy now, pay later financing for online and in-store purchases."}
+        with patch("src.editorial.reader_context.chat", return_value=_json_response(data)) as mock_chat:
+            result = build_reader_context(signal)
+        assert result == data["context_line"]
+        sent_user_message = mock_chat.call_args.kwargs["user"]
+        assert "Varo Money" not in sent_user_message
+        assert "Klarna" in sent_user_message
+
 
 # --- discovery_builder ---
 
