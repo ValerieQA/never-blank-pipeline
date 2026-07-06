@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "47094bc7313e7b30",
+  "HEADLINE": "Microsoft lays off nearly 5,000 employees across Xbox, commercial sales",
+  "prepared_at": "2026-07-06 16:11 UTC",
+  "content": {
+    "blog": {
+      "headline": "Microsoft’s AI Layoffs Reveal the New Corporate Battleground",
+      "angle": "Microsoft’s AI-driven layoffs expose the tension between innovation and workforce stability, prompting a strategic recalibration that founders must study to anticipate the true cost of technological disruption."
+    },
+    "linkedin": {
+      "headline": "The pink slips at Microsoft weren’t handed out by managers—they were handed out by algorithms.",
+      "angle": "When a tech giant like Microsoft cuts thousands of jobs to pivot around AI, it signals a seismic shift in how businesses must rethink workforce strategy to stay competitive."
+    },
+    "facebook": {
+      "headline": "Microsoft just laid off nearly 5,000 employees—mostly in Xbox and sales. What’s really driving these cuts?",
+      "angle": "Microsoft’s AI-driven layoffs highlight the tension between pushing innovation and managing human impact—how should founders balance efficiency with organizational health?"
+    },
+    "instagram": {
+      "headline": "AI Layoffs: The New Corporate Reality",
+      "angle": "Microsoft’s massive job cuts show founders that adapting to AI isn’t just about tech—it’s about who and what replaces the workforce."
+    },
+    "threads": {
+      "thread_hook": "Microsoft just cut 4,800 jobs. But the real story isn’t who left—it’s what’s coming next.",
+      "angle": "This thread breaks down how AI-driven layoffs at Microsoft signal a shift in business models and workforce strategy that founders can’t ignore."
+    },
+    "stories": {
+      "story_question": "What happens when AI decides who stays and who goes?",
+      "angle": "Exploring the tension between innovation through AI and the human cost of workforce reductions in industry-leading companies."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783354262/never-blank/posts/research/47094bc7313e7b30/blog/1783354261.png",
+        "path": "reports/content_packages/images/47094bc7313e7b30_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783354266/never-blank/posts/research/47094bc7313e7b30/linkedin/1783354265.png",
+        "path": "reports/content_packages/images/47094bc7313e7b30_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783354269/never-blank/posts/research/47094bc7313e7b30/facebook/1783354269.png",
+        "path": "reports/content_packages/images/47094bc7313e7b30_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783354276/never-blank/posts/research/47094bc7313e7b30/instagram/1783354275.png",
+        "path": "reports/content_packages/images/47094bc7313e7b30_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783354281/never-blank/posts/research/47094bc7313e7b30/threads/1783354280.png",
+        "path": "reports/content_packages/images/47094bc7313e7b30_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783354287/never-blank/posts/research/47094bc7313e7b30/stories/1783354287.png",
+        "path": "reports/content_packages/images/47094bc7313e7b30_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Signals of change in a shifting landscape."
+  }
+}

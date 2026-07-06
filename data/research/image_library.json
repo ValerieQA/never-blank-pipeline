@@ -323,5 +323,35 @@
     "visual_family": "constellation_networks",
     "design_version": "3",
     "hook_text": "Data connections illuminate hidden opportunities."
+  },
+  "155e18a794a5f897": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783354199/never-blank/posts/research/155e18a794a5f897/blog/1783354198.png",
+    "signal_type": "regulation",
+    "headline": "Klarna seeks U.S. bank charter in latest push beyond buy now, pay later",
+    "created_at": "2026-07-06",
+    "method": "gpt-image-1",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "Navigating new financial constellations."
+  },
+  "47094bc7313e7b30": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783354262/never-blank/posts/research/47094bc7313e7b30/blog/1783354261.png",
+    "signal_type": "layoffs",
+    "headline": "Microsoft lays off nearly 5,000 employees across Xbox, commercial sales",
+    "created_at": "2026-07-06",
+    "method": "gpt-image-1",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Signals of change in a shifting landscape."
+  },
+  "1a28e9f2885724ee": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783354323/never-blank/posts/research/1a28e9f2885724ee/blog/1783354323.png",
+    "signal_type": "layoffs",
+    "headline": "AI Job Disruption Has Come for Ireland's Technology Sector",
+    "created_at": "2026-07-06",
+    "method": "gpt-image-1",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "AI is reshaping the workforce landscape."
   }
 }
