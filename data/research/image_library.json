@@ -413,5 +413,35 @@
     "visual_family": "constellation_networks",
     "design_version": "3",
     "hook_text": "$300M to connect AI hubs across continents."
+  },
+  "76b8677988318fae": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370568/never-blank/posts/research/76b8677988318fae/blog/1783370567.png",
+    "signal_type": "operational change",
+    "headline": "Toyota to invest $3.6 billion to move Tacoma pickup truck production from Mexico to Texas",
+    "created_at": "2026-07-06",
+    "method": "gpt-image-1",
+    "visual_family": "mountains_depth_layers",
+    "design_version": "3",
+    "hook_text": "Shifting production: $3.6B moves from Mexico to Texas."
+  },
+  "1ebfd839fb4ac38c": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370600/never-blank/posts/research/1ebfd839fb4ac38c/blog/1783370600.png",
+    "signal_type": "consumer behavior",
+    "headline": "Tepper’s Appaloosa Soars 32% in First Half on Memory-Chip Makers",
+    "created_at": "2026-07-06",
+    "method": "quote_card",
+    "visual_family": "light_message_card",
+    "design_version": "3",
+    "hook_text": "Appaloosa’s 32% gain came from betting big on one sector—what happens when the tide shifts?"
+  },
+  "a4814be1ee398b24": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370636/never-blank/posts/research/a4814be1ee398b24/blog/1783370636.png",
+    "signal_type": "technology adoption",
+    "headline": "Startup bets that investors want to trade compute like a commodity",
+    "created_at": "2026-07-06",
+    "method": "gpt-image-1",
+    "visual_family": "focus_rings",
+    "design_version": "3",
+    "hook_text": "$33M to trade compute like a commodity."
   }
 }

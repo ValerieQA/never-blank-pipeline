@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "76b8677988318fae",
+  "HEADLINE": "Toyota to invest $3.6 billion to move Tacoma pickup truck production from Mexico to Texas",
+  "prepared_at": "2026-07-06 20:43 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why Toyota’s $3.6 Billion Bet on Texas Signals a Shift in Manufacturing Strategy",
+      "angle": "Toyota’s move from Mexico to Texas exposes the tension between chasing low labor costs and managing supply chain risks, prompting a costly but strategic relocation that offers lessons on balancing operational control with market realities."
+    },
+    "linkedin": {
+      "headline": "Toyota just spent $3.6 billion to bring its trucks home—because cheap labor isn’t worth the uncertainty.",
+      "angle": "When supply chain disruptions and regulatory risks escalate, companies like Toyota prove that investing in local production can safeguard market access and operational stability."
+    },
+    "facebook": {
+      "headline": "Toyota is moving Tacoma production from Mexico to Texas with a $3.6 billion investment. What’s behind this costly shift?",
+      "angle": "Toyota’s strategic relocation highlights the growing challenge of balancing low-cost manufacturing with supply chain resilience—how are other companies managing this trade-off?"
+    },
+    "instagram": {
+      "headline": "When Cheap Labor Costs More",
+      "angle": "Toyota’s $3.6 billion move shows that controlling your supply chain beats chasing the lowest wages."
+    },
+    "threads": {
+      "thread_hook": "Toyota just rewrote the manufacturing playbook with a $3.6 billion bet on Texas over Mexico.",
+      "angle": "This thread breaks down why supply chain uncertainty and shifting trade policies are forcing even the most efficient manufacturers to reconsider where and how they build."
+    },
+    "stories": {
+      "story_question": "Is cheap labor worth the risk when supply chains break?",
+      "angle": "Exploring how Toyota’s massive investment to relocate production reflects a broader shift toward prioritizing control and resilience over cost savings."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370568/never-blank/posts/research/76b8677988318fae/blog/1783370567.png",
+        "path": "reports/content_packages/images/76b8677988318fae_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370571/never-blank/posts/research/76b8677988318fae/linkedin/1783370571.png",
+        "path": "reports/content_packages/images/76b8677988318fae_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370574/never-blank/posts/research/76b8677988318fae/facebook/1783370574.png",
+        "path": "reports/content_packages/images/76b8677988318fae_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370579/never-blank/posts/research/76b8677988318fae/instagram/1783370579.png",
+        "path": "reports/content_packages/images/76b8677988318fae_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370583/never-blank/posts/research/76b8677988318fae/threads/1783370583.png",
+        "path": "reports/content_packages/images/76b8677988318fae_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370591/never-blank/posts/research/76b8677988318fae/stories/1783370590.png",
+        "path": "reports/content_packages/images/76b8677988318fae_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "mountains_depth_layers",
+    "hook_text": "Shifting production: $3.6B moves from Mexico to Texas."
+  }
+}
