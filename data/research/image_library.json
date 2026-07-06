@@ -353,5 +353,35 @@
     "visual_family": "contrast_waves",
     "design_version": "3",
     "hook_text": "AI is reshaping the workforce landscape."
+  },
+  "37a503640b83be6c": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359417/never-blank/posts/research/37a503640b83be6c/blog/1783359416.png",
+    "signal_type": "operational change",
+    "headline": "Versant agrees to buy golf simulator company Full Swing for $530 million",
+    "created_at": "2026-07-06",
+    "method": "quote_card",
+    "visual_family": "dark_insight_card",
+    "design_version": "3",
+    "hook_text": "Versant agreed to acquire golf simulator company"
+  },
+  "0ce7916fe57c4d3a": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359456/never-blank/posts/research/0ce7916fe57c4d3a/blog/1783359455.png",
+    "signal_type": "consumer behavior",
+    "headline": "The World Cup sends prediction market volumes soaring to record highs",
+    "created_at": "2026-07-06",
+    "method": "gpt-image-1",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "Signals of engagement surge during pivotal moments."
+  },
+  "5c32ab8a090da7e5": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359509/never-blank/posts/research/5c32ab8a090da7e5/blog/1783359508.png",
+    "signal_type": "layoffs",
+    "headline": "Microsoft’s Xbox to Cut 3,200 Jobs, Divest Studios in Overhaul",
+    "created_at": "2026-07-06",
+    "method": "gpt-image-1",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Signals of change in the gaming landscape."
   }
 }
