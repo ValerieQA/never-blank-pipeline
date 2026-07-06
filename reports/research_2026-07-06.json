@@ -1,97 +1,97 @@
 {
   "date": "2026-07-06",
-  "candidates_found": 10,
+  "candidates_found": 11,
   "duplicates_skipped": 0,
   "new_signals_added": 10,
   "selected_for_content": 3,
   "sheet_sync": "success",
   "archived": 0,
   "top_signals": [
-    "Drone Maker Ondas Says the 'Arms Race' Has Started",
-    "Apple, Broadcom Expand Custom Chip Partnership | Bloomberg Tech 7/06/2026",
-    "Runway Expands Global AI Footprint"
+    "Toyota to invest $3.6 billion to move Tacoma pickup truck production from Mexico",
+    "Tepper\u2019s Appaloosa Soars 32% in First Half on Memory-Chip Makers",
+    "Startup bets that investors want to trade compute like a commodity"
   ],
   "publish_reports": [
     {
-      "signal_id": "20a53f6eb5aa5506",
-      "headline": "Drone Maker Ondas Says the 'Arms Race' Has Started",
-      "published_at": "2026-07-06 20:03 UTC",
+      "signal_id": "76b8677988318fae",
+      "headline": "Toyota to invest $3.6 billion to move Tacoma pickup truck production from Mexico to Texas",
+      "published_at": "2026-07-06 20:45 UTC",
       "mode": "live",
       "results": {
         "wix": {
           "platform": "wix",
           "status": "published_url_unavailable",
           "url": "",
-          "external_id": "ec00ee93-6bcf-4a68-a9e2-dcfa1cf14fe7",
+          "external_id": "021b9488-541c-41e4-ae22-07de3311be08",
           "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
           "raw_response_path": null
         },
         "linkedin": {
           "platform": "linkedin",
-          "status": "PUBLISHED",
-          "url": "https://www.linkedin.com/feed/update/urn:li:share:7479988396413566977/",
-          "external_id": "urn:li:share:7479988396413566977",
-          "error_message": null,
-          "raw_response_path": "(with image)"
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "HTTP 400: Organization Or Events permissions must be used when using organization as author",
+          "raw_response_path": null
         },
         "facebook": {
           "platform": "facebook",
-          "status": "PUBLISHED",
-          "url": "https://www.facebook.com/1219637131228622_122115821445356169",
-          "external_id": "1219637131228622_122115821445356169",
-          "error_message": null,
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "HTTP 500: Please reduce the amount of data you're asking for, then retry your request",
           "raw_response_path": null
         },
         "instagram": {
           "platform": "instagram",
           "status": "PUBLISHED",
-          "url": "https://www.instagram.com/p/DadtKY3lF40/",
-          "external_id": "18097206887209893",
+          "url": "https://www.instagram.com/p/Dadx7iPDmsJ/",
+          "external_id": "17983068720033708",
           "error_message": null,
           "raw_response_path": null
         },
         "threads": {
           "platform": "threads",
           "status": "PUBLISHED",
-          "url": "https://www.threads.net/t/18008541860744878",
-          "external_id": "18008541860744878",
+          "url": "https://www.threads.net/t/18017689631855413",
+          "external_id": "18017689631855413",
           "error_message": null,
           "raw_response_path": null
         },
         "telegram": {
           "platform": "telegram",
           "status": "PUBLISHED",
-          "url": "https://t.me/never_blank_inneros/24",
-          "external_id": "24",
+          "url": "https://t.me/never_blank_inneros/25",
+          "external_id": "25",
           "error_message": null,
           "raw_response_path": null
         }
       },
       "wix_url": "",
-      "generated_file": "reports/content_packages/20a53f6eb5aa5506_generated.json",
+      "generated_file": "reports/content_packages/76b8677988318fae_generated.json",
       "platform_images": {
         "blog": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368040/never-blank/posts/research/20a53f6eb5aa5506/blog/1783368040.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370568/never-blank/posts/research/76b8677988318fae/blog/1783370567.png",
           "size": "1920x1080"
         },
         "linkedin": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368041/never-blank/posts/research/20a53f6eb5aa5506/linkedin/1783368041.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370571/never-blank/posts/research/76b8677988318fae/linkedin/1783370571.png",
           "size": "1200x628"
         },
         "facebook": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368041/never-blank/posts/research/20a53f6eb5aa5506/facebook/1783368041.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370574/never-blank/posts/research/76b8677988318fae/facebook/1783370574.png",
           "size": "1200x628"
         },
         "instagram": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368042/never-blank/posts/research/20a53f6eb5aa5506/instagram/1783368042.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370579/never-blank/posts/research/76b8677988318fae/instagram/1783370579.png",
           "size": "1080x1350"
         },
         "threads": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368043/never-blank/posts/research/20a53f6eb5aa5506/threads/1783368043.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370583/never-blank/posts/research/76b8677988318fae/threads/1783370583.png",
           "size": "1080x1080"
         },
         "stories": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368045/never-blank/posts/research/20a53f6eb5aa5506/stories/1783368044.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370591/never-blank/posts/research/76b8677988318fae/stories/1783370590.png",
           "size": "1080x1920"
         }
       },
@@ -99,9 +99,9 @@
       "telegram_signature": true,
       "wix_cover_image_attached": false,
       "image_design_version": "",
-      "image_hook_text": "Ondas just spent $875 million not to invent the future,",
-      "image_visual_family": "dark_insight_card",
-      "image_method": "quote_card"
+      "image_hook_text": "Shifting production: $3.6B moves from Mexico to Texas.",
+      "image_visual_family": "mountains_depth_layers",
+      "image_method": "gpt-image-1"
     }
   ],
   "content_packages": 3,
@@ -109,70 +109,148 @@
   "images_reused": 0,
   "_content_packages": [
     {
-      "SIGNAL_ID": "20a53f6eb5aa5506",
-      "HEADLINE": "Drone Maker Ondas Says the 'Arms Race' Has Started",
-      "prepared_at": "2026-07-06 20:00 UTC",
+      "SIGNAL_ID": "76b8677988318fae",
+      "HEADLINE": "Toyota to invest $3.6 billion to move Tacoma pickup truck production from Mexico to Texas",
+      "prepared_at": "2026-07-06 20:43 UTC",
       "content": {
         "blog": {
-          "headline": "Ondas\u2019 $875M Bet: When Buying Beats Building in Defense Tech",
-          "angle": "Ondas faces a high-stakes arms race \u2192 rapid expansion risks and integration headaches mount \u2192 Ondas\u2019 acquisition of DZYNE aims to leapfrog competitors \u2192 strategic buying is the fastest route to market dominance in defense tech."
+          "headline": "Why Toyota\u2019s $3.6 Billion Bet on Texas Signals a Shift in Manufacturing Strategy",
+          "angle": "Toyota\u2019s move from Mexico to Texas exposes the tension between chasing low labor costs and managing supply chain risks, prompting a costly but strategic relocation that offers lessons on balancing operational control with market realities."
         },
         "linkedin": {
-          "headline": "Ondas just spent $875 million not to invent the future, but to assemble it before anyone else can.",
-          "angle": "In hyper-competitive tech sectors, the fastest assembler wins \u2014 Ondas\u2019 acquisition signals that building from scratch is losing to strategic buying."
+          "headline": "Toyota just spent $3.6 billion to bring its trucks home\u2014because cheap labor isn\u2019t worth the uncertainty.",
+          "angle": "When supply chain disruptions and regulatory risks escalate, companies like Toyota prove that investing in local production can safeguard market access and operational stability."
         },
         "facebook": {
-          "headline": "Ondas is racing to dominate defense tech by buying, not building.",
-          "angle": "Ondas\u2019 $875M acquisition of DZYNE shows how rapid expansion forces companies to choose between risky internal development or costly acquisitions \u2014 which path would you take?"
+          "headline": "Toyota is moving Tacoma production from Mexico to Texas with a $3.6 billion investment. What\u2019s behind this costly shift?",
+          "angle": "Toyota\u2019s strategic relocation highlights the growing challenge of balancing low-cost manufacturing with supply chain resilience\u2014how are other companies managing this trade-off?"
         },
         "instagram": {
-          "headline": "When Buying Beats Building",
-          "angle": "Ondas\u2019 massive acquisition reveals why in defense tech, speed to scale often means assembling existing pieces, not inventing new ones."
+          "headline": "When Cheap Labor Costs More",
+          "angle": "Toyota\u2019s $3.6 billion move shows that controlling your supply chain beats chasing the lowest wages."
         },
         "threads": {
-          "thread_hook": "In drone defense tech, the arms race isn\u2019t about invention anymore \u2014 it\u2019s about who can buy and integrate fastest.",
-          "angle": "This thread breaks down why Ondas\u2019 $875M acquisition of DZYNE is a textbook example of how rapid expansion and integration challenges define winners in high-stakes tech sectors."
+          "thread_hook": "Toyota just rewrote the manufacturing playbook with a $3.6 billion bet on Texas over Mexico.",
+          "angle": "This thread breaks down why supply chain uncertainty and shifting trade policies are forcing even the most efficient manufacturers to reconsider where and how they build."
         },
         "stories": {
-          "story_question": "Can you grow fast enough without buying your way forward?",
-          "angle": "Exploring the tension between organic growth and strategic acquisitions in fast-moving, tech-driven industries like defense."
+          "story_question": "Is cheap labor worth the risk when supply chains break?",
+          "angle": "Exploring how Toyota\u2019s massive investment to relocate production reflects a broader shift toward prioritizing control and resilience over cost savings."
         }
       },
       "images": {
         "platform_images": {
           "blog": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368040/never-blank/posts/research/20a53f6eb5aa5506/blog/1783368040.png",
-            "path": "reports/content_packages/images/20a53f6eb5aa5506_blog.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370568/never-blank/posts/research/76b8677988318fae/blog/1783370567.png",
+            "path": "reports/content_packages/images/76b8677988318fae_blog.png",
             "size": "1920x1080",
             "reused": false
           },
           "linkedin": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368041/never-blank/posts/research/20a53f6eb5aa5506/linkedin/1783368041.png",
-            "path": "reports/content_packages/images/20a53f6eb5aa5506_linkedin.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370571/never-blank/posts/research/76b8677988318fae/linkedin/1783370571.png",
+            "path": "reports/content_packages/images/76b8677988318fae_linkedin.png",
             "size": "1200x628",
             "reused": false
           },
           "facebook": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368041/never-blank/posts/research/20a53f6eb5aa5506/facebook/1783368041.png",
-            "path": "reports/content_packages/images/20a53f6eb5aa5506_facebook.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370574/never-blank/posts/research/76b8677988318fae/facebook/1783370574.png",
+            "path": "reports/content_packages/images/76b8677988318fae_facebook.png",
             "size": "1200x628",
             "reused": false
           },
           "instagram": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368042/never-blank/posts/research/20a53f6eb5aa5506/instagram/1783368042.png",
-            "path": "reports/content_packages/images/20a53f6eb5aa5506_instagram.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370579/never-blank/posts/research/76b8677988318fae/instagram/1783370579.png",
+            "path": "reports/content_packages/images/76b8677988318fae_instagram.png",
             "size": "1080x1350",
             "reused": false
           },
           "threads": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368043/never-blank/posts/research/20a53f6eb5aa5506/threads/1783368043.png",
-            "path": "reports/content_packages/images/20a53f6eb5aa5506_threads.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370583/never-blank/posts/research/76b8677988318fae/threads/1783370583.png",
+            "path": "reports/content_packages/images/76b8677988318fae_threads.png",
             "size": "1080x1080",
             "reused": false
           },
           "stories": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368045/never-blank/posts/research/20a53f6eb5aa5506/stories/1783368044.png",
-            "path": "reports/content_packages/images/20a53f6eb5aa5506_stories.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370591/never-blank/posts/research/76b8677988318fae/stories/1783370590.png",
+            "path": "reports/content_packages/images/76b8677988318fae_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "mountains_depth_layers",
+        "hook_text": "Shifting production: $3.6B moves from Mexico to Texas."
+      }
+    },
+    {
+      "SIGNAL_ID": "1ebfd839fb4ac38c",
+      "HEADLINE": "Tepper\u2019s Appaloosa Soars 32% in First Half on Memory-Chip Makers",
+      "prepared_at": "2026-07-06 20:43 UTC",
+      "content": {
+        "blog": {
+          "headline": "Tepper\u2019s Appaloosa Rakes in 32% Betting Big on Memory Chips \u2014 But at What Cost?",
+          "angle": "Appaloosa\u2019s sector concentration in memory-chip makers delivered massive returns \u2192 but volatility lurks beneath \u2192 founders must weigh timing and exit strategies \u2192 outsized conviction demands disciplined risk management."
+        },
+        "linkedin": {
+          "headline": "Appaloosa\u2019s 32% surge shows the power\u2014and peril\u2014of sector concentration.",
+          "angle": "Focused bets on high-demand tech can skyrocket returns, but founders need to anticipate volatility and market reversals."
+        },
+        "facebook": {
+          "headline": "Appaloosa Management soared 32% in six months by doubling down on memory chips. Is doubling down on one sector worth the risk?",
+          "angle": "A concentrated bet on semiconductors paid off big for Appaloosa, but how do you balance outsized returns with potential market swings?"
+        },
+        "instagram": {
+          "headline": "When Focus Fuels 32% Gains",
+          "angle": "Appaloosa\u2019s bold bet on memory chips highlights the tension between chasing big returns and managing sector risk."
+        },
+        "threads": {
+          "thread_hook": "Appaloosa\u2019s 32% jump in 6 months wasn\u2019t luck\u2014it was a high-stakes bet on memory chips.",
+          "angle": "This thread breaks down why concentrated bets in hot tech sectors can deliver outsized returns but also demand razor-sharp timing and risk control."
+        },
+        "stories": {
+          "story_question": "Can doubling down on one sector deliver or destroy your portfolio?",
+          "angle": "Exploring the tension between chasing big returns through sector concentration and the volatility that follows."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370600/never-blank/posts/research/1ebfd839fb4ac38c/blog/1783370600.png",
+            "path": "reports/content_packages/images/1ebfd839fb4ac38c_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370601/never-blank/posts/research/1ebfd839fb4ac38c/linkedin/1783370601.png",
+            "path": "reports/content_packages/images/1ebfd839fb4ac38c_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370602/never-blank/posts/research/1ebfd839fb4ac38c/facebook/1783370602.png",
+            "path": "reports/content_packages/images/1ebfd839fb4ac38c_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370603/never-blank/posts/research/1ebfd839fb4ac38c/instagram/1783370603.png",
+            "path": "reports/content_packages/images/1ebfd839fb4ac38c_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370604/never-blank/posts/research/1ebfd839fb4ac38c/threads/1783370604.png",
+            "path": "reports/content_packages/images/1ebfd839fb4ac38c_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370605/never-blank/posts/research/1ebfd839fb4ac38c/stories/1783370604.png",
+            "path": "reports/content_packages/images/1ebfd839fb4ac38c_stories.png",
             "size": "1080x1920",
             "reused": false
           }
@@ -182,75 +260,75 @@
         "reuse_rate": "0%",
         "image_method": "quote_card",
         "reuse_source": "n/a",
-        "visual_family": "dark_insight_card",
-        "hook_text": "Ondas just spent $875 million not to invent the future,"
+        "visual_family": "light_message_card",
+        "hook_text": "Appaloosa\u2019s 32% gain came from betting big on one sector\u2014what happens when the tide shifts?"
       }
     },
     {
-      "SIGNAL_ID": "d6738548792b5ccc",
-      "HEADLINE": "Apple, Broadcom Expand Custom Chip Partnership | Bloomberg Tech 7/06/2026",
-      "prepared_at": "2026-07-06 20:01 UTC",
+      "SIGNAL_ID": "a4814be1ee398b24",
+      "HEADLINE": "Startup bets that investors want to trade compute like a commodity",
+      "prepared_at": "2026-07-06 20:44 UTC",
       "content": {
         "blog": {
-          "headline": "Why Apple\u2019s Five-Year Chip Deal with Broadcom Is a Masterclass in Supply Chain Control",
-          "angle": "Apple\u2019s extended chip partnership with Broadcom highlights the tension between supply chain security and supplier dependence, showing that doubling down on trusted partners can drive innovation and product edge."
+          "headline": "When Compute Becomes a Commodity: The Startup Betting on Market-Driven AI Infrastructure",
+          "angle": "Ornn\u2019s gamble on trading compute power highlights the tension between affordable access and volatile market pricing, revealing that infrastructure innovation demands trust and seamless integration to tame unpredictability."
         },
         "linkedin": {
-          "headline": "Apple just locked in its chip supplier for five more years \u2014 and with it, locked in a future of both control and dependence.",
-          "angle": "When market volatility hits, doubling down on key suppliers can secure innovation but raises risks of over-reliance."
+          "headline": "Your next infrastructure bottleneck might not be hardware\u2014it might be a price spike.",
+          "angle": "Startups commoditizing compute power face a new challenge: balancing cost efficiency with the risks of market volatility, forcing founders to rethink infrastructure strategy."
         },
         "facebook": {
-          "headline": "Apple\u2019s new chip deal with Broadcom isn\u2019t just about supply \u2014 it\u2019s about control. What happens when you bet big on one partner?",
-          "angle": "Apple\u2019s long-term chip partnership with Broadcom shows the trade-off between supply chain stability and dependence \u2014 how far would you go to control your future?"
+          "headline": "A startup just raised $33M to trade computing power like a commodity. But can market-driven pricing really deliver reliable AI infrastructure?",
+          "angle": "Ornn\u2019s marketplace model promises efficiency but risks supply swings\u2014how will founders manage the trade-offs between cost and stability?"
         },
         "instagram": {
-          "headline": "Control Over Supply Beats Length",
-          "angle": "Apple\u2019s chip deal with Broadcom proves that owning your supply chain means choosing partners who shape your future, not just spreading bets thin."
+          "headline": "Compute Power Meets Market Risk",
+          "angle": "Turning compute into a tradable commodity brings efficiency\u2014and unpredictability\u2014to AI infrastructure."
         },
         "threads": {
-          "thread_hook": "Apple just extended its chip deal with Broadcom through 2031. This isn\u2019t diversification \u2014 it\u2019s doubling down.",
-          "angle": "The thread breaks down why strategic supplier partnerships can be a sharper competitive edge than chasing endless vendor options."
+          "thread_hook": "Treating compute like a commodity isn\u2019t just about cheaper power\u2014it\u2019s about inheriting a market\u2019s wild swings.",
+          "angle": "This thread breaks down how Ornn\u2019s marketplace model exposes startups to new infrastructure risks and what that means for founders betting on AI growth."
         },
         "stories": {
-          "story_question": "Is locking in one supplier for years a smart move or a risky bet?",
-          "angle": "Exploring the tension between supply chain control and the dangers of dependency through Apple\u2019s Broadcom chip deal."
+          "story_question": "Can you handle compute prices that jump like stocks?",
+          "angle": "Exploring the tension between affordable AI infrastructure and the unpredictability of market-driven compute pricing."
         }
       },
       "images": {
         "platform_images": {
           "blog": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368074/never-blank/posts/research/d6738548792b5ccc/blog/1783368074.png",
-            "path": "reports/content_packages/images/d6738548792b5ccc_blog.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370636/never-blank/posts/research/a4814be1ee398b24/blog/1783370636.png",
+            "path": "reports/content_packages/images/a4814be1ee398b24_blog.png",
             "size": "1920x1080",
             "reused": false
           },
           "linkedin": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368077/never-blank/posts/research/d6738548792b5ccc/linkedin/1783368077.png",
-            "path": "reports/content_packages/images/d6738548792b5ccc_linkedin.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370639/never-blank/posts/research/a4814be1ee398b24/linkedin/1783370639.png",
+            "path": "reports/content_packages/images/a4814be1ee398b24_linkedin.png",
             "size": "1200x628",
             "reused": false
           },
           "facebook": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368081/never-blank/posts/research/d6738548792b5ccc/facebook/1783368081.png",
-            "path": "reports/content_packages/images/d6738548792b5ccc_facebook.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370643/never-blank/posts/research/a4814be1ee398b24/facebook/1783370643.png",
+            "path": "reports/content_packages/images/a4814be1ee398b24_facebook.png",
             "size": "1200x628",
             "reused": false
           },
           "instagram": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368087/never-blank/posts/research/d6738548792b5ccc/instagram/1783368087.png",
-            "path": "reports/content_packages/images/d6738548792b5ccc_instagram.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370649/never-blank/posts/research/a4814be1ee398b24/instagram/1783370649.png",
+            "path": "reports/content_packages/images/a4814be1ee398b24_instagram.png",
             "size": "1080x1350",
             "reused": false
           },
           "threads": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368093/never-blank/posts/research/d6738548792b5ccc/threads/1783368092.png",
-            "path": "reports/content_packages/images/d6738548792b5ccc_threads.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370655/never-blank/posts/research/a4814be1ee398b24/threads/1783370654.png",
+            "path": "reports/content_packages/images/a4814be1ee398b24_threads.png",
             "size": "1080x1080",
             "reused": false
           },
           "stories": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368099/never-blank/posts/research/d6738548792b5ccc/stories/1783368099.png",
-            "path": "reports/content_packages/images/d6738548792b5ccc_stories.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370662/never-blank/posts/research/a4814be1ee398b24/stories/1783370661.png",
+            "path": "reports/content_packages/images/a4814be1ee398b24_stories.png",
             "size": "1080x1920",
             "reused": false
           }
@@ -260,170 +338,92 @@
         "reuse_rate": "0%",
         "image_method": "gpt-image-1",
         "reuse_source": "n/a",
-        "visual_family": "particle_flow",
-        "hook_text": "Custom chips extend partnership to 2031."
-      }
-    },
-    {
-      "SIGNAL_ID": "aa7d58492eb24a85",
-      "HEADLINE": "Runway Expands Global AI Footprint",
-      "prepared_at": "2026-07-06 20:02 UTC",
-      "content": {
-        "blog": {
-          "headline": "Runway\u2019s $300M Global AI Bet: Why Local Hubs Trump Homegrown Tech",
-          "angle": "Runway\u2019s massive investment in global AI hubs exposes the tension between costly expansion and the race for market leadership, revealing that building local relevance is the real edge in international AI competition."
-        },
-        "linkedin": {
-          "headline": "Runway just bet $300M that global AI hubs will matter more than homegrown breakthroughs.",
-          "angle": "AI companies expanding globally face high costs, but Runway\u2019s move shows that embedding locally is crucial to outpacing competitors and driving innovation."
-        },
-        "facebook": {
-          "headline": "Runway is spending nearly $300 million to open AI hubs in London, Tokyo, and Paris.",
-          "angle": "Runway\u2019s global expansion highlights the risk of high costs versus the reward of market leadership\u2014are you ready to build local relevance before your competition?"
-        },
-        "instagram": {
-          "headline": "Global AI Hubs > Homegrown Breakthroughs",
-          "angle": "Runway\u2019s $300M investment proves that scaling AI means planting roots where innovation happens, not just where you started."
-        },
-        "threads": {
-          "thread_hook": "When AI companies go global, the real move isn\u2019t technology\u2014it\u2019s building local relevance before the competition does.",
-          "angle": "This thread breaks down why Runway\u2019s $300M global expansion isn\u2019t just about tech\u2014it\u2019s about owning markets through strategic local presence."
-        },
-        "stories": {
-          "story_question": "Is your AI strategy global enough to outpace local competitors?",
-          "angle": "Exploring the tension between costly global expansion and the necessity of local relevance to lead in AI innovation."
-        }
-      },
-      "images": {
-        "platform_images": {
-          "blog": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368129/never-blank/posts/research/aa7d58492eb24a85/blog/1783368129.png",
-            "path": "reports/content_packages/images/aa7d58492eb24a85_blog.png",
-            "size": "1920x1080",
-            "reused": false
-          },
-          "linkedin": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368133/never-blank/posts/research/aa7d58492eb24a85/linkedin/1783368133.png",
-            "path": "reports/content_packages/images/aa7d58492eb24a85_linkedin.png",
-            "size": "1200x628",
-            "reused": false
-          },
-          "facebook": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368137/never-blank/posts/research/aa7d58492eb24a85/facebook/1783368137.png",
-            "path": "reports/content_packages/images/aa7d58492eb24a85_facebook.png",
-            "size": "1200x628",
-            "reused": false
-          },
-          "instagram": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368143/never-blank/posts/research/aa7d58492eb24a85/instagram/1783368143.png",
-            "path": "reports/content_packages/images/aa7d58492eb24a85_instagram.png",
-            "size": "1080x1350",
-            "reused": false
-          },
-          "threads": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368149/never-blank/posts/research/aa7d58492eb24a85/threads/1783368149.png",
-            "path": "reports/content_packages/images/aa7d58492eb24a85_threads.png",
-            "size": "1080x1080",
-            "reused": false
-          },
-          "stories": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368157/never-blank/posts/research/aa7d58492eb24a85/stories/1783368156.png",
-            "path": "reports/content_packages/images/aa7d58492eb24a85_stories.png",
-            "size": "1080x1920",
-            "reused": false
-          }
-        },
-        "new_images": 1,
-        "reused_images": 0,
-        "reuse_rate": "0%",
-        "image_method": "gpt-image-1",
-        "reuse_source": "n/a",
-        "visual_family": "constellation_networks",
-        "hook_text": "$300M to connect AI hubs across continents."
+        "visual_family": "focus_rings",
+        "hook_text": "$33M to trade compute like a commodity."
       }
     }
   ],
   "_publish_reports": [
     {
-      "signal_id": "20a53f6eb5aa5506",
-      "headline": "Drone Maker Ondas Says the 'Arms Race' Has Started",
-      "published_at": "2026-07-06 20:03 UTC",
+      "signal_id": "76b8677988318fae",
+      "headline": "Toyota to invest $3.6 billion to move Tacoma pickup truck production from Mexico to Texas",
+      "published_at": "2026-07-06 20:45 UTC",
       "mode": "live",
       "results": {
         "wix": {
           "platform": "wix",
           "status": "published_url_unavailable",
           "url": "",
-          "external_id": "ec00ee93-6bcf-4a68-a9e2-dcfa1cf14fe7",
+          "external_id": "021b9488-541c-41e4-ae22-07de3311be08",
           "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
           "raw_response_path": null
         },
         "linkedin": {
           "platform": "linkedin",
-          "status": "PUBLISHED",
-          "url": "https://www.linkedin.com/feed/update/urn:li:share:7479988396413566977/",
-          "external_id": "urn:li:share:7479988396413566977",
-          "error_message": null,
-          "raw_response_path": "(with image)"
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "HTTP 400: Organization Or Events permissions must be used when using organization as author",
+          "raw_response_path": null
         },
         "facebook": {
           "platform": "facebook",
-          "status": "PUBLISHED",
-          "url": "https://www.facebook.com/1219637131228622_122115821445356169",
-          "external_id": "1219637131228622_122115821445356169",
-          "error_message": null,
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "HTTP 500: Please reduce the amount of data you're asking for, then retry your request",
           "raw_response_path": null
         },
         "instagram": {
           "platform": "instagram",
           "status": "PUBLISHED",
-          "url": "https://www.instagram.com/p/DadtKY3lF40/",
-          "external_id": "18097206887209893",
+          "url": "https://www.instagram.com/p/Dadx7iPDmsJ/",
+          "external_id": "17983068720033708",
           "error_message": null,
           "raw_response_path": null
         },
         "threads": {
           "platform": "threads",
           "status": "PUBLISHED",
-          "url": "https://www.threads.net/t/18008541860744878",
-          "external_id": "18008541860744878",
+          "url": "https://www.threads.net/t/18017689631855413",
+          "external_id": "18017689631855413",
           "error_message": null,
           "raw_response_path": null
         },
         "telegram": {
           "platform": "telegram",
           "status": "PUBLISHED",
-          "url": "https://t.me/never_blank_inneros/24",
-          "external_id": "24",
+          "url": "https://t.me/never_blank_inneros/25",
+          "external_id": "25",
           "error_message": null,
           "raw_response_path": null
         }
       },
       "wix_url": "",
-      "generated_file": "reports/content_packages/20a53f6eb5aa5506_generated.json",
+      "generated_file": "reports/content_packages/76b8677988318fae_generated.json",
       "platform_images": {
         "blog": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368040/never-blank/posts/research/20a53f6eb5aa5506/blog/1783368040.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370568/never-blank/posts/research/76b8677988318fae/blog/1783370567.png",
           "size": "1920x1080"
         },
         "linkedin": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368041/never-blank/posts/research/20a53f6eb5aa5506/linkedin/1783368041.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370571/never-blank/posts/research/76b8677988318fae/linkedin/1783370571.png",
           "size": "1200x628"
         },
         "facebook": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368041/never-blank/posts/research/20a53f6eb5aa5506/facebook/1783368041.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370574/never-blank/posts/research/76b8677988318fae/facebook/1783370574.png",
           "size": "1200x628"
         },
         "instagram": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368042/never-blank/posts/research/20a53f6eb5aa5506/instagram/1783368042.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370579/never-blank/posts/research/76b8677988318fae/instagram/1783370579.png",
           "size": "1080x1350"
         },
         "threads": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368043/never-blank/posts/research/20a53f6eb5aa5506/threads/1783368043.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370583/never-blank/posts/research/76b8677988318fae/threads/1783370583.png",
           "size": "1080x1080"
         },
         "stories": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368045/never-blank/posts/research/20a53f6eb5aa5506/stories/1783368044.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370591/never-blank/posts/research/76b8677988318fae/stories/1783370590.png",
           "size": "1080x1920"
         }
       },
@@ -431,9 +431,9 @@
       "telegram_signature": true,
       "wix_cover_image_attached": false,
       "image_design_version": "",
-      "image_hook_text": "Ondas just spent $875 million not to invent the future,",
-      "image_visual_family": "dark_insight_card",
-      "image_method": "quote_card"
+      "image_hook_text": "Shifting production: $3.6B moves from Mexico to Texas.",
+      "image_visual_family": "mountains_depth_layers",
+      "image_method": "gpt-image-1"
     }
   ]
 }
