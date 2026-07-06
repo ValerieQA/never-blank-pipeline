@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "0ce7916fe57c4d3a",
+  "HEADLINE": "The World Cup sends prediction market volumes soaring to record highs",
+  "prepared_at": "2026-07-06 17:38 UTC",
+  "content": {
+    "blog": {
+      "headline": "When $2 Billion in Bets Flood Your Platform Overnight: How Prediction Markets Handle the World Cup Surge",
+      "angle": "The World Cup triggers record trading volumes on prediction platforms → rapid scaling clashes with regulatory demands → platforms must build resilient infrastructure and tailored offerings → success hinges on planning for spikes, not just the event itself."
+    },
+    "linkedin": {
+      "headline": "Prediction markets aren’t just reacting to events—they’re engineered to capture the world’s attention.",
+      "angle": "Major global events like the World Cup create unprecedented volume surges, forcing platforms to balance explosive growth with strict compliance or risk collapse."
+    },
+    "facebook": {
+      "headline": "When the World Cup drives $2 billion in bets, can prediction markets keep up?",
+      "angle": "Prediction platforms Kalshi, Polymarket, and newcomer Rothera saw record volumes in June 2026—how do they scale fast enough without breaking compliance? What’s your plan for event-driven spikes?"
+    },
+    "instagram": {
+      "headline": "Prediction Markets: Built for the Surge",
+      "angle": "World Cup betting volumes hit record highs, proving that platforms designed for rapid scaling and compliance win the race."
+    },
+    "threads": {
+      "thread_hook": "When $2 billion floods your prediction market overnight, your biggest risk isn’t losing—it’s breaking.",
+      "angle": "This thread breaks down how prediction platforms like Kalshi and Polymarket manage explosive event-driven volume surges while navigating regulatory hurdles."
+    },
+    "stories": {
+      "story_question": "Can your platform handle a $2 billion surge without crashing?",
+      "angle": "Exploring the tension between scaling fast for major events and staying compliant under pressure."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359456/never-blank/posts/research/0ce7916fe57c4d3a/blog/1783359455.png",
+        "path": "reports/content_packages/images/0ce7916fe57c4d3a_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359459/never-blank/posts/research/0ce7916fe57c4d3a/linkedin/1783359459.png",
+        "path": "reports/content_packages/images/0ce7916fe57c4d3a_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359463/never-blank/posts/research/0ce7916fe57c4d3a/facebook/1783359462.png",
+        "path": "reports/content_packages/images/0ce7916fe57c4d3a_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359469/never-blank/posts/research/0ce7916fe57c4d3a/instagram/1783359468.png",
+        "path": "reports/content_packages/images/0ce7916fe57c4d3a_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359473/never-blank/posts/research/0ce7916fe57c4d3a/threads/1783359473.png",
+        "path": "reports/content_packages/images/0ce7916fe57c4d3a_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359481/never-blank/posts/research/0ce7916fe57c4d3a/stories/1783359480.png",
+        "path": "reports/content_packages/images/0ce7916fe57c4d3a_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "particle_flow",
+    "hook_text": "Signals of engagement surge during pivotal moments."
+  }
+}

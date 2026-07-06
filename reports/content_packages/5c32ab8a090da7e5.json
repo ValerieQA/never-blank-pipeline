@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "5c32ab8a090da7e5",
+  "HEADLINE": "Microsoft’s Xbox to Cut 3,200 Jobs, Divest Studios in Overhaul",
+  "prepared_at": "2026-07-06 17:38 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why Xbox’s 3,200 Job Cuts Signal a Hard Pivot in Tech Growth Strategy",
+      "angle": "Microsoft’s Xbox faces stagnation → must balance cost cuts with innovation risk → responds by slashing workforce and divesting studios → lesson: scaling back is sometimes the only way forward."
+    },
+    "linkedin": {
+      "headline": "3,200 jobs gone overnight—because Xbox decided its own size was the real threat.",
+      "angle": "When growth stalls, even tech giants must shrink teams and portfolios to sharpen focus and protect core strengths."
+    },
+    "facebook": {
+      "headline": "Microsoft’s Xbox just cut 20% of its workforce and sold off studios. What’s the real cost of trimming down?",
+      "angle": "Xbox’s massive layoffs and divestitures highlight the tension between cutting costs and risking innovation—how would your company handle this?"
+    },
+    "instagram": {
+      "headline": "Cutting Deep to Grow Stronger",
+      "angle": "When even the biggest players hit a wall, shrinking your team and portfolio might be the sharpest move."
+    },
+    "threads": {
+      "thread_hook": "Xbox just cut 3,200 jobs and divested studios. Here’s why size became the enemy.",
+      "angle": "This thread breaks down how stagnation forces tech giants to make brutal cuts to refocus and survive."
+    },
+    "stories": {
+      "story_question": "Can cutting your own team be the smartest growth move?",
+      "angle": "Exploring the tension between cost-cutting and innovation risk in major tech restructures."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359509/never-blank/posts/research/5c32ab8a090da7e5/blog/1783359508.png",
+        "path": "reports/content_packages/images/5c32ab8a090da7e5_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359513/never-blank/posts/research/5c32ab8a090da7e5/linkedin/1783359513.png",
+        "path": "reports/content_packages/images/5c32ab8a090da7e5_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359517/never-blank/posts/research/5c32ab8a090da7e5/facebook/1783359516.png",
+        "path": "reports/content_packages/images/5c32ab8a090da7e5_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359522/never-blank/posts/research/5c32ab8a090da7e5/instagram/1783359522.png",
+        "path": "reports/content_packages/images/5c32ab8a090da7e5_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359527/never-blank/posts/research/5c32ab8a090da7e5/threads/1783359527.png",
+        "path": "reports/content_packages/images/5c32ab8a090da7e5_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359534/never-blank/posts/research/5c32ab8a090da7e5/stories/1783359533.png",
+        "path": "reports/content_packages/images/5c32ab8a090da7e5_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Signals of change in the gaming landscape."
+  }
+}
