@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "de9373d13951b3da",
+  "HEADLINE": "Sandwich chain Jersey Mike's files for IPO, reports 50% same-store sales growth in recent years",
+  "prepared_at": "2026-07-04 10:10 UTC",
+  "content": {
+    "blog": {
+      "headline": "Jersey Mike’s IPO: Why Same-Store Sales Matter More Than Store Count",
+      "angle": "Jersey Mike’s rapid expansion created buzz, but the real tension lies in sustaining 50% same-store sales growth under public market scrutiny — their IPO reveals that operational discipline, not just footprint, drives lasting success."
+    },
+    "linkedin": {
+      "headline": "Everyone noticed Jersey Mike’s new locations. Few saw how much more each store started selling.",
+      "angle": "Rapid expansion draws attention, but sustained same-store sales growth signals operational strength that investors demand."
+    },
+    "facebook": {
+      "headline": "Jersey Mike’s just filed for IPO after a 50% jump in same-store sales. What’s the real story behind the growth?",
+      "angle": "Jersey Mike’s case shows that scaling isn’t just about opening stores — it’s about making each location perform better. Can they keep it up as a public company?"
+    },
+    "instagram": {
+      "headline": "Growth Isn’t Just About New Stores",
+      "angle": "Jersey Mike’s 50% same-store sales growth proves operational discipline is the real driver behind their IPO success."
+    },
+    "threads": {
+      "thread_hook": "Jersey Mike’s IPO isn’t just about adding locations — it’s about selling more at each one.",
+      "angle": "This thread breaks down how sustained same-store sales growth underpins a successful IPO and why operational rigor beats expansion for long-term value."
+    },
+    "stories": {
+      "story_question": "Can rapid growth survive the scrutiny of public markets?",
+      "angle": "Exploring the tension between scaling fast and maintaining operational excellence as Jersey Mike’s goes public."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159851/never-blank/posts/research/de9373d13951b3da/blog/1783159850.png",
+        "path": "reports/content_packages/images/de9373d13951b3da_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159852/never-blank/posts/research/de9373d13951b3da/linkedin/1783159852.png",
+        "path": "reports/content_packages/images/de9373d13951b3da_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159854/never-blank/posts/research/de9373d13951b3da/facebook/1783159854.png",
+        "path": "reports/content_packages/images/de9373d13951b3da_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159855/never-blank/posts/research/de9373d13951b3da/instagram/1783159854.png",
+        "path": "reports/content_packages/images/de9373d13951b3da_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159855/never-blank/posts/research/de9373d13951b3da/threads/1783159855.png",
+        "path": "reports/content_packages/images/de9373d13951b3da_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783159856/never-blank/posts/research/de9373d13951b3da/stories/1783159856.png",
+        "path": "reports/content_packages/images/de9373d13951b3da_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "programmatic",
+    "reuse_source": "n/a",
+    "visual_family": "constellation_networks",
+    "hook_text": "Growth emerges from hidden connections."
+  }
+}

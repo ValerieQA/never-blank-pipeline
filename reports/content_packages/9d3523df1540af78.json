@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "9d3523df1540af78",
+  "HEADLINE": "Nvidia Supplier Hon Hai’s Sales Beat on Continued AI Demand",
+  "prepared_at": "2026-07-05 10:13 UTC",
+  "content": {
+    "blog": {
+      "headline": "Foxconn’s 40% Sales Surge Reveals the High-Stakes AI Hardware Race",
+      "angle": "As AI demand pushes suppliers like Foxconn to scale rapidly, the tension between aggressive growth and resource risk forces a rethink on strategic partnerships and market positioning."
+    },
+    "linkedin": {
+      "headline": "Foxconn’s factories are running hot for Nvidia—what happens when the AI fever breaks?",
+      "angle": "When suppliers bet big on AI hardware demand, they either cement their market leadership or face costly overextension."
+    },
+    "facebook": {
+      "headline": "Foxconn just posted a 40% sales jump thanks to Nvidia’s AI boom. But can this pace last?",
+      "angle": "AI hardware demand is skyrocketing, Foxconn is cashing in—what’s the risk if the market cools off?"
+    },
+    "instagram": {
+      "headline": "Foxconn’s AI Sales Surge: Growth or Gamble?",
+      "angle": "Aligning with AI leaders can fuel explosive growth—but scaling too fast risks burning out resources."
+    },
+    "threads": {
+      "thread_hook": "Foxconn’s 40% sales jump isn’t just a number—it’s a sign of how AI is reshaping supplier strategies.",
+      "angle": "This thread breaks down how suppliers are betting on a handful of tech giants to pull the entire AI hardware market forward—and what happens if the demand curve shifts."
+    },
+    "stories": {
+      "story_question": "Foxconn’s AI sales are booming—how long can this growth last?",
+      "angle": "Exploring the tension between scaling fast for AI demand and the risk of overcommitting resources if the market cools."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246408/never-blank/posts/research/9d3523df1540af78/blog/1783246408.png",
+        "path": "reports/content_packages/images/9d3523df1540af78_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246409/never-blank/posts/research/9d3523df1540af78/linkedin/1783246409.png",
+        "path": "reports/content_packages/images/9d3523df1540af78_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246410/never-blank/posts/research/9d3523df1540af78/facebook/1783246410.png",
+        "path": "reports/content_packages/images/9d3523df1540af78_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246410/never-blank/posts/research/9d3523df1540af78/instagram/1783246410.png",
+        "path": "reports/content_packages/images/9d3523df1540af78_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246411/never-blank/posts/research/9d3523df1540af78/threads/1783246411.png",
+        "path": "reports/content_packages/images/9d3523df1540af78_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246413/never-blank/posts/research/9d3523df1540af78/stories/1783246413.png",
+        "path": "reports/content_packages/images/9d3523df1540af78_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "programmatic",
+    "reuse_source": "n/a",
+    "visual_family": "particle_flow",
+    "hook_text": "Signals of demand emerge from structured patterns."
+  }
+}

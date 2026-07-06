@@ -1,0 +1,439 @@
+{
+  "date": "2026-07-05",
+  "candidates_found": 7,
+  "duplicates_skipped": 0,
+  "new_signals_added": 7,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Alibaba reportedly bans employees from using Claude Code",
+    "Anthropic is discussing a new custom chip with Samsung",
+    "Nvidia Supplier Hon Hai\u2019s Sales Beat on Continued AI Demand"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "8798bcbbf9ee7090",
+      "headline": "Alibaba reportedly bans employees from using Claude Code",
+      "published_at": "2026-07-05 10:14 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "a128ba63-2c1c-4f9c-ae7b-cb43c96b50f8",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7479477640291086336/",
+          "external_id": "urn:li:share:7479477640291086336",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "HTTP 500: Please reduce the amount of data you're asking for, then retry your request",
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaaE7GnDeoH/",
+          "external_id": "18063326822726055",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18158664055481806",
+          "external_id": "18158664055481806",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/20",
+          "external_id": "20",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/8798bcbbf9ee7090_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246383/never-blank/posts/research/8798bcbbf9ee7090/blog/1783246383.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246384/never-blank/posts/research/8798bcbbf9ee7090/linkedin/1783246384.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246385/never-blank/posts/research/8798bcbbf9ee7090/facebook/1783246385.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246386/never-blank/posts/research/8798bcbbf9ee7090/instagram/1783246386.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246387/never-blank/posts/research/8798bcbbf9ee7090/threads/1783246387.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246388/never-blank/posts/research/8798bcbbf9ee7090/stories/1783246388.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Signals of risk emerge in unseen patterns.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "programmatic"
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "8798bcbbf9ee7090",
+      "HEADLINE": "Alibaba reportedly bans employees from using Claude Code",
+      "prepared_at": "2026-07-05 10:13 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why Alibaba Banned Claude Code: When AI Innovation Meets Security Red Flags",
+          "angle": "Alibaba\u2019s decision to ban Claude Code exposes the tension between chasing AI-driven productivity and safeguarding sensitive data, prompting founders to rethink how they vet and control AI tools to protect trust and intellectual property."
+        },
+        "linkedin": {
+          "headline": "The AI tool that promised productivity just got banned by Alibaba. Here\u2019s why it matters.",
+          "angle": "When a giant like Alibaba restricts an AI tool, it signals that unchecked AI adoption can jeopardize security and compliance, forcing businesses to balance innovation with risk management."
+        },
+        "facebook": {
+          "headline": "Alibaba just banned Claude Code for being \u2018high-risk\u2019 software. What does that mean for your startup?",
+          "angle": "Alibaba\u2019s move to block Claude Code highlights the hidden dangers of AI tools\u2014are you prepared to handle the risks of data leaks and compliance failures in your own business?"
+        },
+        "instagram": {
+          "headline": "When AI Tools Become Security Threats",
+          "angle": "Alibaba\u2019s ban on Claude Code shows that not all AI innovation is worth the risk\u2014sometimes protecting your IP means saying no."
+        },
+        "threads": {
+          "thread_hook": "The AI tool boosting your team\u2019s output might be the one leaking your next big idea.",
+          "angle": "This thread unpacks Alibaba\u2019s ban on Claude Code to reveal how large companies must weigh AI\u2019s productivity gains against the very real risks of data leakage, compliance breaches, and lost trust."
+        },
+        "stories": {
+          "story_question": "Is your AI tool helping or hurting your company\u2019s security?",
+          "angle": "Exploring the tension between adopting AI for efficiency and the urgent need to control security and compliance risks in fast-moving businesses."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246383/never-blank/posts/research/8798bcbbf9ee7090/blog/1783246383.png",
+            "path": "reports/content_packages/images/8798bcbbf9ee7090_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246384/never-blank/posts/research/8798bcbbf9ee7090/linkedin/1783246384.png",
+            "path": "reports/content_packages/images/8798bcbbf9ee7090_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246385/never-blank/posts/research/8798bcbbf9ee7090/facebook/1783246385.png",
+            "path": "reports/content_packages/images/8798bcbbf9ee7090_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246386/never-blank/posts/research/8798bcbbf9ee7090/instagram/1783246386.png",
+            "path": "reports/content_packages/images/8798bcbbf9ee7090_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246387/never-blank/posts/research/8798bcbbf9ee7090/threads/1783246387.png",
+            "path": "reports/content_packages/images/8798bcbbf9ee7090_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246388/never-blank/posts/research/8798bcbbf9ee7090/stories/1783246388.png",
+            "path": "reports/content_packages/images/8798bcbbf9ee7090_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Signals of risk emerge in unseen patterns."
+      }
+    },
+    {
+      "SIGNAL_ID": "9f4787a614bff63c",
+      "HEADLINE": "Anthropic is discussing a new custom chip with Samsung",
+      "prepared_at": "2026-07-05 10:13 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why Anthropic\u2019s Bet on a Custom Chip Could Reshape AI Hardware",
+          "angle": "Anthropic\u2019s talks with Samsung reveal the tension between costly custom chip development and the strategic edge it offers; the lesson: AI leaders who invest in bespoke silicon gain performance and cost control others can\u2019t match."
+        },
+        "linkedin": {
+          "headline": "The fastest AI models now depend on chips no one else can buy.",
+          "angle": "AI companies investing in custom chips are rewriting hardware norms, forcing founders to rethink where competitive advantage truly lies."
+        },
+        "facebook": {
+          "headline": "Anthropic is working with Samsung on a custom AI chip\u2014why does that matter?",
+          "angle": "As AI firms like OpenAI and Anthropic build bespoke chips to escape generic hardware limits, founders face the question: is the upfront risk worth the long-term payoff?"
+        },
+        "instagram": {
+          "headline": "Custom Chips: The New AI Frontier",
+          "angle": "Behind every breakthrough AI model is a chip designed for it\u2014founders must weigh cost, control, and collaboration."
+        },
+        "threads": {
+          "thread_hook": "The smartest AI firms aren\u2019t waiting for the perfect chip\u2014they\u2019re building it.",
+          "angle": "This thread breaks down why custom AI chips are becoming the real moat, how Anthropic\u2019s Samsung deal fits the trend, and what founders should watch next."
+        },
+        "stories": {
+          "story_question": "Can building your own AI chip beat buying off-the-shelf?",
+          "angle": "Exploring the high stakes and potential payoff of custom silicon in AI\u2019s race for speed and scale."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246397/never-blank/posts/research/9f4787a614bff63c/blog/1783246397.png",
+            "path": "reports/content_packages/images/9f4787a614bff63c_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246398/never-blank/posts/research/9f4787a614bff63c/linkedin/1783246398.png",
+            "path": "reports/content_packages/images/9f4787a614bff63c_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246399/never-blank/posts/research/9f4787a614bff63c/facebook/1783246398.png",
+            "path": "reports/content_packages/images/9f4787a614bff63c_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246399/never-blank/posts/research/9f4787a614bff63c/instagram/1783246399.png",
+            "path": "reports/content_packages/images/9f4787a614bff63c_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246400/never-blank/posts/research/9f4787a614bff63c/threads/1783246400.png",
+            "path": "reports/content_packages/images/9f4787a614bff63c_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246401/never-blank/posts/research/9f4787a614bff63c/stories/1783246401.png",
+            "path": "reports/content_packages/images/9f4787a614bff63c_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "particle_flow",
+        "hook_text": "Custom solutions drive AI evolution."
+      }
+    },
+    {
+      "SIGNAL_ID": "9d3523df1540af78",
+      "HEADLINE": "Nvidia Supplier Hon Hai\u2019s Sales Beat on Continued AI Demand",
+      "prepared_at": "2026-07-05 10:13 UTC",
+      "content": {
+        "blog": {
+          "headline": "Foxconn\u2019s 40% Sales Surge Reveals the High-Stakes AI Hardware Race",
+          "angle": "As AI demand pushes suppliers like Foxconn to scale rapidly, the tension between aggressive growth and resource risk forces a rethink on strategic partnerships and market positioning."
+        },
+        "linkedin": {
+          "headline": "Foxconn\u2019s factories are running hot for Nvidia\u2014what happens when the AI fever breaks?",
+          "angle": "When suppliers bet big on AI hardware demand, they either cement their market leadership or face costly overextension."
+        },
+        "facebook": {
+          "headline": "Foxconn just posted a 40% sales jump thanks to Nvidia\u2019s AI boom. But can this pace last?",
+          "angle": "AI hardware demand is skyrocketing, Foxconn is cashing in\u2014what\u2019s the risk if the market cools off?"
+        },
+        "instagram": {
+          "headline": "Foxconn\u2019s AI Sales Surge: Growth or Gamble?",
+          "angle": "Aligning with AI leaders can fuel explosive growth\u2014but scaling too fast risks burning out resources."
+        },
+        "threads": {
+          "thread_hook": "Foxconn\u2019s 40% sales jump isn\u2019t just a number\u2014it\u2019s a sign of how AI is reshaping supplier strategies.",
+          "angle": "This thread breaks down how suppliers are betting on a handful of tech giants to pull the entire AI hardware market forward\u2014and what happens if the demand curve shifts."
+        },
+        "stories": {
+          "story_question": "Foxconn\u2019s AI sales are booming\u2014how long can this growth last?",
+          "angle": "Exploring the tension between scaling fast for AI demand and the risk of overcommitting resources if the market cools."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246408/never-blank/posts/research/9d3523df1540af78/blog/1783246408.png",
+            "path": "reports/content_packages/images/9d3523df1540af78_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246409/never-blank/posts/research/9d3523df1540af78/linkedin/1783246409.png",
+            "path": "reports/content_packages/images/9d3523df1540af78_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246410/never-blank/posts/research/9d3523df1540af78/facebook/1783246410.png",
+            "path": "reports/content_packages/images/9d3523df1540af78_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246410/never-blank/posts/research/9d3523df1540af78/instagram/1783246410.png",
+            "path": "reports/content_packages/images/9d3523df1540af78_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246411/never-blank/posts/research/9d3523df1540af78/threads/1783246411.png",
+            "path": "reports/content_packages/images/9d3523df1540af78_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246413/never-blank/posts/research/9d3523df1540af78/stories/1783246413.png",
+            "path": "reports/content_packages/images/9d3523df1540af78_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "particle_flow",
+        "hook_text": "Signals of demand emerge from structured patterns."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "8798bcbbf9ee7090",
+      "headline": "Alibaba reportedly bans employees from using Claude Code",
+      "published_at": "2026-07-05 10:14 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "a128ba63-2c1c-4f9c-ae7b-cb43c96b50f8",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7479477640291086336/",
+          "external_id": "urn:li:share:7479477640291086336",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "HTTP 500: Please reduce the amount of data you're asking for, then retry your request",
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DaaE7GnDeoH/",
+          "external_id": "18063326822726055",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18158664055481806",
+          "external_id": "18158664055481806",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/20",
+          "external_id": "20",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/8798bcbbf9ee7090_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246383/never-blank/posts/research/8798bcbbf9ee7090/blog/1783246383.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246384/never-blank/posts/research/8798bcbbf9ee7090/linkedin/1783246384.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246385/never-blank/posts/research/8798bcbbf9ee7090/facebook/1783246385.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246386/never-blank/posts/research/8798bcbbf9ee7090/instagram/1783246386.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246387/never-blank/posts/research/8798bcbbf9ee7090/threads/1783246387.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783246388/never-blank/posts/research/8798bcbbf9ee7090/stories/1783246388.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Signals of risk emerge in unseen patterns.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "programmatic"
+    }
+  ]
+}
