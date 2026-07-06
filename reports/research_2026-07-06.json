@@ -1,0 +1,439 @@
+{
+  "date": "2026-07-06",
+  "candidates_found": 17,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Tencent Seeks to Sell Up to $1.6 Billion Stake in Kuaishou",
+    "Memory Chipmaker SK Hynix Kicks Off $28 Billion US Listing",
+    "Brookfield\u2019s Data Center Firm Csquare Seeks $1.35 Billion in IPO"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "e6b9058fd1fe482f",
+      "headline": "Tencent Seeks to Sell Up to $1.6 Billion Stake in Kuaishou",
+      "published_at": "2026-07-06 12:10 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "cfeed868-b59b-4075-8770-4151c4b26f85",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7479869178246586368/",
+          "external_id": "urn:li:share:7479869178246586368",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122115718041356169",
+          "external_id": "1219637131228622_122115718041356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/Dac29MpE5sA/",
+          "external_id": "18079660508264176",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18096588566189814",
+          "external_id": "18096588566189814",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/21",
+          "external_id": "21",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/e6b9058fd1fe482f_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339710/never-blank/posts/research/e6b9058fd1fe482f/blog/1783339709.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339711/never-blank/posts/research/e6b9058fd1fe482f/linkedin/1783339711.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339712/never-blank/posts/research/e6b9058fd1fe482f/facebook/1783339712.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339713/never-blank/posts/research/e6b9058fd1fe482f/instagram/1783339713.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339715/never-blank/posts/research/e6b9058fd1fe482f/threads/1783339715.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339716/never-blank/posts/research/e6b9058fd1fe482f/stories/1783339716.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Strategic shifts illuminate hidden connections.",
+      "image_visual_family": "constellation_networks",
+      "image_method": "programmatic"
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "e6b9058fd1fe482f",
+      "HEADLINE": "Tencent Seeks to Sell Up to $1.6 Billion Stake in Kuaishou",
+      "prepared_at": "2026-07-06 12:08 UTC",
+      "content": {
+        "blog": {
+          "headline": "Tencent\u2019s $1.6 Billion Kuaishou Stake Sale: Strategic Shift or Market Signal?",
+          "angle": "Tencent\u2019s move to offload a massive Kuaishou stake exposes the tension between portfolio optimization and the fallout of a major shareholder exit, revealing how companies must manage the narrative to protect valuation and investor confidence."
+        },
+        "linkedin": {
+          "headline": "Nothing rattles a boardroom like seeing your largest shareholder head for the exit.",
+          "angle": "When a heavyweight investor like Tencent sells a $1.6 billion stake, it\u2019s not just capital moving\u2014it\u2019s a signal that forces companies to rethink their story and market positioning."
+        },
+        "facebook": {
+          "headline": "Tencent is selling a $1.6 billion stake in Kuaishou\u2014what does that mean for the company\u2019s future?",
+          "angle": "Tencent\u2019s strategic divestment raises questions about how big shareholder exits impact market confidence and company valuation. How should companies respond when the money moves on?"
+        },
+        "instagram": {
+          "headline": "When Money Moves, Stories Change",
+          "angle": "Tencent\u2019s massive stake sale in Kuaishou isn\u2019t just about cash\u2014it\u2019s about controlling the narrative when investors shift gears."
+        },
+        "threads": {
+          "thread_hook": "Tencent selling $1.6 billion of Kuaishou shares isn\u2019t just a transaction\u2014it\u2019s a story rewrite in real time.",
+          "angle": "This thread breaks down why strategic divestments force companies into a narrative scramble, balancing capital needs with market perception risks."
+        },
+        "stories": {
+          "story_question": "What happens when your biggest investor walks away?",
+          "angle": "Exploring the tension companies face between managing capital shifts and maintaining market confidence when major shareholders exit."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339710/never-blank/posts/research/e6b9058fd1fe482f/blog/1783339709.png",
+            "path": "reports/content_packages/images/e6b9058fd1fe482f_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339711/never-blank/posts/research/e6b9058fd1fe482f/linkedin/1783339711.png",
+            "path": "reports/content_packages/images/e6b9058fd1fe482f_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339712/never-blank/posts/research/e6b9058fd1fe482f/facebook/1783339712.png",
+            "path": "reports/content_packages/images/e6b9058fd1fe482f_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339713/never-blank/posts/research/e6b9058fd1fe482f/instagram/1783339713.png",
+            "path": "reports/content_packages/images/e6b9058fd1fe482f_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339715/never-blank/posts/research/e6b9058fd1fe482f/threads/1783339715.png",
+            "path": "reports/content_packages/images/e6b9058fd1fe482f_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339716/never-blank/posts/research/e6b9058fd1fe482f/stories/1783339716.png",
+            "path": "reports/content_packages/images/e6b9058fd1fe482f_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Strategic shifts illuminate hidden connections."
+      }
+    },
+    {
+      "SIGNAL_ID": "7f6108c0fc0a680d",
+      "HEADLINE": "Memory Chipmaker SK Hynix Kicks Off $28 Billion US Listing",
+      "prepared_at": "2026-07-06 12:08 UTC",
+      "content": {
+        "blog": {
+          "headline": "SK Hynix\u2019s $28 Billion US Listing: Visibility Comes With a Price",
+          "angle": "SK Hynix\u2019s move to list in the US highlights the tension between gaining capital market access and inheriting geopolitical risks, prompting semiconductor founders to weigh visibility against vulnerability."
+        },
+        "linkedin": {
+          "headline": "You don\u2019t just list in the US\u2014you relocate your risk.",
+          "angle": "Founders chasing US exchange listings gain capital and visibility but inherit regulatory and geopolitical exposure that can\u2019t be hedged away."
+        },
+        "facebook": {
+          "headline": "SK Hynix is betting $28 billion on US markets. But at what cost?",
+          "angle": "SK Hynix\u2019s US listing mirrors TSMC\u2019s path\u2014capital influx versus geopolitical risk. How should founders balance this trade-off?"
+        },
+        "instagram": {
+          "headline": "Listing in the US: Visibility or Liability?",
+          "angle": "Founders scaling through US exchanges gain leverage but also inherit risks that can\u2019t be diversified."
+        },
+        "threads": {
+          "thread_hook": "Listing on US exchanges isn\u2019t just about capital\u2014it\u2019s about inheriting new risks.",
+          "angle": "This thread breaks down how SK Hynix\u2019s $28 billion US listing exposes semiconductor founders to geopolitical and regulatory risks that come with global visibility."
+        },
+        "stories": {
+          "story_question": "Is US market visibility worth the geopolitical risk?",
+          "angle": "Exploring how founders must balance the benefits of US listings against the unavoidable exposure to regulatory and geopolitical challenges."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339728/never-blank/posts/research/7f6108c0fc0a680d/blog/1783339728.png",
+            "path": "reports/content_packages/images/7f6108c0fc0a680d_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339729/never-blank/posts/research/7f6108c0fc0a680d/linkedin/1783339729.png",
+            "path": "reports/content_packages/images/7f6108c0fc0a680d_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339731/never-blank/posts/research/7f6108c0fc0a680d/facebook/1783339731.png",
+            "path": "reports/content_packages/images/7f6108c0fc0a680d_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339732/never-blank/posts/research/7f6108c0fc0a680d/instagram/1783339732.png",
+            "path": "reports/content_packages/images/7f6108c0fc0a680d_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339733/never-blank/posts/research/7f6108c0fc0a680d/threads/1783339733.png",
+            "path": "reports/content_packages/images/7f6108c0fc0a680d_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339734/never-blank/posts/research/7f6108c0fc0a680d/stories/1783339734.png",
+            "path": "reports/content_packages/images/7f6108c0fc0a680d_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Investing in connections, not just chips."
+      }
+    },
+    {
+      "SIGNAL_ID": "30952c63ed4c7cea",
+      "HEADLINE": "Brookfield\u2019s Data Center Firm Csquare Seeks $1.35 Billion in IPO",
+      "prepared_at": "2026-07-06 12:09 UTC",
+      "content": {
+        "blog": {
+          "headline": "Csquare\u2019s $1.35B IPO: Why Data Center Expansion Meets Wall Street\u2019s Microscope",
+          "angle": "Csquare\u2019s IPO signals a surge in capital-hungry data infrastructure firms facing the tension between rapid growth and public market scrutiny, revealing that operational transparency\u2014not just capital\u2014is the real challenge for sustainable expansion."
+        },
+        "linkedin": {
+          "headline": "Everyone wants the IPO money\u2014few survive the IPO microscope.",
+          "angle": "Data center firms chasing massive IPO capital face a new reality: public investors demand relentless operational discipline, reshaping growth strategies."
+        },
+        "facebook": {
+          "headline": "Brookfield\u2019s Csquare targets $1.35B IPO amid data center boom. Can they handle the public market spotlight?",
+          "angle": "Csquare\u2019s IPO pursuit highlights the tension between rapid expansion needs and investor scrutiny\u2014how will this shape the future of data infrastructure companies?"
+        },
+        "instagram": {
+          "headline": "Visibility Funds Growth, Scrutiny Funds Discipline",
+          "angle": "Csquare\u2019s IPO shows that raising capital is just step one; surviving public market demands is where the real test begins."
+        },
+        "threads": {
+          "thread_hook": "Csquare\u2019s $1.35B IPO isn\u2019t just about money\u2014it\u2019s about surviving the public eye.",
+          "angle": "This thread breaks down why data center companies like Csquare must balance aggressive expansion with the operational transparency public markets require, or risk losing investor confidence."
+        },
+        "stories": {
+          "story_question": "Can data center firms grow fast enough without cracking under IPO scrutiny?",
+          "angle": "Exploring the tension between capital-intensive growth and the discipline public investors demand from companies going public."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339747/never-blank/posts/research/30952c63ed4c7cea/blog/1783339747.png",
+            "path": "reports/content_packages/images/30952c63ed4c7cea_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339748/never-blank/posts/research/30952c63ed4c7cea/linkedin/1783339748.png",
+            "path": "reports/content_packages/images/30952c63ed4c7cea_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339749/never-blank/posts/research/30952c63ed4c7cea/facebook/1783339749.png",
+            "path": "reports/content_packages/images/30952c63ed4c7cea_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339750/never-blank/posts/research/30952c63ed4c7cea/instagram/1783339750.png",
+            "path": "reports/content_packages/images/30952c63ed4c7cea_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339751/never-blank/posts/research/30952c63ed4c7cea/threads/1783339751.png",
+            "path": "reports/content_packages/images/30952c63ed4c7cea_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339753/never-blank/posts/research/30952c63ed4c7cea/stories/1783339753.png",
+            "path": "reports/content_packages/images/30952c63ed4c7cea_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "programmatic",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Data connections illuminate hidden opportunities."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "e6b9058fd1fe482f",
+      "headline": "Tencent Seeks to Sell Up to $1.6 Billion Stake in Kuaishou",
+      "published_at": "2026-07-06 12:10 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "cfeed868-b59b-4075-8770-4151c4b26f85",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7479869178246586368/",
+          "external_id": "urn:li:share:7479869178246586368",
+          "error_message": null,
+          "raw_response_path": "(with image)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122115718041356169",
+          "external_id": "1219637131228622_122115718041356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/Dac29MpE5sA/",
+          "external_id": "18079660508264176",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18096588566189814",
+          "external_id": "18096588566189814",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/21",
+          "external_id": "21",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/e6b9058fd1fe482f_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339710/never-blank/posts/research/e6b9058fd1fe482f/blog/1783339709.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339711/never-blank/posts/research/e6b9058fd1fe482f/linkedin/1783339711.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339712/never-blank/posts/research/e6b9058fd1fe482f/facebook/1783339712.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339713/never-blank/posts/research/e6b9058fd1fe482f/instagram/1783339713.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339715/never-blank/posts/research/e6b9058fd1fe482f/threads/1783339715.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783339716/never-blank/posts/research/e6b9058fd1fe482f/stories/1783339716.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Strategic shifts illuminate hidden connections.",
+      "image_visual_family": "constellation_networks",
+      "image_method": "programmatic"
+    }
+  ]
+}
