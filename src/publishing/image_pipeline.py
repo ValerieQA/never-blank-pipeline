@@ -413,7 +413,14 @@ def choose_visual_family(
     # override — fixed by not overriding at all.
     card_type = _next_rhythm_slot(registry, vs)
     if card_type:
-        log(f"  Visual family (rhythm cycle): {card_type} — quote card, no photo generation")
+        # Dark cards get an atmospheric backdrop — a dimmed _generate_programmatic_base
+        # texture (mountains / light paths / particle flow / etc.), rotating through
+        # FAMILY_IDS by post count so consecutive dark cards don't look identical.
+        # Light cards (light_message_card, sand_pause_card) stay flat by design —
+        # per visual_system.yaml's own rhythm rules, light cards exist to "let the
+        # grid breathe" against the busier dark/photo posts.
+        texture_family = FAMILY_IDS[len(registry.get("posts", [])) % len(FAMILY_IDS)]
+        log(f"  Visual family (rhythm cycle): {card_type} — quote card, texture={texture_family}")
         return {
             "visual_family":    card_type,
             "dominant_palette": CARD_BACKGROUNDS[card_type][1],
@@ -421,6 +428,7 @@ def choose_visual_family(
             "hook_text":        "",
             "negative_prompt":  "",
             "logo_placement":   "bottom_right",
+            "card_texture_family": texture_family,
             "rationale":        f"instagram_rhythm.cycle position selected {card_type}",
         }
 
@@ -547,12 +555,27 @@ def _hex_to_rgb(hexcolor: str) -> tuple[int, int, int]:
 
 # ── Quote card composition (pure typography, no photo) ─────────────────────────
 
-def compose_quote_card(hook_text: str, platform: str, card_type: str) -> "Image.Image":
+def compose_quote_card(
+    hook_text: str,
+    platform: str,
+    card_type: str,
+    texture_family: str = "mountains_depth_layers",
+) -> "Image.Image":
     """
-    Render a pure-typography 'quote card': solid brand background, hook text,
-    Never Blank wordmark, logo — no photo, no AI image call. Selected by
-    choose_visual_family() via the instagram_rhythm.cycle rotation, alternating
-    with the 6 photo visual families for feed variety (see CARD_BACKGROUNDS).
+    Render a 'quote card': hook text, Never Blank wordmark, logo — no AI image
+    call. Selected by choose_visual_family() via the instagram_rhythm.cycle
+    rotation, alternating with the 6 photo visual families for feed variety
+    (see CARD_BACKGROUNDS).
+
+    Dark cards (dark_insight_card) get an atmospheric backdrop: a dimmed
+    _generate_programmatic_base(texture_family) render — the same layered-
+    depth / light-path / particle-flow / constellation / focus-ring / wave
+    textures used for photo posts — instead of a flat color fill. A flat
+    solid-navy card read as generic "dark SaaS placeholder" rather than
+    Never Blank's brand system (feedback from the first live cards,
+    2026-07-06). Light cards (light_message_card, sand_pause_card) stay flat
+    by design — visual_system.yaml's own rhythm rules use them to "let the
+    grid breathe" against the busier dark/photo posts.
 
     Known limitation: assets/logo/never-blank-logo.png is a light-colored mark
     designed for dark backgrounds. On light_message_card / sand_pause_card
@@ -577,8 +600,17 @@ def compose_quote_card(hook_text: str, platform: str, card_type: str) -> "Image.
     text_color  = (255, 255, 255) if is_dark else (11, 19, 35)
     label_color = (170, 190, 220) if is_dark else (90, 100, 120)
 
-    canvas = Image.new("RGB", (target_w, target_h), bg_color)
-    draw   = ImageDraw.Draw(canvas)
+    if is_dark:
+        texture_bytes = _generate_programmatic_base(texture_family)
+        texture_img   = Image.open(BytesIO(texture_bytes)).convert("RGB")
+        canvas        = resize_for_platform(texture_img, platform)
+        # Dim the texture so the hook text — the actual content — stays the
+        # clear focal point, not competing visual noise.
+        dim = Image.new("RGBA", (target_w, target_h), (*bg_color, 80))
+        canvas = Image.alpha_composite(canvas.convert("RGBA"), dim).convert("RGB")
+    else:
+        canvas = Image.new("RGB", (target_w, target_h), bg_color)
+    draw = ImageDraw.Draw(canvas)
 
     padding    = max(56, int(target_w * 0.09))
     max_tw     = target_w - padding * 2
@@ -591,15 +623,27 @@ def compose_quote_card(hook_text: str, platform: str, card_type: str) -> "Image.
     y_start = (target_h - block_h) // 2 - int(target_h * 0.04)
 
     for i, line in enumerate(lines):
-        draw.text((padding, y_start + i * line_h), line, font=font, fill=text_color)
+        bbox   = draw.textbbox((0, 0), line, font=font)
+        line_w = bbox[2] - bbox[0]
+        x      = (target_w - line_w) // 2
+        draw.text((x, y_start + i * line_h), line, font=font, fill=text_color)
 
     sep_y = y_start + block_h + max(20, int(target_h * 0.03))
     sep_w = min(int(target_w * 0.16), 160)
-    draw.line([(padding, sep_y), (padding + sep_w, sep_y)], fill=ELECTRIC_BLUE, width=3)
+    draw.line(
+        [(target_w // 2 - sep_w // 2, sep_y), (target_w // 2 + sep_w // 2, sep_y)],
+        fill=ELECTRIC_BLUE, width=3,
+    )
 
     label_size = max(20, int(target_w * 0.024))
     font_label = _find_font(label_size)
-    draw.text((padding, sep_y + max(12, int(target_h * 0.015))), "NEVER BLANK", font=font_label, fill=label_color)
+    label      = "NEVER BLANK"
+    lbbox      = draw.textbbox((0, 0), label, font=font_label)
+    lw         = lbbox[2] - lbbox[0]
+    draw.text(
+        ((target_w - lw) // 2, sep_y + max(12, int(target_h * 0.015))),
+        label, font=font_label, fill=label_color,
+    )
 
     if is_dark and LOGO_PATH.exists():
         size_ratio = vs.get("logo", {}).get("size_ratio", 0.20)

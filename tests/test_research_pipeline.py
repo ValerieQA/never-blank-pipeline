@@ -411,6 +411,31 @@ def test_choose_visual_family_uses_rhythm_card_before_ai_or_deterministic():
     mock_ai.assert_not_called()
     assert spec["visual_family"] == "dark_insight_card"
     assert spec["image_prompt"] == ""
+    assert spec["card_texture_family"] == "mountains_depth_layers"  # posts=[] -> FAMILY_IDS[0]
+
+
+def test_compose_quote_card_dark_uses_texture_light_stays_flat():
+    """
+    Dark cards get an atmospheric _generate_programmatic_base backdrop instead
+    of a flat fill (feedback from the first live cards, 2026-07-06: a flat
+    solid-navy card read as generic "dark SaaS placeholder", not the brand's
+    visual system). Light cards must stay flat by design.
+    """
+    from src.publishing.image_pipeline import compose_quote_card
+
+    with patch("src.publishing.image_pipeline._generate_programmatic_base") as mock_texture:
+        from PIL import Image as PILImage
+        import io
+        buf = io.BytesIO()
+        PILImage.new("RGB", (1024, 1024), (5, 11, 22)).save(buf, "PNG")
+        mock_texture.return_value = buf.getvalue()
+
+        compose_quote_card("Some hook.", "instagram", "dark_insight_card", "particle_flow")
+        mock_texture.assert_called_once_with("particle_flow")
+
+        mock_texture.reset_mock()
+        compose_quote_card("Some hook.", "instagram", "sand_pause_card", "particle_flow")
+        mock_texture.assert_not_called()
 
 
 def test_compose_quote_card_dark_card_includes_logo_light_card_skips_it():

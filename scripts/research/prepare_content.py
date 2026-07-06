@@ -182,10 +182,12 @@ def _generate_signal_image(signal: dict) -> dict:
 
     is_card = visual_family in CARD_TYPES
     if is_card:
-        # Quote card: pure typography, no photo, no AI image call at all —
-        # also sidesteps the image-safety-policy risk of AI-generated photos.
+        # Quote card: no AI image call at all (also sidesteps the image-
+        # safety-policy risk of AI-generated photos). Dark cards still get an
+        # atmospheric backdrop — see compose_quote_card / card_texture_family.
         method = "quote_card"
         base_bytes = None
+        card_texture_family = spec.get("card_texture_family", "mountains_depth_layers")
     else:
         # Generate base image (AI → programmatic fallback)
         base_bytes, method = _generate_base_image(
@@ -202,7 +204,7 @@ def _generate_signal_image(signal: dict) -> dict:
 
     for platform in PLATFORMS:
         if is_card:
-            sized_img = compose_quote_card(hook_text, platform, visual_family)
+            sized_img = compose_quote_card(hook_text, platform, visual_family, card_texture_family)
         else:
             sized_img = composite_for_platform(base_bytes, hook_text, platform)
         w, h      = PLATFORM_SIZES.get(platform, (1080, 1080))
