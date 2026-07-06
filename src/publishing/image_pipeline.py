@@ -399,8 +399,18 @@ def choose_visual_family(
 
     # Rhythm cycle takes priority: some positions call for a pure-typography
     # quote card instead of a photo family (see instagram_rhythm.cycle in
-    # visual_system.yaml). Cards need no AI image call and no image_prompt —
-    # compose_quote_card() renders them directly from hook_text.
+    # visual_system.yaml). Cards need no AI image call and no image_prompt.
+    #
+    # hook_text is deliberately left empty here, NOT derived from `observation`
+    # (CORE_FACT). The caller (_generate_signal_image) already computed a
+    # proper hook before calling this function — POTENTIAL_HOOK or
+    # POSSIBLE_SIGNATURE_LINE, both already crafted to be sharp — and only
+    # overwrites it when this dict's hook_text is truthy. A first production
+    # run (2026-07-06) showed a card rendering a flat trim of CORE_FACT
+    # ("Versant agreed to acquire golf simulator company") instead of the
+    # actual POTENTIAL_HOOK ("A $530M golf simulator deal says more about
+    # cable TV's future than any ratings chart.") because of exactly that
+    # override — fixed by not overriding at all.
     card_type = _next_rhythm_slot(registry, vs)
     if card_type:
         log(f"  Visual family (rhythm cycle): {card_type} — quote card, no photo generation")
@@ -408,7 +418,7 @@ def choose_visual_family(
             "visual_family":    card_type,
             "dominant_palette": CARD_BACKGROUNDS[card_type][1],
             "image_prompt":     "",
-            "hook_text":        trim_hook_text(observation),
+            "hook_text":        "",
             "negative_prompt":  "",
             "logo_placement":   "bottom_right",
             "rationale":        f"instagram_rhythm.cycle position selected {card_type}",
