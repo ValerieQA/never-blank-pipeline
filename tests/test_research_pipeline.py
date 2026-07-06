@@ -374,3 +374,98 @@ def test_canonical_columns_count():
 def test_canonical_columns_starts_with_signal_id():
     from scripts.research.sync_to_sheets import CANONICAL_COLUMNS
     assert CANONICAL_COLUMNS[0] == "SIGNAL_ID"
+
+
+# --- Quote card rhythm cycle (2026-07-06: previously specced in visual_system.yaml's
+# instagram_rhythm.cycle but never wired to any code — every image was photo-led) ---
+
+def test_next_rhythm_slot_follows_cycle_order():
+    from src.publishing.image_pipeline import _next_rhythm_slot
+    vs = {"instagram_rhythm": {"cycle": ["dark_insight_card", "mountains_depth_layers", "light_paths"]}}
+    assert _next_rhythm_slot({"posts": []}, vs) == "dark_insight_card"
+    assert _next_rhythm_slot({"posts": [{}]}, vs) is None  # mountains_depth_layers — not a card
+    assert _next_rhythm_slot({"posts": [{}, {}]}, vs) is None  # light_paths — not a card
+    assert _next_rhythm_slot({"posts": [{}, {}, {}]}, vs) == "dark_insight_card"  # cycle repeats
+
+
+def test_next_rhythm_slot_returns_none_without_cycle_config():
+    from src.publishing.image_pipeline import _next_rhythm_slot
+    assert _next_rhythm_slot({"posts": []}, {}) is None
+
+
+def test_choose_visual_family_uses_rhythm_card_before_ai_or_deterministic():
+    """When the rhythm cycle lands on a card slot, choose_visual_family must
+    return it directly — it must not call the AI selection or deterministic
+    fallback at all (no image_prompt is needed for a card)."""
+    from src.publishing import image_pipeline
+
+    registry = {"posts": []}  # position 0
+    with patch.object(image_pipeline, "_load_visual_system",
+                       return_value={"instagram_rhythm": {"cycle": ["dark_insight_card"]},
+                                      "palette": {"dark_core": {"colors": {"deep_navy": "#050B16"}},
+                                                  "light_accents": {"colors": {}}}}):
+        with patch.object(image_pipeline, "_ai_choose_visual_spec") as mock_ai:
+            spec = image_pipeline.choose_visual_family(
+                title="Headline", observation="Fact", content_goal="challenge", registry=registry,
+            )
+    mock_ai.assert_not_called()
+    assert spec["visual_family"] == "dark_insight_card"
+    assert spec["image_prompt"] == ""
+
+
+def test_compose_quote_card_dark_card_includes_logo_light_card_skips_it():
+    from src.publishing.image_pipeline import compose_quote_card
+
+    with patch("src.publishing.image_pipeline.LOGO_PATH") as mock_logo_path:
+        mock_logo_path.exists.return_value = True  # pretend a logo file exists
+        # Dark card: should attempt to open+paste the logo. Return a real tiny
+        # RGBA image so PIL's paste() has real size/mode data to work with.
+        from PIL import Image as PILImage
+        real_logo = PILImage.new("RGBA", (20, 20), (255, 255, 255, 255))
+        with patch("src.publishing.image_pipeline.Image.open", return_value=real_logo) as mock_open:
+            img = compose_quote_card("A short hook line.", "instagram", "dark_insight_card")
+            assert mock_open.called
+        assert img.size == (1080, 1350)
+
+        # Light card: logo must be skipped even though the file "exists" —
+        # the light-colored logo asset is not readable on a light background.
+        with patch("src.publishing.image_pipeline.Image.open") as mock_open_light:
+            img2 = compose_quote_card("A short hook line.", "instagram", "sand_pause_card")
+            mock_open_light.assert_not_called()
+        assert img2.size == (1080, 1350)
+
+
+def test_register_post_persisted_by_build_image_plan(tmp_path, monkeypatch):
+    """
+    Regression test: _build_image_plan previously popped and discarded
+    _registry_update instead of persisting it, so the rhythm/rotation cycle
+    never advanced between runs. Verify register_post + save_registry are
+    actually invoked with the returned registry_update payload.
+    """
+    from scripts.research import prepare_content
+
+    fake_registry_update = {
+        "content_slug": "research/sig1", "visual_family": "mountains_depth_layers",
+        "dominant_palette": "midnight", "hook_text": "hook", "image_url": "https://x/1.png",
+        "source_topic": "Some headline",
+    }
+    fake_result = {
+        "platform_images": {}, "new_images": 1, "reused_images": 0, "reuse_rate": "0%",
+        "image_method": "programmatic", "reuse_source": "n/a", "visual_family": "mountains_depth_layers",
+        "hook_text": "hook", "_library_entry": {"url": "https://x/1.png"},
+        "_registry_update": fake_registry_update,
+    }
+
+    with patch.object(prepare_content, "_generate_signal_image", return_value=fake_result):
+        with patch.object(prepare_content, "_find_existing_image", return_value=(None, "none")):
+            with patch("src.publishing.image_pipeline.load_registry", return_value={"posts": []}) as mock_load:
+                with patch("src.publishing.image_pipeline.register_post") as mock_register:
+                    with patch("src.publishing.image_pipeline.save_registry") as mock_save:
+                        mock_register.return_value = {"posts": [fake_registry_update]}
+                        result, lib_entry = prepare_content._build_image_plan({"SIGNAL_ID": "sig1"}, {})
+
+    mock_load.assert_called_once()
+    mock_register.assert_called_once_with({"posts": []}, **fake_registry_update)
+    mock_save.assert_called_once_with({"posts": [fake_registry_update]})
+    assert "_registry_update" not in result
+    assert lib_entry == {"url": "https://x/1.png"}

@@ -143,6 +143,8 @@ def _generate_signal_image(signal: dict) -> dict:
         load_registry,
         _generate_base_image,
         composite_for_platform,
+        compose_quote_card,
+        CARD_TYPES,
         upload_to_cloudinary,
         trim_hook_text,
         PLATFORM_SIZES,
@@ -178,10 +180,17 @@ def _generate_signal_image(signal: dict) -> dict:
 
     log.info("Signal %s: visual_family=%s hook=%r", sig_id, visual_family, hook_text)
 
-    # Generate base image (AI → programmatic fallback)
-    base_bytes, method = _generate_base_image(
-        image_prompt, visual_family, negative_prompt, log=log.info
-    )
+    is_card = visual_family in CARD_TYPES
+    if is_card:
+        # Quote card: pure typography, no photo, no AI image call at all —
+        # also sidesteps the image-safety-policy risk of AI-generated photos.
+        method = "quote_card"
+        base_bytes = None
+    else:
+        # Generate base image (AI → programmatic fallback)
+        base_bytes, method = _generate_base_image(
+            image_prompt, visual_family, negative_prompt, log=log.info
+        )
 
     # ── Per-platform composition: base → resize → overlay (correct order) ──────
     # Each platform gets its own composite with text/logo sized for that canvas.
@@ -192,7 +201,10 @@ def _generate_signal_image(signal: dict) -> dict:
     master_url: str = ""
 
     for platform in PLATFORMS:
-        sized_img = composite_for_platform(base_bytes, hook_text, platform)
+        if is_card:
+            sized_img = compose_quote_card(hook_text, platform, visual_family)
+        else:
+            sized_img = composite_for_platform(base_bytes, hook_text, platform)
         w, h      = PLATFORM_SIZES.get(platform, (1080, 1080))
         img_path  = out_dir / f"{sig_id}_{platform}.png"
         sized_img.save(str(img_path), "PNG", optimize=True)
@@ -309,8 +321,16 @@ def _build_image_plan(signal: dict, library: dict) -> tuple[dict, dict | None]:
             "error":           str(exc),
         }, None
 
-    library_entry = result.pop("_library_entry", None)
-    result.pop("_registry_update", None)
+    library_entry   = result.pop("_library_entry", None)
+    registry_update = result.pop("_registry_update", None)
+    if registry_update:
+        # Persist so the instagram_rhythm.cycle / family rotation actually
+        # advances between posts — previously computed and thrown away here,
+        # so the rhythm cycle would have picked the same slot every run.
+        from src.publishing.image_pipeline import load_registry, register_post, save_registry
+        registry = register_post(load_registry(), **registry_update)
+        save_registry(registry)
+
     return result, library_entry
 
 

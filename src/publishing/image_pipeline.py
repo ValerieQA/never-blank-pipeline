@@ -170,6 +170,35 @@ FAMILY_IDS = [
     "focus_rings",
 ]
 
+# Pure-typography "quote card" slots from visual_system.yaml's instagram_rhythm.cycle.
+# Specified in config since the pipeline's early days but never wired to any code
+# until now — every generated image was photo-led (see CARD_BACKGROUNDS below for
+# the background each one maps to).
+CARD_TYPES = {"dark_insight_card", "light_message_card", "sand_pause_card"}
+
+CARD_BACKGROUNDS: dict[str, tuple[str, str]] = {
+    "dark_insight_card":  ("dark_core", "deep_navy"),
+    "light_message_card": ("light_accents", "soft_white"),
+    "sand_pause_card":    ("light_accents", "sand"),
+}
+
+
+def _next_rhythm_slot(registry: dict, vs: dict) -> Optional[str]:
+    """
+    Return the card_type called for by the current instagram_rhythm.cycle
+    position, or None if this position calls for a photo family (in which
+    case the existing AI/keyword family selection below decides which one).
+
+    Position is the count of posts registered so far, modulo the cycle length —
+    deterministic, so re-running against the same registry state is stable.
+    """
+    cycle = vs.get("instagram_rhythm", {}).get("cycle", [])
+    if not cycle:
+        return None
+    posts = registry.get("posts", [])
+    slot = cycle[len(posts) % len(cycle)]
+    return slot if slot in CARD_TYPES else None
+
 # Maps content_goal / observation keywords to preferred family
 _TOPIC_AFFINITY: dict[str, list[str]] = {
     "momentum":    ["light_paths", "particle_flow"],
@@ -368,6 +397,23 @@ def choose_visual_family(
     recent  = _recent_families(registry)
     last    = _last_family(registry)
 
+    # Rhythm cycle takes priority: some positions call for a pure-typography
+    # quote card instead of a photo family (see instagram_rhythm.cycle in
+    # visual_system.yaml). Cards need no AI image call and no image_prompt —
+    # compose_quote_card() renders them directly from hook_text.
+    card_type = _next_rhythm_slot(registry, vs)
+    if card_type:
+        log(f"  Visual family (rhythm cycle): {card_type} — quote card, no photo generation")
+        return {
+            "visual_family":    card_type,
+            "dominant_palette": CARD_BACKGROUNDS[card_type][1],
+            "image_prompt":     "",
+            "hook_text":        trim_hook_text(observation),
+            "negative_prompt":  "",
+            "logo_placement":   "bottom_right",
+            "rationale":        f"instagram_rhythm.cycle position selected {card_type}",
+        }
+
     # Try AI-based selection
     spec = _ai_choose_visual_spec(
         title, observation, content_goal, recent, img_gen, log=log
@@ -482,6 +528,81 @@ def _fit_text_dynamic(
     font  = _find_font(font_min)
     lines = _wrap_text(text, font, max_w)[:max_lines]
     return font, lines
+
+
+def _hex_to_rgb(hexcolor: str) -> tuple[int, int, int]:
+    hexcolor = hexcolor.lstrip("#")
+    return tuple(int(hexcolor[i:i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
+
+
+# ── Quote card composition (pure typography, no photo) ─────────────────────────
+
+def compose_quote_card(hook_text: str, platform: str, card_type: str) -> "Image.Image":
+    """
+    Render a pure-typography 'quote card': solid brand background, hook text,
+    Never Blank wordmark, logo — no photo, no AI image call. Selected by
+    choose_visual_family() via the instagram_rhythm.cycle rotation, alternating
+    with the 6 photo visual families for feed variety (see CARD_BACKGROUNDS).
+
+    Known limitation: assets/logo/never-blank-logo.png is a light-colored mark
+    designed for dark backgrounds. On light_message_card / sand_pause_card
+    (light background) the logo is skipped — only the "NEVER BLANK" text label
+    is drawn — to avoid pasting a near-invisible light-on-light logo. Add a
+    dark-color logo variant if full parity with the light-card mockup matters.
+    """
+    vs = _load_visual_system()
+    target_w, target_h = PLATFORM_SIZES.get(platform, IMAGE_SIZE)
+    # Cards are pure typography — the text IS the visual, unlike a photo
+    # overlay where a short hook keeps the text from crowding the image.
+    # trim_hook_text() always clamps to HOOK_MAX_WORDS_HARD (10) internally
+    # regardless of the max_words argument, so it's not used here — full
+    # sentences are fine; _fit_text_dynamic (max_lines=5) shrinks the font or
+    # truncates if something is genuinely too long for the card.
+    hook = hook_text.strip()
+
+    palette_group, color_name = CARD_BACKGROUNDS.get(card_type, ("dark_core", "deep_navy"))
+    bg_hex   = vs["palette"][palette_group]["colors"].get(color_name, "#050B16")
+    bg_color = _hex_to_rgb(bg_hex)
+    is_dark  = palette_group == "dark_core"
+    text_color  = (255, 255, 255) if is_dark else (11, 19, 35)
+    label_color = (170, 190, 220) if is_dark else (90, 100, 120)
+
+    canvas = Image.new("RGB", (target_w, target_h), bg_color)
+    draw   = ImageDraw.Draw(canvas)
+
+    padding    = max(56, int(target_w * 0.09))
+    max_tw     = target_w - padding * 2
+    max_th     = int(target_h * 0.5)
+    font_start = max(32, int(target_w * 0.075))
+
+    font, lines = _fit_text_dynamic(hook, max_tw, max_th, font_start=font_start, max_lines=5)
+    line_h  = int(font.size * 1.30)
+    block_h = len(lines) * line_h
+    y_start = (target_h - block_h) // 2 - int(target_h * 0.04)
+
+    for i, line in enumerate(lines):
+        draw.text((padding, y_start + i * line_h), line, font=font, fill=text_color)
+
+    sep_y = y_start + block_h + max(20, int(target_h * 0.03))
+    sep_w = min(int(target_w * 0.16), 160)
+    draw.line([(padding, sep_y), (padding + sep_w, sep_y)], fill=ELECTRIC_BLUE, width=3)
+
+    label_size = max(20, int(target_w * 0.024))
+    font_label = _find_font(label_size)
+    draw.text((padding, sep_y + max(12, int(target_h * 0.015))), "NEVER BLANK", font=font_label, fill=label_color)
+
+    if is_dark and LOGO_PATH.exists():
+        size_ratio = vs.get("logo", {}).get("size_ratio", 0.20)
+        margin     = max(24, int(min(target_w, target_h) * vs.get("logo", {}).get("margin_px", 40) / 1080))
+        logo       = Image.open(LOGO_PATH).convert("RGBA")
+        logo_w     = int(target_w * size_ratio)
+        logo_h     = int(logo.height * (logo_w / logo.width))
+        logo       = logo.resize((logo_w, logo_h), Image.LANCZOS)
+        paste_x    = target_w - logo_w - margin
+        paste_y    = target_h - logo_h - margin
+        canvas.paste(logo, (paste_x, paste_y), logo)
+
+    return canvas
 
 
 # ── Per-platform image composition ────────────────────────────────────────────
