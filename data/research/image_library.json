@@ -383,5 +383,35 @@
     "visual_family": "contrast_waves",
     "design_version": "3",
     "hook_text": "Signals of change in the gaming landscape."
+  },
+  "20a53f6eb5aa5506": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368040/never-blank/posts/research/20a53f6eb5aa5506/blog/1783368040.png",
+    "signal_type": "operational change",
+    "headline": "Drone Maker Ondas Says the 'Arms Race' Has Started",
+    "created_at": "2026-07-06",
+    "method": "quote_card",
+    "visual_family": "dark_insight_card",
+    "design_version": "3",
+    "hook_text": "Ondas just spent $875 million not to invent the future,"
+  },
+  "d6738548792b5ccc": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368074/never-blank/posts/research/d6738548792b5ccc/blog/1783368074.png",
+    "signal_type": "operational change",
+    "headline": "Apple, Broadcom Expand Custom Chip Partnership | Bloomberg Tech 7/06/2026",
+    "created_at": "2026-07-06",
+    "method": "gpt-image-1",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "Custom chips extend partnership to 2031."
+  },
+  "aa7d58492eb24a85": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783368129/never-blank/posts/research/aa7d58492eb24a85/blog/1783368129.png",
+    "signal_type": "AI adoption",
+    "headline": "Runway Expands Global AI Footprint",
+    "created_at": "2026-07-06",
+    "method": "gpt-image-1",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "$300M to connect AI hubs across continents."
   }
 }
