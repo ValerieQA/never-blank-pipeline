@@ -131,8 +131,19 @@ selection_prompt: |
   - One short phrase only — not a quote poster
   - Max 3 lines, 8–12 words preferred, 16 absolute maximum
   - Must feel like a visual insight
-  - Good: "Rates, not events." / "Visibility compounds in systems."
-  - Bad: generic advice, long paragraphs, corporate slogans
+  - HARD REQUIREMENT: hook_text must be traceable to a specific, concrete
+    detail in Title/Observation — a number, a name, the actual tension in
+    this signal. If someone could swap in a different company's headline
+    and the hook_text would still fit unchanged, it is too generic — rewrite
+    it grounded in this signal specifically.
+  - Good (grounded in the actual signal): "$530M for golf, not cable." /
+    "The charter costs more than it saves." / "Compliance was never the point."
+  - Bad — reject phrases like these, they are abstract filler with nothing
+    signal-specific in them: "Navigating new financial constellations."
+    "Strategic shifts illuminate hidden connections." "Signals of risk emerge
+    in unseen patterns." "Growth emerges from hidden connections." These read
+    as generic AI-abstract phrasing, not an insight about this story.
+  - Bad (other failure modes): generic advice, long paragraphs, corporate slogans
 
   LOGO: Do NOT instruct the model to draw the logo. Logo is overlaid by the
   Python pipeline after generation. Set logo_placement to "bottom_right" always.

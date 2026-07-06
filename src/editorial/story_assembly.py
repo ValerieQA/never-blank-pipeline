@@ -22,11 +22,16 @@ Evidence Reveal + Business Translation combined).
 Given the Discovery Builder output (first_wrong_explanation, puzzle,
 investigation_sequence, aha_setup) and the Narrative Spine, produce:
 
-1. surviving_explanation - the explanation the reader now holds, stated directly.
-   This arrives AFTER the aha_setup - the reader already has the answer; this
-   confirms it. Do not re-explain the discovery sequence - state the conclusion in
-   1-3 sentences, evidence-textured (reference what was shown, not "based on the
-   above").
+1. surviving_explanation - the moment it clicked, still in the narrator's first-
+   person investigating voice ("Now I saw it" / "That's when it made sense"),
+   not a third-person analyst's summary ("The evidence suggests..."). This
+   arrives AFTER the aha_setup - the reader already has the answer; this
+   confirms it in 1-3 sentences, evidence-textured (reference what was shown,
+   not "based on the above"). It must be framed as an inference the narrator
+   drew from what was just shown, not a fact stated with more certainty than
+   the evidence supports - avoid phrasing like "X isn't just doing A - it's
+   doing B" stated as settled truth; prefer "which meant X wasn't just A. It
+   was B" as a realization, not a verdict.
 
 2. remaining_uncertainty - one sentence naming a genuine open question this
    investigation could not resolve, framed as an open question rather than a
@@ -37,15 +42,32 @@ investigation_sequence, aha_setup) and the Narrative Spine, produce:
 3. business_translation - what this decision means for a company with nothing to
    do with this one, facing the same TYPE of structural choice. Must be derived
    from strategic_objective/business_lesson provided below, not invented. It must
-   be specific enough to be actionable, not generic enough to apply to everything -
-   "companies should think long-term" is a platitude, not a lesson. It should fail
-   for at least some companies; if it applies to every situation, it applies to
-   none.
+   also clearly rhyme with narrative_spine - reuse its central image or claim so
+   a reader recognizes the connection, not a generic lesson that happens to be
+   nearby in topic.
+
+   HARD REQUIREMENT - reject your own draft if it fails this test: read
+   business_translation with the company name removed. If it would paste
+   unchanged under a headline about a completely different company in a
+   different industry, it is too generic - rewrite it so it depends on the
+   specific narrative_spine and discovery above, not on the general category
+   of decision.
+
+   Banned pattern: "If your company's goal is X, then Y" / "Companies facing
+   Z should consider W" - this formula is what generic AI business advice
+   sounds like, not a lesson earned from this investigation. Bad example (the
+   exact kind of ending to avoid): "If your company's strategic goal is to
+   compete directly with incumbents and expand into regulated markets, it may
+   be necessary to accept higher regulatory burdens." That sentence has
+   nothing in it that required this investigation - delete every word that
+   could apply to any company and see what, if anything, is left.
 
 Rules:
 - Every claim in surviving_explanation must be traceable to the discovery sequence
   or signal facts provided - do not add new facts.
-- business_translation must not be generic advice.
+- business_translation must not be generic advice; it must fail (be visibly
+  wrong or irrelevant) for at least some real companies - if it applies to
+  every situation, it applies to none.
 
 Return ONLY valid JSON:
 {

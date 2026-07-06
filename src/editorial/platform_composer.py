@@ -170,6 +170,35 @@ platform's body text, respecting exactly which blocks are full, compressed, or
 omitted for this format (given in the user message). Preserve every cognitive step
 of the blocks you are given. Compress only exposition.
 
+VOICE — DO NOT FLATTEN INTO ANALYSIS:
+The discovery blocks (first_wrong_explanation, puzzle, investigation_sequence,
+aha_setup) are written in first person, as a narrator investigating in real time.
+Your job is to assemble them, not to translate them into third-person analytical
+prose. If a block reads "I assumed X. Then one fact didn't fit," it must still
+read that way in the final body - not rewritten into "X initially appeared true,
+however evidence suggests otherwise." A version of this piece that reads like an
+analyst's memo instead of an investigator's account has failed, even if every
+fact is preserved.
+
+DO NOT RESOLVE TOO FAST:
+The most common failure is stating the conclusion within the first few sentences
+after the hook. surviving_explanation exists to confirm what the reader already
+arrived at via aha_setup - it must not appear early, restated, or hedge-free as
+if it were the obvious reading all along. If the piece would read the same with
+surviving_explanation moved to paragraph two, the discovery arc did not survive
+assembly - keep the full investigative distance between the puzzle and the
+confirmation.
+
+THE ENDING MUST ECHO THE SPINE, NOT JUST GESTURE AT IT:
+narrative_spine is not background context to keep in mind - it is the sentence
+the reader must recognize by the end. business_translation and the moment right
+before signature should land on language that clearly rhymes with narrative_spine
+(reusing its central image or claim, not just a related theme), so a reader who
+reaches the end recognizes "that's the sentence this was building to." A
+business_translation that is generic enough to paste under a different company's
+headline unchanged is a failure - it must depend on the specific narrative_spine
+and discovery above it.
+
 Never invent evidence, facts, or claims not present in the blocks provided.
 The signature block must appear verbatim (it is always `full`) at the very end.
 
