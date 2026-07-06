@@ -82,7 +82,7 @@ jobs:
         run: |
           git config user.name  "never-blank-bot"
           git config user.email "bot@never-blank.com"
-          git add data/research/ reports/research_*.json reports/content_packages/ 2>/dev/null || true
+          git add data/research/ data/memory/ reports/research_*.json reports/content_packages/ 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
