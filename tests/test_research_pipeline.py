@@ -460,6 +460,44 @@ def test_compose_quote_card_dark_card_includes_logo_light_card_skips_it():
         assert img2.size == (1080, 1350)
 
 
+def test_generate_signal_image_card_hook_text_not_word_trimmed(tmp_path, monkeypatch):
+    """
+    Regression test: a long POTENTIAL_HOOK sent to a quote card was cut off
+    mid-sentence in production ("Ondas just spent $875 million not to invent
+    the future,") because hook_text was run through trim_hook_text's hard
+    10-word ceiling before choose_visual_family() had even determined this
+    was a card. Cards must receive the full, untrimmed hook.
+    """
+    from scripts.research import prepare_content
+    import src.publishing.image_pipeline as image_pipeline
+
+    monkeypatch.chdir(tmp_path)
+    long_hook = ("Ondas just spent $875 million not to invent the future, "
+                 "but to make sure it wasn't the one left behind.")
+    signal = {
+        "SIGNAL_ID": "sig-ondas", "HEADLINE": "Ondas headline",
+        "POTENTIAL_HOOK": long_hook, "CORE_FACT": "fact",
+    }
+    card_spec = {
+        "visual_family": "dark_insight_card", "dominant_palette": "deep_navy",
+        "image_prompt": "", "hook_text": "", "negative_prompt": "",
+        "logo_placement": "bottom_right", "card_texture_family": "mountains_depth_layers",
+    }
+
+    with patch.object(image_pipeline, "choose_visual_family", return_value=card_spec):
+        with patch.object(image_pipeline, "load_registry", return_value={"posts": []}):
+            with patch.object(image_pipeline, "compose_quote_card") as mock_card:
+                from PIL import Image as PILImage
+                mock_card.return_value = PILImage.new("RGB", (1080, 1080))
+                with patch.object(image_pipeline, "upload_to_cloudinary", return_value="https://x/1.png"):
+                    prepare_content._generate_signal_image(signal)
+
+    assert mock_card.call_count >= 1
+    called_hook_text = mock_card.call_args_list[0].args[0]
+    assert called_hook_text == long_hook
+    assert len(called_hook_text.split()) > 10  # would have failed before the fix
+
+
 def test_register_post_persisted_by_build_image_plan(tmp_path, monkeypatch):
     """
     Regression test: _build_image_plan previously popped and discarded

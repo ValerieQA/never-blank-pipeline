@@ -155,9 +155,6 @@ def _generate_signal_image(signal: dict) -> dict:
     headline = signal.get("HEADLINE", "")
     hook_raw = signal.get("POTENTIAL_HOOK") or signal.get("POSSIBLE_SIGNATURE_LINE") or headline
 
-    # Keep hook short and sharp — word-based trim
-    hook_text = trim_hook_text(hook_raw, max_words=10)
-
     registry = load_registry()
 
     spec = choose_visual_family(
@@ -173,14 +170,24 @@ def _generate_signal_image(signal: dict) -> dict:
     dominant_palette = spec["dominant_palette"]
     image_prompt     = spec["image_prompt"]
     negative_prompt  = spec.get("negative_prompt", "")
-    # Prefer AI-generated hook from spec if available and concise
-    ai_hook = spec.get("hook_text", "")
-    if ai_hook:
-        hook_text = trim_hook_text(ai_hook, max_words=10)
+    ai_hook          = spec.get("hook_text", "")
+    is_card          = visual_family in CARD_TYPES
+
+    if is_card:
+        # Quote cards hold full sentences - the text IS the visual. Do NOT
+        # route through trim_hook_text here: it clamps to HOOK_MAX_WORDS_HARD
+        # (10 words) internally no matter what max_words is passed, which cut
+        # a real hook off mid-sentence in production ("Ondas just spent $875
+        # million not to invent the future,"). compose_quote_card's own
+        # _fit_text_dynamic handles sizing for the full sentence.
+        hook_text = ai_hook or hook_raw
+    else:
+        # Photo overlays genuinely need a short hook — prefer the AI-crafted
+        # one from spec if available, else trim the raw hook.
+        hook_text = trim_hook_text(ai_hook, max_words=10) if ai_hook else trim_hook_text(hook_raw, max_words=10)
 
     log.info("Signal %s: visual_family=%s hook=%r", sig_id, visual_family, hook_text)
 
-    is_card = visual_family in CARD_TYPES
     if is_card:
         # Quote card: no AI image call at all (also sidesteps the image-
         # safety-policy risk of AI-generated photos). Dark cards still get an
