@@ -46,10 +46,8 @@ jobs:
           NB_WIX_API_KEY:                    ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID:                    ${{ secrets.NB_WIX_SITE_ID }}
           NB_WIX_POST_OWNER_ID:              ${{ secrets.NB_WIX_POST_OWNER_ID }}
-          NB_LINKEDIN_ACCESS_TOKEN:          ${{ secrets.NB_LINKEDIN_ACCESS_TOKEN }}
-          NB_LINKEDIN_CLIENT_ID:             ${{ secrets.NB_LINKEDIN_CLIENT_ID }}
-          NB_LINKEDIN_CLIENT_SECRET:         ${{ secrets.NB_LINKEDIN_CLIENT_SECRET }}
-          NB_LINKEDIN_AUTHOR_URN:            ${{ secrets.NB_LINKEDIN_AUTHOR_URN }}
+          NB_ZERNIO_API_KEY:                 ${{ secrets.NB_ZERNIO_API_KEY }}
+          NB_ZERNIO_LINKEDIN_ACCOUNT_ID:     ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
           NB_META_USER_TOKEN:                ${{ secrets.NB_META_USER_TOKEN }}
           NB_META_IG_USER_ID:                ${{ secrets.NB_META_IG_USER_ID }}
           NB_META_FB_PAGE_ID:                ${{ secrets.NB_META_FB_PAGE_ID }}

@@ -442,88 +442,54 @@ def audit_wix() -> Result:
 
 
 def audit_linkedin() -> Result:
-    provider = "LinkedIn"
-    missing = _require("NB_LINKEDIN_ACCESS_TOKEN", "NB_LINKEDIN_CLIENT_ID",
-                       "NB_LINKEDIN_CLIENT_SECRET")
+    provider = "LinkedIn (via Zernio)"
+    missing = _require("NB_ZERNIO_API_KEY", "NB_ZERNIO_LINKEDIN_ACCOUNT_ID")
     if missing:
         return Result(provider, Result.FAIL, f"Missing secret: {missing}",
                       failure_type=Result.MISSING_ID)
 
-    token         = _env("NB_LINKEDIN_ACCESS_TOKEN")
-    client_id     = _env("NB_LINKEDIN_CLIENT_ID")
-    client_secret = _env("NB_LINKEDIN_CLIENT_SECRET")
-    checks        = []
+    api_key    = _env("NB_ZERNIO_API_KEY")
+    account_id = _env("NB_ZERNIO_LINKEDIN_ACCOUNT_ID")
+    checks     = []
 
-    import urllib.parse
-    import base64
-
-    # LinkedIn Token Introspection API — works with any token type, no read-profile
-    # scope required. Requires client credentials (Basic auth with client_id:client_secret).
-    # Docs: https://learn.microsoft.com/en-us/linkedin/shared/authentication/token-introspection
-    basic_auth = base64.b64encode(
-        f"{client_id}:{client_secret}".encode()
-    ).decode()
-
-    # LinkedIn introspection requires client_id + client_secret in the POST body
-    # (not just Basic auth header) alongside the token being inspected.
-    code_i, intro, _ = _fetch(
-        "https://www.linkedin.com/oauth/v2/introspectToken",
-        method="POST",
-        headers={
-            "Authorization": f"Basic {basic_auth}",
-            "Content-Type":  "application/x-www-form-urlencoded",
-        },
-        body=urllib.parse.urlencode({
-            "token":         token,
-            "client_id":     client_id,
-            "client_secret": client_secret,
-        }).encode(),
+    # Zernio doesn't expose LinkedIn's own OAuth internals — it manages the
+    # LinkedIn Partner Program relationship on its side. We verify our API key
+    # and connected account by listing the LinkedIn organizations reachable
+    # through this account connection.
+    # Docs: https://docs.zernio.com/platforms/linkedin#multi-organization-posting
+    code, resp, _ = _fetch(
+        f"https://zernio.com/api/v1/accounts/{account_id}/linkedin-organizations",
+        headers={"Authorization": f"Bearer {api_key}"},
+        timeout=15,
     )
 
-    if code_i == 200:
-        active   = intro.get("active", False)
-        scopes   = intro.get("scope", "")
-        exp_at   = intro.get("expires_at", 0)
-        auth_id  = intro.get("authorized_party", intro.get("client_id", "?"))
-        has_post = "w_member_social" in scopes or "w_organization_social" in scopes
-
-        checks.append(_check("Token introspection", True,
-                              f"active={active} authorized_party={auth_id!r}"))
-        checks.append(_check("Token active", active,
-                              f"expires_at={exp_at}" if exp_at else "no expiry"))
-        checks.append(_check("Posting scope (w_member_social)", has_post,
-                              f"scopes={scopes!r}"))
-
-        if not active:
-            return Result(provider, Result.FAIL,
-                          "LinkedIn token is inactive. Re-authorize via LinkedIn Developer Portal.",
-                          failure_type=Result.TOKEN_EXPIRED,
-                          checks=checks)
-        if not has_post:
-            return Result(provider, Result.FAIL,
-                          f"Token is active but lacks w_member_social scope (cannot post). "
-                          f"Current scopes: {scopes!r}. "
-                          "Re-authorize and ensure 'Share on LinkedIn' product is added to the app.",
-                          failure_type=Result.MISSING_SCOPE,
-                          checks=checks)
-
-    elif code_i == 401:
-        err = intro.get("error_description", intro.get("_raw", ""))[:120]
-        checks.append(_check("Token introspection", False, f"401 — {err}"))
+    if code == 200:
+        orgs = resp.get("organizations", resp if isinstance(resp, list) else [])
+        checks.append(_check("Zernio API key + account valid", True,
+                              f"{len(orgs) if isinstance(orgs, list) else '?'} organization(s) reachable"))
+        return Result(provider, Result.PASS, checks=checks)
+    elif code == 401:
+        err = resp.get("error", resp.get("message", resp.get("_raw", "")))[:120]
+        checks.append(_check("Zernio API key valid", False, f"401 — {err}"))
         return Result(provider, Result.FAIL,
-                      f"Client credentials rejected by introspection API: {err}. "
-                      "Verify NB_LINKEDIN_CLIENT_ID and NB_LINKEDIN_CLIENT_SECRET.",
+                      f"Zernio rejected the API key: {err}. Check NB_ZERNIO_API_KEY.",
                       failure_type=Result.TOKEN_INVALID,
                       checks=checks)
-    else:
-        err = intro.get("error_description", intro.get("message", intro.get("_raw", "")))[:120]
-        checks.append(_check("Token introspection", False, f"HTTP {code_i} — {err}"))
+    elif code == 404:
+        err = resp.get("error", resp.get("message", resp.get("_raw", "")))[:120]
+        checks.append(_check("Zernio account ID valid", False, f"404 — {err}"))
         return Result(provider, Result.FAIL,
-                      f"Introspection API failed (HTTP {code_i}): {err}",
+                      f"Zernio account not found: {err}. Check NB_ZERNIO_LINKEDIN_ACCOUNT_ID "
+                      "(copy it again from zernio.com/dashboard/connections).",
+                      failure_type=Result.MISSING_ID,
+                      checks=checks)
+    else:
+        err = resp.get("error", resp.get("message", resp.get("_raw", "")))[:120]
+        checks.append(_check("Zernio connectivity", False, f"HTTP {code} — {err}"))
+        return Result(provider, Result.FAIL,
+                      f"Zernio API call failed (HTTP {code}): {err}",
                       failure_type=Result.UNKNOWN,
                       checks=checks)
-
-    return Result(provider, Result.PASS, checks=checks)
 
 
 def audit_facebook() -> Result:
@@ -1103,9 +1069,8 @@ REQUIRED_SECRETS = [
     "NB_WIX_API_KEY",
     "NB_WIX_SITE_ID",
     "NB_WIX_POST_OWNER_ID",
-    "NB_LINKEDIN_ACCESS_TOKEN",
-    "NB_LINKEDIN_CLIENT_ID",
-    "NB_LINKEDIN_CLIENT_SECRET",
+    "NB_ZERNIO_API_KEY",
+    "NB_ZERNIO_LINKEDIN_ACCOUNT_ID",
     "NB_META_USER_TOKEN",
     "NB_META_IG_USER_ID",
     "NB_META_FB_PAGE_ID",
