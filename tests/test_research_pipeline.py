@@ -213,6 +213,24 @@ def test_hook_text_trim_no_partial_word():
     assert trim_hook_text(short_text) == short_text
 
 
+def test_fit_text_dynamic_never_drops_words():
+    """
+    Regression test: a photo-overlay hook ("Shifting production: $3.6B moves
+    from Mexico to Texas.") was published missing its last word - the
+    fallback path sliced wrapped lines down to max_lines, silently dropping
+    whatever didn't fit. _fit_text_dynamic must return every word from the
+    input, even if that means exceeding max_lines/max_h in extreme cases.
+    """
+    from src.publishing.image_pipeline import _fit_text_dynamic
+
+    text = "Shifting production: $3.6B moves from Mexico to Texas."
+    # Force the fallback path: a max_h so small no font size in range satisfies it.
+    font, lines = _fit_text_dynamic(text, max_w=200, max_h=1, font_start=40, font_min=28, max_lines=2)
+    rendered = " ".join(lines)
+    for word in text.split():
+        assert word in rendered, f"word {word!r} was dropped: {lines!r}"
+
+
 def test_signal_selection_requires_both_conditions():
     """Selected signals must have BOTH RECOMMENDED_FOR_ARTICLE=true AND score >= threshold."""
     # Signal with recommendation but low score → should NOT be selected

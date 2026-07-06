@@ -532,7 +532,12 @@ def _fit_text_dynamic(
     Find the largest font size where `text` wraps into ≤ max_lines lines
     and fits inside max_w × max_h pixels.
     Steps down by 4px until it fits or hits font_min.
-    Never crops text.
+    Never crops text — the fallback below used to slice wrapped lines to
+    max_lines, which silently dropped trailing words whenever even font_min
+    still wrapped into more than max_lines lines (seen in production: a
+    photo overlay hook that fit fine in one font's metrics wrapped into 4
+    lines in the renderer's actual font, and slicing to max_lines=3 dropped
+    the last word). The fallback now always returns every wrapped line.
     """
     for size in range(font_start, font_min - 1, -4):
         font  = _find_font(size)
@@ -542,9 +547,10 @@ def _fit_text_dynamic(
             total_h   = len(lines) * line_h
             if total_h <= max_h:
                 return font, lines
-    # Hard fallback — use minimum font, take first max_lines lines
+    # Hard fallback — smallest font, but keep every line (may exceed
+    # max_lines/max_h in extreme cases; that is preferable to dropping words).
     font  = _find_font(font_min)
-    lines = _wrap_text(text, font, max_w)[:max_lines]
+    lines = _wrap_text(text, font, max_w)
     return font, lines
 
 
