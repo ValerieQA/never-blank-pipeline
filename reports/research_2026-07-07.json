@@ -1,28 +1,28 @@
 {
   "date": "2026-07-07",
-  "candidates_found": 8,
+  "candidates_found": 6,
   "duplicates_skipped": 0,
-  "new_signals_added": 8,
+  "new_signals_added": 6,
   "selected_for_content": 3,
   "sheet_sync": "success",
   "archived": 0,
   "top_signals": [
-    "US investors will soon get access to SK Hynix, another memory maker riding the A",
-    "Samsung\u2019s Soaring Profit Fails to Lift Shares After AI Rally",
-    "Intel-Backed AI Chip and Software Maker Syntiant Files for IPO"
+    "Samsung\u2019s Soaring Profit Fails to Impress After AI Chip Rally",
+    "Samsung\u2019s Soaring Profit Fails to Lift Shares",
+    "Americans of all ages are spending less time socializing"
   ],
   "publish_reports": [
     {
-      "signal_id": "d0726eb3915b23c0",
-      "headline": "US investors will soon get access to SK Hynix, another memory maker riding the AI boom",
-      "published_at": "2026-07-07 00:40 UTC",
+      "signal_id": "b892b61489a4df4f",
+      "headline": "Samsung\u2019s Soaring Profit Fails to Impress After AI Chip Rally",
+      "published_at": "2026-07-07 01:38 UTC",
       "mode": "live",
       "results": {
         "wix": {
           "platform": "wix",
           "status": "published_url_unavailable",
           "url": "",
-          "external_id": "855c675e-6872-437f-a2af-a31084eb4459",
+          "external_id": "8a0d554e-1701-43a1-bc8f-9c5cabdd3950",
           "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
           "raw_response_path": null
         },
@@ -30,68 +30,68 @@
           "platform": "linkedin",
           "status": "PUBLISHED",
           "url": "https://www.linkedin.com/feed/",
-          "external_id": "6a4c4ae71a0dd448ab31381f",
+          "external_id": "6a4c586f32616c30da9b7b8a",
           "error_message": null,
           "raw_response_path": "(with image, via Zernio)"
         },
         "facebook": {
           "platform": "facebook",
           "status": "PUBLISHED",
-          "url": "https://www.facebook.com/1219637131228622_122115860433356169",
-          "external_id": "1219637131228622_122115860433356169",
+          "url": "https://www.facebook.com/1219637131228622_122115866463356169",
+          "external_id": "1219637131228622_122115866463356169",
           "error_message": null,
           "raw_response_path": null
         },
         "instagram": {
           "platform": "instagram",
           "status": "PUBLISHED",
-          "url": "https://www.instagram.com/p/DaeM1jknF0L/",
-          "external_id": "18116830249895555",
+          "url": "https://www.instagram.com/p/DaeTcTNjtUP/",
+          "external_id": "17882150568457592",
           "error_message": null,
           "raw_response_path": null
         },
         "threads": {
           "platform": "threads",
           "status": "PUBLISHED",
-          "url": "https://www.threads.net/t/18083030831208981",
-          "external_id": "18083030831208981",
+          "url": "https://www.threads.net/t/18037104329806244",
+          "external_id": "18037104329806244",
           "error_message": null,
           "raw_response_path": null
         },
         "telegram": {
           "platform": "telegram",
           "status": "PUBLISHED",
-          "url": "https://t.me/never_blank_inneros/26",
-          "external_id": "26",
+          "url": "https://t.me/never_blank_inneros/27",
+          "external_id": "27",
           "error_message": null,
           "raw_response_path": null
         }
       },
       "wix_url": "",
-      "generated_file": "reports/content_packages/d0726eb3915b23c0_generated.json",
+      "generated_file": "reports/content_packages/b892b61489a4df4f_generated.json",
       "platform_images": {
         "blog": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384658/never-blank/posts/research/d0726eb3915b23c0/blog/1783384657.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388122/never-blank/posts/research/b892b61489a4df4f/blog/1783388121.png",
           "size": "1920x1080"
         },
         "linkedin": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384662/never-blank/posts/research/d0726eb3915b23c0/linkedin/1783384662.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388123/never-blank/posts/research/b892b61489a4df4f/linkedin/1783388123.png",
           "size": "1200x628"
         },
         "facebook": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384666/never-blank/posts/research/d0726eb3915b23c0/facebook/1783384666.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388123/never-blank/posts/research/b892b61489a4df4f/facebook/1783388123.png",
           "size": "1200x628"
         },
         "instagram": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384673/never-blank/posts/research/d0726eb3915b23c0/instagram/1783384672.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388124/never-blank/posts/research/b892b61489a4df4f/instagram/1783388124.png",
           "size": "1080x1350"
         },
         "threads": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384678/never-blank/posts/research/d0726eb3915b23c0/threads/1783384678.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388125/never-blank/posts/research/b892b61489a4df4f/threads/1783388125.png",
           "size": "1080x1080"
         },
         "stories": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384686/never-blank/posts/research/d0726eb3915b23c0/stories/1783384685.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388126/never-blank/posts/research/b892b61489a4df4f/stories/1783388126.png",
           "size": "1080x1920"
         }
       },
@@ -99,9 +99,9 @@
       "telegram_signature": true,
       "wix_cover_image_attached": false,
       "image_design_version": "",
-      "image_hook_text": "Memory chips surge as AI demand accelerates.",
-      "image_visual_family": "contrast_waves",
-      "image_method": "gpt-image-1"
+      "image_hook_text": "Samsung\u2019s profits just soared 19x\u2014and the market shrugged.",
+      "image_visual_family": "dark_insight_card",
+      "image_method": "quote_card"
     }
   ],
   "content_packages": 3,
@@ -109,226 +109,70 @@
   "images_reused": 0,
   "_content_packages": [
     {
-      "SIGNAL_ID": "d0726eb3915b23c0",
-      "HEADLINE": "US investors will soon get access to SK Hynix, another memory maker riding the AI boom",
-      "prepared_at": "2026-07-07 00:38 UTC",
+      "SIGNAL_ID": "b892b61489a4df4f",
+      "HEADLINE": "Samsung\u2019s Soaring Profit Fails to Impress After AI Chip Rally",
+      "prepared_at": "2026-07-07 01:35 UTC",
       "content": {
         "blog": {
-          "headline": "SK Hynix\u2019s U.S. IPO: When AI Demand Meets Wall Street\u2019s Watchful Eye",
-          "angle": "SK Hynix\u2019s rush to raise capital in the U.S. spotlights the tension between fueling AI-driven growth and navigating regulatory scrutiny, revealing how semiconductor firms must strategically tap global markets to stay competitive."
+          "headline": "Samsung\u2019s 19x Profit Surge: Why Market Expectations Still Leave Founders Cold",
+          "angle": "Samsung\u2019s massive AI chip-driven profit jump clashes with sky-high market expectations \u2192 reveals the tension between operational success and investor sentiment \u2192 founders must learn that beating past results isn\u2019t enough when the narrative demands more \u2192 managing expectations is as vital as execution."
         },
         "linkedin": {
-          "headline": "The AI gold rush isn\u2019t just about chips\u2014it\u2019s about capital reshaping the industry.",
-          "angle": "As SK Hynix prepares a multibillion-dollar U.S. IPO, semiconductor companies face the challenge of balancing rapid expansion with regulatory hurdles, signaling a shift in how tech growth is financed."
+          "headline": "Samsung\u2019s profits just soared 19x\u2014and the market shrugged.",
+          "angle": "When operational wins fail to move markets, founders face the hard truth: outperforming history doesn\u2019t guarantee outperforming the narrative."
         },
         "facebook": {
-          "headline": "SK Hynix is heading to Wall Street amid the AI boom. What does that mean for the chip industry?",
-          "angle": "SK Hynix\u2019s U.S. IPO highlights the push for capital to fund AI-driven expansion\u2014can semiconductor companies manage market volatility and regulatory risks while scaling fast?"
+          "headline": "Samsung\u2019s profits jumped 19 times thanks to AI chips\u2014but investors barely blinked.",
+          "angle": "Samsung\u2019s record-breaking growth meets muted market response\u2014how do founders balance real success with sky-high expectations?"
         },
         "instagram": {
-          "headline": "AI Chips Meet Wall Street Capital",
-          "angle": "SK Hynix\u2019s IPO shows that the real AI disruption is in how capital flows, not just the tech itself."
+          "headline": "19x Profit Surge, Zero Market Cheers",
+          "angle": "When growth becomes the baseline, founders must master managing what \u2018enough\u2019 means to investors."
         },
         "threads": {
-          "thread_hook": "The AI boom isn\u2019t just about who makes the chips\u2014it\u2019s about who controls the capital behind them.",
-          "angle": "This thread breaks down how SK Hynix\u2019s U.S. IPO exposes the high-stakes balance semiconductor firms must strike between rapid growth and regulatory scrutiny in a volatile market."
+          "thread_hook": "Samsung\u2019s 19x profit jump didn\u2019t impress the market. Here\u2019s why that matters for founders.",
+          "angle": "The thread breaks down how surpassing historical performance can still fall short if market expectations run ahead\u2014and why managing that gap is crucial."
         },
         "stories": {
-          "story_question": "Can chipmakers grow fast without losing control to Wall Street?",
-          "angle": "Exploring the tension semiconductor companies face between raising capital for AI-driven expansion and managing regulatory risks."
+          "story_question": "Can huge growth still leave investors unimpressed?",
+          "angle": "Exploring the tension between operational success and market expectations in fast-moving industries."
         }
       },
       "images": {
         "platform_images": {
           "blog": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384658/never-blank/posts/research/d0726eb3915b23c0/blog/1783384657.png",
-            "path": "reports/content_packages/images/d0726eb3915b23c0_blog.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388122/never-blank/posts/research/b892b61489a4df4f/blog/1783388121.png",
+            "path": "reports/content_packages/images/b892b61489a4df4f_blog.png",
             "size": "1920x1080",
             "reused": false
           },
           "linkedin": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384662/never-blank/posts/research/d0726eb3915b23c0/linkedin/1783384662.png",
-            "path": "reports/content_packages/images/d0726eb3915b23c0_linkedin.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388123/never-blank/posts/research/b892b61489a4df4f/linkedin/1783388123.png",
+            "path": "reports/content_packages/images/b892b61489a4df4f_linkedin.png",
             "size": "1200x628",
             "reused": false
           },
           "facebook": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384666/never-blank/posts/research/d0726eb3915b23c0/facebook/1783384666.png",
-            "path": "reports/content_packages/images/d0726eb3915b23c0_facebook.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388123/never-blank/posts/research/b892b61489a4df4f/facebook/1783388123.png",
+            "path": "reports/content_packages/images/b892b61489a4df4f_facebook.png",
             "size": "1200x628",
             "reused": false
           },
           "instagram": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384673/never-blank/posts/research/d0726eb3915b23c0/instagram/1783384672.png",
-            "path": "reports/content_packages/images/d0726eb3915b23c0_instagram.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388124/never-blank/posts/research/b892b61489a4df4f/instagram/1783388124.png",
+            "path": "reports/content_packages/images/b892b61489a4df4f_instagram.png",
             "size": "1080x1350",
             "reused": false
           },
           "threads": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384678/never-blank/posts/research/d0726eb3915b23c0/threads/1783384678.png",
-            "path": "reports/content_packages/images/d0726eb3915b23c0_threads.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388125/never-blank/posts/research/b892b61489a4df4f/threads/1783388125.png",
+            "path": "reports/content_packages/images/b892b61489a4df4f_threads.png",
             "size": "1080x1080",
             "reused": false
           },
           "stories": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384686/never-blank/posts/research/d0726eb3915b23c0/stories/1783384685.png",
-            "path": "reports/content_packages/images/d0726eb3915b23c0_stories.png",
-            "size": "1080x1920",
-            "reused": false
-          }
-        },
-        "new_images": 1,
-        "reused_images": 0,
-        "reuse_rate": "0%",
-        "image_method": "gpt-image-1",
-        "reuse_source": "n/a",
-        "visual_family": "contrast_waves",
-        "hook_text": "Memory chips surge as AI demand accelerates."
-      }
-    },
-    {
-      "SIGNAL_ID": "239339df45e7c952",
-      "HEADLINE": "Samsung\u2019s Soaring Profit Fails to Lift Shares After AI Rally",
-      "prepared_at": "2026-07-07 00:39 UTC",
-      "content": {
-        "blog": {
-          "headline": "Samsung\u2019s 19x Profit Surge and the Silent Stock Market",
-          "angle": "Samsung\u2019s explosive AI-driven profit growth \u2192 market\u2019s muted share response \u2192 founders must manage investor expectations beyond headline numbers \u2192 operational wins alone don\u2019t guarantee market rewards"
-        },
-        "linkedin": {
-          "headline": "Samsung delivered a 19x profit surge\u2014and the market shrugged.",
-          "angle": "Exceptional profit growth doesn\u2019t always translate to stock gains; founders need to align market expectations with long-term strategy to avoid investor silence."
-        },
-        "facebook": {
-          "headline": "Samsung\u2019s profits soared 19 times thanks to AI\u2014but shares barely budged.",
-          "angle": "When Samsung\u2019s AI-driven earnings exploded but shares stayed flat, it raises the question: How should founders manage the gap between operational success and market response?"
-        },
-        "instagram": {
-          "headline": "Profit Soars, Shares Stay Flat",
-          "angle": "Samsung\u2019s AI profits jumped 19x, yet the market stayed unmoved\u2014because tomorrow\u2019s story matters more than yesterday\u2019s wins."
-        },
-        "threads": {
-          "thread_hook": "Samsung\u2019s 19-fold profit jump didn\u2019t move its stock price. Here\u2019s why that matters.",
-          "angle": "This thread breaks down why massive operational gains don\u2019t guarantee market applause and what founders can learn about managing investor expectations."
-        },
-        "stories": {
-          "story_question": "Can huge profits fail to excite investors?",
-          "angle": "Exploring why Samsung\u2019s massive AI-driven earnings didn\u2019t boost its shares and what that means for founders managing market expectations."
-        }
-      },
-      "images": {
-        "platform_images": {
-          "blog": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384730/never-blank/posts/research/239339df45e7c952/blog/1783384730.png",
-            "path": "reports/content_packages/images/239339df45e7c952_blog.png",
-            "size": "1920x1080",
-            "reused": false
-          },
-          "linkedin": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384734/never-blank/posts/research/239339df45e7c952/linkedin/1783384733.png",
-            "path": "reports/content_packages/images/239339df45e7c952_linkedin.png",
-            "size": "1200x628",
-            "reused": false
-          },
-          "facebook": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384737/never-blank/posts/research/239339df45e7c952/facebook/1783384737.png",
-            "path": "reports/content_packages/images/239339df45e7c952_facebook.png",
-            "size": "1200x628",
-            "reused": false
-          },
-          "instagram": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384743/never-blank/posts/research/239339df45e7c952/instagram/1783384743.png",
-            "path": "reports/content_packages/images/239339df45e7c952_instagram.png",
-            "size": "1080x1350",
-            "reused": false
-          },
-          "threads": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384748/never-blank/posts/research/239339df45e7c952/threads/1783384748.png",
-            "path": "reports/content_packages/images/239339df45e7c952_threads.png",
-            "size": "1080x1080",
-            "reused": false
-          },
-          "stories": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384756/never-blank/posts/research/239339df45e7c952/stories/1783384756.png",
-            "path": "reports/content_packages/images/239339df45e7c952_stories.png",
-            "size": "1080x1920",
-            "reused": false
-          }
-        },
-        "new_images": 1,
-        "reused_images": 0,
-        "reuse_rate": "0%",
-        "image_method": "gpt-image-1",
-        "reuse_source": "n/a",
-        "visual_family": "contrast_waves",
-        "hook_text": "19-fold profit surge, yet shares remain stagnant."
-      }
-    },
-    {
-      "SIGNAL_ID": "cc2cebb8591007d6",
-      "HEADLINE": "Intel-Backed AI Chip and Software Maker Syntiant Files for IPO",
-      "prepared_at": "2026-07-07 00:39 UTC",
-      "content": {
-        "blog": {
-          "headline": "Syntiant\u2019s IPO: When AI Chip Startups Meet Wall Street Reality",
-          "angle": "Syntiant\u2019s IPO ride exposes the tension between investor hype and the harsh scrutiny of public markets, forcing AI chipmakers to prove sustainable performance beyond capital raises."
-        },
-        "linkedin": {
-          "headline": "The IPO is the easy part \u2014 surviving the next quarter is where most AI chipmakers stumble.",
-          "angle": "AI chip startups attract massive investor interest, but the real challenge lies in meeting market expectations post-IPO amid rapid tech shifts."
-        },
-        "facebook": {
-          "headline": "Intel-backed Syntiant just filed for an IPO \u2014 but can AI chip startups handle the pressure of public markets?",
-          "angle": "Syntiant\u2019s IPO follows in the footsteps of Arm Holdings, raising the question: will investor enthusiasm translate into long-term business success?"
-        },
-        "instagram": {
-          "headline": "AI Chip IPOs: Spotlight or Struggle?",
-          "angle": "Syntiant\u2019s move to go public highlights the fine line between investor excitement and the relentless demands of market performance."
-        },
-        "threads": {
-          "thread_hook": "Raising capital is just the opening act for AI chip startups \u2014 the real show begins when public markets start watching.",
-          "angle": "This thread breaks down why AI semiconductor IPOs like Syntiant\u2019s face intense scrutiny post-listing and what founders must prepare for beyond the initial funding buzz."
-        },
-        "stories": {
-          "story_question": "Can AI chip startups survive the glare of public markets after the IPO?",
-          "angle": "Exploring the tension between investor expectations and the operational realities AI hardware companies face once public."
-        }
-      },
-      "images": {
-        "platform_images": {
-          "blog": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384764/never-blank/posts/research/cc2cebb8591007d6/blog/1783384764.png",
-            "path": "reports/content_packages/images/cc2cebb8591007d6_blog.png",
-            "size": "1920x1080",
-            "reused": false
-          },
-          "linkedin": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384765/never-blank/posts/research/cc2cebb8591007d6/linkedin/1783384765.png",
-            "path": "reports/content_packages/images/cc2cebb8591007d6_linkedin.png",
-            "size": "1200x628",
-            "reused": false
-          },
-          "facebook": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384766/never-blank/posts/research/cc2cebb8591007d6/facebook/1783384766.png",
-            "path": "reports/content_packages/images/cc2cebb8591007d6_facebook.png",
-            "size": "1200x628",
-            "reused": false
-          },
-          "instagram": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384766/never-blank/posts/research/cc2cebb8591007d6/instagram/1783384766.png",
-            "path": "reports/content_packages/images/cc2cebb8591007d6_instagram.png",
-            "size": "1080x1350",
-            "reused": false
-          },
-          "threads": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384768/never-blank/posts/research/cc2cebb8591007d6/threads/1783384768.png",
-            "path": "reports/content_packages/images/cc2cebb8591007d6_threads.png",
-            "size": "1080x1080",
-            "reused": false
-          },
-          "stories": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384769/never-blank/posts/research/cc2cebb8591007d6/stories/1783384768.png",
-            "path": "reports/content_packages/images/cc2cebb8591007d6_stories.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388126/never-blank/posts/research/b892b61489a4df4f/stories/1783388126.png",
+            "path": "reports/content_packages/images/b892b61489a4df4f_stories.png",
             "size": "1080x1920",
             "reused": false
           }
@@ -338,23 +182,179 @@
         "reuse_rate": "0%",
         "image_method": "quote_card",
         "reuse_source": "n/a",
-        "visual_family": "sand_pause_card",
-        "hook_text": "The IPO is the easy part \u2014 surviving the next quarter is where most AI chipmakers stumble."
+        "visual_family": "dark_insight_card",
+        "hook_text": "Samsung\u2019s profits just soared 19x\u2014and the market shrugged."
+      }
+    },
+    {
+      "SIGNAL_ID": "f7612e66508ede43",
+      "HEADLINE": "Samsung\u2019s Soaring Profit Fails to Lift Shares",
+      "prepared_at": "2026-07-07 01:36 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why Samsung\u2019s Profit Surge Didn\u2019t Move Its Stock: The Trust Deficit in Tech Growth",
+          "angle": "Samsung\u2019s soaring profits highlight operational success, but investor skepticism about AI\u2019s lasting impact stalls share price gains, showing founders that clear future narratives matter as much as current results."
+        },
+        "linkedin": {
+          "headline": "Samsung\u2019s profits climbed, yet its shares stayed flat. What\u2019s missing?",
+          "angle": "Strong financials alone can\u2019t convince markets; investor trust hinges on confidence in sustainable growth, especially in volatile sectors like AI."
+        },
+        "facebook": {
+          "headline": "Samsung just posted record profits\u2014but its stock didn\u2019t follow. Why?",
+          "angle": "Samsung\u2019s case shows that even stellar earnings can fail to boost share prices if investors doubt the longevity of growth trends. How are you communicating your company\u2019s future?"
+        },
+        "instagram": {
+          "headline": "Profit Up, Stock Stuck: The Trust Gap",
+          "angle": "Samsung\u2019s story reveals that market trust depends on more than profits\u2014it demands a clear, believable vision for what\u2019s next."
+        },
+        "threads": {
+          "thread_hook": "Samsung\u2019s profits soared, but the stock didn\u2019t move. Here\u2019s why markets care about more than just numbers.",
+          "angle": "This thread breaks down how investor skepticism around sustainable growth can mute the impact of strong financial results, and what founders need to do to bridge that trust gap."
+        },
+        "stories": {
+          "story_question": "Can profits alone convince investors to back your vision?",
+          "angle": "Exploring why even record earnings don\u2019t guarantee market trust without a clear, credible growth story."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388155/never-blank/posts/research/f7612e66508ede43/blog/1783388155.png",
+            "path": "reports/content_packages/images/f7612e66508ede43_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388159/never-blank/posts/research/f7612e66508ede43/linkedin/1783388159.png",
+            "path": "reports/content_packages/images/f7612e66508ede43_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388162/never-blank/posts/research/f7612e66508ede43/facebook/1783388162.png",
+            "path": "reports/content_packages/images/f7612e66508ede43_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388169/never-blank/posts/research/f7612e66508ede43/instagram/1783388169.png",
+            "path": "reports/content_packages/images/f7612e66508ede43_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388174/never-blank/posts/research/f7612e66508ede43/threads/1783388174.png",
+            "path": "reports/content_packages/images/f7612e66508ede43_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388182/never-blank/posts/research/f7612e66508ede43/stories/1783388182.png",
+            "path": "reports/content_packages/images/f7612e66508ede43_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Investors question AI growth sustainability despite record profits."
+      }
+    },
+    {
+      "SIGNAL_ID": "0cd638363f03e9a3",
+      "HEADLINE": "Americans of all ages are spending less time socializing",
+      "prepared_at": "2026-07-07 01:37 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why Declining Social Time Is Netflix\u2019s Opportunity, Not a Problem",
+          "angle": "Americans are socializing less \u2192 traditional community models are losing ground \u2192 businesses like Netflix respond with compelling solo experiences \u2192 founders must rethink social engagement to capture growth."
+        },
+        "linkedin": {
+          "headline": "The living room is full, but nobody\u2019s talking.",
+          "angle": "Social habits are shifting away from in-person gatherings, forcing businesses to rethink how they engage customers and capture attention."
+        },
+        "facebook": {
+          "headline": "Americans are spending less time socializing than 20 years ago. Netflix isn\u2019t trying to rebuild community\u2014they\u2019re redefining it. What does that mean for your business?",
+          "angle": "Less social time + Netflix\u2019s rise in solo entertainment + how can brands adapt to changing social behaviors?"
+        },
+        "instagram": {
+          "headline": "The Next Big Market Is On The Couch",
+          "angle": "As Americans retreat from socializing, businesses that create compelling at-home experiences are winning."
+        },
+        "threads": {
+          "thread_hook": "Social time is shrinking across all ages. The fastest-growing brands aren\u2019t rebuilding community\u2014they\u2019re redefining it.",
+          "angle": "This thread breaks down how shifting social habits create new opportunities for businesses that focus on digital and at-home experiences."
+        },
+        "stories": {
+          "story_question": "Is your business ready for a world where nobody\u2019s talking face-to-face?",
+          "angle": "Exploring the tension between declining social time and rising demand for solo, convenient experiences."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388214/never-blank/posts/research/0cd638363f03e9a3/blog/1783388214.png",
+            "path": "reports/content_packages/images/0cd638363f03e9a3_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388217/never-blank/posts/research/0cd638363f03e9a3/linkedin/1783388217.png",
+            "path": "reports/content_packages/images/0cd638363f03e9a3_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388220/never-blank/posts/research/0cd638363f03e9a3/facebook/1783388220.png",
+            "path": "reports/content_packages/images/0cd638363f03e9a3_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388227/never-blank/posts/research/0cd638363f03e9a3/instagram/1783388227.png",
+            "path": "reports/content_packages/images/0cd638363f03e9a3_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388232/never-blank/posts/research/0cd638363f03e9a3/threads/1783388232.png",
+            "path": "reports/content_packages/images/0cd638363f03e9a3_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388241/never-blank/posts/research/0cd638363f03e9a3/stories/1783388241.png",
+            "path": "reports/content_packages/images/0cd638363f03e9a3_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "particle_flow",
+        "hook_text": "Socializing time down 20% since 2003."
       }
     }
   ],
   "_publish_reports": [
     {
-      "signal_id": "d0726eb3915b23c0",
-      "headline": "US investors will soon get access to SK Hynix, another memory maker riding the AI boom",
-      "published_at": "2026-07-07 00:40 UTC",
+      "signal_id": "b892b61489a4df4f",
+      "headline": "Samsung\u2019s Soaring Profit Fails to Impress After AI Chip Rally",
+      "published_at": "2026-07-07 01:38 UTC",
       "mode": "live",
       "results": {
         "wix": {
           "platform": "wix",
           "status": "published_url_unavailable",
           "url": "",
-          "external_id": "855c675e-6872-437f-a2af-a31084eb4459",
+          "external_id": "8a0d554e-1701-43a1-bc8f-9c5cabdd3950",
           "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
           "raw_response_path": null
         },
@@ -362,68 +362,68 @@
           "platform": "linkedin",
           "status": "PUBLISHED",
           "url": "https://www.linkedin.com/feed/",
-          "external_id": "6a4c4ae71a0dd448ab31381f",
+          "external_id": "6a4c586f32616c30da9b7b8a",
           "error_message": null,
           "raw_response_path": "(with image, via Zernio)"
         },
         "facebook": {
           "platform": "facebook",
           "status": "PUBLISHED",
-          "url": "https://www.facebook.com/1219637131228622_122115860433356169",
-          "external_id": "1219637131228622_122115860433356169",
+          "url": "https://www.facebook.com/1219637131228622_122115866463356169",
+          "external_id": "1219637131228622_122115866463356169",
           "error_message": null,
           "raw_response_path": null
         },
         "instagram": {
           "platform": "instagram",
           "status": "PUBLISHED",
-          "url": "https://www.instagram.com/p/DaeM1jknF0L/",
-          "external_id": "18116830249895555",
+          "url": "https://www.instagram.com/p/DaeTcTNjtUP/",
+          "external_id": "17882150568457592",
           "error_message": null,
           "raw_response_path": null
         },
         "threads": {
           "platform": "threads",
           "status": "PUBLISHED",
-          "url": "https://www.threads.net/t/18083030831208981",
-          "external_id": "18083030831208981",
+          "url": "https://www.threads.net/t/18037104329806244",
+          "external_id": "18037104329806244",
           "error_message": null,
           "raw_response_path": null
         },
         "telegram": {
           "platform": "telegram",
           "status": "PUBLISHED",
-          "url": "https://t.me/never_blank_inneros/26",
-          "external_id": "26",
+          "url": "https://t.me/never_blank_inneros/27",
+          "external_id": "27",
           "error_message": null,
           "raw_response_path": null
         }
       },
       "wix_url": "",
-      "generated_file": "reports/content_packages/d0726eb3915b23c0_generated.json",
+      "generated_file": "reports/content_packages/b892b61489a4df4f_generated.json",
       "platform_images": {
         "blog": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384658/never-blank/posts/research/d0726eb3915b23c0/blog/1783384657.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388122/never-blank/posts/research/b892b61489a4df4f/blog/1783388121.png",
           "size": "1920x1080"
         },
         "linkedin": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384662/never-blank/posts/research/d0726eb3915b23c0/linkedin/1783384662.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388123/never-blank/posts/research/b892b61489a4df4f/linkedin/1783388123.png",
           "size": "1200x628"
         },
         "facebook": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384666/never-blank/posts/research/d0726eb3915b23c0/facebook/1783384666.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388123/never-blank/posts/research/b892b61489a4df4f/facebook/1783388123.png",
           "size": "1200x628"
         },
         "instagram": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384673/never-blank/posts/research/d0726eb3915b23c0/instagram/1783384672.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388124/never-blank/posts/research/b892b61489a4df4f/instagram/1783388124.png",
           "size": "1080x1350"
         },
         "threads": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384678/never-blank/posts/research/d0726eb3915b23c0/threads/1783384678.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388125/never-blank/posts/research/b892b61489a4df4f/threads/1783388125.png",
           "size": "1080x1080"
         },
         "stories": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384686/never-blank/posts/research/d0726eb3915b23c0/stories/1783384685.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388126/never-blank/posts/research/b892b61489a4df4f/stories/1783388126.png",
           "size": "1080x1920"
         }
       },
@@ -431,9 +431,9 @@
       "telegram_signature": true,
       "wix_cover_image_attached": false,
       "image_design_version": "",
-      "image_hook_text": "Memory chips surge as AI demand accelerates.",
-      "image_visual_family": "contrast_waves",
-      "image_method": "gpt-image-1"
+      "image_hook_text": "Samsung\u2019s profits just soared 19x\u2014and the market shrugged.",
+      "image_visual_family": "dark_insight_card",
+      "image_method": "quote_card"
     }
   ]
 }

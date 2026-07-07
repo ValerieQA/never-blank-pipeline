@@ -91,6 +91,36 @@
       "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384764/never-blank/posts/research/cc2cebb8591007d6/blog/1783384764.png",
       "source_topic": "Intel-Backed AI Chip and Software Maker Syntiant Files for IPO",
       "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-07T01:35:27Z",
+      "content_slug": "research/b892b61489a4df4f",
+      "visual_family": "dark_insight_card",
+      "dominant_palette": "deep_navy",
+      "hook_text": "Samsung\u2019s profits just soared 19x\u2014and the market shrugged.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388122/never-blank/posts/research/b892b61489a4df4f/blog/1783388121.png",
+      "source_topic": "Samsung\u2019s Soaring Profit Fails to Impress After AI Chip Rally",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-07T01:36:23Z",
+      "content_slug": "research/f7612e66508ede43",
+      "visual_family": "constellation_networks",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "Investors question AI growth sustainability despite record profits.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388155/never-blank/posts/research/f7612e66508ede43/blog/1783388155.png",
+      "source_topic": "Samsung\u2019s Soaring Profit Fails to Lift Shares",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-07T01:37:22Z",
+      "content_slug": "research/0cd638363f03e9a3",
+      "visual_family": "particle_flow",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "Socializing time down 20% since 2003.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388214/never-blank/posts/research/0cd638363f03e9a3/blog/1783388214.png",
+      "source_topic": "Americans of all ages are spending less time socializing",
+      "reuse_count": 1
     }
   ]
 }

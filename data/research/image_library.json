@@ -473,5 +473,35 @@
     "visual_family": "sand_pause_card",
     "design_version": "3",
     "hook_text": "The IPO is the easy part — surviving the next quarter is where most AI chipmakers stumble."
+  },
+  "b892b61489a4df4f": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388122/never-blank/posts/research/b892b61489a4df4f/blog/1783388121.png",
+    "signal_type": "technology adoption",
+    "headline": "Samsung’s Soaring Profit Fails to Impress After AI Chip Rally",
+    "created_at": "2026-07-07",
+    "method": "quote_card",
+    "visual_family": "dark_insight_card",
+    "design_version": "3",
+    "hook_text": "Samsung’s profits just soared 19x—and the market shrugged."
+  },
+  "f7612e66508ede43": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388155/never-blank/posts/research/f7612e66508ede43/blog/1783388155.png",
+    "signal_type": "business trust",
+    "headline": "Samsung’s Soaring Profit Fails to Lift Shares",
+    "created_at": "2026-07-07",
+    "method": "gpt-image-1",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "Investors question AI growth sustainability despite record profits."
+  },
+  "0cd638363f03e9a3": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388214/never-blank/posts/research/0cd638363f03e9a3/blog/1783388214.png",
+    "signal_type": "consumer behavior",
+    "headline": "Americans of all ages are spending less time socializing",
+    "created_at": "2026-07-07",
+    "method": "gpt-image-1",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "Socializing time down 20% since 2003."
   }
 }
