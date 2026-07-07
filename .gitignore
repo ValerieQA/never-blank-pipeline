@@ -19,8 +19,7 @@ data/research/*
 !data/research/image_library.json
 data/research/archive/*
 !data/research/archive/.gitkeep
-# logo is a tracked asset — must NOT be ignored
-assets/fonts/
+# logo and fonts are tracked assets — must NOT be ignored
 __pycache__/
 *.py[cod]
 .venv/

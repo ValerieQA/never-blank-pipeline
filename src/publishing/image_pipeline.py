@@ -469,10 +469,28 @@ def choose_visual_family(
 
 # ── Font loader ────────────────────────────────────────────────────────────────
 
-def _find_font(size: int) -> ImageFont.FreeTypeFont:
+def _find_font(size: int, weight: int = 600) -> ImageFont.FreeTypeFont:
+    """
+    Load a font at the given pixel size and weight.
+
+    Bundles Inter (assets/fonts/Inter-Variable.ttf, SIL OFL licensed - see
+    assets/fonts/OFL.txt) as the primary font, so rendering is byte-for-byte
+    identical across every environment this pipeline runs in. Previously this
+    function only found system fonts, which differ between a macOS dev
+    machine and the GitHub Actions Ubuntu runner - different font metrics
+    silently changed word-wrap line counts and, in production, cropped a word
+    off a photo overlay hook ("Shifting production: $3.6B moves from Mexico
+    to Texas." rendered without "Texas.").
+
+    weight (100-900) uses Inter's variable "wght" axis instead of hardcoding
+    Bold everywhere. The old system-font fallback list only ever had Bold
+    (700+) available, which is why headlines read as heavy/poster-like
+    rather than calm and editorial - default 600 (semibold) has presence
+    without shouting.
+    """
     from glob import glob
-    candidates = [
-        str(REPO_ROOT / "assets" / "fonts" / "*.ttf"),
+    bundled_candidates = sorted(glob(str(REPO_ROOT / "assets" / "fonts" / "*.ttf")))
+    system_fallbacks = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
         "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
@@ -481,18 +499,29 @@ def _find_font(size: int) -> ImageFont.FreeTypeFont:
         "/Library/Fonts/Arial Bold.ttf",
         "/Library/Fonts/Arial.ttf",
     ]
-    for candidate in candidates:
-        if "*" in candidate:
-            for match in sorted(glob(candidate)):
-                try:
-                    return ImageFont.truetype(match, size)
-                except Exception:
-                    continue
-        elif os.path.exists(candidate):
+    for path in bundled_candidates + [p for p in system_fallbacks if os.path.exists(p)]:
+        try:
+            font = ImageFont.truetype(path, size)
+        except Exception:
+            continue
+        try:
+            axes = font.get_variation_axes()
+        except Exception:
+            axes = None
+        if axes:
+            values = []
+            for axis in axes:
+                if axis["name"] == b"Weight":
+                    values.append(max(axis["minimum"], min(weight, axis["maximum"])))
+                elif axis["name"] == b"Optical size":
+                    values.append(max(axis["minimum"], min(size * 0.3, axis["maximum"])))
+                else:
+                    values.append(axis["default"])
             try:
-                return ImageFont.truetype(candidate, size)
+                font.set_variation_by_axes(values)
             except Exception:
-                continue
+                pass
+        return font
     return ImageFont.load_default()
 
 
@@ -527,6 +556,7 @@ def _fit_text_dynamic(
     font_start: int = 80,
     font_min: int = 28,
     max_lines: int = 3,
+    weight: int = 600,
 ) -> tuple["ImageFont.FreeTypeFont", list[str]]:
     """
     Find the largest font size where `text` wraps into ≤ max_lines lines
@@ -540,7 +570,7 @@ def _fit_text_dynamic(
     the last word). The fallback now always returns every wrapped line.
     """
     for size in range(font_start, font_min - 1, -4):
-        font  = _find_font(size)
+        font  = _find_font(size, weight=weight)
         lines = _wrap_text(text, font, max_w)
         if len(lines) <= max_lines:
             line_h    = int(size * 1.30)
@@ -549,7 +579,7 @@ def _fit_text_dynamic(
                 return font, lines
     # Hard fallback — smallest font, but keep every line (may exceed
     # max_lines/max_h in extreme cases; that is preferable to dropping words).
-    font  = _find_font(font_min)
+    font  = _find_font(font_min, weight=weight)
     lines = _wrap_text(text, font, max_w)
     return font, lines
 
@@ -557,6 +587,21 @@ def _fit_text_dynamic(
 def _hex_to_rgb(hexcolor: str) -> tuple[int, int, int]:
     hexcolor = hexcolor.lstrip("#")
     return tuple(int(hexcolor[i:i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
+
+
+# Families whose _generate_programmatic_base texture puts a fixed-position
+# focal element right where centered text also wants to sit -
+# mountains_depth_layers' horizon glow and focus_rings' rings both sit at
+# (~0.5w, ~0.47h); contrast_waves draws a full-width Electric Blue horizon
+# line at a fixed 0.60h that lands right on the separator/signature line.
+# Fighting that geometry (dimming harder, etc.) just produces the "text
+# pasted over a blob/line" look this was criticized for. Instead these
+# families get a different composition: text anchored to the lower third,
+# so the focal element reads as a real image occupying the top of the frame
+# - like a magazine cover - rather than competing with the headline for the
+# same spot. Every other family spreads its detail across the frame
+# (diagonal beams, distributed nodes) and works fine with centered text.
+_CENTER_FOCAL_FAMILIES = {"mountains_depth_layers", "focus_rings", "contrast_waves"}
 
 
 # ── Quote card composition (pure typography, no photo) ─────────────────────────
@@ -573,15 +618,21 @@ def compose_quote_card(
     rotation, alternating with the 6 photo visual families for feed variety
     (see CARD_BACKGROUNDS).
 
-    Dark cards (dark_insight_card) get an atmospheric backdrop: a dimmed
-    _generate_programmatic_base(texture_family) render — the same layered-
-    depth / light-path / particle-flow / constellation / focus-ring / wave
-    textures used for photo posts — instead of a flat color fill. A flat
-    solid-navy card read as generic "dark SaaS placeholder" rather than
-    Never Blank's brand system (feedback from the first live cards,
-    2026-07-06). Light cards (light_message_card, sand_pause_card) stay flat
-    by design — visual_system.yaml's own rhythm rules use them to "let the
-    grid breathe" against the busier dark/photo posts.
+    Dark cards (dark_insight_card) get a composed atmospheric background —
+    a two-tone gradient wash blended with a _generate_programmatic_base
+    texture, darkened only in the band behind the text (not the whole
+    canvas) — instead of a flat color fill with a uniformly dimmed texture
+    pasted behind it. Direct feedback on the first live cards (2026-07-06)
+    was that the result still read as "flat dark rectangle + small
+    decoration behind the text," headlines were oversized/heavy (system
+    Bold at ~7.5% of width), and most of the canvas was near-black when it
+    didn't need to be. This version aims for depth/atmosphere across the
+    whole frame, calmer semibold type with real negative space, and a
+    background that reads as designed around the headline rather than
+    pasted underneath it. Light cards (light_message_card, sand_pause_card)
+    keep a gentle two-tone wash of their own but stay overall flat by
+    design — visual_system.yaml's rhythm rules use them to "let the grid
+    breathe" against busier dark/photo posts.
 
     Known limitation: assets/logo/never-blank-logo.png is a light-colored mark
     designed for dark backgrounds. On light_message_card / sand_pause_card
@@ -595,8 +646,8 @@ def compose_quote_card(
     # overlay where a short hook keeps the text from crowding the image.
     # trim_hook_text() always clamps to HOOK_MAX_WORDS_HARD (10) internally
     # regardless of the max_words argument, so it's not used here — full
-    # sentences are fine; _fit_text_dynamic (max_lines=5) shrinks the font or
-    # truncates if something is genuinely too long for the card.
+    # sentences are fine; _fit_text_dynamic shrinks the font or wraps to
+    # more lines if something is genuinely too long for the card.
     hook = hook_text.strip()
 
     palette_group, color_name = CARD_BACKGROUNDS.get(card_type, ("dark_core", "deep_navy"))
@@ -604,29 +655,97 @@ def compose_quote_card(
     bg_color = _hex_to_rgb(bg_hex)
     is_dark  = palette_group == "dark_core"
     text_color  = (255, 255, 255) if is_dark else (11, 19, 35)
-    label_color = (170, 190, 220) if is_dark else (90, 100, 120)
+    label_color = (185, 200, 225) if is_dark else (90, 100, 120)
+
+    if is_dark:
+        top_c = _hex_to_rgb(vs["palette"]["dark_core"]["colors"].get("steel_blue", "#1D2E4A"))
+        bot_c = bg_color
+    else:
+        top_c = _hex_to_rgb(vs["palette"]["light_accents"]["colors"].get("white", "#FFFFFF"))
+        bot_c = bg_color
+
+    # Two-tone gradient wash — depth from the first pixel, never a flat fill.
+    wash = Image.new("RGB", (target_w, target_h))
+    wash_draw = ImageDraw.Draw(wash)
+    for y in range(target_h):
+        t = y / target_h
+        color = tuple(int(top_c[i] * (1 - t) + bot_c[i] * t) for i in range(3))
+        wash_draw.line([(0, y), (target_w, y)], fill=color)
 
     if is_dark:
         texture_bytes = _generate_programmatic_base(texture_family)
         texture_img   = Image.open(BytesIO(texture_bytes)).convert("RGB")
-        canvas        = resize_for_platform(texture_img, platform)
-        # Dim the texture so the hook text — the actual content — stays the
-        # clear focal point, not competing visual noise.
-        dim = Image.new("RGBA", (target_w, target_h), (*bg_color, 35))
-        canvas = Image.alpha_composite(canvas.convert("RGBA"), dim).convert("RGB")
+        textured      = resize_for_platform(texture_img, platform)
+        # Blend the real texture into the wash at real strength — it should
+        # read as atmosphere, not a faint decoration glimpsed through a dimmer.
+        canvas = Image.blend(wash, textured, 0.6)
+
+        # Most _generate_programmatic_base families concentrate their detail
+        # in the vertical middle of a 1024x1024 square (e.g. mountain bands
+        # sit at y 0.32-0.72) — cropped into a taller platform frame, that
+        # leaves the top third empty gradient with no atmosphere at all. A
+        # soft off-center accent glow fills that otherwise-blank space so the
+        # whole frame reads as composed, not just the middle third.
+        glow = Image.new("RGBA", (target_w, target_h), (0, 0, 0, 0))
+        glow_draw = ImageDraw.Draw(glow)
+        gx, gy = int(target_w * 0.78), int(target_h * 0.14)
+        max_r  = int(target_w * 0.55)
+        for r in range(max_r, 0, -6):
+            frac  = r / max_r
+            alpha = int((1 - frac) ** 2 * 46)
+            glow_draw.ellipse(
+                [gx - r, gy - r, gx + r, gy + r],
+                fill=(*ELECTRIC_BLUE, alpha),
+            )
+        canvas = Image.alpha_composite(canvas.convert("RGBA"), glow).convert("RGB")
     else:
-        canvas = Image.new("RGB", (target_w, target_h), bg_color)
+        canvas = wash
+
+    # Layout choice: fight the geometry, or change the composition? For
+    # families whose one focal element sits dead-center, move the text to
+    # the lower third instead (see _CENTER_FOCAL_FAMILIES above) so the
+    # image and the headline occupy different space rather than the same one.
+    bottom_anchored = is_dark and texture_family in _CENTER_FOCAL_FAMILIES
+
+    if bottom_anchored:
+        text_zone_top    = int(target_h * 0.60)
+        text_zone_bottom = int(target_h * 0.94)
+    else:
+        text_zone_top    = int(target_h * 0.22)
+        text_zone_bottom = int(target_h * 0.74)
+
+    # Contrast band: darken (or for light cards, lighten) only the vertical
+    # zone the text sits in, fading in/out — so legibility doesn't require
+    # dimming the entire frame. The rest of the canvas — the image itself,
+    # for bottom_anchored layouts — stays richer/brighter, uncropped.
+    band = Image.new("RGBA", (target_w, target_h), (0, 0, 0, 0))
+    band_draw = ImageDraw.Draw(band)
+    band_color = bot_c if is_dark else (255, 255, 255)
+    band_strength = 150 if is_dark else 110
+    fade_px = int(target_h * 0.08)
+    for y in range(text_zone_top, text_zone_bottom):
+        edge_dist = min(y - text_zone_top, text_zone_bottom - y)
+        fade = min(edge_dist / fade_px, 1.0)
+        band_draw.line([(0, y), (target_w, y)], fill=(*band_color, int(band_strength * fade)))
+    canvas = Image.alpha_composite(canvas.convert("RGBA"), band).convert("RGB")
     draw = ImageDraw.Draw(canvas)
 
-    padding    = max(56, int(target_w * 0.09))
+    # Generous negative space and calmer type size — the previous version
+    # started at ~7.5% of width in system Bold, which read as an oversized
+    # poster rather than editorial type. Semibold (weight=600) at a smaller
+    # scale, with more line-height, gives the headline room to breathe.
+    padding    = max(64, int(target_w * 0.13))
     max_tw     = target_w - padding * 2
-    max_th     = int(target_h * 0.5)
-    font_start = max(32, int(target_w * 0.075))
+    max_th     = int((text_zone_bottom - text_zone_top) * 0.82)
+    font_start = max(28, int(target_w * 0.05))
 
-    font, lines = _fit_text_dynamic(hook, max_tw, max_th, font_start=font_start, max_lines=5)
-    line_h  = int(font.size * 1.30)
+    font, lines = _fit_text_dynamic(
+        hook, max_tw, max_th, font_start=font_start, font_min=24, max_lines=5, weight=600,
+    )
+    line_h  = int(font.size * 1.42)
     block_h = len(lines) * line_h
-    y_start = (target_h - block_h) // 2 - int(target_h * 0.04)
+    zone_center = (text_zone_top + text_zone_bottom) // 2
+    y_start = zone_center - block_h // 2
 
     for i, line in enumerate(lines):
         bbox   = draw.textbbox((0, 0), line, font=font)
@@ -634,20 +753,20 @@ def compose_quote_card(
         x      = (target_w - line_w) // 2
         draw.text((x, y_start + i * line_h), line, font=font, fill=text_color)
 
-    sep_y = y_start + block_h + max(20, int(target_h * 0.03))
-    sep_w = min(int(target_w * 0.16), 160)
+    sep_y = y_start + block_h + max(28, int(target_h * 0.035))
+    sep_w = min(int(target_w * 0.14), 140)
     draw.line(
         [(target_w // 2 - sep_w // 2, sep_y), (target_w // 2 + sep_w // 2, sep_y)],
-        fill=ELECTRIC_BLUE, width=3,
+        fill=ELECTRIC_BLUE, width=2,
     )
 
-    label_size = max(20, int(target_w * 0.024))
-    font_label = _find_font(label_size)
+    label_size = max(18, int(target_w * 0.02))
+    font_label = _find_font(label_size, weight=500)
     label      = "NEVER BLANK"
     lbbox      = draw.textbbox((0, 0), label, font=font_label)
     lw         = lbbox[2] - lbbox[0]
     draw.text(
-        ((target_w - lw) // 2, sep_y + max(12, int(target_h * 0.015))),
+        ((target_w - lw) // 2, sep_y + max(16, int(target_h * 0.018))),
         label, font=font_label, fill=label_color,
     )
 
