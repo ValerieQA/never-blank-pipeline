@@ -121,6 +121,36 @@
       "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783388214/never-blank/posts/research/0cd638363f03e9a3/blog/1783388214.png",
       "source_topic": "Americans of all ages are spending less time socializing",
       "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-07T10:57:43Z",
+      "content_slug": "research/e18318799cd5b03e",
+      "visual_family": "light_paths",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "46% drop reveals AI strategy missteps.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783421837/never-blank/posts/research/e18318799cd5b03e/blog/1783421836.png",
+      "source_topic": "SAP\u2019s Senior Reshuffle Follows AI-Induced Stock Rout",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-07T10:57:55Z",
+      "content_slug": "research/e9f052e05a7ef893",
+      "visual_family": "light_message_card",
+      "dominant_palette": "soft_white",
+      "hook_text": "Samsung delivered record profits\u2014and the market yawned.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783421871/never-blank/posts/research/e9f052e05a7ef893/blog/1783421871.png",
+      "source_topic": "Samsung\u2019s Record Profit Fails to Impress After AI Chip Rally",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-07T10:58:50Z",
+      "content_slug": "research/43b4978d775f9a59",
+      "visual_family": "mountains_depth_layers",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "AMD's GPUs steer Turing into the future of autonomy.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783421905/never-blank/posts/research/43b4978d775f9a59/blog/1783421904.png",
+      "source_topic": "Self-Driving Startup Turing Gets AMD Backing and GPUs",
+      "reuse_count": 1
     }
   ]
 }

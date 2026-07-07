@@ -503,5 +503,35 @@
     "visual_family": "particle_flow",
     "design_version": "3",
     "hook_text": "Socializing time down 20% since 2003."
+  },
+  "e18318799cd5b03e": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783421837/never-blank/posts/research/e18318799cd5b03e/blog/1783421836.png",
+    "signal_type": "AI adoption",
+    "headline": "SAP’s Senior Reshuffle Follows AI-Induced Stock Rout",
+    "created_at": "2026-07-07",
+    "method": "gpt-image-1",
+    "visual_family": "light_paths",
+    "design_version": "3",
+    "hook_text": "46% drop reveals AI strategy missteps."
+  },
+  "e9f052e05a7ef893": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783421871/never-blank/posts/research/e9f052e05a7ef893/blog/1783421871.png",
+    "signal_type": "AI adoption",
+    "headline": "Samsung’s Record Profit Fails to Impress After AI Chip Rally",
+    "created_at": "2026-07-07",
+    "method": "quote_card",
+    "visual_family": "light_message_card",
+    "design_version": "3",
+    "hook_text": "Samsung delivered record profits—and the market yawned."
+  },
+  "43b4978d775f9a59": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783421905/never-blank/posts/research/43b4978d775f9a59/blog/1783421904.png",
+    "signal_type": "technology adoption",
+    "headline": "Self-Driving Startup Turing Gets AMD Backing and GPUs",
+    "created_at": "2026-07-07",
+    "method": "gpt-image-1",
+    "visual_family": "mountains_depth_layers",
+    "design_version": "3",
+    "hook_text": "AMD's GPUs steer Turing into the future of autonomy."
   }
 }
