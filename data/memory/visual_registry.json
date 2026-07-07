@@ -61,6 +61,36 @@
       "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783370636/never-blank/posts/research/a4814be1ee398b24/blog/1783370636.png",
       "source_topic": "Startup bets that investors want to trade compute like a commodity",
       "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-07T00:38:06Z",
+      "content_slug": "research/d0726eb3915b23c0",
+      "visual_family": "contrast_waves",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "Memory chips surge as AI demand accelerates.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384658/never-blank/posts/research/d0726eb3915b23c0/blog/1783384657.png",
+      "source_topic": "US investors will soon get access to SK Hynix, another memory maker riding the AI boom",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-07T00:39:17Z",
+      "content_slug": "research/239339df45e7c952",
+      "visual_family": "contrast_waves",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "19-fold profit surge, yet shares remain stagnant.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384730/never-blank/posts/research/239339df45e7c952/blog/1783384730.png",
+      "source_topic": "Samsung\u2019s Soaring Profit Fails to Lift Shares After AI Rally",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-07T00:39:29Z",
+      "content_slug": "research/cc2cebb8591007d6",
+      "visual_family": "sand_pause_card",
+      "dominant_palette": "sand",
+      "hook_text": "The IPO is the easy part \u2014 surviving the next quarter is where most AI chipmakers stumble.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384764/never-blank/posts/research/cc2cebb8591007d6/blog/1783384764.png",
+      "source_topic": "Intel-Backed AI Chip and Software Maker Syntiant Files for IPO",
+      "reuse_count": 1
     }
   ]
 }

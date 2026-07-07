@@ -443,5 +443,35 @@
     "visual_family": "focus_rings",
     "design_version": "3",
     "hook_text": "$33M to trade compute like a commodity."
+  },
+  "d0726eb3915b23c0": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384658/never-blank/posts/research/d0726eb3915b23c0/blog/1783384657.png",
+    "signal_type": "AI adoption",
+    "headline": "US investors will soon get access to SK Hynix, another memory maker riding the AI boom",
+    "created_at": "2026-07-07",
+    "method": "gpt-image-1",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Memory chips surge as AI demand accelerates."
+  },
+  "239339df45e7c952": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384730/never-blank/posts/research/239339df45e7c952/blog/1783384730.png",
+    "signal_type": "AI adoption",
+    "headline": "Samsung’s Soaring Profit Fails to Lift Shares After AI Rally",
+    "created_at": "2026-07-07",
+    "method": "gpt-image-1",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "19-fold profit surge, yet shares remain stagnant."
+  },
+  "cc2cebb8591007d6": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783384764/never-blank/posts/research/cc2cebb8591007d6/blog/1783384764.png",
+    "signal_type": "AI adoption",
+    "headline": "Intel-Backed AI Chip and Software Maker Syntiant Files for IPO",
+    "created_at": "2026-07-07",
+    "method": "quote_card",
+    "visual_family": "sand_pause_card",
+    "design_version": "3",
+    "hook_text": "The IPO is the easy part — surviving the next quarter is where most AI chipmakers stumble."
   }
 }
