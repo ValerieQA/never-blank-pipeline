@@ -199,6 +199,16 @@ business_translation that is generic enough to paste under a different company's
 headline unchanged is a failure - it must depend on the specific narrative_spine
 and discovery above it.
 
+FORMATTING — PARAGRAPH SPACING (presentation only, changes no content decision):
+Put a blank line between paragraphs. Keep paragraphs short enough to read on a
+phone without feeling like a wall of text - roughly 2-4 sentences for long,
+reading, and medium. For instagram, one sentence per paragraph (this is the
+same one-idea-per-paragraph rhythm already required above - make the blank
+lines between them explicit rather than running them together). For short,
+keep it a single unbroken block - its length is too small for internal breaks.
+This never changes which sentences appear or their order, only where the
+blank lines between them fall.
+
 Never invent evidence, facts, or claims not present in the blocks provided.
 The signature block must appear verbatim (it is always `full`) at the very end.
 

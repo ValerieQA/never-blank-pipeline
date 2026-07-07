@@ -25,6 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.utils.logger import get_logger
 from src.editorial.pipeline import generate_article, ArticleGenerationError
+from src.publishing import formatting
+from src.publishing.hashtags import generate_hashtags
 from src.publishing.base import DraftPackage
 from src.publishing.result import PublishResult, PublishStatus
 from src.publishing.wix import WixPublisher
@@ -90,17 +92,10 @@ def ensure_never_blank_signature(text: str, signal: dict) -> str:
 # Story Assembly -> Never Blank Voice -> Platform Composer. See
 # docs/EDITORIAL_ENGINE_V2.md and docs/NARRATIVE_SPINE.md.
 #
-# Note: hashtags are intentionally not generated here. EDITORIAL_ENGINE_V2.md does
-# not define a hashtag concept for any platform — the old per-platform prompts
-# added them ad hoc. Revisit if visibility data shows this matters.
-
-def _source_footer(signal: dict) -> str:
-    source_name = signal.get("SOURCE_NAME", "")
-    source_url  = signal.get("SOURCE_URL", "")
-    if not source_url:
-        return ""
-    return f"\n\n## Source\n\n[{source_name or source_url}]({source_url})"
-
+# Presentation/platform-dressing (bold signature, source attribution, hashtags)
+# is applied here, not inside the Editorial Engine — see src/publishing/formatting.py
+# and src/publishing/hashtags.py. The article's thinking is Editorial Engine's job;
+# platform dressing is the Publisher's.
 
 def _insert_wix_url(text: str, wix_url: str, signature: str) -> str:
     """Insert the published Wix URL just before the signature line, or append
@@ -204,13 +199,38 @@ def publish_packages(
         platforms = article["platforms"]
         signature = article["structured_article"].get("signature", "")
 
-        wix_url        = ""
-        blog_body      = platforms["long"]["body"] + _source_footer(signal)
-        linkedin_text  = platforms["medium"]["body"]
-        facebook_text  = platforms["medium"]["body"]
+        source_name = signal.get("SOURCE_NAME", "")
+        source_url  = signal.get("SOURCE_URL", "")
+
+        wix_url   = ""
+
+        blog_body = platforms["long"]["body"] + formatting.source_line(source_name, source_url, "blog_markdown")
+        blog_body = formatting.bold_signature_prefix(blog_body, "markdown")
+
+        linkedin_text = platforms["medium"]["body"]
+        linkedin_text = formatting.bold_signature_prefix(linkedin_text, "unicode")
+        linkedin_text += formatting.source_line(source_name, source_url, "bare_url")
+        linkedin_text = formatting.append_hashtags(linkedin_text, generate_hashtags(signal, "linkedin"))
+
+        facebook_text = platforms["medium"]["body"]
+        facebook_text = formatting.bold_signature_prefix(facebook_text, "unicode")
+        facebook_text += formatting.source_line(source_name, source_url, "bare_url")
+        facebook_text = formatting.append_hashtags(facebook_text, generate_hashtags(signal, "facebook"))
+
         instagram_text = platforms["instagram"]["body"]
-        threads_seq    = [platforms["short"]["body"]]
-        telegram_text  = platforms["reading"]["body"]
+        instagram_text = formatting.bold_signature_prefix(instagram_text, "unicode")
+        instagram_text = formatting.append_hashtags(instagram_text, generate_hashtags(signal, "instagram"))
+
+        threads_body = platforms["short"]["body"]
+        threads_body = formatting.bold_signature_prefix(threads_body, "unicode")
+        threads_body = formatting.append_hashtags(threads_body, generate_hashtags(signal, "threads"))
+        threads_seq  = [threads_body]
+
+        # telegram_text stays unbolded/unattributed here — _insert_wix_url() below
+        # matches the raw `signature` string verbatim once Wix publishes. Bold +
+        # source are applied right before telegram publishes (telegram is always
+        # last in _PUBLISHERS).
+        telegram_text = platforms["reading"]["body"]
 
         image_url_blog = pimgs.get("blog", {}).get("url") or None
         draft = _build_draft(
@@ -239,8 +259,13 @@ def publish_packages(
             try:
                 if name == "telegram":
                     # Always use the most up-to-date telegram_text (may have been
-                    # regenerated with wix_url after Wix publisher ran)
-                    use_draft.telegram_text = telegram_text
+                    # regenerated with wix_url after Wix publisher ran). Bold +
+                    # source attribution applied last, right before publish, so
+                    # earlier `signature` string matching (_insert_wix_url) still
+                    # works against the unbolded text.
+                    final_telegram_text = formatting.bold_signature_prefix(telegram_text, "telegram")
+                    final_telegram_text += formatting.source_line(source_name, source_url, "telegram")
+                    use_draft.telegram_text = final_telegram_text
                     result = publisher.publish(use_draft, mode, wix_url=wix_url)
                 else:
                     result = publisher.publish(use_draft, mode)
@@ -267,7 +292,7 @@ def publish_packages(
                     platform=name, status=PublishStatus.FAILED, error_message=str(exc),
                 ).to_dict()
 
-        ig_sig  = "Never Blank" in instagram_text
+        ig_sig  = formatting.bold_unicode("Never Blank") in instagram_text
         tg_sig  = "Never Blank" in telegram_text
         wix_cov = "published_without_cover_image" in (results.get("wix", {}).get("error_message") or "")
 

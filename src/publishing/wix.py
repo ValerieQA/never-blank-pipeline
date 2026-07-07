@@ -15,10 +15,26 @@ from src.publishing.result import PublishResult, PublishStatus
 _API = "https://www.wixapis.com"
 
 
+def _parse_bold_runs(text: str) -> list[tuple[str, bool]]:
+    """Split text on **bold** markers into (text, is_bold) runs, in order."""
+    runs = []
+    last = 0
+    for m in re.finditer(r"\*\*(.+?)\*\*", text):
+        if m.start() > last:
+            runs.append((text[last:m.start()], False))
+        runs.append((m.group(1), True))
+        last = m.end()
+    if last < len(text):
+        runs.append((text[last:], False))
+    return runs or [(text, False)]
+
+
 def _md_to_rich_nodes(markdown: str) -> list[dict]:
     """
     Convert Markdown to Wix richContent nodes.
-    Handles H1/H2/H3 headings and paragraph text.
+    Handles H1/H2/H3 headings and paragraph text. **bold** spans within a
+    paragraph become real Wix bold text-decoration nodes; italic/inline-code
+    markers are stripped (not supported by this parser).
     """
     nodes = []
     for block in re.split(r"\n{2,}", markdown.strip()):
@@ -36,13 +52,24 @@ def _md_to_rich_nodes(markdown: str) -> list[dict]:
                 "nodes": [{"type": "TEXT", "textData": {"text": text}}],
             })
         else:
-            # Strip inline markdown (bold/italic) for plain text fallback
-            text = re.sub(r"\*\*(.+?)\*\*", r"\1", block)
-            text = re.sub(r"\*(.+?)\*", r"\1", text)
+            # Strip italic/inline-code markdown (not **bold** - handled below).
+            text = re.sub(r"(?<!\*)\*(?!\*)(.+?)\*(?!\*)", r"\1", block)
             text = re.sub(r"`(.+?)`", r"\1", text)
+
+            text_nodes = []
+            for run_text, is_bold in _parse_bold_runs(text):
+                if not run_text:
+                    continue
+                node = {"type": "TEXT", "textData": {"text": run_text}}
+                if is_bold:
+                    node["textData"]["decorations"] = [{"type": "BOLD"}]
+                text_nodes.append(node)
+            if not text_nodes:
+                text_nodes = [{"type": "TEXT", "textData": {"text": text}}]
+
             nodes.append({
                 "type": "PARAGRAPH",
-                "nodes": [{"type": "TEXT", "textData": {"text": text}}],
+                "nodes": text_nodes,
             })
     return nodes
 
