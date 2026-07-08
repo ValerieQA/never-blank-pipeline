@@ -151,6 +151,36 @@
       "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783421905/never-blank/posts/research/43b4978d775f9a59/blog/1783421904.png",
       "source_topic": "Self-Driving Startup Turing Gets AMD Backing and GPUs",
       "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-08T10:19:31Z",
+      "content_slug": "research/3a9bd0297a166bd4",
+      "visual_family": "contrast_waves",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "A new era for small EVs at $13,995.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505947/never-blank/posts/research/3a9bd0297a166bd4/blog/1783505946.png",
+      "source_topic": "Stellantis to sell small Fiat Topolino EV for $13,995 in U.S.",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-08T10:20:26Z",
+      "content_slug": "research/791e49c0c9495ef3",
+      "visual_family": "focus_rings",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "Rivian's 18% drop signals deeper market concerns.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505997/never-blank/posts/research/791e49c0c9495ef3/blog/1783505997.png",
+      "source_topic": "Rivian stock falls 18% as company sells 75 million shares to raise capital",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-07-08T10:20:36Z",
+      "content_slug": "research/568b28568497d3c8",
+      "visual_family": "sand_pause_card",
+      "dominant_palette": "sand",
+      "hook_text": "It\u2019s easy to raise money when everyone wants to buy you \u2014 but at what cost?",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506031/never-blank/posts/research/568b28568497d3c8/blog/1783506031.png",
+      "source_topic": "AI chip maker SambaNova raises $1B at $11B valuation, 5 months after last mega round",
+      "reuse_count": 1
     }
   ]
 }

@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "3a9bd0297a166bd4",
+  "HEADLINE": "Stellantis to sell small Fiat Topolino EV for $13,995 in U.S.",
+  "prepared_at": "2026-07-08 10:19 UTC",
+  "content": {
+    "blog": {
+      "headline": "Stellantis’ $13,995 Fiat Topolino: Racing to the Bottom or Smart Market Entry?",
+      "angle": "Stellantis bets on aggressive pricing to crack the U.S. EV market → but balancing affordability with brand and profitability remains a tightrope → the response: a quadricycle EV aimed at volume → the lesson: price is a lever, not a strategy."
+    },
+    "linkedin": {
+      "headline": "Everyone loves a $13,995 EV—except the finance team.",
+      "angle": "When automakers slash EV prices to grab market share, it pressures margins and brand value—Stellantis’ Topolino launch exposes the tension between volume and sustainable profitability."
+    },
+    "facebook": {
+      "headline": "A $13,995 electric car in the U.S.? Stellantis is making it happen.",
+      "angle": "Stellantis introduces the Fiat Topolino at a jaw-dropping price, echoing GM’s Bolt strategy—will aggressive pricing win the EV race or burn through profits? What’s your take?"
+    },
+    "instagram": {
+      "headline": "The $13,995 EV Gamble",
+      "angle": "Stellantis’ Topolino challenges the EV market’s pricing norms—but low price tags don’t guarantee long-term wins."
+    },
+    "threads": {
+      "thread_hook": "The EV market is sliding toward rock-bottom prices. But who really wins when everyone’s digging that deep?",
+      "angle": "This thread breaks down Stellantis’ Topolino pricing move, compares it to GM’s Bolt, and reveals why knowing your price floor beats racing to the bottom."
+    },
+    "stories": {
+      "story_question": "Can a $13,995 EV survive beyond the hype?",
+      "angle": "Exploring the tension between aggressive pricing to gain market share and the risks it poses to profitability and brand positioning."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505947/never-blank/posts/research/3a9bd0297a166bd4/blog/1783505946.png",
+        "path": "reports/content_packages/images/3a9bd0297a166bd4_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505950/never-blank/posts/research/3a9bd0297a166bd4/linkedin/1783505950.png",
+        "path": "reports/content_packages/images/3a9bd0297a166bd4_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505954/never-blank/posts/research/3a9bd0297a166bd4/facebook/1783505953.png",
+        "path": "reports/content_packages/images/3a9bd0297a166bd4_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505959/never-blank/posts/research/3a9bd0297a166bd4/instagram/1783505959.png",
+        "path": "reports/content_packages/images/3a9bd0297a166bd4_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505964/never-blank/posts/research/3a9bd0297a166bd4/threads/1783505964.png",
+        "path": "reports/content_packages/images/3a9bd0297a166bd4_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505970/never-blank/posts/research/3a9bd0297a166bd4/stories/1783505970.png",
+        "path": "reports/content_packages/images/3a9bd0297a166bd4_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "A new era for small EVs at $13,995."
+  }
+}

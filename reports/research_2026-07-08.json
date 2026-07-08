@@ -1,0 +1,439 @@
+{
+  "date": "2026-07-08",
+  "candidates_found": 16,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Stellantis to sell small Fiat Topolino EV for $13,995 in U.S.",
+    "Rivian stock falls 18% as company sells 75 million shares to raise capital",
+    "AI chip maker SambaNova raises $1B at $11B valuation, 5 months after last mega r"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "3a9bd0297a166bd4",
+      "headline": "Stellantis to sell small Fiat Topolino EV for $13,995 in U.S.",
+      "published_at": "2026-07-08 10:21 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "792eb72e-0e4a-4eb6-bb86-b6974b619480",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/",
+          "external_id": "6a4e24994b3a246c48be6dfa",
+          "error_message": null,
+          "raw_response_path": "(with image, via Zernio)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "HTTP 500: Please reduce the amount of data you're asking for, then retry your request",
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/Dah0JOaEzY1/",
+          "external_id": "17958491256072740",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18322362409279118",
+          "external_id": "18322362409279118",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/29",
+          "external_id": "29",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/3a9bd0297a166bd4_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505947/never-blank/posts/research/3a9bd0297a166bd4/blog/1783505946.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505950/never-blank/posts/research/3a9bd0297a166bd4/linkedin/1783505950.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505954/never-blank/posts/research/3a9bd0297a166bd4/facebook/1783505953.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505959/never-blank/posts/research/3a9bd0297a166bd4/instagram/1783505959.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505964/never-blank/posts/research/3a9bd0297a166bd4/threads/1783505964.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505970/never-blank/posts/research/3a9bd0297a166bd4/stories/1783505970.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "A new era for small EVs at $13,995.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "gpt-image-1"
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "3a9bd0297a166bd4",
+      "HEADLINE": "Stellantis to sell small Fiat Topolino EV for $13,995 in U.S.",
+      "prepared_at": "2026-07-08 10:19 UTC",
+      "content": {
+        "blog": {
+          "headline": "Stellantis\u2019 $13,995 Fiat Topolino: Racing to the Bottom or Smart Market Entry?",
+          "angle": "Stellantis bets on aggressive pricing to crack the U.S. EV market \u2192 but balancing affordability with brand and profitability remains a tightrope \u2192 the response: a quadricycle EV aimed at volume \u2192 the lesson: price is a lever, not a strategy."
+        },
+        "linkedin": {
+          "headline": "Everyone loves a $13,995 EV\u2014except the finance team.",
+          "angle": "When automakers slash EV prices to grab market share, it pressures margins and brand value\u2014Stellantis\u2019 Topolino launch exposes the tension between volume and sustainable profitability."
+        },
+        "facebook": {
+          "headline": "A $13,995 electric car in the U.S.? Stellantis is making it happen.",
+          "angle": "Stellantis introduces the Fiat Topolino at a jaw-dropping price, echoing GM\u2019s Bolt strategy\u2014will aggressive pricing win the EV race or burn through profits? What\u2019s your take?"
+        },
+        "instagram": {
+          "headline": "The $13,995 EV Gamble",
+          "angle": "Stellantis\u2019 Topolino challenges the EV market\u2019s pricing norms\u2014but low price tags don\u2019t guarantee long-term wins."
+        },
+        "threads": {
+          "thread_hook": "The EV market is sliding toward rock-bottom prices. But who really wins when everyone\u2019s digging that deep?",
+          "angle": "This thread breaks down Stellantis\u2019 Topolino pricing move, compares it to GM\u2019s Bolt, and reveals why knowing your price floor beats racing to the bottom."
+        },
+        "stories": {
+          "story_question": "Can a $13,995 EV survive beyond the hype?",
+          "angle": "Exploring the tension between aggressive pricing to gain market share and the risks it poses to profitability and brand positioning."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505947/never-blank/posts/research/3a9bd0297a166bd4/blog/1783505946.png",
+            "path": "reports/content_packages/images/3a9bd0297a166bd4_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505950/never-blank/posts/research/3a9bd0297a166bd4/linkedin/1783505950.png",
+            "path": "reports/content_packages/images/3a9bd0297a166bd4_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505954/never-blank/posts/research/3a9bd0297a166bd4/facebook/1783505953.png",
+            "path": "reports/content_packages/images/3a9bd0297a166bd4_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505959/never-blank/posts/research/3a9bd0297a166bd4/instagram/1783505959.png",
+            "path": "reports/content_packages/images/3a9bd0297a166bd4_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505964/never-blank/posts/research/3a9bd0297a166bd4/threads/1783505964.png",
+            "path": "reports/content_packages/images/3a9bd0297a166bd4_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505970/never-blank/posts/research/3a9bd0297a166bd4/stories/1783505970.png",
+            "path": "reports/content_packages/images/3a9bd0297a166bd4_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "A new era for small EVs at $13,995."
+      }
+    },
+    {
+      "SIGNAL_ID": "791e49c0c9495ef3",
+      "HEADLINE": "Rivian stock falls 18% as company sells 75 million shares to raise capital",
+      "prepared_at": "2026-07-08 10:20 UTC",
+      "content": {
+        "blog": {
+          "headline": "Rivian\u2019s 75 Million Share Sale: When Capital Meets Confidence",
+          "angle": "Rivian\u2019s need to raise capital clashes with shareholder value, prompting a communication challenge that reveals how timing and transparency shape investor trust."
+        },
+        "linkedin": {
+          "headline": "Rivian\u2019s stock plunged 18% after selling 75 million shares\u2014what went wrong?",
+          "angle": "A sharp stock rise invites capital raises, but mismanaging investor expectations can erode the very confidence founders rely on."
+        },
+        "facebook": {
+          "headline": "Rivian\u2019s stock soared, then dropped 18% after a massive share sale. How do you raise cash without tanking trust?",
+          "angle": "Rivian\u2019s capital raise after a strong stock run triggered a sell-off\u2014what\u2019s the balance between funding growth and preserving investor faith?"
+        },
+        "instagram": {
+          "headline": "When Cash Calls, Trust Is on the Line",
+          "angle": "Rivian\u2019s stock dip after a big share sale shows that raising capital isn\u2019t just about money\u2014it\u2019s about managing investor belief."
+        },
+        "threads": {
+          "thread_hook": "Rivian\u2019s stock jumped, then crashed 18% after selling 75 million shares. The real fallout? Investor trust.",
+          "angle": "This thread breaks down why timing and communication during capital raises matter more than the dollars raised\u2014founders, take note."
+        },
+        "stories": {
+          "story_question": "Can you raise capital without killing your stock price?",
+          "angle": "Exploring the tension between securing funds and maintaining market confidence when founders cash in on optimism."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505997/never-blank/posts/research/791e49c0c9495ef3/blog/1783505997.png",
+            "path": "reports/content_packages/images/791e49c0c9495ef3_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506001/never-blank/posts/research/791e49c0c9495ef3/linkedin/1783506001.png",
+            "path": "reports/content_packages/images/791e49c0c9495ef3_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506005/never-blank/posts/research/791e49c0c9495ef3/facebook/1783506005.png",
+            "path": "reports/content_packages/images/791e49c0c9495ef3_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506012/never-blank/posts/research/791e49c0c9495ef3/instagram/1783506012.png",
+            "path": "reports/content_packages/images/791e49c0c9495ef3_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506018/never-blank/posts/research/791e49c0c9495ef3/threads/1783506018.png",
+            "path": "reports/content_packages/images/791e49c0c9495ef3_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506025/never-blank/posts/research/791e49c0c9495ef3/stories/1783506025.png",
+            "path": "reports/content_packages/images/791e49c0c9495ef3_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "focus_rings",
+        "hook_text": "Rivian's 18% drop signals deeper market concerns."
+      }
+    },
+    {
+      "SIGNAL_ID": "568b28568497d3c8",
+      "HEADLINE": "AI chip maker SambaNova raises $1B at $11B valuation, 5 months after last mega round",
+      "prepared_at": "2026-07-08 10:20 UTC",
+      "content": {
+        "blog": {
+          "headline": "SambaNova\u2019s $1B Raise at $11B Valuation: When Doubling Down Beats Selling Out",
+          "angle": "SambaNova\u2019s rapid $1B raise amid acquisition buzz highlights the tension between chasing capital and risking overvaluation \u2014 the response: outpace the market to keep control, proving that strategic fundraising can defend and amplify market position."
+        },
+        "linkedin": {
+          "headline": "It\u2019s easy to raise money when everyone wants to buy you \u2014 but at what cost?",
+          "angle": "SambaNova\u2019s $1B raise just months after a mega round shows that bold capital moves can protect a company\u2019s valuation and narrative amid acquisition rumors."
+        },
+        "facebook": {
+          "headline": "SambaNova raised $1 billion at an $11 billion valuation just five months after its last mega round. What\u2019s the play when acquisition talks start swirling?",
+          "angle": "Rapid capital raises can reinforce market power, but do they risk overextension? SambaNova\u2019s move forces founders to ask: when do you double down instead of selling out?"
+        },
+        "instagram": {
+          "headline": "Raise Big or Fold: The SambaNova Play",
+          "angle": "When acquisition pressure mounts, raising capital aggressively can be the sharpest move to keep control and dictate your company\u2019s future."
+        },
+        "threads": {
+          "thread_hook": "SambaNova just raised $1B at an $11B valuation \u2014 five months after their last mega round. Why double down instead of selling out?",
+          "angle": "This thread breaks down how aggressive fundraising amid acquisition rumors can serve as a defensive play to protect valuation and control, not just a cash grab."
+        },
+        "stories": {
+          "story_question": "Acquisition talks heating up \u2014 do you sell or raise bigger?",
+          "angle": "Exploring the tension founders face between quick exits and strategic capital raises to maintain control and market position."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506031/never-blank/posts/research/568b28568497d3c8/blog/1783506031.png",
+            "path": "reports/content_packages/images/568b28568497d3c8_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506032/never-blank/posts/research/568b28568497d3c8/linkedin/1783506032.png",
+            "path": "reports/content_packages/images/568b28568497d3c8_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506033/never-blank/posts/research/568b28568497d3c8/facebook/1783506033.png",
+            "path": "reports/content_packages/images/568b28568497d3c8_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506033/never-blank/posts/research/568b28568497d3c8/instagram/1783506033.png",
+            "path": "reports/content_packages/images/568b28568497d3c8_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506034/never-blank/posts/research/568b28568497d3c8/threads/1783506034.png",
+            "path": "reports/content_packages/images/568b28568497d3c8_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506035/never-blank/posts/research/568b28568497d3c8/stories/1783506035.png",
+            "path": "reports/content_packages/images/568b28568497d3c8_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "sand_pause_card",
+        "hook_text": "It\u2019s easy to raise money when everyone wants to buy you \u2014 but at what cost?"
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "3a9bd0297a166bd4",
+      "headline": "Stellantis to sell small Fiat Topolino EV for $13,995 in U.S.",
+      "published_at": "2026-07-08 10:21 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "792eb72e-0e4a-4eb6-bb86-b6974b619480",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/",
+          "external_id": "6a4e24994b3a246c48be6dfa",
+          "error_message": null,
+          "raw_response_path": "(with image, via Zernio)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "HTTP 500: Please reduce the amount of data you're asking for, then retry your request",
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/Dah0JOaEzY1/",
+          "external_id": "17958491256072740",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18322362409279118",
+          "external_id": "18322362409279118",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/29",
+          "external_id": "29",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/3a9bd0297a166bd4_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505947/never-blank/posts/research/3a9bd0297a166bd4/blog/1783505946.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505950/never-blank/posts/research/3a9bd0297a166bd4/linkedin/1783505950.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505954/never-blank/posts/research/3a9bd0297a166bd4/facebook/1783505953.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505959/never-blank/posts/research/3a9bd0297a166bd4/instagram/1783505959.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505964/never-blank/posts/research/3a9bd0297a166bd4/threads/1783505964.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505970/never-blank/posts/research/3a9bd0297a166bd4/stories/1783505970.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "A new era for small EVs at $13,995.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "gpt-image-1"
+    }
+  ]
+}

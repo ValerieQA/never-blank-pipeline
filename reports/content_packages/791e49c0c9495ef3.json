@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "791e49c0c9495ef3",
+  "HEADLINE": "Rivian stock falls 18% as company sells 75 million shares to raise capital",
+  "prepared_at": "2026-07-08 10:20 UTC",
+  "content": {
+    "blog": {
+      "headline": "Rivian’s 75 Million Share Sale: When Capital Meets Confidence",
+      "angle": "Rivian’s need to raise capital clashes with shareholder value, prompting a communication challenge that reveals how timing and transparency shape investor trust."
+    },
+    "linkedin": {
+      "headline": "Rivian’s stock plunged 18% after selling 75 million shares—what went wrong?",
+      "angle": "A sharp stock rise invites capital raises, but mismanaging investor expectations can erode the very confidence founders rely on."
+    },
+    "facebook": {
+      "headline": "Rivian’s stock soared, then dropped 18% after a massive share sale. How do you raise cash without tanking trust?",
+      "angle": "Rivian’s capital raise after a strong stock run triggered a sell-off—what’s the balance between funding growth and preserving investor faith?"
+    },
+    "instagram": {
+      "headline": "When Cash Calls, Trust Is on the Line",
+      "angle": "Rivian’s stock dip after a big share sale shows that raising capital isn’t just about money—it’s about managing investor belief."
+    },
+    "threads": {
+      "thread_hook": "Rivian’s stock jumped, then crashed 18% after selling 75 million shares. The real fallout? Investor trust.",
+      "angle": "This thread breaks down why timing and communication during capital raises matter more than the dollars raised—founders, take note."
+    },
+    "stories": {
+      "story_question": "Can you raise capital without killing your stock price?",
+      "angle": "Exploring the tension between securing funds and maintaining market confidence when founders cash in on optimism."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505997/never-blank/posts/research/791e49c0c9495ef3/blog/1783505997.png",
+        "path": "reports/content_packages/images/791e49c0c9495ef3_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506001/never-blank/posts/research/791e49c0c9495ef3/linkedin/1783506001.png",
+        "path": "reports/content_packages/images/791e49c0c9495ef3_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506005/never-blank/posts/research/791e49c0c9495ef3/facebook/1783506005.png",
+        "path": "reports/content_packages/images/791e49c0c9495ef3_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506012/never-blank/posts/research/791e49c0c9495ef3/instagram/1783506012.png",
+        "path": "reports/content_packages/images/791e49c0c9495ef3_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506018/never-blank/posts/research/791e49c0c9495ef3/threads/1783506018.png",
+        "path": "reports/content_packages/images/791e49c0c9495ef3_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506025/never-blank/posts/research/791e49c0c9495ef3/stories/1783506025.png",
+        "path": "reports/content_packages/images/791e49c0c9495ef3_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "focus_rings",
+    "hook_text": "Rivian's 18% drop signals deeper market concerns."
+  }
+}

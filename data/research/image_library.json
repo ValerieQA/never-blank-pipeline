@@ -533,5 +533,35 @@
     "visual_family": "mountains_depth_layers",
     "design_version": "3",
     "hook_text": "AMD's GPUs steer Turing into the future of autonomy."
+  },
+  "3a9bd0297a166bd4": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505947/never-blank/posts/research/3a9bd0297a166bd4/blog/1783505946.png",
+    "signal_type": "pricing pressure",
+    "headline": "Stellantis to sell small Fiat Topolino EV for $13,995 in U.S.",
+    "created_at": "2026-07-08",
+    "method": "gpt-image-1",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "A new era for small EVs at $13,995."
+  },
+  "791e49c0c9495ef3": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783505997/never-blank/posts/research/791e49c0c9495ef3/blog/1783505997.png",
+    "signal_type": "capital raising",
+    "headline": "Rivian stock falls 18% as company sells 75 million shares to raise capital",
+    "created_at": "2026-07-08",
+    "method": "gpt-image-1",
+    "visual_family": "focus_rings",
+    "design_version": "3",
+    "hook_text": "Rivian's 18% drop signals deeper market concerns."
+  },
+  "568b28568497d3c8": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783506031/never-blank/posts/research/568b28568497d3c8/blog/1783506031.png",
+    "signal_type": "capital raising",
+    "headline": "AI chip maker SambaNova raises $1B at $11B valuation, 5 months after last mega round",
+    "created_at": "2026-07-08",
+    "method": "quote_card",
+    "visual_family": "sand_pause_card",
+    "design_version": "3",
+    "hook_text": "It’s easy to raise money when everyone wants to buy you — but at what cost?"
   }
 }
