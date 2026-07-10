@@ -563,5 +563,35 @@
     "visual_family": "sand_pause_card",
     "design_version": "3",
     "hook_text": "It’s easy to raise money when everyone wants to buy you — but at what cost?"
+  },
+  "55323acdeda4972d": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680937/never-blank/posts/research/55323acdeda4972d/blog/1783680937.png",
+    "signal_type": "pricing pressure",
+    "headline": "Delta expects higher airfare to last, bringing 2026 profit goal in reach, CEO says",
+    "created_at": "2026-07-10",
+    "method": "quote_card",
+    "visual_family": "dark_insight_card",
+    "design_version": "3",
+    "hook_text": "Delta’s profits are up, but so is the price of every seat—who’s getting left behind?"
+  },
+  "85a1aa05ddbf96df": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680975/never-blank/posts/research/85a1aa05ddbf96df/blog/1783680975.png",
+    "signal_type": "consumer behavior",
+    "headline": "June home sales disappoint as prices reach an all-time high",
+    "created_at": "2026-07-10",
+    "method": "gpt-image-1",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "Home sales down, prices at record highs."
+  },
+  "db048c8d7b50047b": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783681033/never-blank/posts/research/db048c8d7b50047b/blog/1783681033.png",
+    "signal_type": "consumer behavior",
+    "headline": "PepsiCo earnings miss estimates as U.S. consumers tighten their budgets",
+    "created_at": "2026-07-10",
+    "method": "gpt-image-1",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "Consumer budgets tighten, impacting earnings."
   }
 }

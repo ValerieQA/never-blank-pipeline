@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "55323acdeda4972d",
+  "HEADLINE": "Delta expects higher airfare to last, bringing 2026 profit goal in reach, CEO says",
+  "prepared_at": "2026-07-10 10:55 UTC",
+  "content": {
+    "blog": {
+      "headline": "Delta’s 2026 Profit Target Hinges on Higher Airfares, Not More Passengers",
+      "angle": "Delta’s bet on sustained higher prices reveals the tension between maximizing revenue per customer and risking demand drop-off, showing founders how pricing power under capacity constraints can hit financial goals—if managed carefully."
+    },
+    "linkedin": {
+      "headline": "Delta’s profits climb as ticket prices rise—what does that mean for your pricing strategy?",
+      "angle": "When demand holds firm despite price hikes, businesses can push for higher margins—but the risk of losing customers or triggering competition remains a tightrope."
+    },
+    "facebook": {
+      "headline": "Delta’s ticket prices are up—and so are profits. But who’s paying the price?",
+      "angle": "Delta’s approach to squeezing more value from fewer passengers raises a key question for businesses: when does charging more start to cost you customers?"
+    },
+    "instagram": {
+      "headline": "Higher Prices, Fewer Passengers, Bigger Profits",
+      "angle": "Delta’s strategy shows that profit growth isn’t always about more customers—it’s about charging the right ones more."
+    },
+    "threads": {
+      "thread_hook": "Delta isn’t chasing more passengers—it’s charging the ones who still fly more. Here’s why that matters.",
+      "angle": "This thread breaks down how Delta’s pricing power under capacity constraints offers a lesson in balancing profit goals with customer elasticity and competitive risks."
+    },
+    "stories": {
+      "story_question": "Can raising prices without losing customers really work?",
+      "angle": "Exploring the tension between pushing for higher profits through pricing and the risk of driving away demand."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680937/never-blank/posts/research/55323acdeda4972d/blog/1783680937.png",
+        "path": "reports/content_packages/images/55323acdeda4972d_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680938/never-blank/posts/research/55323acdeda4972d/linkedin/1783680938.png",
+        "path": "reports/content_packages/images/55323acdeda4972d_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680939/never-blank/posts/research/55323acdeda4972d/facebook/1783680939.png",
+        "path": "reports/content_packages/images/55323acdeda4972d_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680941/never-blank/posts/research/55323acdeda4972d/instagram/1783680940.png",
+        "path": "reports/content_packages/images/55323acdeda4972d_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680942/never-blank/posts/research/55323acdeda4972d/threads/1783680941.png",
+        "path": "reports/content_packages/images/55323acdeda4972d_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680943/never-blank/posts/research/55323acdeda4972d/stories/1783680943.png",
+        "path": "reports/content_packages/images/55323acdeda4972d_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "dark_insight_card",
+    "hook_text": "Delta’s profits are up, but so is the price of every seat—who’s getting left behind?"
+  }
+}

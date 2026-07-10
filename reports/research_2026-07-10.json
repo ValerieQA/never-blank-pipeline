@@ -1,0 +1,439 @@
+{
+  "date": "2026-07-10",
+  "candidates_found": 22,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Delta expects higher airfare to last, bringing 2026 profit goal in reach, CEO sa",
+    "June home sales disappoint as prices reach an all-time high",
+    "PepsiCo earnings miss estimates as U.S. consumers tighten their budgets"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "55323acdeda4972d",
+      "headline": "Delta expects higher airfare to last, bringing 2026 profit goal in reach, CEO says",
+      "published_at": "2026-07-10 10:58 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "eb4f47ca-d91a-420f-821c-18d06a49650c",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/",
+          "external_id": "6a50d04ae672efbeee30c7f0",
+          "error_message": null,
+          "raw_response_path": "(with image, via Zernio)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122116876083356169",
+          "external_id": "1219637131228622_122116876083356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DanB-YWltlI/",
+          "external_id": "18121011595700524",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18020927816897727",
+          "external_id": "18020927816897727",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/30",
+          "external_id": "30",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/55323acdeda4972d_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680937/never-blank/posts/research/55323acdeda4972d/blog/1783680937.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680938/never-blank/posts/research/55323acdeda4972d/linkedin/1783680938.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680939/never-blank/posts/research/55323acdeda4972d/facebook/1783680939.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680941/never-blank/posts/research/55323acdeda4972d/instagram/1783680940.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680942/never-blank/posts/research/55323acdeda4972d/threads/1783680941.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680943/never-blank/posts/research/55323acdeda4972d/stories/1783680943.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Delta\u2019s profits are up, but so is the price of every seat\u2014who\u2019s getting left behind?",
+      "image_visual_family": "dark_insight_card",
+      "image_method": "quote_card"
+    }
+  ],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "55323acdeda4972d",
+      "HEADLINE": "Delta expects higher airfare to last, bringing 2026 profit goal in reach, CEO says",
+      "prepared_at": "2026-07-10 10:55 UTC",
+      "content": {
+        "blog": {
+          "headline": "Delta\u2019s 2026 Profit Target Hinges on Higher Airfares, Not More Passengers",
+          "angle": "Delta\u2019s bet on sustained higher prices reveals the tension between maximizing revenue per customer and risking demand drop-off, showing founders how pricing power under capacity constraints can hit financial goals\u2014if managed carefully."
+        },
+        "linkedin": {
+          "headline": "Delta\u2019s profits climb as ticket prices rise\u2014what does that mean for your pricing strategy?",
+          "angle": "When demand holds firm despite price hikes, businesses can push for higher margins\u2014but the risk of losing customers or triggering competition remains a tightrope."
+        },
+        "facebook": {
+          "headline": "Delta\u2019s ticket prices are up\u2014and so are profits. But who\u2019s paying the price?",
+          "angle": "Delta\u2019s approach to squeezing more value from fewer passengers raises a key question for businesses: when does charging more start to cost you customers?"
+        },
+        "instagram": {
+          "headline": "Higher Prices, Fewer Passengers, Bigger Profits",
+          "angle": "Delta\u2019s strategy shows that profit growth isn\u2019t always about more customers\u2014it\u2019s about charging the right ones more."
+        },
+        "threads": {
+          "thread_hook": "Delta isn\u2019t chasing more passengers\u2014it\u2019s charging the ones who still fly more. Here\u2019s why that matters.",
+          "angle": "This thread breaks down how Delta\u2019s pricing power under capacity constraints offers a lesson in balancing profit goals with customer elasticity and competitive risks."
+        },
+        "stories": {
+          "story_question": "Can raising prices without losing customers really work?",
+          "angle": "Exploring the tension between pushing for higher profits through pricing and the risk of driving away demand."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680937/never-blank/posts/research/55323acdeda4972d/blog/1783680937.png",
+            "path": "reports/content_packages/images/55323acdeda4972d_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680938/never-blank/posts/research/55323acdeda4972d/linkedin/1783680938.png",
+            "path": "reports/content_packages/images/55323acdeda4972d_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680939/never-blank/posts/research/55323acdeda4972d/facebook/1783680939.png",
+            "path": "reports/content_packages/images/55323acdeda4972d_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680941/never-blank/posts/research/55323acdeda4972d/instagram/1783680940.png",
+            "path": "reports/content_packages/images/55323acdeda4972d_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680942/never-blank/posts/research/55323acdeda4972d/threads/1783680941.png",
+            "path": "reports/content_packages/images/55323acdeda4972d_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680943/never-blank/posts/research/55323acdeda4972d/stories/1783680943.png",
+            "path": "reports/content_packages/images/55323acdeda4972d_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "dark_insight_card",
+        "hook_text": "Delta\u2019s profits are up, but so is the price of every seat\u2014who\u2019s getting left behind?"
+      }
+    },
+    {
+      "SIGNAL_ID": "85a1aa05ddbf96df",
+      "HEADLINE": "June home sales disappoint as prices reach an all-time high",
+      "prepared_at": "2026-07-10 10:56 UTC",
+      "content": {
+        "blog": {
+          "headline": "June Home Sales Drop as Prices Hit Record Highs: How Builders Are Rethinking Value",
+          "angle": "June's sales slump amid record prices exposes the tension between affordability and profitability; builders like Lennar respond by redesigning offers and incentives, proving that adapting value propositions is key to sustaining demand when rates bite."
+        },
+        "linkedin": {
+          "headline": "Home sales are falling, but builders aren\u2019t slashing prices\u2014they\u2019re rewriting the rules of the deal.",
+          "angle": "When mortgage rates push prices beyond reach, builders face stalled sales; those who engineer affordability instead of chasing volume maintain market relevance."
+        },
+        "facebook": {
+          "headline": "June saw home sales dip even as prices hit all-time highs. Lennar isn\u2019t cutting prices\u2014so how are they keeping buyers interested?",
+          "angle": "With affordability stretched thin and sales slowing, Lennar\u2019s approach to reshaping deals raises the question: can creative incentives sustain demand when buyers balk?"
+        },
+        "instagram": {
+          "headline": "High Prices, Falling Sales: Builders Adapt",
+          "angle": "Record home prices and slow sales aren\u2019t forcing price cuts\u2014they\u2019re forcing smarter deals and new value plays."
+        },
+        "threads": {
+          "thread_hook": "June home sales fell even as prices soared to record highs. Builders aren\u2019t panicking\u2014they\u2019re pivoting.",
+          "angle": "This thread breaks down how rising rates and record prices create a sales squeeze, and why companies like Lennar are shifting from volume chasing to value engineering to stay afloat."
+        },
+        "stories": {
+          "story_question": "Prices hit record highs, but sales are dropping\u2014how do builders keep buyers interested?",
+          "angle": "Exploring the tension between high prices and affordability, and how adapting offers can sustain demand despite tough market conditions."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680975/never-blank/posts/research/85a1aa05ddbf96df/blog/1783680975.png",
+            "path": "reports/content_packages/images/85a1aa05ddbf96df_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680978/never-blank/posts/research/85a1aa05ddbf96df/linkedin/1783680978.png",
+            "path": "reports/content_packages/images/85a1aa05ddbf96df_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680982/never-blank/posts/research/85a1aa05ddbf96df/facebook/1783680982.png",
+            "path": "reports/content_packages/images/85a1aa05ddbf96df_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680988/never-blank/posts/research/85a1aa05ddbf96df/instagram/1783680988.png",
+            "path": "reports/content_packages/images/85a1aa05ddbf96df_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680993/never-blank/posts/research/85a1aa05ddbf96df/threads/1783680993.png",
+            "path": "reports/content_packages/images/85a1aa05ddbf96df_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783681000/never-blank/posts/research/85a1aa05ddbf96df/stories/1783681000.png",
+            "path": "reports/content_packages/images/85a1aa05ddbf96df_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Home sales down, prices at record highs."
+      }
+    },
+    {
+      "SIGNAL_ID": "db048c8d7b50047b",
+      "HEADLINE": "PepsiCo earnings miss estimates as U.S. consumers tighten their budgets",
+      "prepared_at": "2026-07-10 10:57 UTC",
+      "content": {
+        "blog": {
+          "headline": "PepsiCo\u2019s Earnings Miss: When Premiumization Meets a Budget-Conscious Consumer",
+          "angle": "PepsiCo\u2019s Q2 miss exposes the tension between chasing margin growth through premium products and the reality of price-sensitive consumers tightening their belts, underscoring the need for diversified strategies and agile product positioning."
+        },
+        "linkedin": {
+          "headline": "PepsiCo\u2019s margin dreams just met America\u2019s shrinking wallet.",
+          "angle": "When premium products collide with budget-conscious consumers, even giants like PepsiCo see earnings slip\u2014founders must watch where margin strategies crack under pressure."
+        },
+        "facebook": {
+          "headline": "PepsiCo missed earnings estimates as U.S. consumers cut back. How do you balance premium pricing with value in a slowdown?",
+          "angle": "PepsiCo\u2019s Q2 earnings reveal the challenge of maintaining margins when core markets tighten budgets\u2014are your products ready for that shift?"
+        },
+        "instagram": {
+          "headline": "Margin Growth vs. Consumer Budgets",
+          "angle": "PepsiCo\u2019s earnings miss shows that premium pricing only works until consumers start watching every dollar."
+        },
+        "threads": {
+          "thread_hook": "PepsiCo\u2019s earnings miss isn\u2019t about product innovation\u2014it\u2019s about margin strategy cracking under consumer pressure.",
+          "angle": "This thread breaks down how economic slowdowns expose weaknesses in margin strategies and why diversification and consumer sentiment tracking are non-negotiable for founders."
+        },
+        "stories": {
+          "story_question": "Can your margins survive when consumers tighten their belts?",
+          "angle": "Exploring the tension between premium pricing and value offerings during economic slowdowns and what founders can do to stay resilient."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783681033/never-blank/posts/research/db048c8d7b50047b/blog/1783681033.png",
+            "path": "reports/content_packages/images/db048c8d7b50047b_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783681037/never-blank/posts/research/db048c8d7b50047b/linkedin/1783681037.png",
+            "path": "reports/content_packages/images/db048c8d7b50047b_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783681040/never-blank/posts/research/db048c8d7b50047b/facebook/1783681040.png",
+            "path": "reports/content_packages/images/db048c8d7b50047b_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783681047/never-blank/posts/research/db048c8d7b50047b/instagram/1783681047.png",
+            "path": "reports/content_packages/images/db048c8d7b50047b_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783681052/never-blank/posts/research/db048c8d7b50047b/threads/1783681052.png",
+            "path": "reports/content_packages/images/db048c8d7b50047b_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783681061/never-blank/posts/research/db048c8d7b50047b/stories/1783681061.png",
+            "path": "reports/content_packages/images/db048c8d7b50047b_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "particle_flow",
+        "hook_text": "Consumer budgets tighten, impacting earnings."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "55323acdeda4972d",
+      "headline": "Delta expects higher airfare to last, bringing 2026 profit goal in reach, CEO says",
+      "published_at": "2026-07-10 10:58 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "eb4f47ca-d91a-420f-821c-18d06a49650c",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/",
+          "external_id": "6a50d04ae672efbeee30c7f0",
+          "error_message": null,
+          "raw_response_path": "(with image, via Zernio)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122116876083356169",
+          "external_id": "1219637131228622_122116876083356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DanB-YWltlI/",
+          "external_id": "18121011595700524",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18020927816897727",
+          "external_id": "18020927816897727",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/30",
+          "external_id": "30",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/55323acdeda4972d_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680937/never-blank/posts/research/55323acdeda4972d/blog/1783680937.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680938/never-blank/posts/research/55323acdeda4972d/linkedin/1783680938.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680939/never-blank/posts/research/55323acdeda4972d/facebook/1783680939.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680941/never-blank/posts/research/55323acdeda4972d/instagram/1783680940.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680942/never-blank/posts/research/55323acdeda4972d/threads/1783680941.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783680943/never-blank/posts/research/55323acdeda4972d/stories/1783680943.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Delta\u2019s profits are up, but so is the price of every seat\u2014who\u2019s getting left behind?",
+      "image_visual_family": "dark_insight_card",
+      "image_method": "quote_card"
+    }
+  ]
+}
