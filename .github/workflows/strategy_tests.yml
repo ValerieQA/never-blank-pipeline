@@ -5,23 +5,28 @@ on:
     branches: [main]
     paths:
       - "src/strategy/**"
+      - "src/analytics/**"
       - "src/editorial/pipeline.py"
       - "src/editorial/decision_lens_lite.py"
       - "src/editorial/narrative_spine.py"
       - "src/models.py"
       - "scripts/strategy/**"
+      - "scripts/analytics/**"
       - "strategy/reviews/**"
       - "strategy/history/**"
       - "scripts/research/publish_packages.py"
       - "strategy/current/strategy.json"
       - "strategy/current/strategy.md"
       - "tests/strategy/**"
+      - "tests/analytics/**"
       - ".github/workflows/strategy_tests.yml"
   pull_request:
     branches: [main]
     paths:
       - "src/strategy/**"
+      - "src/analytics/**"
       - "tests/strategy/**"
+      - "tests/analytics/**"
   workflow_dispatch:
 
 jobs:
@@ -51,10 +56,13 @@ jobs:
           python -m py_compile src/strategy/decision_engine.py
           python -m py_compile src/strategy/history.py
           python -m py_compile src/strategy/echo_memory.py
+          python -m py_compile src/analytics/collector_protocol.py
+          python -m py_compile src/analytics/scorer.py
+          python -m py_compile src/analytics/orchestrator.py
           python -m py_compile scripts/strategy/build_monthly_plan.py
           python -m py_compile scripts/strategy/run_weekly_review.py
           python -m py_compile scripts/strategy/run_monthly_review.py
           python -m py_compile scripts/strategy/approve_strategy_recommendation.py
 
       - name: Run strategy tests
-        run: pytest tests/strategy/ -v --tb=short
+        run: pytest tests/strategy/ tests/analytics/ -v --tb=short
