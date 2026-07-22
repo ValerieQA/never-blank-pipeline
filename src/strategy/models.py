@@ -336,6 +336,14 @@ class PublishedEntry(BaseModel):
     strategy_week: Optional[int] = None  # week number in strategy cycle; used by mark_entries_reviewed
     reviewed:      bool = False          # set to True after weekly review covers this entry
 
+    # ── Analytics fields (Phase 4D) ──────────────────────────────────────────
+    # Raw metrics from platform APIs are stored elsewhere; only the derived
+    # score lands here so that the scoring formula can change independently
+    # of the collector. analytics_version identifies which formula produced it.
+    analytics_score:      Optional[float] = None  # normalized 0.0–1.0; None = not yet collected
+    analytics_fetched_at: Optional[datetime] = None
+    analytics_version:    Optional[str] = None    # e.g. "v1", "v2" — tracks formula revision
+
     @field_validator("content_id", "strategy_id")
     @classmethod
     def must_be_nonempty(cls, v: str) -> str:

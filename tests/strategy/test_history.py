@@ -479,3 +479,96 @@ class TestMarkEntriesReviewed:
         import src.strategy.history as h
         monkeypatch.setattr(h, "PUBLISHED_INDEX", tmp_path / "nonexistent.jsonl")
         assert h.mark_entries_reviewed("2026-08-test", week_number=1) == 0
+
+
+# ── update_entry (Phase 4D.0) ─────────────────────────────────────────────────
+
+class TestUpdateEntry:
+    def test_updates_analytics_fields(self, tmp_path, monkeypatch):
+        import src.strategy.history as h
+        monkeypatch.setattr(h, "PUBLISHED_INDEX", tmp_path / "published_content_index.jsonl")
+        h.append_published_entry(_published_entry("sig-001"))
+
+        result = h.update_entry("sig-001", {
+            "analytics_score": 0.74,
+            "analytics_fetched_at": "2026-08-15T12:00:00+00:00",
+            "analytics_version": "v1",
+        })
+
+        assert result is True
+        data = json.loads((tmp_path / "published_content_index.jsonl").read_text().strip())
+        assert data["analytics_score"] == 0.74
+        assert data["analytics_version"] == "v1"
+        assert data["analytics_fetched_at"] == "2026-08-15T12:00:00+00:00"
+
+    def test_preserves_unpatched_fields(self, tmp_path, monkeypatch):
+        import src.strategy.history as h
+        monkeypatch.setattr(h, "PUBLISHED_INDEX", tmp_path / "published_content_index.jsonl")
+        h.append_published_entry(_published_entry("sig-001"))
+
+        h.update_entry("sig-001", {"analytics_score": 0.5})
+
+        data = json.loads((tmp_path / "published_content_index.jsonl").read_text().strip())
+        assert data["content_id"] == "sig-001"
+        assert data["strategy_id"] == "2026-08-test"
+        assert data["echo"] == "The competitor was just present."
+
+    def test_only_updates_matching_entry(self, tmp_path, monkeypatch):
+        import src.strategy.history as h
+        monkeypatch.setattr(h, "PUBLISHED_INDEX", tmp_path / "published_content_index.jsonl")
+        h.append_published_entry(_published_entry("sig-001"))
+        h.append_published_entry(_published_entry("sig-002"))
+
+        h.update_entry("sig-001", {"analytics_score": 0.9})
+
+        lines = [l for l in (tmp_path / "published_content_index.jsonl").read_text().splitlines() if l.strip()]
+        data = [json.loads(l) for l in lines]
+        sig1 = next(d for d in data if d["content_id"] == "sig-001")
+        sig2 = next(d for d in data if d["content_id"] == "sig-002")
+        assert sig1["analytics_score"] == 0.9
+        assert sig2.get("analytics_score") is None
+
+    def test_returns_false_when_content_id_not_found(self, tmp_path, monkeypatch):
+        import src.strategy.history as h
+        monkeypatch.setattr(h, "PUBLISHED_INDEX", tmp_path / "published_content_index.jsonl")
+        h.append_published_entry(_published_entry("sig-001"))
+
+        result = h.update_entry("nonexistent-id", {"analytics_score": 0.5})
+        assert result is False
+
+    def test_returns_false_when_no_index(self, tmp_path, monkeypatch):
+        import src.strategy.history as h
+        monkeypatch.setattr(h, "PUBLISHED_INDEX", tmp_path / "nonexistent.jsonl")
+        assert h.update_entry("sig-001", {"analytics_score": 0.5}) is False
+
+    def test_patch_overwrites_existing_analytics(self, tmp_path, monkeypatch):
+        import src.strategy.history as h
+        monkeypatch.setattr(h, "PUBLISHED_INDEX", tmp_path / "published_content_index.jsonl")
+        h.append_published_entry(_published_entry("sig-001"))
+
+        h.update_entry("sig-001", {"analytics_score": 0.3, "analytics_version": "v1"})
+        h.update_entry("sig-001", {"analytics_score": 0.6, "analytics_version": "v2"})
+
+        data = json.loads((tmp_path / "published_content_index.jsonl").read_text().strip())
+        assert data["analytics_score"] == 0.6
+        assert data["analytics_version"] == "v2"
+
+    def test_analytics_fields_round_trip_through_published_entry(self, tmp_path, monkeypatch):
+        import src.strategy.history as h
+        monkeypatch.setattr(h, "PUBLISHED_INDEX", tmp_path / "published_content_index.jsonl")
+        h.append_published_entry(_published_entry("sig-001"))
+
+        from datetime import timezone
+        fetched = datetime(2026, 8, 15, 12, 0, 0, tzinfo=timezone.utc)
+        h.update_entry("sig-001", {
+            "analytics_score": 0.72,
+            "analytics_fetched_at": fetched.isoformat(),
+            "analytics_version": "v1",
+        })
+
+        entries = h.load_published_index()
+        assert len(entries) == 1
+        entry = entries[0]
+        assert entry.analytics_score == 0.72
+        assert entry.analytics_version == "v1"
+        assert entry.analytics_fetched_at is not None

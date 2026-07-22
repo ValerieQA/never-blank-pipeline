@@ -275,6 +275,56 @@ def archive_monthly_review(strategy_id: str) -> None:
     log.info("Monthly review archived for strategy %s → %s", strategy_id, dest_dir)
 
 
+def update_entry(content_id: str, patch: dict) -> bool:
+    """
+    Apply a partial update to a single entry in published_content_index.jsonl.
+
+    Only updates the entry whose content_id matches; all other entries are
+    written back unchanged. Returns True if the entry was found and updated.
+
+    The `patch` dict is merged into the stored JSON — keys not present in
+    patch are preserved. This interface is stable: the backing store can be
+    replaced (SQLite, DuckDB) without changing callers.
+
+    Primary use: write analytics fields back after scoring:
+        update_entry("2026-08-test-w1-01", {
+            "analytics_score": 0.74,
+            "analytics_fetched_at": "2026-08-15T12:00:00+00:00",
+            "analytics_version": "v1",
+        })
+
+    This is a full JSONL rewrite. Call once per scoring batch, not per row.
+    """
+    if not PUBLISHED_INDEX.exists():
+        log.warning("update_entry: published_content_index.jsonl not found")
+        return False
+
+    lines = PUBLISHED_INDEX.read_text(encoding="utf-8").splitlines()
+    found = False
+    new_lines: list[str] = []
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            data = json.loads(line)
+            if data.get("content_id") == content_id:
+                data.update(patch)
+                found = True
+            new_lines.append(json.dumps(data, default=str))
+        except json.JSONDecodeError:
+            new_lines.append(line)
+
+    if found:
+        PUBLISHED_INDEX.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+        log.info("update_entry: patched content_id=%s fields=%s", content_id, list(patch.keys()))
+    else:
+        log.warning("update_entry: content_id=%s not found in index", content_id)
+
+    return found
+
+
 def mark_entries_reviewed(strategy_id: str, week_number: int) -> int:
     """
     Mark published_content_index.jsonl entries as reviewed=True for all entries
