@@ -128,16 +128,17 @@ def save_package(pkg: ContentPackage, output_dir: Path) -> dict[str, Path]:
     _save_json(p, {"stories": pkg.stories_sequence})
     files["stories"] = p
 
-    p = output_dir / "stories_readable.txt"
-    readable = "\n\n---\n\n".join(
-        f"[Story {s.get('story_number', i+1)} — {s.get('type','').upper()}]\n"
-        f"{s.get('text','')}\n"
-        f"Sticker: {s.get('sticker_suggestion','none')}\n"
-        f"Visual: {s.get('visual_note','')}"
-        for i, s in enumerate(pkg.stories_sequence)
-    )
-    _save_text(p, readable)
-    files["stories_readable"] = p
+    if pkg.stories_sequence is not None:
+        p = output_dir / "stories_readable.txt"
+        readable = "\n\n---\n\n".join(
+            f"[Story {s.get('story_number', i+1)} — {s.get('type','').upper()}]\n"
+            f"{s.get('text','')}\n"
+            f"Sticker: {s.get('sticker_suggestion','none')}\n"
+            f"Visual: {s.get('visual_note','')}"
+            for i, s in enumerate(pkg.stories_sequence)
+        )
+        _save_text(p, readable)
+        files["stories_readable"] = p
 
     # Facebook
     p = output_dir / "facebook.txt"
@@ -157,9 +158,10 @@ def save_package(pkg: ContentPackage, output_dir: Path) -> dict[str, Path]:
     files["threads_readable"] = p
 
     # Telegram
-    p = output_dir / "telegram.txt"
-    _save_text(p, pkg.telegram_text)
-    files["telegram"] = p
+    if pkg.telegram_text is not None:
+        p = output_dir / "telegram.txt"
+        _save_text(p, pkg.telegram_text)
+        files["telegram"] = p
 
     # Image prompt
     p = output_dir / "image_prompt.txt"
@@ -329,8 +331,8 @@ def run(topic_id: str | None = None, dry: bool = False, with_qc: bool = False) -
     print(f"  ✓  Instagram:      {len(pkg.instagram_caption)} chars + {len(pkg.instagram_hashtags)} hashtags")
     print(f"  ✓  Facebook:       {len(pkg.facebook_text)} chars")
     print(f"  ✓  Threads:        {len(pkg.threads_sequence)} posts")
-    print(f"  ✓  Telegram:       {len(pkg.telegram_text)} chars")
-    print(f"  ✓  Stories:        {len(pkg.stories_sequence)} stories")
+    print(f"  {'✓' if pkg.telegram_text is not None else '—'}  Telegram:       {len(pkg.telegram_text) if pkg.telegram_text is not None else 'SKIPPED'}")
+    print(f"  {'✓' if pkg.stories_sequence is not None else '—'}  Stories:        {len(pkg.stories_sequence) if pkg.stories_sequence is not None else 'SKIPPED'}")
     print(f"  ✓  Image prompt:   {len(pkg.image_prompt)} chars")
 
     # ── 6. Differentiation check ───────────────────────────────────────────────

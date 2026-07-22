@@ -35,16 +35,17 @@ def jaccard(a: str, b: str) -> float:
 
 
 def _platform_texts(pkg: ContentPackage) -> dict[str, str]:
-    """Extract comparable text for each platform."""
-    threads_full = " ".join(pkg.threads_sequence)
-    return {
+    """Extract comparable text for each platform. Skipped channels (None) are excluded."""
+    texts = {
         "blog_intro": " ".join(pkg.blog_body.split()[:80]),   # first ~80 words only
         "linkedin":   pkg.linkedin_text,
         "instagram":  pkg.instagram_caption,
         "facebook":   pkg.facebook_text,
-        "threads":    threads_full,
-        "telegram":   pkg.telegram_text,
+        "threads":    " ".join(pkg.threads_sequence) if pkg.threads_sequence else "",
     }
+    if pkg.telegram_text is not None:
+        texts["telegram"] = pkg.telegram_text
+    return {k: v for k, v in texts.items() if v}
 
 
 def check_differentiation(pkg: ContentPackage) -> dict:
