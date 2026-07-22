@@ -50,8 +50,10 @@ class BlogCollector(BaseCollector):
     """
     Fetches view/like/comment counts from Wix Blog Posts Stats API v3.
 
-    Requires PublishedEntry.platform_content_id (Wix post ID stored at publish time).
-    Entries missing platform_content_id are skipped with a warning.
+    Requires PublishedEntry.publications["blog"].external_id (Wix post ID).
+    Entries without a blog publication record or without an external_id are skipped.
+    Legacy entries with only platform_content_id are backfilled automatically by
+    the PublishedEntry model validator.
 
     AuthorizationCollectorError is raised immediately on 401/403 so the
     orchestrator can record the whole-collector failure and stop retrying.
@@ -118,22 +120,19 @@ class BlogCollector(BaseCollector):
         """
         self._check_credentials()
 
-        blog_entries = [e for e in entries if e.platform == "blog"]
+        blog_entries = [
+            e for e in entries
+            if "blog" in e.publications and e.publications["blog"].external_id
+        ]
         if not blog_entries:
-            log.info("blog: no blog entries in index — nothing to collect")
+            log.info("blog: no blog entries with a Wix post ID in index — nothing to collect")
             return []
 
         records: list[AnalyticsRecord] = []
         collected_at = self._now()
 
         for entry in blog_entries:
-            if not entry.platform_content_id:
-                log.warning(
-                    "blog: entry %s has no platform_content_id (Wix post ID) — "
-                    "re-publish or backfill platform_content_id to enable analytics",
-                    entry.content_id,
-                )
-                continue
+            post_id = entry.publications["blog"].external_id
 
             if self._is_stale(collected_at, entry.analytics_fetched_at):
                 log.info(
@@ -143,13 +142,13 @@ class BlogCollector(BaseCollector):
                 continue
 
             try:
-                raw = self._fetch_post_metrics(entry.platform_content_id)
+                raw = self._fetch_post_metrics(post_id)
             except AuthorizationCollectorError:
                 raise   # stop the whole collector
             except EntryCollectorError as exc:
                 log.warning(
                     "blog: failed to fetch metrics for %s (post_id=%s): %s",
-                    entry.content_id, entry.platform_content_id, exc,
+                    entry.content_id, post_id, exc,
                 )
                 continue
 
@@ -179,8 +178,7 @@ class BlogCollector(BaseCollector):
             records.append(record)
             log.info(
                 "blog: collected content_id=%s post_id=%s views=%s likes=%s comments=%s",
-                entry.content_id, entry.platform_content_id,
-                record.views, record.likes, record.comments,
+                entry.content_id, post_id, record.views, record.likes, record.comments,
             )
 
         log.info("blog: collected %d/%d blog entries", len(records), len(blog_entries))

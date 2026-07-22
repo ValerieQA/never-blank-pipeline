@@ -294,7 +294,7 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
         else:
             try:
                 from src.strategy.history import append_published_entry
-                from src.strategy.models import PublishedEntry
+                from src.strategy.models import PlatformPublication, PublishedEntry
                 # pattern_id: check all known field names used across the pipeline
                 _pattern_id = (
                     signal.get("source_pattern_id")
@@ -307,14 +307,28 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
                 if active_strategy and active_strategy.started_at:
                     _days = (datetime.now(timezone.utc).date() - active_strategy.started_at).days
                     _strategy_week = max(1, (_days // 7) + 1)
+                # Build per-platform publication map from publisher results
+                _published_at = datetime.now(timezone.utc)
+                _publications: dict[str, PlatformPublication] = {}
+                _ok_statuses = {"PUBLISHED", "DRAFT_CREATED", "published_url_unavailable"}
+                for _pub_name, _pub_dict in results.items():
+                    if _pub_dict.get("status") in _ok_statuses:
+                        _publications[_pub_name] = PlatformPublication(
+                            platform=_pub_name,
+                            external_id=_pub_dict.get("external_id") or None,
+                            url=_pub_dict.get("url") or "",
+                            published_at=_published_at,
+                            status=_pub_dict.get("status", "published").lower(),
+                        )
                 append_published_entry(PublishedEntry(
                     content_id=sig_id,
                     strategy_id=_pub_strategy_id,
                     pattern_id=_pattern_id,
-                    published_at=datetime.now(timezone.utc),
+                    published_at=_published_at,
                     platform="blog",
                     url=wix_url,
                     platform_content_id=wix_post_id,
+                    publications=_publications,
                     echo=structured.get("echo_line") or None,
                     hook=structured.get("hook", ""),
                     topic=headline,

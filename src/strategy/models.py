@@ -17,7 +17,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # Re-export the single source of truth for CTA mode (decision 45).
 from src.models import CTAMode
@@ -320,7 +320,20 @@ class StrategyChangeRecord(BaseModel):
 # ── Published Content Index ────────────────────────────────────────────────────
 #
 # One entry per published signal (canonical record — not per platform).
-# Foundation for Echo Memory (4C) and future Analytics Collectors (4D).
+# Foundation for Echo Memory (4C) and Analytics Collectors (4D).
+#
+# Platform-native IDs and per-platform publish metadata live in `publications`
+# (a dict keyed by platform name). Collectors read external_id from there;
+# publish_packages.py populates it after each publish run.
+
+class PlatformPublication(BaseModel):
+    """Metadata for one platform's publish of a content signal."""
+    platform:    str
+    external_id: Optional[str] = None   # Wix post_id, LinkedIn URN, Instagram media ID, etc.
+    url:         str = ""
+    published_at: Optional[datetime] = None
+    status:      str = "published"       # "published" | "draft_created"
+
 
 class PublishedEntry(BaseModel):
     content_id:    str
@@ -329,7 +342,8 @@ class PublishedEntry(BaseModel):
     published_at:  datetime
     platform:      str = "blog"           # canonical platform; blog = primary
     url:           str = ""              # blog/Wix URL when available
-    platform_content_id: Optional[str] = None  # platform-native ID (Wix post_id, LinkedIn URN, etc.)
+    platform_content_id: Optional[str] = None  # deprecated alias for publications["blog"].external_id
+    publications:  dict[str, PlatformPublication] = Field(default_factory=dict)
     echo:          Optional[str] = None  # echo_line used in the published article
     hook:          str = ""
     topic:         str = ""
@@ -351,3 +365,17 @@ class PublishedEntry(BaseModel):
         if not v or not v.strip():
             raise ValueError("Required PublishedEntry field cannot be empty")
         return v
+
+    @model_validator(mode="after")
+    def _backfill_blog_publication(self) -> "PublishedEntry":
+        # Migrate legacy platform_content_id into publications["blog"] on first read.
+        # This covers entries written before the publications map was introduced.
+        if self.platform_content_id and "blog" not in self.publications:
+            self.publications["blog"] = PlatformPublication(
+                platform="blog",
+                external_id=self.platform_content_id,
+                url=self.url,
+                published_at=self.published_at,
+                status="published",
+            )
+        return self
