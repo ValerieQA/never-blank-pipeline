@@ -161,17 +161,32 @@ def generate_threads(brief: ContentBrief, matrix: ContentMatrix, blog_body: str)
 
 
 def generate_telegram(brief: ContentBrief, matrix: ContentMatrix) -> dict:
-    """Telegram post generation removed — telegram_post prompt deleted.
-    Returns None so ContentPackage marks this channel as SKIPPED, not success."""
-    log.info("generate_telegram: channel SKIPPED (prompt removed)")
-    return {"text": None}
+    """Generate a Telegram signal post (3 lines max) from telegram_post.yaml."""
+    try:
+        ctx = _build_context(brief, matrix)
+        result = _call("telegram_post", ctx)
+        if not result.get("text"):
+            log.error("generate_telegram: prompt returned empty text — channel FAILED")
+            return {"text": None}
+        return result
+    except Exception as exc:
+        log.error("generate_telegram: failed — %s", exc)
+        return {"text": None}
 
 
 def generate_stories(brief: ContentBrief, matrix: ContentMatrix) -> list[dict] | None:
-    """Stories generation removed — stories_post prompt deleted.
-    Returns None so ContentPackage marks this channel as SKIPPED, not success."""
-    log.info("generate_stories: channel SKIPPED (prompt removed)")
-    return None
+    """Generate a 4-frame Stories sequence from stories_post.yaml."""
+    try:
+        ctx = _build_context(brief, matrix)
+        result = _call("stories_post", ctx)
+        frames = result.get("frames")
+        if not frames or not isinstance(frames, list) or len(frames) == 0:
+            log.error("generate_stories: prompt returned no frames — channel FAILED")
+            return None
+        return frames
+    except Exception as exc:
+        log.error("generate_stories: failed — %s", exc)
+        return None
 
 
 # ── Full package ───────────────────────────────────────────────────────────────

@@ -163,7 +163,6 @@ class ContentMatrix:
     visual_anchor:      str
     sales_angle:        str
     soft_cta:           str
-    cta_mode:           CTAMode = CTAMode.NONE  # none | reflection | diagnostic | example_request | direct_conversation
     linkedin_angle:     str
     instagram_angle:    str
     facebook_angle:     str
@@ -171,6 +170,7 @@ class ContentMatrix:
     telegram_angle:     str
     stories_flow:       str
     created_at:         str
+    cta_mode:           CTAMode = CTAMode.NONE  # none | reflection | diagnostic | example_request | direct_conversation
 
 
 @dataclass

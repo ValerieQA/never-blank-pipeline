@@ -76,7 +76,9 @@ _BLOCK_TABLE = {
         "explanation": "skip",
         "reframe": "skip",
         "business_meaning": "skip",
+        # Echo: adapted to platform voice (not copy-pasted from Blog/LinkedIn verbatim)
         "echo": "full",
+        # CTA: controlled by cta_mode at call time — skip by default, injected when cta_mode != none
         "cta": "skip",
     },
     "short": {
@@ -179,9 +181,39 @@ def _block_content(structured_article: dict, block: str) -> str | None:
     return mapping.get(block)
 
 
-def _build_user_prompt(structured_article: dict, format_key: str) -> str:
+# Platforms where Echo must be preserved verbatim (strong editorial identity formats)
+_ECHO_VERBATIM_FORMATS = {"long", "reading"}
+
+# Platforms where Echo should be adapted to platform voice (semantic content preserved,
+# wording adapted — NOT copy-pasted verbatim from Blog/LinkedIn)
+_ECHO_ADAPT_FORMATS = {"medium", "instagram", "short"}
+
+
+def _build_user_prompt(structured_article: dict, format_key: str, cta_mode: str = "none") -> str:
     table = _BLOCK_TABLE[format_key]
     lo, hi = _WORD_RANGE[format_key]
+
+    # For instagram with cta_mode != "none", inject a platform-adapted CTA note
+    instagram_cta_note = ""
+    if format_key == "instagram" and cta_mode and cta_mode != "none":
+        instagram_cta_note = (
+            f"\nINSTAGRAM CTA (cta_mode={cta_mode}): Add one short, natural sentence "
+            f"at the end of the caption (before the echo if present) that matches the "
+            f"intent of cta_mode '{cta_mode}'. One sentence only. Caption style — not a "
+            f"LinkedIn paragraph. Must feel organic to the voice, not generic."
+        )
+
+    # Echo adaptation note for non-verbatim platforms
+    echo_note = ""
+    if format_key in _ECHO_ADAPT_FORMATS:
+        echo = _block_content(structured_article, "echo")
+        if echo:
+            echo_note = (
+                f"\nECHO ADAPTATION: The echo block is provided for semantic reference. "
+                f"For {format_key} format, adapt the echo to platform voice — preserve the "
+                f"core thought but adjust the wording to feel native to this format. "
+                f"Do NOT copy-paste the exact wording from the Blog/LinkedIn version."
+            )
 
     lines = [
         f"narrative_spine (do not state verbatim — the article must earn it): "
@@ -202,6 +234,10 @@ def _build_user_prompt(structured_article: dict, format_key: str) -> str:
     lines.append("")
     lines.append(f"Format-specific constraints: {_FORMAT_CONSTRAINTS[format_key]}")
     lines.append(_COMPRESSION_RULE)
+    if instagram_cta_note:
+        lines.append(instagram_cta_note)
+    if echo_note:
+        lines.append(echo_note)
     lines.append("")
     lines.append(
         "Assemble the final body text for this format now, in the order the blocks "
@@ -264,9 +300,9 @@ Return ONLY valid JSON:
 {"body": "string - the assembled body text for this format"}"""
 
 
-def _compose_one(structured_article: dict, format_key: str) -> dict:
+def _compose_one(structured_article: dict, format_key: str, cta_mode: str = "none") -> dict:
     model = model_article() if format_key in ("long", "reading") else model_social()
-    user = _build_user_prompt(structured_article, format_key)
+    user = _build_user_prompt(structured_article, format_key, cta_mode=cta_mode)
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model)
     try:
@@ -302,15 +338,19 @@ def _compose_one(structured_article: dict, format_key: str) -> dict:
     return {"word_count": word_count, "body": body}
 
 
-def compose_platforms(structured_article: dict) -> dict:
+def compose_platforms(structured_article: dict, cta_mode: str = "none") -> dict:
     """
     Produce all five platform formats from one structured_article.
+
+    cta_mode: campaign-level CTA intent. Controls whether Instagram gets a CTA
+    sentence and what kind. Blog and LinkedIn always follow the cta block from
+    the structured_article directly. 'none' = no CTA on any platform.
 
     Raises ValueError if any single format's LLM call returns an empty body.
     """
     result = {}
     for format_key in ("long", "reading", "medium", "instagram", "short"):
-        result[format_key] = _compose_one(structured_article, format_key)
+        result[format_key] = _compose_one(structured_article, format_key, cta_mode=cta_mode)
         log.info(
             "Platform Composer: %s -> %d words", format_key, result[format_key]["word_count"],
         )

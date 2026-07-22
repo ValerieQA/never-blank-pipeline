@@ -1,0 +1,114 @@
+name: telegram_post
+status: ready
+purpose: >
+  Write a minimal Telegram signal post for a Never Blank content piece.
+  Format: 3 lines max. One observation. One business implication. Optional link.
+  Not a summary. Not a teaser. Not an announcement.
+
+input_schema:
+  core_idea:
+    type: str
+  telegram_angle:
+    type: str
+  observation:
+    type: str
+  mechanism:
+    type: str
+  cost_of_ignoring:
+    type: str
+  cta_mode:
+    type: str
+  wix_url:
+    type: str
+
+output_schema:
+  type: json_object
+  fields:
+    text:
+      type: str
+      description: >
+        The full Telegram post. 3 lines max.
+        Line 1: one sharp observation (the pattern, not the topic).
+        Line 2: one business implication (what this costs or changes).
+        Line 3: optional — one short CTA sentence if cta_mode is not "none",
+                or "[link]" placeholder if a link is appropriate.
+        No hashtags. No "Read more." No "Check the link." No "New post out."
+
+required_context:
+  - telegram_angle
+  - observation
+  - mechanism
+
+constraints:
+  - 3 lines maximum (not counting blank separator lines)
+  - no hashtags
+  - no "Read more", "Check the link", "New post out", "I wrote about" phrasing
+  - no article summary, no teaser
+  - observation must be a specific pattern, not a general topic statement
+  - if cta_mode is "none" — no CTA, no link, just the two-line signal
+  - if cta_mode is not "none" — add one short sentence matching the mode,
+    or include [link] as the third line if a full article exists
+  - output must be valid JSON
+
+failure_modes:
+  - text exceeds 3 lines: truncate to the most essential lines
+  - returns invalid JSON: retry once
+
+system: |
+  You write Telegram posts for Never Blank, a content strategy practice
+  for founder-led businesses.
+
+  Telegram is a signal channel. Posts are 3 lines maximum.
+  Never Blank's Telegram readers want the observation itself — not a pointer to it.
+
+  LINE 1 — THE OBSERVATION:
+  One sharp, specific fact about a pattern in founder-led businesses.
+  Not: "Visibility matters for small businesses."
+  Yes: "Fully booked founders go quiet. Clients read quiet as available."
+
+  LINE 2 — THE IMPLICATION:
+  One concrete business consequence. What this costs or what it produces.
+  Not: "This can affect your pipeline."
+  Yes: "That is how you lose the next project to someone with a worse product."
+
+  LINE 3 — CTA OR LINK (only if cta_mode is not "none"):
+  If cta_mode is "diagnostic": one short sentence like "Reply if you recognize this."
+  If cta_mode is "reflection": one short sentence like "If your presence disappears when you get busy, that is the pattern."
+  If cta_mode is "example_request": "Reply to see what this looks like in practice."
+  If cta_mode is "direct_conversation": "Reply if you want to look at where this is happening in your business."
+  If a link is provided and cta_mode is not "none", use [link] as a placeholder.
+  If cta_mode is "none": no third line. Two-line signal only.
+
+  VOICE:
+  - Analytical, observant, evidence-aware
+  - No corporate vocabulary
+  - No motivational language
+  - No hashtags
+  - Same Never Blank voice as the blog — compressed to its minimum
+
+  FORBIDDEN:
+  - "Read more" / "Full article" / "Check the link" / "New post out"
+  - "In today's world" / "It's important to" / "Let us help"
+  - Hashtags of any kind
+  - Generic CTAs: "book a call", "learn more", "schedule a consultation"
+
+  Format: Return valid JSON only. No text outside the JSON object.
+
+user: |
+  Write a Telegram post for Never Blank from this Content Matrix.
+
+  CONTENT MATRIX:
+  - Telegram angle: {telegram_angle}
+  - Core idea: {core_idea}
+  - Observation: {observation}
+  - Mechanism: {mechanism}
+  - Cost of ignoring: {cost_of_ignoring}
+
+  CTA MODE: {cta_mode}
+  ARTICLE LINK (use as [link] placeholder if appropriate): {wix_url}
+
+  Write the signal — not the announcement.
+  The reader must get the insight from these 3 lines, not be pointed toward it.
+
+  Return JSON with this exact key:
+  - "text": the full Telegram post (3 lines max, no hashtags)

@@ -556,6 +556,180 @@ class TestPlatformComposer:
             result = compose_platforms(self.STRUCTURED_ARTICLE)
         assert set(result.keys()) == set(_WORD_RANGE.keys())
 
+    def test_instagram_cta_mode_diagnostic_adds_cta_note_to_prompt(self):
+        """When cta_mode=diagnostic, the user prompt sent to the LLM must mention
+        the CTA instruction for Instagram."""
+        from src.editorial.platform_composer import _build_user_prompt
+        prompt = _build_user_prompt(self.STRUCTURED_ARTICLE, "instagram", cta_mode="diagnostic")
+        assert "INSTAGRAM CTA" in prompt
+        assert "diagnostic" in prompt
+
+    def test_instagram_cta_mode_none_has_no_cta_note(self):
+        """When cta_mode=none, no CTA note must appear in the Instagram prompt."""
+        from src.editorial.platform_composer import _build_user_prompt
+        prompt = _build_user_prompt(self.STRUCTURED_ARTICLE, "instagram", cta_mode="none")
+        assert "INSTAGRAM CTA" not in prompt
+
+    def test_instagram_cta_default_is_none(self):
+        """cta_mode defaults to 'none' — Instagram must not get a CTA note by default."""
+        from src.editorial.platform_composer import _build_user_prompt
+        prompt = _build_user_prompt(self.STRUCTURED_ARTICLE, "instagram")
+        assert "INSTAGRAM CTA" not in prompt
+
+    def test_echo_adaptation_note_for_instagram(self):
+        """Instagram prompt must include the ECHO ADAPTATION note when echo is present."""
+        from src.editorial.platform_composer import _build_user_prompt
+        prompt = _build_user_prompt(self.STRUCTURED_ARTICLE, "instagram")
+        assert "ECHO ADAPTATION" in prompt
+
+    def test_echo_no_adaptation_note_for_long_format(self):
+        """Long format (Blog) must NOT include ECHO ADAPTATION note — echo is verbatim."""
+        from src.editorial.platform_composer import _build_user_prompt
+        prompt = _build_user_prompt(self.STRUCTURED_ARTICLE, "long")
+        assert "ECHO ADAPTATION" not in prompt
+
+    def test_compose_platforms_accepts_cta_mode(self):
+        """compose_platforms must accept cta_mode without error."""
+        body = "some body text " * 20
+        with patch("src.editorial.platform_composer.chat", return_value=_json_response({"body": body})):
+            result = compose_platforms(self.STRUCTURED_ARTICLE, cta_mode="diagnostic")
+        assert set(result.keys()) == set(_WORD_RANGE.keys())
+
+
+# --- generator telegram and stories ---
+
+class TestGeneratorTelegramStories:
+    """Tests for generate_telegram and generate_stories in src/content/generator.py."""
+
+    BRIEF_MOCK = None  # set in tests via mock
+    MATRIX_MOCK = None
+
+    def _make_brief(self):
+        from unittest.mock import MagicMock
+        brief = MagicMock()
+        brief.title = "Test title"
+        brief.angle = "test angle"
+        brief.hook = "test hook"
+        brief.content_goal.value = "recognition"
+        brief.observation_statement = "test observation"
+        brief.observation_type.value = "pattern"
+        brief.tone_notes = ""
+        brief.wix_slug = "test-slug"
+        brief.observation_id = "obs_001"
+        brief.platforms = ["telegram", "stories"]
+        return brief
+
+    def _make_matrix(self):
+        from unittest.mock import MagicMock
+        matrix = MagicMock()
+        matrix.cta_mode = "diagnostic"
+        matrix.core_idea = "test core idea"
+        matrix.observation = "test observation"
+        matrix.mechanism = "test mechanism"
+        matrix.cost_of_ignoring = "test cost"
+        matrix.strategic_question = "test question"
+        matrix.hook_type = "hidden_cost"
+        matrix.primary_hook = "test hook"
+        matrix.supporting_points = ["point 1", "point 2"]
+        matrix.visual_anchor = "test visual"
+        matrix.sales_angle = "test sales"
+        matrix.soft_cta = "test cta"
+        matrix.linkedin_angle = "test linkedin"
+        matrix.instagram_angle = "test instagram"
+        matrix.facebook_angle = "test facebook"
+        matrix.threads_angle = "test threads"
+        matrix.telegram_angle = "test telegram"
+        matrix.stories_flow = "test stories flow"
+        return matrix
+
+    def test_generate_telegram_returns_text_when_prompt_succeeds(self):
+        """generate_telegram must return {"text": ...} with content when prompt succeeds."""
+        from src.content.generator import generate_telegram
+        brief = self._make_brief()
+        matrix = self._make_matrix()
+        telegram_text = "Fully booked founders go quiet.\nClients read quiet as available.\nReply if you recognize this."
+        with patch("src.content.generator._call", return_value={"text": telegram_text}):
+            result = generate_telegram(brief, matrix)
+        assert result.get("text") == telegram_text
+
+    def test_generate_telegram_returns_none_text_on_failure(self):
+        """generate_telegram must return {"text": None} if the LLM call fails."""
+        from src.content.generator import generate_telegram
+        brief = self._make_brief()
+        matrix = self._make_matrix()
+        with patch("src.content.generator._call", side_effect=RuntimeError("LLM down")):
+            result = generate_telegram(brief, matrix)
+        assert result.get("text") is None
+
+    def test_generate_telegram_returns_none_text_on_empty_response(self):
+        """generate_telegram must return {"text": None} if LLM returns empty text."""
+        from src.content.generator import generate_telegram
+        brief = self._make_brief()
+        matrix = self._make_matrix()
+        with patch("src.content.generator._call", return_value={"text": ""}):
+            result = generate_telegram(brief, matrix)
+        assert result.get("text") is None
+
+    def test_generate_telegram_text_max_3_lines(self):
+        """Telegram output must be 3 lines max — validate the prompt contract."""
+        from src.content.generator import generate_telegram
+        brief = self._make_brief()
+        matrix = self._make_matrix()
+        three_line_text = "Line one.\nLine two.\nLine three."
+        with patch("src.content.generator._call", return_value={"text": three_line_text}):
+            result = generate_telegram(brief, matrix)
+        assert result["text"].count("\n") <= 2  # 3 lines = 2 newlines max
+
+    def test_generate_stories_returns_4_frames_on_success(self):
+        """generate_stories must return a list of 4 frame dicts when prompt succeeds."""
+        from src.content.generator import generate_stories
+        brief = self._make_brief()
+        matrix = self._make_matrix()
+        frames = [
+            {"frame_number": 1, "type": "recognition", "text": "You've been heads down.", "interaction": None, "interaction_options": None},
+            {"frame_number": 2, "type": "mechanism", "text": "Delivery mode filters presence out.", "interaction": None, "interaction_options": None},
+            {"frame_number": 3, "type": "reframe", "text": "Not a discipline problem.", "interaction": None, "interaction_options": None},
+            {"frame_number": 4, "type": "cta", "text": "Show me how your presence is organized.", "interaction": "cta", "interaction_options": None},
+        ]
+        with patch("src.content.generator._call", return_value={"frames": frames}):
+            result = generate_stories(brief, matrix)
+        assert result is not None
+        assert len(result) == 4
+
+    def test_generate_stories_frame_types_in_order(self):
+        """Stories frames must follow recognition→mechanism→reframe→cta order."""
+        from src.content.generator import generate_stories
+        brief = self._make_brief()
+        matrix = self._make_matrix()
+        frames = [
+            {"frame_number": 1, "type": "recognition", "text": "Frame 1.", "interaction": None, "interaction_options": None},
+            {"frame_number": 2, "type": "mechanism", "text": "Frame 2.", "interaction": None, "interaction_options": None},
+            {"frame_number": 3, "type": "reframe", "text": "Frame 3.", "interaction": None, "interaction_options": None},
+            {"frame_number": 4, "type": "cta", "text": "Frame 4.", "interaction": "question_box", "interaction_options": None},
+        ]
+        with patch("src.content.generator._call", return_value={"frames": frames}):
+            result = generate_stories(brief, matrix)
+        types = [f["type"] for f in result]
+        assert types == ["recognition", "mechanism", "reframe", "cta"]
+
+    def test_generate_stories_returns_none_on_failure(self):
+        """generate_stories must return None (channel FAILED) if prompt fails."""
+        from src.content.generator import generate_stories
+        brief = self._make_brief()
+        matrix = self._make_matrix()
+        with patch("src.content.generator._call", side_effect=RuntimeError("LLM error")):
+            result = generate_stories(brief, matrix)
+        assert result is None
+
+    def test_generate_stories_returns_none_on_empty_frames(self):
+        """generate_stories must return None if prompt returns empty frames list."""
+        from src.content.generator import generate_stories
+        brief = self._make_brief()
+        matrix = self._make_matrix()
+        with patch("src.content.generator._call", return_value={"frames": []}):
+            result = generate_stories(brief, matrix)
+        assert result is None
+
 
 # --- pipeline ---
 

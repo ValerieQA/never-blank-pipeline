@@ -266,19 +266,65 @@ If the first sentence could be removed without losing the core idea, it is the w
 
 **Blog** — full development. Hook → observation → recognition → evidence → explanation
 → reframe → business meaning → echo. No resolution. No advice. End with echo, not comfort.
+Echo: verbatim.
 
 **LinkedIn** — one observation, recognition, specific implication.
-Short paragraphs. No preamble. Max 3 niche hashtags. CTA only when natural.
+Short paragraphs. No preamble. Max 3–5 niche hashtags. CTA only when cta_mode is not "none."
+Echo: verbatim.
 
-**Threads** — 3–5 posts. Each post adds something the previous one didn't.
-Post 1 is the hook. Final post is an Echo — not a motivational close.
-No hashtags. No "bridges must be built."
+**Threads** — 5-post cognitive arc: Hook → Recognition → Mechanism → Reframe → Echo.
+Each post adds a new cognitive step — not a restatement. No hashtags. No summary.
+Post 5 (Echo) is the final position — an uncomfortable truth or sharp consequence.
+Not a motivational close. Not "bridges must be built."
+Echo: adapted to Threads voice (short, punchy — not copy-pasted from Blog/LinkedIn).
 
-**Telegram** — signal format. One line observation. One business implication.
-One link. Three lines total. Not a newsletter teaser. Not a summary.
+**Telegram** — signal format only. 3 lines maximum.
+Line 1: one sharp observation (the pattern itself, not a topic statement).
+Line 2: one business implication (what this costs or produces).
+Line 3: optional — one short CTA sentence if cta_mode is not "none", or link placeholder.
+No hashtags. No "Read more." No "New post out." No article teaser.
+The reader gets the insight from these 3 lines — not a pointer to it.
+Echo: not used.
 
 **Instagram** — visual anchor first. One-paragraph observation. Niche hashtags only.
-Make the reader feel the pattern before they understand it.
+Make the reader feel the pattern before they understand it. Caption is literary, not analytical.
+CTA: if cta_mode is not "none", add one short sentence at the end (before echo). Caption style only.
+Echo: adapted (semantic content preserved, wording adjusted for Instagram voice).
 
-**Facebook** — same depth as blog but conversational. Can include a natural invitation.
-No generic closers.
+**Facebook** — same depth as blog but more human and conversational.
+Longer recognition section. Direct questions to audience allowed.
+Diagnostic CTA allowed in conversational form. More personal tone than LinkedIn.
+No generic closers. Warmer register — peer-to-peer, not analytical.
+Echo: adapted (warmer wording than Blog/LinkedIn).
+
+## CTA Form by Platform
+
+Campaign layer sets the CTA intent (cta_mode). Platform layer determines the form.
+
+| cta_mode | LinkedIn | Instagram | Stories | Telegram | Facebook |
+|---|---|---|---|---|---|
+| none | no CTA | no CTA | question_box frame | two-line signal | no CTA |
+| diagnostic | paragraph invitation | one sentence | "Show me how your presence is organized" | "Reply if you recognize this." | conversational question |
+| reflection | soft paragraph | one sentence | question_box | one sentence | conversational |
+| example_request | paragraph | one sentence | CTA frame | "Reply to see what this looks like." | conversational |
+| direct_conversation | paragraph invitation | one sentence | poll | "Reply if you want to look at this." | direct question |
+
+## Stories Structure (4 Frames)
+
+Stories are an interactive channel — not a summary of the article.
+
+**Frame 1 — Recognition:** Reader sees themselves in the pattern.
+One specific, concrete moment that describes what they do.
+
+**Frame 2 — Mechanism:** What is actually happening underneath the behavior.
+The explanation the reader did not have before.
+
+**Frame 3 — Reframe:** It is not what they thought. The problem is different from
+how it appears.
+
+**Frame 4 — Interaction:** The interactive moment. Type depends on cta_mode:
+- cta_mode "none" → question_box
+- cta_mode "diagnostic" → CTA ("Show me how your presence is organized. I'll identify where it breaks.")
+- cta_mode "reflection" → question_box with reflective prompt
+- cta_mode "example_request" → CTA frame
+- cta_mode "direct_conversation" → poll ("Does this happen in your business? Yes / Sometimes")

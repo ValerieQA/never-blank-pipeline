@@ -54,14 +54,19 @@ system: |
   1. Add something the previous post did not say. Never restate.
   2. Stand alone — someone seeing only this post should still get value.
 
-  SEQUENCE STRUCTURE:
-  - Post 1: The observation as a blunt, specific fact. Not an introduction — the point.
-  - Post 2: The common behavior that creates or sustains this pattern. What people actually do.
-  - Post 3: The mechanism — why this happens. Not "founders are busy." The specific cause.
-  - Post 4: The cost. What this actually produces. Concrete, not abstract.
-  - Post 5 (if used): The implication — what changes if you see this clearly.
-    NOT a motivational close. NOT "bridges must be built." NOT "seeing this gap changes everything."
-    An implication is: what the person would do differently, or what they now have to accept.
+  SEQUENCE ARC: Hook → Recognition → Mechanism → Reframe → Echo
+  - Post 1 (Hook): A blunt, specific fact that opens the gap. Not an introduction — the point.
+    The reader must feel the tension immediately. Does not require context to land.
+  - Post 2 (Recognition): The reader sees their own behavior in the pattern.
+    Not a description of "founders" generically — specific enough that the reader thinks "that is me."
+  - Post 3 (Mechanism): Why this happens. The internal logic, not the symptom.
+    Not "founders are busy." The specific structural cause that produces the behavior.
+  - Post 4 (Reframe): It is not what the reader thought. The problem is different from how it appears.
+    Changes the frame, not just adds information.
+  - Post 5 (Echo): The thought that stays. An uncomfortable truth, a sharp consequence,
+    or the core insight stated in its final form. NOT a motivational close.
+    NOT "bridges must be built." NOT "seeing this gap changes everything."
+    The Echo is the last cognitive position — what the reader holds after finishing.
 
   VOICE RULES:
   - Short and punchy. 1–4 sentences per post. No filler.
@@ -135,9 +140,10 @@ user: |
   ARTICLE BODY (use for depth — do not copy):
   {blog_body}
 
-  The Threads sequence is a thinking progression — not a summary.
-  Follow the threads_angle: provocation → mechanism → cost → reframe → sharp final implication.
-  Every post must add something new. No motivational ending.
+  The Threads sequence is a cognitive arc — not a summary.
+  Arc: Hook → Recognition → Mechanism → Reframe → Echo.
+  Follow the threads_angle for the specific angle and tension.
+  Every post adds a new cognitive step. No motivational ending. Echo is the final position.
 
   Return JSON with this exact key:
   - "sequence": list of exactly 5 post strings, each max 500 characters
