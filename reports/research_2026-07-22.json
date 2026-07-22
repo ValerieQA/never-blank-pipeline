@@ -1,11 +1,13 @@
 {
   "date": "2026-07-22",
-  "candidates_found": 0,
+  "candidates_found": 2,
   "duplicates_skipped": 0,
-  "new_signals_added": 0,
+  "new_signals_added": 2,
   "selected_for_content": 0,
-  "sheet_sync": "not_run",
+  "sheet_sync": "success",
   "archived": 0,
   "top_signals": [],
-  "publish_reports": []
+  "publish_reports": [],
+  "_content_packages": [],
+  "_publish_reports": []
 }
