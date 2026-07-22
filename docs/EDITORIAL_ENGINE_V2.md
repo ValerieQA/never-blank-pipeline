@@ -194,16 +194,25 @@ The Echo is the core Never Blank editorial device. It is NOT:
   the strategy — even when nobody chose it."
 - "Customers rarely decide to forget a business. They simply stop encountering it."
 
-Every second article should normally contain a strong Echo. More often when naturally earned,
-but never formulaic. An Echo can be omitted when no strong candidate emerged.
+For every article, generate 3–5 Echo candidates internally. Include the strongest one only
+when it is genuinely earned by that article's specific argument. An absent Echo is better
+than a generic one. No per-article quota — include when earned, omit when not.
+Soft target for the first campaign: roughly half of posts carry a strong Echo, but this
+is a guideline for review, NOT a counter or hard rule in code.
 
-### Step 9 — Natural invitation (optional)
+### Step 9 — CTA (governed by cta_mode — not model judgment)
 
-Not every article needs a direct CTA. When used:
+CTA presence and type are set by the campaign via the `cta_mode` field. The model does NOT
+decide on its own whether to include a CTA — it follows the directive.
 
-- Place before the Echo or integrate before it — do not destroy a strong Echo with generic
-  sales text appended after it
-- Vary the type across articles
+- cta_mode = none: no CTA
+- cta_mode = reflection: soft reflective invitation
+- cta_mode = diagnostic: visibility audit / identify where the system breaks
+- cta_mode = example_request: invitation to request an example
+- cta_mode = direct_conversation: invitation to discuss fit directly
+
+When CTA is included:
+- Place before the Echo — do not destroy a strong Echo with sales text appended after it
 - Never use: "book a call", "learn more", "buy now", "let us handle your content",
   "transform your social media"
 
@@ -394,3 +403,43 @@ The Editorial Engine determines how the reader encounters it.
 ---
 
 *The reader is the central character. The article succeeds when they recognize themselves.*
+
+---
+
+## 9. Analytics — Automatic vs. Qualitative Signals
+
+After publishing, two types of signals exist. They must not be conflated.
+
+### Automatic signals (pulled from platform APIs)
+
+These can be collected programmatically:
+- Impressions
+- Reactions (likes, etc.)
+- Comments (count)
+- Reposts / shares
+- Clicks
+- Profile views (where platform exposes them)
+- Website visits (via UTM or platform referral data)
+- Replies (DMs or comment replies)
+- Leads and conversations started
+
+**These are the signals a future Distribution Engine / analytics module can automate.**
+
+### Qualitative signals (require human judgment)
+
+Platforms do not expose these as metrics. They require the Experiment Analyst role to
+review the actual text of comments, DMs, and audience behavior:
+
+- Whether the Recognition moment landed (comments showing self-recognition)
+- Whether the Echo worked (readers quoting it back, sharing just the Echo line)
+- Whether the CTA felt forced or natural (absence of complaints; type of response)
+- Whether readers repeated a Named Concept (e.g. "Presence Debt") in their own language
+- Whether comments showed genuine "this is me" recognition vs. generic positive response
+- Whether the article prompted questions that move toward a diagnostic conversation
+
+**Do NOT build or imply an automatic dashboard for qualitative signals.** Platforms do not
+expose these as data points. They are human judgments made by the Experiment Analyst after
+reading comments, messages, and post performance in context.
+
+The split matters: automating the automatic half is useful. Automating the qualitative half
+is not possible — and pretending otherwise wastes engineering time on a fake metric.

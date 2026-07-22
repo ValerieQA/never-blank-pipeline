@@ -424,6 +424,61 @@ class TestNeverBlankVoice:
         assert result["cta_line"] is not None
         assert "presence" in result["cta_line"]
 
+    # --- cta_mode tests ---
+
+    def test_cta_mode_none_produces_no_cta(self):
+        """When cta_mode='none', cta_line must be null regardless of article content."""
+        data = {
+            "echo_candidates": ["Customers rarely decide to forget a business."],
+            "echo_line": "Customers rarely decide to forget a business.",
+            "cta_line": None,
+            "checklist_pass": True,
+            "checklist_notes": "",
+        }
+        with patch("src.editorial.never_blank_voice.chat", return_value=_json_response(data)):
+            result = finalize_article(
+                self.HOOK, None, self.DISCOVERY, self.STORY, self.SPINE,
+                self.DECISION_LENS, SIGNAL, cta_mode="none",
+            )
+        assert result["cta_line"] is None
+        assert result["cta_mode"] == "none"
+
+    def test_cta_mode_diagnostic_passed_to_user_message(self):
+        """cta_mode='diagnostic' must appear in the user message sent to the LLM."""
+        data = {
+            "echo_candidates": ["echo"],
+            "echo_line": "echo",
+            "cta_line": "If your content presence disappears when you get busy, let's look at exactly where the system fails.",
+            "checklist_pass": True,
+            "checklist_notes": "",
+        }
+        with patch("src.editorial.never_blank_voice.chat", return_value=_json_response(data)) as mock_chat:
+            result = finalize_article(
+                self.HOOK, None, self.DISCOVERY, self.STORY, self.SPINE,
+                self.DECISION_LENS, SIGNAL, cta_mode="diagnostic",
+            )
+        sent_user = mock_chat.call_args.kwargs["user"]
+        assert "diagnostic" in sent_user
+        assert result["cta_mode"] == "diagnostic"
+        assert result["cta_line"] is not None
+
+    def test_cta_mode_stored_in_structured_article(self):
+        """cta_mode must be stored in the returned structured_article dict."""
+        data = {
+            "echo_candidates": [],
+            "echo_line": None,
+            "cta_line": None,
+            "checklist_pass": True,
+            "checklist_notes": "",
+        }
+        for mode in ("none", "reflection", "diagnostic", "example_request", "direct_conversation"):
+            with patch("src.editorial.never_blank_voice.chat", return_value=_json_response(data)):
+                result = finalize_article(
+                    self.HOOK, None, self.DISCOVERY, self.STORY, self.SPINE,
+                    self.DECISION_LENS, SIGNAL, cta_mode=mode,
+                )
+            assert result["cta_mode"] == mode
+
     def test_checklist_fail_does_not_raise(self):
         data = {
             "echo_candidates": [],
@@ -536,8 +591,9 @@ class TestPipeline:
                 "remaining_uncertainty": None,
                 "business_translation": "f",
             },
-            finalize_article=lambda hook, ctx, discovery, story, spine, dl, signal: {
+            finalize_article=lambda hook, ctx, discovery, story, spine, dl, signal, cta_mode="none": {
                 "signal_id": signal.get("SIGNAL_ID", ""),
+                "cta_mode": cta_mode,
                 "narrative_spine": "spine sentence",
                 "hook": "hook", "reader_context": None, "discovery": discovery,
                 "surviving_explanation": "e",

@@ -80,6 +80,19 @@ fields:
       Maximum 1–2 sentences.
     type: string
 
+  cta_mode:
+    description: >
+      Explicit campaign-level instruction that governs whether and what type of CTA
+      the article includes. The model must NOT decide this on its own — it receives
+      cta_mode as a directive and follows it exactly.
+    type: string
+    enum:
+      - none            # No CTA. Article's job: reach, recognition, concept-building only.
+      - reflection      # Soft reflective invitation ("if you recognize your business in this pattern…")
+      - diagnostic      # Invitation to a visibility audit / identify where the system breaks
+      - example_request # Invitation to request an example of what Never Blank produces
+      - direct_conversation  # Direct invitation to discuss fit with Never Blank
+
   soft_cta:
     description: >
       Low-pressure call to action.
@@ -87,6 +100,7 @@ fields:
         This is the kind of signal Never Blank is built to keep visible.
         If your business keeps disappearing when you get busy, that is not a content problem.
         The system you are watching here is the product.
+      Note: soft_cta provides the wording suggestion; cta_mode governs whether it appears.
     type: string
 
   # Platform-specific angles (brief guidance for each platform generator)
@@ -113,6 +127,28 @@ fields:
   stories_flow:
     description: "Brief description of the story arc for Instagram/Facebook Stories (4-story sequence)"
     type: string
+
+named_concepts:
+  campaign_1:
+    active:
+      - name: Presence Debt
+        status: hypothesis  # Evaluate after first campaign — not a locked brand term
+        definition: >
+          Presence Debt is the accumulated cost of the periods when a business
+          disappears from customers' view and has to rebuild recognition,
+          familiarity, and trust again.
+        usage_rule: >
+          Introduce and explain before using as a hashtag.
+          Not obligatory in every article — use when the article's argument
+          naturally earns it. Evaluate after campaign 1: do readers repeat
+          the phrase? Do they recognize their own situation? Does it prompt
+          questions toward a diagnostic conversation?
+    reserve:
+      - Compound Presence
+      - Never Silent
+      - customer memory
+      - accumulated recognition
+      - continuity of presence
 
 hook_type_definitions:
   hidden_cost:

@@ -15,6 +15,16 @@ input_schema:
   content_goal:
     type: str
     enum: [educate, challenge, demonstrate, invite]
+  cta_mode:
+    type: str
+    enum: [none, reflection, diagnostic, example_request, direct_conversation]
+    description: >
+      Explicit campaign directive. The model must follow this exactly.
+      none = no CTA at all.
+      reflection = soft reflective invitation.
+      diagnostic = visibility audit / identify where the system breaks.
+      example_request = invitation to request an example.
+      direct_conversation = direct invitation to discuss fit.
   blog_body:
     type: str
     description: Full blog article — use as source material
@@ -49,7 +59,12 @@ required_context:
 constraints:
   - max 2800 characters
   - first line must be hook — no preamble
-  - max 3 hashtags at end — niche only, no generic tags
+  - 3–5 hashtags at end — niche and article-specific, chosen per article/industry/audience
+  - BLACKLISTED hashtags (never use): #success #motivation #business #entrepreneurship
+    #growth #marketing #startup #hustle #mindset #leadership #innovation #FounderLed
+    #BusinessStrategy #VisibilityGap #ContentCreation #SocialMedia
+  - Named Concept (e.g. #PresenceDebt) only after the concept has been explained
+    in the article itself — never on first appearance
   - no "let me know what you think" or similar closers
   - CTA (if present) must precede the Echo, never follow it
   - output must be valid JSON
@@ -82,10 +97,12 @@ system: |
   4. EXPLANATION — the mechanism, in 1-2 sentences. Why does this happen.
   5. REFRAME — one sentence that reframes the obvious interpretation.
   6. ECHO — the final memorable thought. Article-specific. Not a slogan.
-     Generate 3 candidates internally, select the one that depends on this article's
-     specific argument, not on Never Blank's general worldview.
-  7. CTA (optional) — ONLY when it fits naturally. Place BEFORE the Echo if used.
-     Never after. Never generic.
+     Generate 3–5 candidates internally, select the one that is genuinely earned
+     by THIS article's specific argument — not by Never Blank's general worldview.
+     Include only when earned. An absent Echo is better than a generic one.
+     No per-article quota: include when the argument earns it, omit when it does not.
+  7. CTA — governed entirely by cta_mode (see CTA RULES below). Place BEFORE the Echo
+     if both are used. Never after.
 
   VOICE RULES:
   - First line is a pattern interrupt. State the observation bluntly. No wind-up.
@@ -100,15 +117,37 @@ system: |
   - Max 3 hashtags. They must be specific and niche — not #business, #entrepreneur,
     #marketing, #FounderLed, #BusinessStrategy, #VisibilityGap.
 
-  CTA RULES:
-  - Not every post needs a CTA. Vary across articles — don't use CTA in every post.
-  - Permitted: visibility audit invitation, show-us-your-presence-system invitation,
-    identify-where-it-breaks invitation, example request, fit discussion.
-  - Forbidden: "book a call", "learn more", "buy now", "let us handle your content",
-    "transform your social media", "schedule your free consultation".
-  - Example of a natural invitation: "If you recognize your business in this pattern,
+  CTA RULES — GOVERNED BY cta_mode (DO NOT DECIDE ON YOUR OWN):
+  The cta_mode field is a campaign-level directive. Follow it exactly.
+
+  cta_mode = none:
+    Do not include any CTA. End on the Echo (if earned) or the business meaning.
+    Do not add even a soft "feel free to reach out."
+
+  cta_mode = reflection:
+    Include a soft, reflective invitation. Tied to the reader recognizing their
+    own situation. Example: "If you recognize your business in this pattern,
     let's look at where your presence starts depending entirely on your time and energy."
-  - A CTA MUST precede the Echo if both are used. The Echo ends the post.
+
+  cta_mode = diagnostic:
+    Invite the reader to a visibility audit or to identify where their system breaks.
+    Example: "If your content presence disappears when you get busy, let's look at
+    exactly where the system fails — and whether it can hold without you."
+
+  cta_mode = example_request:
+    Invite the reader to request an example of what Never Blank produces.
+    Example: "If you're curious what this looks like for a business like yours,
+    ask me to show you a sample."
+
+  cta_mode = direct_conversation:
+    Invite the reader to discuss fit directly. Still natural, not salesy.
+    Example: "If this pattern describes your business right now, let's talk
+    about whether Never Blank fits."
+
+  UNIVERSAL CTA RULES (regardless of mode):
+  - CTA must precede the Echo if both are used. The Echo ends the post.
+  - Forbidden always: "book a call", "learn more", "buy now", "let us handle
+    your content", "transform your social media", "schedule your free consultation".
 
   ECHO RULES:
   - Not every post needs an Echo. Use when the article's argument earns one.
@@ -159,7 +198,8 @@ user: |
   - Strategic question: {strategic_question}
   - Primary hook: {primary_hook}
   - LinkedIn angle: {linkedin_angle}
-  - Soft CTA (use only if natural, place before Echo): {soft_cta}
+  - CTA mode (follow exactly): {cta_mode}
+  - Soft CTA wording suggestion (use only if cta_mode ≠ none, place before Echo): {soft_cta}
   - Sales angle (subtle only): {sales_angle}
 
   SOURCE CONTEXT:
@@ -172,7 +212,8 @@ user: |
 
   Follow the linkedin_angle. The post must not copy the blog intro.
   The reader is the central character — they must recognize their own situation.
-  If soft_cta is natural, use it BEFORE any Echo. If it sounds like promotion, omit it.
+  CTA: follow cta_mode exactly. If cta_mode is "none", include no CTA.
+  If cta_mode requires a CTA, place it BEFORE any Echo.
 
   Return JSON with these exact keys:
   - "text": full LinkedIn post (max 2800 chars), hashtags at end

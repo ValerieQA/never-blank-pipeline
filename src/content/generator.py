@@ -68,6 +68,7 @@ def _build_context(brief: ContentBrief, matrix: ContentMatrix, blog_body: str = 
         "observation_id":        brief.observation_id or "",
         "statement":             brief.observation_statement,
         # Matrix fields — primary inputs for all platform prompts
+        "cta_mode":              getattr(matrix, "cta_mode", "none"),
         "core_idea":             matrix.core_idea,
         "observation":           matrix.observation,
         "mechanism":             matrix.mechanism,
@@ -160,42 +161,17 @@ def generate_threads(brief: ContentBrief, matrix: ContentMatrix, blog_body: str)
 
 
 def generate_telegram(brief: ContentBrief, matrix: ContentMatrix) -> dict:
-    ctx = _build_context(brief, matrix)
-    result = _call("telegram_post", ctx)
-    result.setdefault("text", "")
-    return result
+    """Telegram post generation removed — telegram_post prompt deleted.
+    Returns an empty stub so ContentPackage can still be constructed."""
+    log.info("generate_telegram: prompt removed, returning empty stub")
+    return {"text": ""}
 
 
 def generate_stories(brief: ContentBrief, matrix: ContentMatrix) -> list[dict]:
-    """Generate 4-story Instagram/Facebook Stories sequence."""
-    ctx = _build_context(brief, matrix)
-    result = _call("stories_post", ctx)
-    stories = result.get("stories", [])
-    if not isinstance(stories, list) or len(stories) == 0:
-        log.warning("stories_post missing 'stories' array — using fallback")
-        return _fallback_stories(matrix)
-    # Ensure all 4 stories have required fields
-    required = ["story_number", "type", "text", "sticker_suggestion", "visual_note"]
-    cleaned = []
-    for i, s in enumerate(stories[:4], start=1):
-        if not isinstance(s, dict):
-            s = {}
-        s.setdefault("story_number", i)
-        s.setdefault("type", ["hook", "poll", "insight", "cta"][i - 1])
-        s.setdefault("text", matrix.primary_hook if i == 1 else "")
-        s.setdefault("sticker_suggestion", "none")
-        s.setdefault("visual_note", "dark branded background")
-        cleaned.append(s)
-    return cleaned
-
-
-def _fallback_stories(matrix: ContentMatrix) -> list[dict]:
-    return [
-        {"story_number": 1, "type": "hook",    "text": matrix.primary_hook,       "sticker_suggestion": "question sticker", "visual_note": "dark background, large text"},
-        {"story_number": 2, "type": "poll",     "text": matrix.strategic_question, "sticker_suggestion": "poll sticker",     "visual_note": "split composition"},
-        {"story_number": 3, "type": "insight",  "text": matrix.cost_of_ignoring,   "sticker_suggestion": "none",             "visual_note": "brand visual, high contrast"},
-        {"story_number": 4, "type": "cta",      "text": matrix.soft_cta,           "sticker_suggestion": "link sticker",     "visual_note": "branded with logo"},
-    ]
+    """Stories generation removed — stories_post prompt deleted.
+    Returns an empty list stub so ContentPackage can still be constructed."""
+    log.info("generate_stories: prompt removed, returning empty stub")
+    return []
 
 
 # ── Full package ───────────────────────────────────────────────────────────────

@@ -15,6 +15,14 @@ input_schema:
   content_goal:
     type: str
     enum: [educate, challenge, demonstrate, invite]
+  cta_mode:
+    type: str
+    enum: [none, reflection, diagnostic, example_request, direct_conversation]
+    description: >
+      Explicit campaign directive for CTA. The model must NOT decide on its own
+      whether to include a CTA or which type. Follow cta_mode exactly.
+      none = no CTA. reflection = soft reflective invitation. diagnostic = audit
+      invitation. example_request = request example. direct_conversation = discuss fit.
   observation_statement:
     type: str
   observation_type:
@@ -96,10 +104,14 @@ system: |
      candidates internally and select the one most specific to this article's argument.
      NOT a summary, NOT a slogan, NOT a generic motivational line. Must be earned by
      the logic that preceded it. Works out of context.
-  9. NATURAL INVITATION (optional) — only include if it fits naturally. Must precede
-     the Echo, not follow it. Use one of: visibility audit invitation, show-us-your-
-     presence-system invitation, identify-where-it-breaks invitation. Never use:
-     "book a call", "learn more", "buy now", "let us handle your content".
+  9. CTA — governed entirely by cta_mode input. Do NOT decide on your own.
+     cta_mode = none: no CTA whatsoever.
+     cta_mode = reflection: soft reflective invitation tied to recognition.
+     cta_mode = diagnostic: invite to audit / identify where the system breaks.
+     cta_mode = example_request: invite to request an example.
+     cta_mode = direct_conversation: invite to discuss fit directly.
+     When CTA is included, it MUST precede the Echo — never follow it.
+     Forbidden always: "book a call", "learn more", "buy now", "let us handle your content".
 
   HOOK RULES:
   - Open with a concrete, uncomfortable observation. Not an introduction. Not context.
@@ -158,7 +170,8 @@ user: |
   - Primary hook: {primary_hook}
   - Supporting points: {supporting_points}
   - Visual anchor: {visual_anchor}
-  - Soft CTA (use only if natural, place before Echo): {soft_cta}
+  - CTA mode (follow exactly): {cta_mode}
+  - Soft CTA wording suggestion (use only if cta_mode ≠ none, place before Echo): {soft_cta}
   - Sales angle (weave subtly if it fits): {sales_angle}
 
   BRIEF CONTEXT:
@@ -169,7 +182,7 @@ user: |
 
   Use the primary_hook as the opening. Mechanism and cost_of_ignoring are the
   structural backbone. End with a strong Echo specific to this article.
-  If soft_cta fits naturally, place it before the Echo — never after.
+  CTA: follow cta_mode exactly (see step 9 in the arc). Place before Echo if used.
 
   Return JSON with these exact keys:
   - "title": the article title

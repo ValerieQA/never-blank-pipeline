@@ -57,7 +57,25 @@ Write for that person. Not for a large company. Not for a marketing team. Not fo
 ## Named Concepts
 
 These concepts are mechanisms, not branded phrases. Explain them as structural patterns,
-not as slogans.
+not as slogans. Named concepts are introduced gradually — not all at once.
+
+### Active (Campaign 1) — Hypothesis Under Test
+
+**Presence Debt** — *Presence Debt is the accumulated cost of the periods when a business
+disappears from customers' view and has to rebuild recognition, familiarity, and trust again.*
+
+Treat this as a hypothesis, not a locked brand term. After the first campaign, evaluate:
+- Do readers repeat the phrase in comments?
+- Do they recognize their own situation in it without lengthy explanation?
+- Does it prompt questions that move toward a diagnostic conversation?
+- Does it require too much setup to land with a new reader?
+
+Usage guidance: introduce and explain Presence Debt before using it as a hashtag.
+Not obligatory in every article — use when the article's argument earns it.
+If the term does not resonate after the first campaign, it is not defended just because
+it appears in this document.
+
+### Reserve (introduce later, only when context is natural)
 
 **Compound Presence** — repeated meaningful visibility accumulates recognition and trust
 over time. The effect is not linear. Absence erases accumulated familiarity faster than
@@ -154,3 +172,19 @@ Permitted CTA territory:
 Example of a natural invitation:
 "If you recognize your business in this pattern, let's look at where your presence
 starts depending entirely on your time and energy."
+
+---
+
+## Architecture Staging
+
+```
+Stage 1: Implement Editorial Strategy          ← done
+Stage 2: Generate and review the first campaign
+Stage 3: Publish the campaign
+Stage 4: Collect real qualitative and quantitative signals
+Stage 5: Build/extend Distribution Engine (SEO, LinkedIn discoverability, etc.)
+         using actual evidence from Stage 4
+```
+
+Nothing in Stages 2–5 blocks this document. This note exists so future work does not
+jump to Stage 5 tooling before Stage 4 evidence exists to justify it.

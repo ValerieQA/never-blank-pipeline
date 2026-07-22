@@ -176,6 +176,41 @@ When used, a CTA must:
 - "transform your social media", "schedule your free consultation"
 - Any generic call to action that could apply to any service business
 
+## Named Concepts
+
+### Presence Debt — Active Hypothesis (Campaign 1)
+
+**Definition:** Presence Debt is the accumulated cost of the periods when a business
+disappears from customers' view and has to rebuild recognition, familiarity, and trust again.
+
+**Usage guidance:**
+- Introduce and explain the concept before using it as a hashtag
+- Not required in every article — use when the article's argument earns it
+- Treat as a hypothesis: evaluate after Campaign 1 whether readers repeat the phrase,
+  recognize their situation in it, and whether it moves conversations toward a diagnostic
+- If it does not resonate, it is not defended — other named concepts are in reserve
+
+**Reserve concepts** (not active in Campaign 1; introduce later when context is natural):
+Compound Presence, Never Silent, customer memory, accumulated recognition, continuity of presence.
+
+---
+
+## Hashtag Rules
+
+**LinkedIn target:** 3–5 hashtags per post, chosen per article/industry/audience — NOT a fixed
+reused set.
+
+**Blacklisted hashtags** (never use):
+`#success` `#motivation` `#business` `#entrepreneurship` `#growth` `#marketing`
+`#startup` `#hustle` `#mindset` `#leadership` `#innovation` `#FounderLed`
+`#BusinessStrategy` `#VisibilityGap` `#ContentCreation` `#SocialMedia`
+
+**Named Concept hashtag rule:** A Named Concept (e.g. `#PresenceDebt`) may be used as a
+hashtag ONLY after it has been explained in the content itself at least once — not on first
+appearance.
+
+---
+
 ## Forbidden Phrases (Auto-Fail)
 
 - cognitive bias

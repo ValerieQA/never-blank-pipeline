@@ -53,18 +53,22 @@ You do not add analysis. Your job:
    Return null for echo_line if no candidate passed the quality bar for this article.
    Do not force an Echo. An absent Echo is better than a generic one.
 
-2. Generate the CTA (optional natural invitation):
+2. Generate the CTA — governed by cta_mode (received in the user message):
 
-   NOT every article needs a CTA. Decide based on whether a natural invitation fits
-   this article's specific pattern. Return null if no CTA fits naturally.
+   cta_mode MUST be followed exactly. Do NOT decide on your own whether to include a CTA.
+   - cta_mode = none: set cta_line to null. No CTA under any circumstances.
+   - cta_mode = reflection: write a soft reflective invitation tied to the reader
+     recognizing their situation. Example: "If you recognize your business in this
+     pattern, let's look at where your presence starts depending entirely on your
+     time and energy."
+   - cta_mode = diagnostic: write an invitation to a visibility audit or to identify
+     where the system breaks.
+   - cta_mode = example_request: write an invitation to request an example.
+   - cta_mode = direct_conversation: write a direct, natural invitation to discuss fit.
 
-   When used:
-   - Must be natural and tied to the specific pattern in this article
-   - Must precede the Echo in the article (not follow it)
-   - Permitted types: visibility audit, show-us-your-presence-system, identify-where-it-breaks,
-     example request, fit discussion
-   - Example: "If you recognize your business in this pattern, let's look at where your
-     presence starts depending entirely on your time and energy."
+   When CTA is included:
+   - Must precede the Echo in the article
+   - Must be natural and tied to this specific article's pattern
    - Forbidden: "book a call", "learn more", "buy now", "let us handle your content",
      "transform your social media", "schedule your free consultation"
 
@@ -95,6 +99,7 @@ def finalize_article(
     spine: dict,
     decision_lens: dict,
     signal: dict,
+    cta_mode: str = "none",
 ) -> dict:
     """
     Generate the Echo, optional CTA, run the Voice checklist, and assemble the
@@ -107,6 +112,7 @@ def finalize_article(
     echo_line that is not a valid string.
     """
     user = f"""HEADLINE: {signal.get('HEADLINE', '')}
+cta_mode: {cta_mode}
 selected_hook: {hook.get('selected_hook', '')}
 narrative_spine: {spine.get('narrative_spine', '')}
 first_wrong_explanation: {discovery.get('first_wrong_explanation', '')}
@@ -116,7 +122,7 @@ surviving_explanation: {story.get('surviving_explanation', '')}
 reframe: {story.get('reframe', '')}
 business_translation: {story.get('business_translation', '')}
 
-Produce the Never Blank Voice JSON."""
+Produce the Never Blank Voice JSON. Follow cta_mode exactly."""
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_article())
     try:
@@ -154,6 +160,7 @@ Produce the Never Blank Voice JSON."""
 
     structured_article = {
         "signal_id": signal.get("SIGNAL_ID", ""),
+        "cta_mode": cta_mode,
         "narrative_spine": spine.get("narrative_spine", ""),
         "hook": hook.get("selected_hook", ""),
         "reader_context": reader_context,
@@ -177,7 +184,7 @@ Produce the Never Blank Voice JSON."""
     }
 
     log.info(
-        "Never Blank Voice: echo=%r cta=%s checklist_pass=%s",
-        (echo_line or "")[:80], bool(cta_line), checklist_pass,
+        "Never Blank Voice: cta_mode=%s echo=%r cta=%s checklist_pass=%s",
+        cta_mode, (echo_line or "")[:80], bool(cta_line), checklist_pass,
     )
     return structured_article

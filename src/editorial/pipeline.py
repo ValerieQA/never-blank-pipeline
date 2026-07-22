@@ -49,9 +49,15 @@ def _run_stage(stage_name: str, fn: Callable, *args, **kwargs):
             raise ArticleGenerationError(stage_name, exc2) from exc2
 
 
-def generate_article(signal: dict) -> dict:
+def generate_article(signal: dict, cta_mode: str = "none") -> dict:
     """
     Run the full Editorial Engine V2 pipeline for one enriched signal.
+
+    Args:
+        signal: Enriched signal dict from the Investigation Layer.
+        cta_mode: Explicit campaign directive for CTA. One of:
+            none | reflection | diagnostic | example_request | direct_conversation.
+            Defaults to "none". The model does NOT decide this — it is passed in.
 
     Returns:
         {
@@ -77,7 +83,7 @@ def generate_article(signal: dict) -> dict:
     story = _run_stage("story_assembly", assemble_story, discovery, spine, decision_lens, signal)
     structured_article = _run_stage(
         "never_blank_voice", finalize_article,
-        hook, reader_context, discovery, story, spine, decision_lens, signal,
+        hook, reader_context, discovery, story, spine, decision_lens, signal, cta_mode,
     )
     platforms = _run_stage("platform_composer", compose_platforms, structured_article)
 
