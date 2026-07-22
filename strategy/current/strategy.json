@@ -1,0 +1,62 @@
+{
+  "strategy_id": "2026-07-presence-debt-campaign-1",
+  "status": "active",
+  "started_at": "2026-07-22",
+  "review_date": "2026-08-22",
+  "strategy_name": "Build demand through recognition of inconsistent presence",
+  "strategy_summary": "Help small B2B service business owners recognize that their visibility depends on when they have free time, not on a system. The article content demonstrates the cost of this pattern and introduces Compound Presence as the structural alternative. Never Blank sells itself through the quality of this analysis.",
+  "market_context": "Small agencies, consultants, and MSPs consistently produce content when quiet and go dark when busy. This creates a presence gap that erodes customer memory, referral momentum, and pipeline — precisely when they most need new clients. The pattern is structural, not motivational: delivery mode defeats presence work every time.",
+  "selected_problem": "Owner-dependent presence: visibility collapses when the owner is at capacity, which is exactly when new client work is most needed. The business becomes invisible to the market at the moment it most needs to be visible.",
+  "target_audience": "Small B2B service businesses with a single decision-maker — agencies (digital/web/dev/creative), independent consultants, MSPs",
+  "sales_hypothesis": "If we can make owners recognize their own presence pattern — and feel the commercial cost of it — they will want a system that maintains presence without depending on their free time. That system is Never Blank.",
+  "why_now": "Post-pandemic normalization of remote work has increased competition for the same B2B buyers. Algorithms now require consistent presence to maintain reach. AI-generated content has raised the floor for content quality, making consistent high-quality presence harder for solo operators.",
+  "commercial_goal": "Generate qualified inquiries from agency owners, consultants, and MSP operators who recognize the presence dependency pattern in their business and want to address it systematically.",
+  "primary_message": "When your presence depends on your free time, it disappears exactly when you need it most.",
+  "supporting_messages": [
+    "Consistent presence is not about posting more — it is about not disappearing.",
+    "Clients rarely decide to forget a business. They simply stop encountering it.",
+    "The competitor who won that client was not better. They were just present."
+  ],
+  "compound_presence_role": "Compound Presence is the named alternative to owner-dependent presence. Articles demonstrate the mechanism of how consistent, systematic presence accumulates recognition and trust over time — and contrast it with the fragility of presence that depends on the owner's schedule.",
+  "desired_reader_realization": "Our presence depends on whether I have time this week. That means it disappears when we are at capacity. That is exactly when we most need new clients to find us.",
+  "primary_cta_intent": "reflection",
+  "presence_debt_focus": true,
+  "success_criteria": {
+    "leads_target": 2,
+    "early_signal_description": "Posts generating saves, shares, and comments showing genuine self-recognition (not generic engagement). Follower growth among B2B profiles.",
+    "min_weeks_to_evaluate": 4
+  },
+  "continuation_criteria": {
+    "description": "Continue if the strategy is generating leads or confirmed positive early signal momentum",
+    "indicators": [
+      "At least 1 qualified lead per month",
+      "Engagement trend positive over 3+ weeks",
+      "Comments showing genuine self-recognition of the presence dependency pattern",
+      "Presence Debt concept being repeated back by readers"
+    ]
+  },
+  "adjustment_criteria": {
+    "description": "Adjust execution if direction is confirmed but specific content elements are not working",
+    "indicators": [
+      "No leads but engagement trending positive",
+      "Strong recognition on some posts but not others — adjust topics/hooks",
+      "CTA not converting — adjust cta_mode distribution",
+      "One platform significantly outperforming — shift content mix"
+    ]
+  },
+  "replacement_criteria": {
+    "description": "Replace strategy if hypothesis is not confirmed after sufficient data",
+    "indicators": [
+      "No leads after 6+ weeks with consistent publishing",
+      "No engagement trend despite multiple topic/hook variations",
+      "No self-recognition signals in comments",
+      "Market signals suggest a different problem is more urgent for the segment"
+    ]
+  },
+  "research_references": [
+    "strategy/methodology/strategy_methodology.md",
+    "strategy/worldview.md",
+    "strategy/decision_log.md — decisions 13, 21, 34, 38, 44"
+  ],
+  "confidence": "high"
+}
