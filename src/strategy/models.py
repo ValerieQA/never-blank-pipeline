@@ -297,6 +297,13 @@ class StrategyRecommendation(BaseModel):
     approved_at:                 Optional[datetime] = None
     notes:                       str            = ""
 
+    @field_validator("approved_at")
+    @classmethod
+    def approved_at_requires_approval(cls, v: Optional[datetime], info: Any) -> Optional[datetime]:
+        if v is not None and info.data.get("human_approved") is False:
+            raise ValueError("approved_at cannot be set when human_approved is False")
+        return v
+
 
 class StrategyChangeRecord(BaseModel):
     record_id:          str
@@ -316,14 +323,22 @@ class StrategyChangeRecord(BaseModel):
 # Foundation for Echo Memory (4C) and future Analytics Collectors (4D).
 
 class PublishedEntry(BaseModel):
-    content_id:  str
-    strategy_id: str
-    pattern_id:  Optional[str] = None   # from content plan; may be absent for ad-hoc signals
-    published_at: datetime
-    platform:    str = "blog"            # canonical platform; blog = primary
-    url:         str = ""               # blog/Wix URL when available
-    echo:        Optional[str] = None   # echo_line used in the published article
-    hook:        str = ""
-    topic:       str = ""
-    cta_mode:    str = "none"
-    reviewed:    bool = False           # set to True after weekly review covers this entry
+    content_id:    str
+    strategy_id:   str
+    pattern_id:    Optional[str] = None   # from content plan; may be absent for ad-hoc signals
+    published_at:  datetime
+    platform:      str = "blog"           # canonical platform; blog = primary
+    url:           str = ""              # blog/Wix URL when available
+    echo:          Optional[str] = None  # echo_line used in the published article
+    hook:          str = ""
+    topic:         str = ""
+    cta_mode:      str = "none"
+    strategy_week: Optional[int] = None  # week number in strategy cycle; used by mark_entries_reviewed
+    reviewed:      bool = False          # set to True after weekly review covers this entry
+
+    @field_validator("content_id", "strategy_id")
+    @classmethod
+    def must_be_nonempty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Required PublishedEntry field cannot be empty")
+        return v

@@ -264,6 +264,67 @@ class TestDraftMonthlyReview:
             review = draft_monthly_review(strategy, reviews)
         assert review.strategy_id == "2026-08-test"
 
+    def test_fewer_than_3_weeks_forces_insufficient_data_without_llm(self):
+        # Code rule — LLM must not override minimum data requirement
+        strategy = _make_strategy()
+        reviews = [_make_weekly_review(week=1), _make_weekly_review(week=2)]
+        # Patch chat to return REPLACE_STRATEGY — should be overridden by code
+        with patch("src.strategy.decision_engine.chat", return_value=json.dumps({
+            "decision": "REPLACE_STRATEGY", "rationale": "x", "trend": "declining",
+            "hypothesis_confirmed": False, "next_cycle_adjustments": [],
+            "qualitative_assessment": "", "presence_debt_resonance": "", "lessons": [],
+        })):
+            from src.strategy.decision_engine import draft_monthly_review
+            review = draft_monthly_review(strategy, reviews)
+        assert review.decision == MonthlyDecision.INSUFFICIENT_DATA
+        assert "2" in review.rationale  # mentions the count
+
+    def test_1_week_forces_insufficient_data(self):
+        strategy = _make_strategy()
+        reviews = [_make_weekly_review(week=1)]
+        with patch("src.strategy.decision_engine.chat", return_value=_VALID_MONTHLY_LLM_RESPONSE):
+            from src.strategy.decision_engine import draft_monthly_review
+            review = draft_monthly_review(strategy, reviews)
+        assert review.decision == MonthlyDecision.INSUFFICIENT_DATA
+
+    def test_3_weeks_proceeds_to_llm(self):
+        strategy = _make_strategy()
+        reviews = [_make_weekly_review(week=w) for w in (1, 2, 3)]
+        with patch("src.strategy.decision_engine.chat", return_value=_VALID_MONTHLY_LLM_RESPONSE):
+            from src.strategy.decision_engine import draft_monthly_review
+            review = draft_monthly_review(strategy, reviews)
+        # VALID_MONTHLY_LLM_RESPONSE returns CONTINUE_WITH_ADJUSTMENTS
+        assert review.decision == MonthlyDecision.CONTINUE_WITH_ADJUSTMENTS
+
+    def test_wrong_strategy_id_raises(self):
+        strategy = _make_strategy()
+        reviews = [
+            _make_weekly_review(week=1),
+            _make_weekly_review(week=2),
+        ]
+        reviews[1] = WeeklyReview(
+            strategy_id="DIFFERENT-strategy",
+            week_number=2,
+            period_start=date(2026, 8, 11),
+            period_end=date(2026, 8, 15),
+            posts_published=3,
+            decision=WeeklyDecision.CONTINUE,
+            rationale="ok",
+        )
+        with pytest.raises(ValueError, match="wrong strategy_id"):
+            from src.strategy.decision_engine import draft_monthly_review
+            draft_monthly_review(strategy, reviews)
+
+    def test_duplicate_week_numbers_raise(self):
+        strategy = _make_strategy()
+        reviews = [
+            _make_weekly_review(week=1),
+            _make_weekly_review(week=1),  # duplicate
+        ]
+        with pytest.raises(ValueError, match="Duplicate week_number"):
+            from src.strategy.decision_engine import draft_monthly_review
+            draft_monthly_review(strategy, reviews)
+
 
 # ── StrategyRecommendation drafting ───────────────────────────────────────────
 
@@ -400,3 +461,53 @@ class TestDecisionModels:
         assert MonthlyDecision.CONTINUE_WITH_ADJUSTMENTS.value == "CONTINUE_WITH_ADJUSTMENTS"
         assert MonthlyDecision.REPLACE_STRATEGY.value == "REPLACE_STRATEGY"
         assert MonthlyDecision.INSUFFICIENT_DATA.value == "INSUFFICIENT_DATA"
+
+    def test_recommendation_contradiction_guard_approved_at_without_approval(self):
+        from datetime import datetime
+        with pytest.raises(Exception):
+            StrategyRecommendation(
+                recommendation_id="rec-001",
+                strategy_id="2026-08-test",
+                generated_at=datetime(2026, 8, 31),
+                trigger="monthly_review",
+                trigger_ref="",
+                recommended_action=MonthlyDecision.CONTINUE_WITH_ADJUSTMENTS,
+                confidence=Confidence.HIGH,
+                rationale="ok",
+                human_approved=False,
+                approved_at=datetime(2026, 8, 31, 12, 0),  # contradiction
+            )
+
+    def test_published_entry_empty_strategy_id_raises(self):
+        from datetime import datetime, timezone
+        from src.strategy.models import PublishedEntry
+        with pytest.raises(Exception):
+            PublishedEntry(
+                content_id="sig-001",
+                strategy_id="",          # empty — must be rejected
+                published_at=datetime(2026, 8, 7, tzinfo=timezone.utc),
+                platform="blog",
+            )
+
+    def test_published_entry_empty_content_id_raises(self):
+        from datetime import datetime, timezone
+        from src.strategy.models import PublishedEntry
+        with pytest.raises(Exception):
+            PublishedEntry(
+                content_id="",           # empty — must be rejected
+                strategy_id="2026-08-test",
+                published_at=datetime(2026, 8, 7, tzinfo=timezone.utc),
+                platform="blog",
+            )
+
+    def test_published_entry_strategy_week_stored(self):
+        from datetime import datetime, timezone
+        from src.strategy.models import PublishedEntry
+        entry = PublishedEntry(
+            content_id="sig-001",
+            strategy_id="2026-08-test",
+            published_at=datetime(2026, 8, 14, tzinfo=timezone.utc),
+            platform="blog",
+            strategy_week=2,
+        )
+        assert entry.strategy_week == 2

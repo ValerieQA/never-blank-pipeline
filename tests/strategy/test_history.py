@@ -85,82 +85,112 @@ def _change_record(strategy_id: str = "2026-08-test") -> StrategyChangeRecord:
 
 # ── 4B.1 Strategy Rotation ─────────────────────────────────────────────────────
 
-class TestRotateStrategy:
-    def test_archives_current_and_writes_new(self, tmp_path, monkeypatch):
-        import src.strategy.history as h
-        monkeypatch.setattr(h, "CURRENT_DIR", tmp_path / "current")
-        monkeypatch.setattr(h, "CURRENT_STRATEGY_JSON", tmp_path / "current" / "strategy.json")
-        monkeypatch.setattr(h, "CURRENT_STRATEGY_MD", tmp_path / "current" / "strategy.md")
-        monkeypatch.setattr(h, "HISTORY_STRATEGIES_DIR", tmp_path / "history" / "strategies")
+def _setup_current_strategy(tmp_path, monkeypatch, strategy_id="2026-08-old"):
+    """Helper: patch history module paths and write a current strategy file."""
+    import src.strategy.history as h
+    monkeypatch.setattr(h, "CURRENT_DIR", tmp_path / "current")
+    monkeypatch.setattr(h, "CURRENT_STRATEGY_JSON", tmp_path / "current" / "strategy.json")
+    monkeypatch.setattr(h, "CURRENT_STRATEGY_MD", tmp_path / "current" / "strategy.md")
+    monkeypatch.setattr(h, "HISTORY_STRATEGIES_DIR", tmp_path / "history" / "strategies")
+    (tmp_path / "current").mkdir(parents=True)
+    (tmp_path / "current" / "strategy.json").write_text(json.dumps(_strategy_json(strategy_id)))
+    return h
 
-        (tmp_path / "current").mkdir(parents=True)
-        current_data = _strategy_json("2026-08-old")
-        (tmp_path / "current" / "strategy.json").write_text(json.dumps(current_data))
-        (tmp_path / "current" / "strategy.md").write_text("# Old strategy")
 
-        new_data = _strategy_json("2026-09-new")
-        archive_path = h.rotate_strategy(new_data)
-
-        # Archive exists and contains old strategy_id
+class TestArchiveCurrentStrategy:
+    def test_archives_json_to_history(self, tmp_path, monkeypatch):
+        h = _setup_current_strategy(tmp_path, monkeypatch)
+        archive_path = h.archive_current_strategy()
         assert archive_path.exists()
         archived = json.loads(archive_path.read_text())
         assert archived["strategy_id"] == "2026-08-old"
 
-        # Current file now contains new strategy
-        current = json.loads((tmp_path / "current" / "strategy.json").read_text())
-        assert current["strategy_id"] == "2026-09-new"
+    def test_archive_filename_contains_timestamp_and_id(self, tmp_path, monkeypatch):
+        h = _setup_current_strategy(tmp_path, monkeypatch, "2026-08-presence-debt")
+        archive_path = h.archive_current_strategy()
+        assert "2026-08-presence-debt" in archive_path.name
+        assert "T" in archive_path.name   # timestamp contains 'T' separator
+        assert archive_path.suffix == ".json"
 
     def test_archives_md_alongside_json(self, tmp_path, monkeypatch):
-        import src.strategy.history as h
-        monkeypatch.setattr(h, "CURRENT_DIR", tmp_path / "current")
-        monkeypatch.setattr(h, "CURRENT_STRATEGY_JSON", tmp_path / "current" / "strategy.json")
-        monkeypatch.setattr(h, "CURRENT_STRATEGY_MD", tmp_path / "current" / "strategy.md")
-        monkeypatch.setattr(h, "HISTORY_STRATEGIES_DIR", tmp_path / "history" / "strategies")
-
-        (tmp_path / "current").mkdir(parents=True)
-        (tmp_path / "current" / "strategy.json").write_text(json.dumps(_strategy_json("2026-08-old")))
-        (tmp_path / "current" / "strategy.md").write_text("# Old strategy md content")
-
-        h.rotate_strategy(_strategy_json("2026-09-new"))
-
+        h = _setup_current_strategy(tmp_path, monkeypatch)
+        (tmp_path / "current" / "strategy.md").write_text("# Old strategy md")
+        h.archive_current_strategy()
         md_files = list((tmp_path / "history" / "strategies").glob("*2026-08-old.md"))
         assert len(md_files) == 1
-        assert "Old strategy md content" in md_files[0].read_text()
+        assert "Old strategy md" in md_files[0].read_text()
 
     def test_raises_if_no_current_strategy(self, tmp_path, monkeypatch):
         import src.strategy.history as h
         monkeypatch.setattr(h, "CURRENT_STRATEGY_JSON", tmp_path / "nonexistent.json")
-
         with pytest.raises(FileNotFoundError, match="does not exist"):
-            h.rotate_strategy(_strategy_json("2026-09-new"))
+            h.archive_current_strategy()
+
+    def test_raises_on_archive_collision(self, tmp_path, monkeypatch):
+        import src.strategy.history as h
+        h2 = _setup_current_strategy(tmp_path, monkeypatch)
+        # Patch timestamp to always return the same value → force collision on second call
+        fixed_ts = "2026-08-01T120000"
+        monkeypatch.setattr(
+            "src.strategy.history.datetime",
+            type("dt", (), {
+                "now": staticmethod(lambda tz=None: type("dtnow", (), {
+                    "strftime": lambda self, fmt: fixed_ts
+                })()),
+            })()
+        )
+        # Write archive at the expected collision path first
+        (tmp_path / "history" / "strategies").mkdir(parents=True, exist_ok=True)
+        collision = tmp_path / "history" / "strategies" / f"{fixed_ts}_2026-08-old.json"
+        collision.write_text("{}")
+        with pytest.raises(FileExistsError, match="Archive collision"):
+            h2.archive_current_strategy()
+
+
+class TestActivateNewStrategy:
+    def test_writes_new_strategy_atomically(self, tmp_path, monkeypatch):
+        h = _setup_current_strategy(tmp_path, monkeypatch)
+        h.activate_new_strategy(_strategy_json("2026-09-new"))
+        current = json.loads((tmp_path / "current" / "strategy.json").read_text())
+        assert current["strategy_id"] == "2026-09-new"
+
+    def test_validates_new_strategy_before_writing(self, tmp_path, monkeypatch):
+        h = _setup_current_strategy(tmp_path, monkeypatch)
+        with pytest.raises(ValueError, match="invalid"):
+            h.activate_new_strategy({"strategy_id": "bad", "strategy_name": "Missing required fields"})
+        # Current strategy should be unchanged
+        current = json.loads((tmp_path / "current" / "strategy.json").read_text())
+        assert current["strategy_id"] == "2026-08-old"
 
     def test_raises_if_new_strategy_missing_id(self, tmp_path, monkeypatch):
-        import src.strategy.history as h
-        monkeypatch.setattr(h, "CURRENT_DIR", tmp_path / "current")
-        monkeypatch.setattr(h, "CURRENT_STRATEGY_JSON", tmp_path / "current" / "strategy.json")
-        monkeypatch.setattr(h, "CURRENT_STRATEGY_MD", tmp_path / "current" / "strategy.md")
-        monkeypatch.setattr(h, "HISTORY_STRATEGIES_DIR", tmp_path / "history" / "strategies")
-
-        (tmp_path / "current").mkdir(parents=True)
-        (tmp_path / "current" / "strategy.json").write_text(json.dumps(_strategy_json()))
-
+        h = _setup_current_strategy(tmp_path, monkeypatch)
         with pytest.raises(ValueError, match="strategy_id"):
-            h.rotate_strategy({"strategy_name": "No ID here"})
+            h.activate_new_strategy({"strategy_name": "No ID here"})
 
-    def test_archive_filename_contains_date_and_strategy_id(self, tmp_path, monkeypatch):
-        import src.strategy.history as h
-        monkeypatch.setattr(h, "CURRENT_DIR", tmp_path / "current")
-        monkeypatch.setattr(h, "CURRENT_STRATEGY_JSON", tmp_path / "current" / "strategy.json")
-        monkeypatch.setattr(h, "CURRENT_STRATEGY_MD", tmp_path / "current" / "strategy.md")
-        monkeypatch.setattr(h, "HISTORY_STRATEGIES_DIR", tmp_path / "history" / "strategies")
 
-        (tmp_path / "current").mkdir(parents=True)
-        (tmp_path / "current" / "strategy.json").write_text(json.dumps(_strategy_json("2026-08-presence-debt")))
-
+class TestRotateStrategy:
+    def test_archives_current_and_writes_new(self, tmp_path, monkeypatch):
+        h = _setup_current_strategy(tmp_path, monkeypatch)
         archive_path = h.rotate_strategy(_strategy_json("2026-09-new"))
+        assert archive_path.exists()
+        archived = json.loads(archive_path.read_text())
+        assert archived["strategy_id"] == "2026-08-old"
+        current = json.loads((tmp_path / "current" / "strategy.json").read_text())
+        assert current["strategy_id"] == "2026-09-new"
 
-        assert "2026-08-presence-debt" in archive_path.name
-        assert archive_path.suffix == ".json"
+    def test_raises_if_no_current_strategy(self, tmp_path, monkeypatch):
+        import src.strategy.history as h
+        monkeypatch.setattr(h, "CURRENT_STRATEGY_JSON", tmp_path / "nonexistent.json")
+        with pytest.raises(FileNotFoundError):
+            h.rotate_strategy(_strategy_json("2026-09-new"))
+
+    def test_raises_if_new_strategy_invalid(self, tmp_path, monkeypatch):
+        h = _setup_current_strategy(tmp_path, monkeypatch)
+        with pytest.raises(ValueError):
+            h.rotate_strategy({"strategy_id": "bad-only"})
+        # Current should be unchanged
+        current = json.loads((tmp_path / "current" / "strategy.json").read_text())
+        assert current["strategy_id"] == "2026-08-old"
 
 
 # ── 4B.2 Decision History ──────────────────────────────────────────────────────
@@ -373,30 +403,59 @@ class TestReviewArchive:
 
 # ── mark_entries_reviewed ──────────────────────────────────────────────────────
 
+def _entry_with_week(content_id: str, strategy_week: int, strategy_id: str = "2026-08-test") -> PublishedEntry:
+    return PublishedEntry(
+        content_id=content_id,
+        strategy_id=strategy_id,
+        published_at=datetime(2026, 8, 7 + (strategy_week - 1) * 7, 10, 0, tzinfo=timezone.utc),
+        platform="blog",
+        strategy_week=strategy_week,
+    )
+
+
 class TestMarkEntriesReviewed:
-    def test_marks_unreviewed_entries(self, tmp_path, monkeypatch):
+    def test_marks_entries_with_matching_week(self, tmp_path, monkeypatch):
         import src.strategy.history as h
         index_path = tmp_path / "published_content_index.jsonl"
         monkeypatch.setattr(h, "PUBLISHED_INDEX", index_path)
 
-        h.append_published_entry(_published_entry("sig-001"))
-        h.append_published_entry(_published_entry("sig-002"))
+        h.append_published_entry(_entry_with_week("sig-w1", strategy_week=1))
+        h.append_published_entry(_entry_with_week("sig-w2", strategy_week=2))
+        h.append_published_entry(_entry_with_week("sig-w3", strategy_week=3))
 
-        count = h.mark_entries_reviewed("2026-08-test", week_number=1)
+        count = h.mark_entries_reviewed("2026-08-test", week_number=2)
 
-        assert count == 2
+        assert count == 2  # week 1 and 2 only
         entries = h.load_published_index()
-        assert all(e.reviewed for e in entries)
+        assert entries[0].reviewed is True   # week 1
+        assert entries[1].reviewed is True   # week 2
+        assert entries[2].reviewed is False  # week 3 — future, not marked
+
+    def test_marks_legacy_entries_without_strategy_week(self, tmp_path, monkeypatch):
+        import src.strategy.history as h
+        index_path = tmp_path / "published_content_index.jsonl"
+        monkeypatch.setattr(h, "PUBLISHED_INDEX", index_path)
+
+        # Entry without strategy_week (legacy) should always be marked
+        legacy = PublishedEntry(
+            content_id="sig-legacy",
+            strategy_id="2026-08-test",
+            published_at=datetime(2026, 8, 7, tzinfo=timezone.utc),
+            platform="blog",
+            strategy_week=None,
+        )
+        h.append_published_entry(legacy)
+        count = h.mark_entries_reviewed("2026-08-test", week_number=1)
+        assert count == 1
+        assert h.load_published_index()[0].reviewed is True
 
     def test_skips_already_reviewed_entries(self, tmp_path, monkeypatch):
         import src.strategy.history as h
         index_path = tmp_path / "published_content_index.jsonl"
         monkeypatch.setattr(h, "PUBLISHED_INDEX", index_path)
 
-        entry = _published_entry("sig-001")
-        h.append_published_entry(entry)
-        h.mark_entries_reviewed("2026-08-test", week_number=1)
-
+        h.append_published_entry(_entry_with_week("sig-001", strategy_week=1))
+        h.mark_entries_reviewed("2026-08-test", week_number=2)
         count = h.mark_entries_reviewed("2026-08-test", week_number=2)
         assert count == 0
 
@@ -405,8 +464,8 @@ class TestMarkEntriesReviewed:
         index_path = tmp_path / "published_content_index.jsonl"
         monkeypatch.setattr(h, "PUBLISHED_INDEX", index_path)
 
-        h.append_published_entry(_published_entry("sig-001", strategy_id="2026-08-test"))
-        h.append_published_entry(_published_entry("sig-002", strategy_id="2026-09-other"))
+        h.append_published_entry(_entry_with_week("sig-001", strategy_week=1, strategy_id="2026-08-test"))
+        h.append_published_entry(_entry_with_week("sig-002", strategy_week=1, strategy_id="2026-09-other"))
 
         h.mark_entries_reviewed("2026-08-test", week_number=1)
 
@@ -419,5 +478,4 @@ class TestMarkEntriesReviewed:
     def test_returns_zero_when_no_index(self, tmp_path, monkeypatch):
         import src.strategy.history as h
         monkeypatch.setattr(h, "PUBLISHED_INDEX", tmp_path / "nonexistent.jsonl")
-
         assert h.mark_entries_reviewed("2026-08-test", week_number=1) == 0

@@ -187,8 +187,45 @@ def draft_monthly_review(
     if not weekly_reviews:
         raise ValueError("Cannot draft monthly review: no weekly reviews provided")
 
+    # Validate: all reviews must reference the same strategy
+    wrong_sid = [r.strategy_id for r in weekly_reviews if r.strategy_id != strategy.strategy_id]
+    if wrong_sid:
+        raise ValueError(
+            f"Weekly reviews contain wrong strategy_id: {wrong_sid}. "
+            f"Expected: {strategy.strategy_id}"
+        )
+
+    # Validate: no duplicate week numbers
+    week_numbers = [r.week_number for r in weekly_reviews]
+    duplicates = [w for w in set(week_numbers) if week_numbers.count(w) > 1]
+    if duplicates:
+        raise ValueError(f"Duplicate week_number(s) in weekly reviews: {duplicates}")
+
     # Sort by week number for consistent ordering
     reviews = sorted(weekly_reviews, key=lambda r: r.week_number)
+
+    # Deterministic INSUFFICIENT_DATA guard: < 3 unique weeks → LLM cannot reliably decide.
+    # This is a code rule, not an LLM suggestion — LLM can write the rationale but not override it.
+    unique_weeks = {r.week_number for r in reviews}
+    if len(unique_weeks) < 3:
+        rationale = (
+            f"Insufficient data: only {len(unique_weeks)} week(s) of data available "
+            f"(minimum 3 required for a reliable monthly decision). "
+            f"Continue collecting data before making a strategic decision."
+        )
+        log.info(
+            "Monthly review forced to INSUFFICIENT_DATA: %d unique week(s) for strategy %s",
+            len(unique_weeks), strategy.strategy_id,
+        )
+        return MonthlyReview(
+            strategy_id=strategy.strategy_id,
+            period_start=reviews[0].period_start,
+            period_end=reviews[-1].period_end,
+            posts_published=sum(r.posts_published for r in reviews),
+            total_leads=sum(r.leads_this_week for r in reviews),
+            decision=MonthlyDecision.INSUFFICIENT_DATA,
+            rationale=rationale,
+        )
 
     total_leads = sum(r.leads_this_week for r in reviews)
     total_posts = sum(r.posts_published for r in reviews)

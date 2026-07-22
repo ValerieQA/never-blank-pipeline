@@ -53,6 +53,7 @@ jobs:
           python -m py_compile scripts/strategy/build_monthly_plan.py
           python -m py_compile scripts/strategy/run_weekly_review.py
           python -m py_compile scripts/strategy/run_monthly_review.py
+          python -m py_compile scripts/strategy/approve_strategy_recommendation.py
 
       - name: Run strategy tests
         run: pytest tests/strategy/ -v --tb=short

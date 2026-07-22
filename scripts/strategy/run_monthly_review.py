@@ -18,19 +18,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import uuid
-from datetime import datetime
 from pathlib import Path
 
 from src.strategy.decision_engine import draft_monthly_review, draft_strategy_recommendation
-from src.strategy.history import (
-    append_decision_log,
-    archive_monthly_review,
-    archive_weekly_reviews,
-    rotate_strategy,
-)
 from src.strategy.loader import load_active_strategy
-from src.strategy.models import MonthlyDecision, StrategyChangeRecord, WeeklyReview
+from src.strategy.models import MonthlyDecision, WeeklyReview
 from src.utils.logger import get_logger
 
 log = get_logger("scripts.run_monthly_review")
@@ -126,41 +118,16 @@ def main() -> None:
         print(f"\n[dry-run] Would save monthly review to: {monthly_path}")
         print(f"[dry-run] Would save recommendation to: {RECOMMENDATIONS_DIR}/{recommendation.recommendation_id}.json")
 
-    # Handle REPLACE_STRATEGY
-    if monthly_review.decision == MonthlyDecision.REPLACE_STRATEGY:
-        print(f"\n[!] REPLACE_STRATEGY — archiving current strategy cycle")
-        print("    Human approval required before writing a new strategy.")
-
-        if not args.dry_run:
-            from src.strategy.history import HISTORY_STRATEGIES_DIR
-            archived_path = HISTORY_STRATEGIES_DIR / f"{datetime.now().strftime('%Y-%m-%d')}_{strategy_id}.json"
-            # archive_weekly_reviews and archive_monthly_review called via history module
-            archive_weekly_reviews(strategy_id)
-            archive_monthly_review(strategy_id)
-
-            change_record = StrategyChangeRecord(
-                record_id=f"change-{uuid.uuid4().hex[:8]}",
-                changed_at=datetime.now(),
-                from_strategy_id=strategy_id,
-                to_strategy_id=None,
-                decision=MonthlyDecision.REPLACE_STRATEGY,
-                rationale=monthly_review.rationale,
-                recommendation_id=recommendation.recommendation_id,
-                trigger_ref=str(monthly_path),
-                archived_to=str(archived_path),
-            )
-            append_decision_log(change_record)
-        else:
-            print("[dry-run] Would archive strategy, weekly reviews, and monthly review to history/")
-            print("[dry-run] Would append REPLACE_STRATEGY to decision_log.jsonl")
-
-        print("\nNext steps:")
-        print("  1. Review the recommendation in strategy/reviews/recommendations/")
-        print("  2. Create a new strategy.json in strategy/current/")
-        print("     (Use rotate_strategy() from src.strategy.history to do this atomically)")
-        print("  3. Run build_monthly_plan.py for the new cycle")
-    else:
-        print(f"\nNo archiving required for {monthly_review.decision.value}.")
+    # Human approval gate.
+    # Monthly review only drafts and saves — it does NOT archive or rotate.
+    # Only approve_strategy_recommendation.py triggers archiving after explicit human approval.
+    if monthly_review.decision in (MonthlyDecision.REPLACE_STRATEGY, MonthlyDecision.CONTINUE_WITH_ADJUSTMENTS):
+        print(f"\nSTATUS: AWAITING_HUMAN_APPROVAL")
+        print(f"  Decision requires human review before any strategy change.")
+        print(f"  Recommendation ID: {recommendation.recommendation_id}")
+        print(f"\nTo approve and execute:")
+        print(f"  python3 -m scripts.strategy.approve_strategy_recommendation \\")
+        print(f"    --recommendation-id {recommendation.recommendation_id}")
 
 
 if __name__ == "__main__":

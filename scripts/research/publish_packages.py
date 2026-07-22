@@ -284,23 +284,40 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
                         facebook_text, instagram_text, threads_seq, telegram_text, wix_url)
         # Append to published content index (History Engine 4B.3).
         # Non-fatal: index failure must never block a completed publish.
-        try:
-            from src.strategy.history import append_published_entry
-            from src.strategy.models import PublishedEntry
-            append_published_entry(PublishedEntry(
-                content_id=sig_id,
-                strategy_id=strategy_context.get("strategy_id", ""),
-                pattern_id=signal.get("PATTERN_ID") or None,
-                published_at=datetime.now(timezone.utc),
-                platform="blog",
-                url=wix_url,
-                echo=structured.get("echo_line") or None,
-                hook=structured.get("hook", ""),
-                topic=headline,
-                cta_mode=cta_mode,
-            ))
-        except Exception as _index_exc:
-            log.warning("Published index append failed (non-fatal): %s", _index_exc)
+        _pub_strategy_id = strategy_context.get("strategy_id", "")
+        if not _pub_strategy_id or _pub_strategy_id == "none":
+            log.warning("Published index: skipping entry for %s — no active strategy", sig_id)
+        else:
+            try:
+                from src.strategy.history import append_published_entry
+                from src.strategy.models import PublishedEntry
+                # pattern_id: check all known field names used across the pipeline
+                _pattern_id = (
+                    signal.get("source_pattern_id")
+                    or signal.get("PATTERN_ID")
+                    or pkg_map.get(sig_id, {}).get("source_pattern_id")
+                    or None
+                )
+                # Compute strategy_week from publication date and strategy start
+                _strategy_week: Optional[int] = None
+                if active_strategy and active_strategy.started_at:
+                    _days = (datetime.now(timezone.utc).date() - active_strategy.started_at).days
+                    _strategy_week = max(1, (_days // 7) + 1)
+                append_published_entry(PublishedEntry(
+                    content_id=sig_id,
+                    strategy_id=_pub_strategy_id,
+                    pattern_id=_pattern_id,
+                    published_at=datetime.now(timezone.utc),
+                    platform="blog",
+                    url=wix_url,
+                    echo=structured.get("echo_line") or None,
+                    hook=structured.get("hook", ""),
+                    topic=headline,
+                    cta_mode=cta_mode,
+                    strategy_week=_strategy_week,
+                ))
+            except Exception as _index_exc:
+                log.warning("Published index append failed (non-fatal): %s", _index_exc)
 
         reports.append({
             "signal_id": sig_id,
