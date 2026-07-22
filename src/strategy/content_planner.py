@@ -158,6 +158,15 @@ CONTENT ROLE THIS WEEK: {role.value}
 
 Generate the content plan item. Return JSON only."""
 
+    # Inject echo memory context so LLM avoids repeating recent echoes/hooks/patterns
+    try:
+        from src.strategy.echo_memory import format_memory_for_prompt
+        memory_context = format_memory_for_prompt(strategy.strategy_id, last_n=10)
+        if memory_context:
+            user += f"\n\n{memory_context}"
+    except Exception as exc:
+        log.warning("Echo memory context unavailable (non-fatal): %s", exc)
+
     raw = chat(_SYSTEM, user, json_mode=True, model=model_article())
     try:
         data = json.loads(raw) if isinstance(raw, str) else raw

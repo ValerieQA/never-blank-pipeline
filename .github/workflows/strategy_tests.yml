@@ -50,6 +50,7 @@ jobs:
           python -m py_compile src/strategy/content_planner.py
           python -m py_compile src/strategy/decision_engine.py
           python -m py_compile src/strategy/history.py
+          python -m py_compile src/strategy/echo_memory.py
           python -m py_compile scripts/strategy/build_monthly_plan.py
           python -m py_compile scripts/strategy/run_weekly_review.py
           python -m py_compile scripts/strategy/run_monthly_review.py

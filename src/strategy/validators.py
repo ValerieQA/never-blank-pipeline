@@ -306,6 +306,63 @@ def _llm_semantic_check(
         )
 
 
+# ── Echo Memory editorial guard ───────────────────────────────────────────────
+
+def check_echo_uniqueness(
+    item: ContentPlanItem,
+    strategy_id: str,
+    last_n: int = 20,
+    block_on_high: bool = True,
+    use_llm: bool = False,
+    llm_fn=None,
+) -> None:
+    """
+    Check a ContentPlanItem's echo, hook, and topic against published history.
+
+    MEDIUM conflicts → warning log only.
+    HIGH conflicts   → raises ValueError when block_on_high=True.
+    Pattern recency  → always raises when pattern used in last 3 items.
+
+    This is the Editorial Guard step between Echo Memory and content plan approval.
+    Called explicitly — not wired into validate_content_plan_item() to keep
+    that validator dependency-free (no filesystem access required).
+    """
+    from src.strategy.echo_memory import check_against_memory
+
+    result = check_against_memory(
+        echo=item.echo,
+        hook=item.hook,
+        topic=item.topic,
+        pattern_id=item.source_pattern_id,
+        strategy_id=strategy_id,
+        last_n=last_n,
+        use_llm=use_llm,
+        llm_fn=llm_fn,
+    )
+
+    for warning in result.warnings:
+        if "HIGH" in warning or "Pattern" in warning and "last 3" in warning:
+            log.warning("Echo memory guard [%s]: %s", item.content_id, warning)
+        else:
+            log.info("Echo memory guard [%s]: %s", item.content_id, warning)
+
+    if block_on_high and result.blocked:
+        conflict_fields = [
+            field for field, flag in [
+                ("echo", result.echo_conflict),
+                ("hook", result.hook_conflict),
+                ("topic", result.topic_conflict),
+                ("pattern", result.pattern_conflict),
+            ] if flag
+        ]
+        raise ValueError(
+            f"Content plan item '{item.content_id}' blocked by Echo Memory: "
+            f"HIGH similarity detected in {conflict_fields}. "
+            f"Regenerate with a different angle.\n"
+            + "\n".join(f"  • {w}" for w in result.warnings if "HIGH" in w or "last 3" in w)
+        )
+
+
 # ── Article pre-publish validation ─────────────────────────────────────────────
 
 def validate_article_for_publish(
