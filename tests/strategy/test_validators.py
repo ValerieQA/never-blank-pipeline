@@ -176,9 +176,17 @@ class TestValidateContentPlanItem:
         with pytest.raises(ValueError, match="reframe"):
             validate_content_plan_item(_make_content_item(reframe=""))
 
-    def test_missing_echo_fails(self):
+    def test_empty_echo_string_fails(self):
         with pytest.raises(ValueError, match="echo"):
             validate_content_plan_item(_make_content_item(echo=""))
+
+    def test_null_echo_without_reason_fails(self):
+        with pytest.raises(ValueError, match="echo_omission_reason"):
+            validate_content_plan_item(_make_content_item(echo=None, echo_omission_reason=None))
+
+    def test_null_echo_with_reason_passes(self):
+        item = _make_content_item(echo=None, echo_omission_reason="No strong candidate emerged for this analytical article")
+        validate_content_plan_item(item)  # should not raise
 
     def test_missing_compound_presence_fails(self):
         with pytest.raises(ValueError, match="compound_presence_connection"):

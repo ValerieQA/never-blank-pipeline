@@ -6,8 +6,12 @@ Three validation layers:
   2. validate_content_plan_item() — each topic has all required fields
   3. validate_compound_presence_semantic() — article contains the semantic connection
 
-All validators are fail-closed: raise ValueError on failure.
-None of them run silently.
+Fail-closed semantics:
+- validate_strategy and validate_content_plan_item: always raise on failure.
+- validate_compound_presence_semantic: raises only when the connection is
+  DEFINITIVELY ABSENT (0 presence keywords / LLM high-confidence absent).
+  Ambiguous text (some keywords, no contrast) logs a warning but does not fail —
+  per decision 44: "fail-closed only when ENTIRELY absent."
 """
 
 from __future__ import annotations
@@ -89,12 +93,11 @@ def validate_content_plan_item(item: ContentPlanItem) -> None:
     if not item.strategy_id:
         errors.append("content plan item must reference a strategy_id")
 
-    # Echo is required (rare exception allowed but must be explicit)
-    if not item.echo or not item.echo.strip():
-        errors.append(
-            "echo is required. If no strong Echo candidate emerged, "
-            "set echo to null explicitly with a note — do not leave empty."
-        )
+    # Echo: required unless explicitly null with a stated reason (decision 43).
+    if item.echo is not None and not item.echo.strip():
+        errors.append("echo cannot be an empty string; use null + echo_omission_reason")
+    if item.echo is None and not item.echo_omission_reason:
+        errors.append("echo is null but echo_omission_reason is missing; set a reason")
 
     if errors:
         raise ValueError(
@@ -228,22 +231,25 @@ def validate_compound_presence_semantic(
                   presence_count, contrast_count)
         return
 
-    # Clear fail: no presence vocabulary at all
+    # Clear fail: no presence vocabulary at all → definitively absent.
     if presence_count == 0:
         if use_llm and llm_fn:
-            _llm_semantic_check(text, llm_fn)
+            # If LLM disagrees (high-confidence present), accept it. If LLM fails,
+            # the heuristic result stands — treat as absent.
+            _llm_semantic_check(text, llm_fn, heuristic_failed=True)
             return
         raise ValueError(
             "Article missing Compound Presence Connection: no presence/visibility vocabulary found. "
             "The article must connect its mechanism to the cumulative effect of consistent presence."
         )
 
-    # Ambiguous zone: some presence keywords but no contrast signal
+    # Ambiguous zone: some presence keywords but no contrast signal.
+    # Not definitively absent — warn only (decision 44: fail only when ENTIRELY absent).
     if presence_count >= 1 and contrast_count == 0:
         if use_llm and llm_fn:
-            _llm_semantic_check(text, llm_fn)
+            # LLM failure in ambiguous zone: warn, do not fail.
+            _llm_semantic_check(text, llm_fn, heuristic_failed=False)
             return
-        # Without LLM, give benefit of doubt — log warning but do not fail
         log.warning(
             "compound_presence check: AMBIGUOUS — presence keywords=%d, contrast signals=%d. "
             "Consider enabling LLM semantic check for production.",
@@ -251,14 +257,26 @@ def validate_compound_presence_semantic(
         )
 
 
-def _llm_semantic_check(text: str, llm_fn: callable) -> None:
-    """Run LLM semantic check. Raises ValueError if connection is absent with high confidence."""
+def _llm_semantic_check(
+    text: str,
+    llm_fn: callable,
+    heuristic_failed: bool = False,
+) -> None:
+    """
+    Run LLM semantic check.
+    Raises ValueError if connection is absent with high confidence,
+    or if heuristic_failed=True and LLM call itself fails.
+    """
     user = f"Article text:\n\n{text[:3000]}"
     try:
         raw = llm_fn(_SYSTEM_PROMPT_SEMANTIC, user, json_mode=True)
         data = json.loads(raw) if isinstance(raw, str) else raw
     except Exception as exc:
-        log.warning("LLM compound_presence check failed: %s — skipping hard fail", exc)
+        if heuristic_failed:
+            raise ValueError(
+                "Article missing Compound Presence Connection (heuristic absent, LLM check failed)"
+            ) from exc
+        log.warning("LLM compound_presence check failed: %s — heuristic was ambiguous, skipping", exc)
         return
 
     present = data.get("compound_presence_present", True)

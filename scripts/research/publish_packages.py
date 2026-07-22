@@ -19,6 +19,7 @@ from src.content.output_guard import (
     validate_platform_output,
     validate_telegram,
 )
+from src.strategy.validators import validate_article_for_publish
 from src.strategy.loader import get_cta_mode, get_strategy_context, load_active_strategy
 from src.editorial.pipeline import ArticleGenerationError, generate_article
 from src.publishing import formatting
@@ -112,7 +113,11 @@ def _build_threads(structured: dict) -> list[str]:
 
 def _validate_package(texts: dict[str, str], threads: list[str]) -> None:
     for platform, text in texts.items():
-        validate_platform_output(platform, text)
+        # Blog and LinkedIn also get the Compound Presence semantic check.
+        if platform in ("blog", "linkedin"):
+            validate_article_for_publish(text, platform=platform)
+        else:
+            validate_platform_output(platform, text)
     for post in threads:
         validate_platform_output("threads", post)
 

@@ -15,9 +15,16 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
+
+# Allowed CTA mode values — matches editorial pipeline values (decision 45).
+CTAMode = Literal["none", "reflection", "diagnostic", "example_request", "direct_conversation"]
+
+# Analytics metric: None = unavailable from API, 0 = confirmed zero,
+# "not_collected" = data retrieval not yet attempted.
+MetricValue = Optional[Union[int, Literal["not_collected"]]]
 
 
 # ── Enums ─────────────────────────────────────────────────────────────────────
@@ -91,6 +98,16 @@ class PatternRecord(BaseModel):
     compound_presence_relevance:  str
     confidence:                   Confidence
 
+    @field_validator(
+        "pattern_name", "underlying_mechanism", "business_risk",
+        "sales_relevance", "compound_presence_relevance",
+    )
+    @classmethod
+    def must_be_nonempty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Required PatternRecord field cannot be empty — LLM returned no content")
+        return v
+
 
 # ── Monthly Sales Strategy ─────────────────────────────────────────────────────
 
@@ -161,9 +178,10 @@ class ContentPlanItem(BaseModel):
     mechanism:                    str
     business_consequence:         str
     reframe:                      str
-    compound_presence_connection: str          # semantic, not structural — what the connection IS
-    echo:                         str          # required (null only in rare exception, decision 43)
-    cta_mode:                     str          # maps to CTAMode enum in src/models.py
+    compound_presence_connection: str           # semantic, not structural — what the connection IS
+    echo:                         Optional[str] = None  # null allowed as rare exception (decision 43)
+    echo_omission_reason:         Optional[str] = None  # required when echo is null
+    cta_mode:                     CTAMode = "none"
     cta:                          str
     website_angle:                str
     linkedin_angle:               str
@@ -194,21 +212,22 @@ class AnalyticsRecord(BaseModel):
     platform:         str
     published_at:     Optional[datetime]      = None
     collected_at:     Optional[datetime]      = None
-    # Metrics: None = unavailable from API, 0 = confirmed zero, NOT_COLLECTED = not yet retrieved
-    impressions:      Optional[int]           = None
-    reach:            Optional[int]           = None
-    views:            Optional[int]           = None
-    likes:            Optional[int]           = None
-    comments:         Optional[int]           = None
-    shares:           Optional[int]           = None
-    saves:            Optional[int]           = None
-    profile_visits:   Optional[int]           = None
-    new_followers:    Optional[int]           = None
-    link_clicks:      Optional[int]           = None
-    website_sessions: Optional[int]           = None
-    cta_actions:      Optional[int]           = None
-    leads:            Optional[int]           = None
-    qualified_leads:  Optional[int]           = None
+    # Metrics use MetricValue: None = unavailable from API, 0 = confirmed zero,
+    # "not_collected" = retrieval not yet attempted for this period.
+    impressions:      MetricValue             = None
+    reach:            MetricValue             = None
+    views:            MetricValue             = None
+    likes:            MetricValue             = None
+    comments:         MetricValue             = None
+    shares:           MetricValue             = None
+    saves:            MetricValue             = None
+    profile_visits:   MetricValue             = None
+    new_followers:    MetricValue             = None
+    link_clicks:      MetricValue             = None
+    website_sessions: MetricValue             = None
+    cta_actions:      MetricValue             = None
+    leads:            MetricValue             = None
+    qualified_leads:  MetricValue             = None
     notes:            str                     = ""
 
 
