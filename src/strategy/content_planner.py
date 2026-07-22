@@ -213,15 +213,15 @@ def generate_monthly_content_plan(
     start_date: Optional[date] = None,
 ) -> list[ContentPlanItem]:
     """
-    Generate a full monthly content plan (12–14 items across 4 weeks).
+    Generate a full monthly content plan (12 items across 4 weeks, Mon/Wed/Fri).
 
     Patterns are cycled across weeks. If fewer patterns than items,
-    patterns are reused with different content roles.
+    patterns are reused with different content roles and slots.
 
     Args:
         strategy:       Active Strategy
-        patterns:       PatternRecords from market_analyzer
-        items_per_week: Target publications per week (default 3 = Mon/Wed/Fri)
+        patterns:       PatternRecords from market_analyzer (must have source_signal_ids)
+        items_per_week: Publications per week; capped at 3 (Mon/Wed/Fri schedule)
         start_date:     First publication date (defaults to next Monday)
     """
     if not patterns:
@@ -325,10 +325,10 @@ def _save_json(items: list[ContentPlanItem], path: Path) -> None:
 
 
 _CSV_COLUMNS = [
-    "Date", "Week", "Strategy", "Content Role", "Topic", "Title",
+    "Date", "Week", "Strategy", "Source Pattern ID", "Content Role", "Topic", "Title",
     "Target Reader", "Reader Problem", "Market Signal", "Sales Objective",
     "Hook", "Recognition", "Mechanism", "Business Consequence", "Reframe",
-    "Compound Presence Connection", "Echo", "CTA Mode", "CTA",
+    "Compound Presence Connection", "Echo", "Echo Omission Reason", "CTA Mode", "CTA",
     "Website Angle", "LinkedIn Angle", "Instagram Angle",
     "Facebook Angle", "Threads Angle", "Telegram Angle",
     "SEO Keywords", "GEO Questions", "Status",
@@ -344,6 +344,7 @@ def _save_csv(items: list[ContentPlanItem], path: Path) -> None:
                 "Date":                      str(item.publication_date or ""),
                 "Week":                      item.week,
                 "Strategy":                  item.strategy_id,
+                "Source Pattern ID":         item.source_pattern_id or "",
                 "Content Role":              item.content_role.value,
                 "Topic":                     item.topic,
                 "Title":                     item.working_title,
@@ -357,8 +358,9 @@ def _save_csv(items: list[ContentPlanItem], path: Path) -> None:
                 "Business Consequence":      item.business_consequence,
                 "Reframe":                   item.reframe,
                 "Compound Presence Connection": item.compound_presence_connection,
-                "Echo":                      item.echo,
-                "CTA Mode":                  item.cta_mode,
+                "Echo":                      item.echo or "",
+                "Echo Omission Reason":      item.echo_omission_reason or "",
+                "CTA Mode":                  item.cta_mode.value if hasattr(item.cta_mode, "value") else item.cta_mode,
                 "CTA":                       item.cta,
                 "Website Angle":             item.website_angle,
                 "LinkedIn Angle":            item.linkedin_angle,
@@ -381,7 +383,9 @@ def _save_markdown(items: list[ContentPlanItem], path: Path) -> None:
             lines.append(f"\n## Week {item.week}\n")
         date_str = str(item.publication_date) if item.publication_date else "TBD"
         lines.append(f"### {date_str} — {item.working_title}")
-        lines.append(f"**Role:** {item.content_role.value} | **CTA mode:** {item.cta_mode}")
+        cta_val = item.cta_mode.value if hasattr(item.cta_mode, "value") else item.cta_mode
+        trace = f" | **Pattern:** `{item.source_pattern_id}`" if item.source_pattern_id else ""
+        lines.append(f"**Role:** {item.content_role.value} | **CTA mode:** {cta_val}{trace}")
         lines.append(f"\n**Hook:** {item.hook}")
         lines.append(f"**Mechanism:** {item.mechanism}")
         lines.append(f"**Reframe:** {item.reframe}")

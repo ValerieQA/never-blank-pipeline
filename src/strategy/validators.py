@@ -120,6 +120,15 @@ def validate_content_plan(items: list[ContentPlanItem], strategy_id: str) -> Non
     if wrong_strategy:
         errors.append(f"Items referencing wrong strategy_id: {wrong_strategy}")
 
+    # Traceability: generated plans must have source_pattern_id on all items.
+    # Items missing it could indicate the plan was created without market analysis.
+    untraced = [i.content_id for i in items if not i.source_pattern_id]
+    if untraced:
+        errors.append(
+            f"Items missing source_pattern_id (traceability): {untraced}. "
+            "Generate plans via build_monthly_plan or market_analyzer to populate this field."
+        )
+
     # Check for excessive duplication across items
     hooks = [i.hook.lower().strip() for i in items if i.hook]
     unique_hooks = set(hooks)

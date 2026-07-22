@@ -89,6 +89,7 @@ def _make_content_item(**overrides) -> ContentPlanItem:
         pattern="Delivery mode defeats presence work every time",
         sales_objective="Make owner feel the commercial cost of going dark",
         main_argument="Going dark at capacity is structural, not motivational",
+        source_pattern_id="pat-test000000001",
         hook="The month you were fully booked was the month you went quiet.",
         recognition="You posted three times in January, once in March, nothing in April.",
         mechanism="Delivery mode allocates all cognitive and time resources to client work. Presence work has no protected slot.",
@@ -204,6 +205,7 @@ class TestValidateContentPlan:
                 content_id=f"test-{i:03d}",
                 hook=f"Hook {i}: unique opening for article {i}",
                 week=(i // 3) + 1,
+                source_pattern_id=f"pat-{i:012d}",
             )
             for i in range(n)
         ]
@@ -226,6 +228,12 @@ class TestValidateContentPlan:
         for item in items:
             item.hook = "The exact same hook every time"
         with pytest.raises(ValueError, match="duplicate hooks"):
+            validate_content_plan(items, "2026-08-test-strategy")
+
+    def test_missing_source_pattern_id_fails(self):
+        items = self._make_plan(10)
+        items[3].source_pattern_id = None
+        with pytest.raises(ValueError, match="source_pattern_id"):
             validate_content_plan(items, "2026-08-test-strategy")
 
 
