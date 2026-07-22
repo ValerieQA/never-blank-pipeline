@@ -20,9 +20,14 @@ _DETECTIVE_PATTERNS = (
     r"\bSo I (?:checked|went back|looked)\b",
 )
 
+# Narrowly target encyclopedic entity definitions, not strong pattern-led openings such
+# as "A founder who is fully booked often has no content."
 _DICTIONARY_OPENING_PATTERNS = (
-    r"^(?:A|An|The) .{0,80} (?:is|are|serves|provides|offers) .{0,120}\.$",
-    r"^Located in .{0,120}, .{0,120}\.$",
+    r"^(?:A|An|The) [A-Z][^.!?]{0,70} (?:serves|provides|offers) "
+    r"(?:food|beverages|products|services|customers|clients)[^.!?]{0,100}\.$",
+    r"^(?:A|An|The) [A-Z][^.!?]{0,60} is (?:a|an|the) "
+    r"(?:restaurant|company|business|agency|clinic|store|platform|provider)[^.!?]{0,100}\.$",
+    r"^Located in [^.!?]{1,100}, [^.!?]{1,120}\.$",
 )
 
 
@@ -83,7 +88,6 @@ def validate_no_duplicate_echo(text: str, platform: str) -> None:
     if repeated:
         raise ValueError(f"{platform} repeats a long sentence, likely a duplicated Echo")
 
-    # Near-duplicate final sentences: high token overlap means two Echo variants survived.
     a, b = sentences[-2], sentences[-1]
     wa, wb = set(a.split()), set(b.split())
     if wa and wb and len(wa & wb) / len(wa | wb) >= 0.55:
