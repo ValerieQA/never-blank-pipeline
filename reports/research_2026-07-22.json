@@ -1,0 +1,281 @@
+{
+  "date": "2026-07-22",
+  "candidates_found": 1,
+  "duplicates_skipped": 0,
+  "new_signals_added": 1,
+  "selected_for_content": 1,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Nike to cut off thousands of online distributors in China, restructure digital f"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "8ddfd49067b27f4f",
+      "headline": "Nike to cut off thousands of online distributors in China, restructure digital footprint",
+      "published_at": "2026-07-22 01:32 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "91f7d2f1-a877-4101-95aa-f5769f0c0788",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/",
+          "external_id": "6a601d9072b8881b0ee633f7",
+          "error_message": null,
+          "raw_response_path": "(with image, via Zernio)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122120172249356169",
+          "external_id": "1219637131228622_122120172249356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DbE6syqjv2I/",
+          "external_id": "18080394350285302",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18137628247605632",
+          "external_id": "18137628247605632",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/32",
+          "external_id": "32",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/8ddfd49067b27f4f_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683859/never-blank/posts/research/8ddfd49067b27f4f/blog/1784683859.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683863/never-blank/posts/research/8ddfd49067b27f4f/linkedin/1784683863.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683867/never-blank/posts/research/8ddfd49067b27f4f/facebook/1784683867.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683874/never-blank/posts/research/8ddfd49067b27f4f/instagram/1784683874.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683880/never-blank/posts/research/8ddfd49067b27f4f/threads/1784683879.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683887/never-blank/posts/research/8ddfd49067b27f4f/stories/1784683887.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": false,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Controlling distribution to stabilize pricing and regain growth.",
+      "image_visual_family": "light_paths",
+      "image_method": "gpt-image-1"
+    }
+  ],
+  "content_packages": 1,
+  "images_new": 1,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "8ddfd49067b27f4f",
+      "HEADLINE": "Nike to cut off thousands of online distributors in China, restructure digital footprint",
+      "prepared_at": "2026-07-22 01:31 UTC",
+      "content": {
+        "blog": {
+          "headline": "Nike\u2019s China Shakeup: Why Cutting Distributors Beats Chasing Volume",
+          "angle": "Nike\u2019s move to cut thousands of online distributors in China exposes the tension between expanding reach and protecting brand equity, showing founders that sometimes growth means saying no to preserve pricing power."
+        },
+        "linkedin": {
+          "headline": "Nike\u2019s biggest competitor in China wasn\u2019t another brand\u2014it was its own distribution network.",
+          "angle": "When distribution channels spiral out of control, brand value and pricing integrity take the hit\u2014Nike\u2019s China strategy is a masterclass in reclaiming control."
+        },
+        "facebook": {
+          "headline": "Nike is slashing thousands of online distributors in China\u2014what\u2019s behind the move?",
+          "angle": "Nike\u2019s crackdown on its sprawling online network highlights the risk of uncontrolled reselling\u2014are you ready to tighten your own distribution before it costs you brand equity?"
+        },
+        "instagram": {
+          "headline": "When Growth Means Saying No",
+          "angle": "Nike\u2019s China purge shows that controlling distribution is the real power move behind maintaining brand value."
+        },
+        "threads": {
+          "thread_hook": "Nike just cut thousands of online distributors in China. Here\u2019s why that matters beyond sneakers.",
+          "angle": "This thread breaks down how unchecked distribution channels can erode brand pricing and equity, and why founders need to prioritize control over blind expansion."
+        },
+        "stories": {
+          "story_question": "Is your distribution network quietly eating your brand\u2019s value?",
+          "angle": "Exploring the tension between chasing sales volume and protecting brand equity through tighter channel control."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683859/never-blank/posts/research/8ddfd49067b27f4f/blog/1784683859.png",
+            "path": "reports/content_packages/images/8ddfd49067b27f4f_blog.png",
+            "size": "1920x1080",
+            "reused": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683863/never-blank/posts/research/8ddfd49067b27f4f/linkedin/1784683863.png",
+            "path": "reports/content_packages/images/8ddfd49067b27f4f_linkedin.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683867/never-blank/posts/research/8ddfd49067b27f4f/facebook/1784683867.png",
+            "path": "reports/content_packages/images/8ddfd49067b27f4f_facebook.png",
+            "size": "1200x628",
+            "reused": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683874/never-blank/posts/research/8ddfd49067b27f4f/instagram/1784683874.png",
+            "path": "reports/content_packages/images/8ddfd49067b27f4f_instagram.png",
+            "size": "1080x1350",
+            "reused": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683880/never-blank/posts/research/8ddfd49067b27f4f/threads/1784683879.png",
+            "path": "reports/content_packages/images/8ddfd49067b27f4f_threads.png",
+            "size": "1080x1080",
+            "reused": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683887/never-blank/posts/research/8ddfd49067b27f4f/stories/1784683887.png",
+            "path": "reports/content_packages/images/8ddfd49067b27f4f_stories.png",
+            "size": "1080x1920",
+            "reused": false
+          }
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "light_paths",
+        "hook_text": "Controlling distribution to stabilize pricing and regain growth."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "8ddfd49067b27f4f",
+      "headline": "Nike to cut off thousands of online distributors in China, restructure digital footprint",
+      "published_at": "2026-07-22 01:32 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "published_url_unavailable",
+          "url": "",
+          "external_id": "91f7d2f1-a877-4101-95aa-f5769f0c0788",
+          "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
+          "raw_response_path": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "PUBLISHED",
+          "url": "https://www.linkedin.com/feed/",
+          "external_id": "6a601d9072b8881b0ee633f7",
+          "error_message": null,
+          "raw_response_path": "(with image, via Zernio)"
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122120172249356169",
+          "external_id": "1219637131228622_122120172249356169",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/DbE6syqjv2I/",
+          "external_id": "18080394350285302",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "PUBLISHED",
+          "url": "https://www.threads.net/t/18137628247605632",
+          "external_id": "18137628247605632",
+          "error_message": null,
+          "raw_response_path": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/32",
+          "external_id": "32",
+          "error_message": null,
+          "raw_response_path": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/8ddfd49067b27f4f_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683859/never-blank/posts/research/8ddfd49067b27f4f/blog/1784683859.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683863/never-blank/posts/research/8ddfd49067b27f4f/linkedin/1784683863.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683867/never-blank/posts/research/8ddfd49067b27f4f/facebook/1784683867.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683874/never-blank/posts/research/8ddfd49067b27f4f/instagram/1784683874.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683880/never-blank/posts/research/8ddfd49067b27f4f/threads/1784683879.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683887/never-blank/posts/research/8ddfd49067b27f4f/stories/1784683887.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": false,
+      "wix_cover_image_attached": false,
+      "image_design_version": "",
+      "image_hook_text": "Controlling distribution to stabilize pricing and regain growth.",
+      "image_visual_family": "light_paths",
+      "image_method": "gpt-image-1"
+    }
+  ]
+}

@@ -593,5 +593,15 @@
     "visual_family": "particle_flow",
     "design_version": "3",
     "hook_text": "Consumer budgets tighten, impacting earnings."
+  },
+  "8ddfd49067b27f4f": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683859/never-blank/posts/research/8ddfd49067b27f4f/blog/1784683859.png",
+    "signal_type": "pricing pressure",
+    "headline": "Nike to cut off thousands of online distributors in China, restructure digital footprint",
+    "created_at": "2026-07-22",
+    "method": "gpt-image-1",
+    "visual_family": "light_paths",
+    "design_version": "3",
+    "hook_text": "Controlling distribution to stabilize pricing and regain growth."
   }
 }
