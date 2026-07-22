@@ -274,3 +274,37 @@ class MonthlyReview(BaseModel):
     qualitative_assessment:     str                   = ""
     presence_debt_resonance:    str                   = ""   # Campaign 1 specific
     lessons:                    list[str]             = Field(default_factory=list)
+
+
+# ── Decision artifacts ─────────────────────────────────────────────────────────
+#
+# Review   = analysis of what happened (WeeklyReview / MonthlyReview above)
+# Recommendation = proposed strategic action (separate concern)
+# StrategyChangeRecord = audit trail when strategy is replaced
+
+class StrategyRecommendation(BaseModel):
+    recommendation_id:           str            # e.g. "rec-2026-08-w4"
+    strategy_id:                 str
+    generated_at:                datetime
+    trigger:                     str            # "weekly_review" | "monthly_review" | "manual"
+    trigger_ref:                 str            # path to the review JSON that triggered this
+    recommended_action:          MonthlyDecision
+    confidence:                  Confidence
+    rationale:                   str
+    proposed_adjustments:        list[str]      = Field(default_factory=list)
+    proposed_new_strategy_focus: str            = ""  # populated only when REPLACE_STRATEGY
+    human_approved:              Optional[bool] = None
+    approved_at:                 Optional[datetime] = None
+    notes:                       str            = ""
+
+
+class StrategyChangeRecord(BaseModel):
+    record_id:          str
+    changed_at:         datetime
+    from_strategy_id:   str
+    to_strategy_id:     Optional[str]  = None  # None until new strategy is created
+    decision:           MonthlyDecision
+    rationale:          str
+    recommendation_id:  Optional[str]  = None
+    trigger_ref:        str            = ""    # path to monthly review that triggered change
+    archived_to:        str            = ""    # path in strategy/history/strategies/
