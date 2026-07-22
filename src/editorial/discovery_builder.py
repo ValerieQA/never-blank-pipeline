@@ -1,18 +1,7 @@
-"""
-Discovery Builder — Editorial Engine V2 Module 3
-Spec: docs/EDITORIAL_ENGINE_V2.md, Module 3
+"""Discovery Builder — Editorial Engine V2 Module 3.
 
-Voice: "Here is why I stopped believing the first interpretation." The reader is a
-co-investigator watching the obvious explanation break, not a student receiving
-analysis.
-
-LIMITATION (temporary): per spec, this module receives hypothesis_history and
-contradicted_hypotheses from a real Evidence Collector. That layer does not exist
-in code yet. This module instead constructs a plausible discovery arc directly from
-enriched signal fields (CORE_TENSION as the puzzle source, RESPONSE_TAKEN /
-OUTCOME_IF_KNOWN / COUNTER_EXAMPLE as the evidence beats). The arc is honest to the
-provided facts but is not built from a tested hypothesis space. Replace this with a
-real hypothesis_history-driven version once the Investigation Layer exists.
+Builds structured reasoning inputs, not publishable prose. The owner is the
+protagonist; a company example may appear once as supporting evidence only.
 """
 
 import json
@@ -21,113 +10,90 @@ from src.utils.llm_client import chat, model_article
 from src.utils.logger import get_logger
 
 log = get_logger("editorial.discovery_builder")
-
-_MIN_SEQUENCE = 3
+_MIN_SEQUENCE = 2
 _MAX_SEQUENCE = 4
 
 _SYSTEM_PROMPT = """You are the Discovery Builder for Never Blank.
 
-Your job is not to deliver the surviving explanation - it is to make the reader
-arrive at it themselves, one step ahead of the article confirming it.
+Your output is STRUCTURED REASONING MATERIAL for downstream platform writers.
+It is not finished prose, not a first-person investigation, and not a detective story.
 
-VOICE — HARD REQUIREMENT:
-Every field is written in first person, as a narrator investigating in real
-time and changing their mind on the page. Not "the compliance explanation
-falls apart because..." (analyst voice) but "I assumed this was about
-compliance. Then one fact didn't fit." (narrator voice). This is not optional
-styling — a version of these fields with the "I" removed and stated as
-settled analysis instead has failed the task, no matter how accurate the
-content is. Required-voice reference examples:
-- "I thought Getty had blinked."
-- "Except the lawsuit wasn't dropped. It's still active."
-- "So I went back to the timeline."
-- "That's not the sequence of a company reacting. It's the sequence of a
-  company setting terms."
+The reader is a small-business owner. The owner situation is the protagonist.
+A named company, publication, or corporate case may appear in at most ONE evidence
+item and only as supporting evidence. The structure must remain coherent if every
+company name is removed.
 
-ONE FACT, NOT FIVE:
-Before you write anything, decide: if I could keep only one fact that broke
-my first assumption, which fact is it? That single fact is the puzzle. Do
-not confuse "thorough investigation" with "many separate findings." A
-version of this output that presents four or five different discoveries
-side by side (an earnings call, a competitor comparison, an investor
-statement, an industry trend, each introducing new information) has failed
-- it reads as "here is everything I found," a list competing for the
-reader's attention, not "here is the one thing that changed my mind." Once
-you have the one fact, everything else you include exists only to confirm,
-deepen, or corroborate that same fact from another angle - never to
-introduce a second, competing candidate for what broke the first
-explanation.
+Build four fields:
 
-Four beats, each in that first-person investigating voice:
+1. first_wrong_explanation
+   The natural explanation an owner gives themselves for the situation.
+   Write it as a concise proposition, not "I assumed..." and not "many founders believe...".
 
-1. first_wrong_explanation - what I assumed, going in - the interpretation
-   everyone held, including the narrator, before the investigation. Not a
-   straw man - the actual obvious conclusion a reader would reach from the
-   headline alone. Phrase it as something the narrator believed ("I assumed
-   X"), not as a description of a public misconception ("Many believe X").
+2. puzzle
+   The single observable contradiction that makes that explanation insufficient.
+   It must be grounded in the provided inputs. No theatrical surprise language.
 
-2. puzzle - the ONE fact that made me stop believing it (see ONE FACT, NOT
-   FIVE above). Not a list of doubts - a single contradiction. A crack
-   invites qualification; a contradiction forces a new explanation. This is
-   the pivot of the whole piece - it must read as a genuine surprise the
-   narrator ran into, not a thesis being asserted. If the provided facts
-   include something a company or its representatives stated directly
-   (an earnings call line, a public statement), prefer building the puzzle
-   around that stated fact over an inferred one - it reads as evidence, not
-   assertion. Never fabricate a quote that is not grounded in the provided
-   facts.
+3. investigation_sequence
+   Two to four concise evidence/mechanism beats. Each beat must do one distinct job:
+   - identify a behavior or process;
+   - show a consequence;
+   - clarify the mechanism;
+   - optionally use one company example as corroboration.
+   Do not narrate research actions. Forbidden constructions include:
+   "I figured", "I went looking", "I expected", "But then I found",
+   "That's when I realized", "So I checked", "Then I saw".
 
-3. investigation_sequence - 3 to 4 ordered beats that all deepen the SAME
-   puzzle fact from beat 2 - not parallel discoveries. Each beat should feel
-   like turning the same fact over and looking at another side of it, in the
-   narrator's voice ("So I checked X." "That's when Y surfaced." "Then Z
-   confirmed it."), never a report ("The timeline shows..."). If a beat
-   would work equally well as the opening of a different article about a
-   different fact, it does not belong here - cut it. Do not state the
-   surviving explanation here - the reader should watch it form.
+4. aha_setup
+   A concrete owner-recognition scene that leaves the reader ready for the reframe.
+   Prefer second person or a direct small-business situation. Do not state the final thesis.
 
-4. aha_setup - the last thing I found before it clicked - the moment the one
-   fact from beat 2 became undeniable. Present the evidence in the
-   narrator's voice; do not state the conclusion ("therefore..."). The
-   reader should arrive at the conclusion one sentence ahead of the text.
-
-Rules:
-- Every field must be in first person. A field with no "I" in it, or written
-  as third-person analysis, fails the task regardless of factual accuracy.
-- first_wrong_explanation must be a position a reader would genuinely hold, not a
-  weak position set up to be knocked down.
-- puzzle must be a single fact, not a list.
-- investigation_sequence must show sequence ("First this. Then this. Then this."),
-  not summary ("The timeline shows X"), and must not introduce a second
-  candidate fact competing with the puzzle from beat 2.
-- aha_setup must not state the conclusion - the article confirms it, the reader
-  already has it.
+Hard rules:
+- no first-person detective narration;
+- no diary of research actions;
+- no article-ready transitions;
+- no invented facts;
+- company evidence in at most one investigation_sequence item;
+- the owner scenario and mechanism must dominate the output.
 
 Return ONLY valid JSON:
 {
   "first_wrong_explanation": "string",
   "puzzle": "string",
-  "investigation_sequence": ["string", "string", "string"],
+  "investigation_sequence": ["string", "string"],
   "aha_setup": "string"
 }"""
+
+
+def _contains_detective_template(text: str) -> bool:
+    lowered = text.lower()
+    markers = (
+        "i figured", "i went looking", "i expected", "but then i found",
+        "that's when i realized", "that’s when i realized", "so i checked",
+        "then i saw", "i thought maybe",
+    )
+    return any(marker in lowered for marker in markers)
 
 
 def _validate(data: dict) -> dict:
     for field in ("first_wrong_explanation", "puzzle", "aha_setup"):
         value = data.get(field, "")
         if not isinstance(value, str) or not value.strip():
-            raise ValueError(f"Discovery Builder: field {field!r} missing or empty in LLM output")
+            raise ValueError(f"Discovery Builder: field {field!r} missing or empty")
+        if _contains_detective_template(value):
+            raise ValueError(f"Discovery Builder: field {field!r} uses detective-template narration")
 
     sequence = data.get("investigation_sequence", [])
     if not isinstance(sequence, list) or not (_MIN_SEQUENCE <= len(sequence) <= _MAX_SEQUENCE):
         raise ValueError(
-            f"Discovery Builder: investigation_sequence must have {_MIN_SEQUENCE}-{_MAX_SEQUENCE} "
-            f"items, got {len(sequence) if isinstance(sequence, list) else 'non-list'}"
+            f"Discovery Builder: investigation_sequence must have {_MIN_SEQUENCE}-{_MAX_SEQUENCE} items"
         )
+
     clean_sequence = []
     for i, item in enumerate(sequence):
         if not isinstance(item, str) or not item.strip():
             raise ValueError(f"Discovery Builder: investigation_sequence item {i} is empty")
+        if _contains_detective_template(item):
+            raise ValueError(f"Discovery Builder: investigation_sequence item {i} uses detective narration")
         clean_sequence.append(item.strip())
 
     return {
@@ -139,19 +105,14 @@ def _validate(data: dict) -> dict:
 
 
 def build_discovery(hook: dict, spine: dict, decision_lens: dict, signal: dict) -> dict:
-    """
-    Produce the Discovery Builder dict.
-
-    Raises ValueError if any field is missing/empty, or investigation_sequence is
-    outside the 3-5 item range.
-    """
-    user = f"""HEADLINE: {signal.get('HEADLINE', '')}
-selected_hook: {hook.get('selected_hook', '')}
+    user = f"""selected_hook: {hook.get('selected_hook', '')}
 narrative_spine: {spine.get('narrative_spine', '')}
+visibility_pattern: {signal.get('visibility_pattern', '')}
 founder_scenario: {signal.get('founder_scenario', '')}
 mechanism: {signal.get('mechanism', '')}
 business_consequence: {signal.get('business_consequence', '')}
 company_as_evidence_of: {signal.get('company_as_evidence_of', '')}
+evidence_limit: {signal.get('evidence_limit', '')}
 CORE_FACT: {signal.get('CORE_FACT', '')}
 CORE_TENSION: {signal.get('CORE_TENSION', '')}
 RESPONSE_TAKEN: {signal.get('RESPONSE_TAKEN', '')}
@@ -160,12 +121,8 @@ COUNTER_EXAMPLE: {signal.get('COUNTER_EXAMPLE', '')}
 owner_system_objective: {decision_lens.get('owner_system_objective', '')}
 delivery_vs_presence_conflict: {decision_lens.get('delivery_vs_presence_conflict', '')}
 
-HARD REQUIREMENT: The investigation arc must be about the owner's situation. The corporate
-example, if used, must appear as supporting evidence in at most one beat of
-investigation_sequence. The article must remain coherent if the company name is removed.
-
-Produce the Discovery Builder JSON. The reader is being built toward the
-narrative_spine above - the aha_setup should leave them one sentence away from it."""
+Produce owner-centered structured discovery material. Do not write publishable prose.
+The company is evidence, never protagonist."""
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_article())
     try:
