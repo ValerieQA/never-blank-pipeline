@@ -308,3 +308,22 @@ class StrategyChangeRecord(BaseModel):
     recommendation_id:  Optional[str]  = None
     trigger_ref:        str            = ""    # path to monthly review that triggered change
     archived_to:        str            = ""    # path in strategy/history/strategies/
+
+
+# ── Published Content Index ────────────────────────────────────────────────────
+#
+# One entry per published signal (canonical record — not per platform).
+# Foundation for Echo Memory (4C) and future Analytics Collectors (4D).
+
+class PublishedEntry(BaseModel):
+    content_id:  str
+    strategy_id: str
+    pattern_id:  Optional[str] = None   # from content plan; may be absent for ad-hoc signals
+    published_at: datetime
+    platform:    str = "blog"            # canonical platform; blog = primary
+    url:         str = ""               # blog/Wix URL when available
+    echo:        Optional[str] = None   # echo_line used in the published article
+    hook:        str = ""
+    topic:       str = ""
+    cta_mode:    str = "none"
+    reviewed:    bool = False           # set to True after weekly review covers this entry

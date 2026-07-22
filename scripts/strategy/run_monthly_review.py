@@ -18,12 +18,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
 
 from src.strategy.decision_engine import draft_monthly_review, draft_strategy_recommendation
+from src.strategy.history import (
+    append_decision_log,
+    archive_monthly_review,
+    archive_weekly_reviews,
+    rotate_strategy,
+)
 from src.strategy.loader import load_active_strategy
 from src.strategy.models import MonthlyDecision, StrategyChangeRecord, WeeklyReview
 from src.utils.logger import get_logger
@@ -33,11 +38,6 @@ log = get_logger("scripts.run_monthly_review")
 WEEKLY_DIR = Path("strategy/reviews/weekly")
 MONTHLY_DIR = Path("strategy/reviews/monthly")
 RECOMMENDATIONS_DIR = Path("strategy/reviews/recommendations")
-HISTORY_STRATEGIES_DIR = Path("strategy/history/strategies")
-HISTORY_REVIEWS_DIR = Path("strategy/history/reviews")
-DECISIONS_DIR = Path("strategy/history/decisions")
-CURRENT_STRATEGY_JSON = Path("strategy/current/strategy.json")
-CURRENT_STRATEGY_MD = Path("strategy/current/strategy.md")
 
 
 def load_weekly_reviews(strategy_id: str) -> list[WeeklyReview]:
@@ -53,47 +53,6 @@ def load_weekly_reviews(strategy_id: str) -> list[WeeklyReview]:
         except Exception as exc:
             log.warning("Failed to load %s: %s", path, exc)
     return reviews
-
-
-def archive_strategy(strategy_id: str, dry_run: bool) -> str:
-    """Copy current strategy.json + strategy.md to strategy/history/strategies/{strategy_id}/."""
-    dest_dir = HISTORY_STRATEGIES_DIR / strategy_id
-    if dry_run:
-        print(f"[dry-run] Would archive strategy to: {dest_dir}/")
-        return str(dest_dir)
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    if CURRENT_STRATEGY_JSON.exists():
-        shutil.copy2(CURRENT_STRATEGY_JSON, dest_dir / "strategy.json")
-    if CURRENT_STRATEGY_MD.exists():
-        shutil.copy2(CURRENT_STRATEGY_MD, dest_dir / "strategy.md")
-    log.info("Strategy archived to %s", dest_dir)
-    return str(dest_dir)
-
-
-def archive_weekly_reviews(strategy_id: str, dry_run: bool) -> None:
-    """Move weekly reviews for the strategy to strategy/history/reviews/."""
-    dest_dir = HISTORY_REVIEWS_DIR / strategy_id
-    if dry_run:
-        print(f"[dry-run] Would archive weekly reviews to: {dest_dir}/")
-        return
-    if not WEEKLY_DIR.exists():
-        return
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    for path in WEEKLY_DIR.glob(f"{strategy_id}_w*.json"):
-        shutil.move(str(path), dest_dir / path.name)
-    log.info("Weekly reviews archived to %s", dest_dir)
-
-
-def append_decision_log(record: StrategyChangeRecord, dry_run: bool) -> None:
-    """Append a StrategyChangeRecord to the decision log (append-only JSONL)."""
-    log_path = DECISIONS_DIR / "decision_log.jsonl"
-    if dry_run:
-        print(f"[dry-run] Would append to decision log: {log_path}")
-        return
-    DECISIONS_DIR.mkdir(parents=True, exist_ok=True)
-    with log_path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(json.loads(record.model_dump_json()), default=str) + "\n")
-    log.info("Decision log updated: %s", log_path)
 
 
 def main() -> None:
@@ -169,28 +128,36 @@ def main() -> None:
 
     # Handle REPLACE_STRATEGY
     if monthly_review.decision == MonthlyDecision.REPLACE_STRATEGY:
-        print(f"\n⚠  REPLACE_STRATEGY — archiving current strategy cycle")
-        print("   Human approval required before creating a new strategy.")
+        print(f"\n[!] REPLACE_STRATEGY — archiving current strategy cycle")
+        print("    Human approval required before writing a new strategy.")
 
-        archived_to = archive_strategy(strategy_id, args.dry_run)
-        archive_weekly_reviews(strategy_id, args.dry_run)
+        if not args.dry_run:
+            from src.strategy.history import HISTORY_STRATEGIES_DIR
+            archived_path = HISTORY_STRATEGIES_DIR / f"{datetime.now().strftime('%Y-%m-%d')}_{strategy_id}.json"
+            # archive_weekly_reviews and archive_monthly_review called via history module
+            archive_weekly_reviews(strategy_id)
+            archive_monthly_review(strategy_id)
 
-        change_record = StrategyChangeRecord(
-            record_id=f"change-{uuid.uuid4().hex[:8]}",
-            changed_at=datetime.now(),
-            from_strategy_id=strategy_id,
-            to_strategy_id=None,
-            decision=MonthlyDecision.REPLACE_STRATEGY,
-            rationale=monthly_review.rationale,
-            recommendation_id=recommendation.recommendation_id,
-            trigger_ref=str(monthly_path),
-            archived_to=archived_to,
-        )
-        append_decision_log(change_record, args.dry_run)
+            change_record = StrategyChangeRecord(
+                record_id=f"change-{uuid.uuid4().hex[:8]}",
+                changed_at=datetime.now(),
+                from_strategy_id=strategy_id,
+                to_strategy_id=None,
+                decision=MonthlyDecision.REPLACE_STRATEGY,
+                rationale=monthly_review.rationale,
+                recommendation_id=recommendation.recommendation_id,
+                trigger_ref=str(monthly_path),
+                archived_to=str(archived_path),
+            )
+            append_decision_log(change_record)
+        else:
+            print("[dry-run] Would archive strategy, weekly reviews, and monthly review to history/")
+            print("[dry-run] Would append REPLACE_STRATEGY to decision_log.jsonl")
 
         print("\nNext steps:")
         print("  1. Review the recommendation in strategy/reviews/recommendations/")
         print("  2. Create a new strategy.json in strategy/current/")
+        print("     (Use rotate_strategy() from src.strategy.history to do this atomically)")
         print("  3. Run build_monthly_plan.py for the new cycle")
     else:
         print(f"\nNo archiving required for {monthly_review.decision.value}.")

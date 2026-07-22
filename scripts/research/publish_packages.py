@@ -282,6 +282,26 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
 
         _save_generated(generated_path, sig_id, headline, blog_body, linkedin_text,
                         facebook_text, instagram_text, threads_seq, telegram_text, wix_url)
+        # Append to published content index (History Engine 4B.3).
+        # Non-fatal: index failure must never block a completed publish.
+        try:
+            from src.strategy.history import append_published_entry
+            from src.strategy.models import PublishedEntry
+            append_published_entry(PublishedEntry(
+                content_id=sig_id,
+                strategy_id=strategy_context.get("strategy_id", ""),
+                pattern_id=signal.get("PATTERN_ID") or None,
+                published_at=datetime.now(timezone.utc),
+                platform="blog",
+                url=wix_url,
+                echo=structured.get("echo_line") or None,
+                hook=structured.get("hook", ""),
+                topic=headline,
+                cta_mode=cta_mode,
+            ))
+        except Exception as _index_exc:
+            log.warning("Published index append failed (non-fatal): %s", _index_exc)
+
         reports.append({
             "signal_id": sig_id,
             "headline": headline,
