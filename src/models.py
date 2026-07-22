@@ -36,6 +36,14 @@ class RunStatus(str, Enum):
     RED = "red"
 
 
+class CTAMode(str, Enum):
+    NONE = "none"
+    REFLECTION = "reflection"
+    DIAGNOSTIC = "diagnostic"
+    EXAMPLE_REQUEST = "example_request"
+    DIRECT_CONVERSATION = "direct_conversation"
+
+
 class QCFailureType(str, Enum):
     TYPE1 = "type1"  # technical
     TYPE2 = "type2"  # quality
@@ -155,7 +163,7 @@ class ContentMatrix:
     visual_anchor:      str
     sales_angle:        str
     soft_cta:           str
-    cta_mode:           str   # none | reflection | diagnostic | example_request | direct_conversation
+    cta_mode:           CTAMode = CTAMode.NONE  # none | reflection | diagnostic | example_request | direct_conversation
     linkedin_angle:     str
     instagram_angle:    str
     facebook_angle:     str
@@ -180,8 +188,8 @@ class ContentPackage:
     instagram_hashtags: list[str]
     facebook_text: str
     threads_sequence: list[str]     # 5 posts
-    telegram_text: str
-    stories_sequence: list[dict]    # 4-story JSON sequence for IG/FB Stories
+    telegram_text: Optional[str]             # None = channel SKIPPED (prompt deleted)
+    stories_sequence: Optional[list[dict]]   # None = channel SKIPPED (prompt deleted)
     image_prompt: str               # derived from matrix.visual_anchor
     generated_at: str               # ISO datetime
 

@@ -97,12 +97,30 @@ def _llm_select_indices(items: list[dict], categories: list[str], avoid: list[st
     )
     system = f"""You are a business signal analyst for Never Blank, a content strategy practice for founders.
 
+Never Blank's territory is: business visibility, consistent presence, customer memory,
+recognition and trust, presence collapse, owner dependency, and the communication-to-sales
+relationship for small and expert businesses.
+
 Select news items that represent genuine business signals:
 - Economic, operational, or behavioral shift businesses must respond to
 - Relevant to: {', '.join(categories)}
 - Avoid: {', '.join(avoid)}
 
-Be inclusive — prefer false positives over missed signals.
+VISIBILITY RELEVANCE GATE — reject a signal UNLESS it passes at least one of:
+  1. Directly relevant to Never Blank's territory (visibility, presence, recognition,
+     customer memory, consistent communication, owner dependency).
+  2. A large-company story that directly illustrates a visibility or presence MECHANISM
+     relevant to small/expert business owners (e.g., why a brand disappeared from customer
+     awareness, how presence collapsed during a leadership transition).
+
+ALWAYS REJECT:
+  - Large-company M&A, earnings reports, product launches at Apple/Google/Microsoft/Meta
+    scale — UNLESS they directly illustrate a visibility/presence mechanism for small businesses.
+  - Generic AI news (new model releases, AI chip shortages, AI investment rounds) with no
+    connection to how small business owners maintain presence or communicate with clients.
+  - Macro-economic or geopolitical news with no small-business visibility angle.
+
+Be inclusive within Never Blank's territory — prefer false positives over missed signals.
 
 Respond with ONLY a JSON object in this exact format:
 {{"selected": [0, 3, 7, 12]}}

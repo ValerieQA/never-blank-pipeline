@@ -162,16 +162,16 @@ def generate_threads(brief: ContentBrief, matrix: ContentMatrix, blog_body: str)
 
 def generate_telegram(brief: ContentBrief, matrix: ContentMatrix) -> dict:
     """Telegram post generation removed — telegram_post prompt deleted.
-    Returns an empty stub so ContentPackage can still be constructed."""
-    log.info("generate_telegram: prompt removed, returning empty stub")
-    return {"text": ""}
+    Returns None so ContentPackage marks this channel as SKIPPED, not success."""
+    log.info("generate_telegram: channel SKIPPED (prompt removed)")
+    return {"text": None}
 
 
-def generate_stories(brief: ContentBrief, matrix: ContentMatrix) -> list[dict]:
+def generate_stories(brief: ContentBrief, matrix: ContentMatrix) -> list[dict] | None:
     """Stories generation removed — stories_post prompt deleted.
-    Returns an empty list stub so ContentPackage can still be constructed."""
-    log.info("generate_stories: prompt removed, returning empty stub")
-    return []
+    Returns None so ContentPackage marks this channel as SKIPPED, not success."""
+    log.info("generate_stories: channel SKIPPED (prompt removed)")
+    return None
 
 
 # ── Full package ───────────────────────────────────────────────────────────────
@@ -212,7 +212,7 @@ def generate_content_package(brief: ContentBrief, matrix: ContentMatrix) -> Cont
         "Content generation complete: blog=%d linkedin=%d ig=%d fb=%d threads=%d tg=%d stories=%d",
         len(body), len(li.get("text", "")), len(ig.get("caption", "")),
         len(fb.get("text", "")), len(thr.get("sequence", [])),
-        len(tg.get("text", "")), len(st),
+        len(tg.get("text") or ""), len(st) if st is not None else 0,
     )
 
     return ContentPackage(
@@ -228,8 +228,8 @@ def generate_content_package(brief: ContentBrief, matrix: ContentMatrix) -> Cont
         instagram_hashtags = ig.get("hashtags", []),
         facebook_text      = fb.get("text", ""),
         threads_sequence   = thr.get("sequence", []),
-        telegram_text      = tg.get("text", ""),
-        stories_sequence   = st,
+        telegram_text      = tg.get("text", None),   # None = SKIPPED
+        stories_sequence   = st,                        # None = SKIPPED
         image_prompt       = img_prompt,
         generated_at       = datetime.now(timezone.utc).isoformat(),
     )

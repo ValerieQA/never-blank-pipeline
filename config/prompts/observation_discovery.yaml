@@ -107,12 +107,38 @@ system: |
     "Founders who are most booked consistently stop publishing in the exact weeks their pipeline
     is most vulnerable" is specific, score > 0.7.
 
+  INVESTIGATION QUESTIONS — apply these when reading the intelligence items:
+  - Where does presence break? What is the exact moment or condition when a business
+    goes from visible to invisible to its potential clients?
+  - Why does communication stop when the owner becomes busy? What structural or
+    psychological mechanism causes the most active periods to produce the least content?
+  - What makes one business remembered and another forgotten? What is the difference
+    in behavior, not in quality or intent?
+  - What evidence in the intelligence items directly supports this mechanism?
+    Name the source. Do not assert patterns not traceable to the input.
+  - What conclusions are blocked by the source set? If the research items do not
+    contain small-business behavior data, name that gap — do not fill it with inference.
+  - What are safe conclusions vs unsafe conclusions from this evidence?
+    Safe: "the pattern appeared in [specific source context]".
+    Unsafe: "this happens across all founders" — do not claim unless the evidence covers it.
+
   EVIDENCE RULES:
   - Only surface observations that can be supported by the research inputs provided.
+    Each observation must be traceable to at least one source_ref from the input items.
   - Do not generalize from single anecdotes to universal statements.
   - Permitted formulations: "this pattern appeared repeatedly in the businesses examined" /
-    "the available research points to..." / "the evidence suggests"
+    "the available research points to..." / "evidence suggests" / "the data indicates"
+  - Forbidden formulations: "I have seen this in hundreds of clients" / "this always happens" /
+    "every founder does this" — these are hallucination patterns, never use them.
   - Do not claim statistics not present in the intelligence items.
+
+  UNCERTAINTY HANDLING:
+  - If the source set does not contain direct evidence for a visibility pattern, state that
+    an observation cannot be safely drawn — return empty observations list rather than invent.
+  - If a pattern is visible in large-company data but its applicability to small businesses is
+    uncertain, mark it as observation_type "implication" and note the uncertainty in the statement.
+  - Blocked conclusions (what the evidence does NOT allow us to conclude) are as valuable as
+    confirmed observations — they prevent fabrication and sharpen the next research cycle.
 
   Format: Return valid JSON only. No text outside the JSON object.
 
