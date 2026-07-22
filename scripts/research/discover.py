@@ -95,37 +95,39 @@ def _llm_select_indices(items: list[dict], categories: list[str], avoid: list[st
         f"[{i}] {it['title']} | {it.get('summary', '')[:150]}"
         for i, it in enumerate(items)
     )
-    system = f"""You are a business signal analyst for Never Blank, a content strategy practice for founders.
+    system = f"""You are a signal analyst for Never Blank, a content practice that observes how small business owners lose and rebuild visibility.
 
-Never Blank's territory is: business visibility, consistent presence, customer memory,
-recognition and trust, presence collapse, owner dependency, and the communication-to-sales
-relationship for small and expert businesses.
+Never Blank does NOT publish advice. It publishes OBSERVATIONS about observable business behavior patterns.
 
-Select news items that represent genuine business signals:
-- Economic, operational, or behavioral shift businesses must respond to
-- Relevant to: {', '.join(categories)}
-- Avoid: {', '.join(avoid)}
+The key distinction:
+- NOT a signal: "5 ways to stay consistent on social media" (tips article)
+- NOT a signal: "Why AI will change marketing forever" (opinion/trend)
+- NOT a signal: "Nike's rebrand strategy" (corporate case study, no owner mechanism)
+- IS a signal: "A bakery's single viral photo filled their restaurant for 3 weeks, then foot traffic dropped back to baseline" (observable mechanism: presence depends on rare lucky moments, not system)
+- IS a signal: Research or data showing that businesses that go quiet during busy seasons lose customer recall faster than expected
+- IS a signal: A pattern where service business owners stop communicating when they're at capacity, creating a gap that erodes client pipeline
 
-VISIBILITY RELEVANCE GATE — reject a signal UNLESS it passes at least one of:
-  1. Directly relevant to Never Blank's territory (visibility, presence, recognition,
-     customer memory, consistent communication, owner dependency).
-  2. A large-company story that directly illustrates a visibility or presence MECHANISM
-     relevant to small/expert business owners (e.g., why a brand disappeared from customer
-     awareness, how presence collapsed during a leadership transition).
+A signal must contain at least ONE of:
+  1. An observable behavioral pattern — something a business owner actually DID or DIDN'T DO, with a consequence
+  2. Data or research about how customer memory, trust, recognition, or awareness works
+  3. A mechanism: why a specific business became invisible or visible, not just that it did
 
-ALWAYS REJECT:
-  - Large-company M&A, earnings reports, product launches at Apple/Google/Microsoft/Meta
-    scale — UNLESS they directly illustrate a visibility/presence mechanism for small businesses.
-  - Generic AI news (new model releases, AI chip shortages, AI investment rounds) with no
-    connection to how small business owners maintain presence or communicate with clients.
-  - Macro-economic or geopolitical news with no small-business visibility angle.
+Signal mechanism types to look for: {', '.join(categories)}
 
-Be inclusive within Never Blank's territory — prefer false positives over missed signals.
+ALWAYS REJECT — no exceptions:
+  - "X tips/ways/steps to..." articles
+  - Trend roundups ("top marketing trends for 2025")
+  - Generic advice ("how to grow your audience")
+  - Large company M&A, earnings, product launches — unless they directly show a MECHANISM relevant to small business visibility
+  - Generic AI news (new models, investment rounds, chip shortages)
+  - Opinion pieces without data or real business observation
+  - Macro-economic and geopolitical news
+  - Avoid: {', '.join(avoid)}
 
-Respond with ONLY a JSON object in this exact format:
+Respond with ONLY a JSON object:
 {{"selected": [0, 3, 7, 12]}}
 
-Where the numbers are indices from the input list. If nothing qualifies, return {{"selected": []}}."""
+If nothing qualifies, return {{"selected": []}}. It is correct to return an empty list."""
 
     user = f"Select relevant items from this list:\n\n{batch_text}"
 

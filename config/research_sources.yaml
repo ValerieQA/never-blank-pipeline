@@ -42,30 +42,31 @@ max_candidates: 30
 min_candidates: 5
 
 signal_categories:
-  # Core Never Blank territory — small business visibility and presence
-  - business visibility collapse
-  - presence system failure
-  - owner dependency on personal energy
-  - consistency and customer memory
-  - communication stopping during busy periods
-  - client work defeating content work
-  - trust built through repeated contact
-  - recognition and familiarity patterns
-  - silence and customer forgetting
-  - service business presence
-  # Secondary — business behavior with visibility mechanism
-  - platform behavior change affecting small business reach
-  - consumer trust and purchase decisions
-  - referral and word-of-mouth patterns
-  - small business marketing behavior
-  - business communication patterns
+  # Mechanism types — what the system is looking for is observable behavior patterns, not topics
+  - visibility interruption
+  - presence maintenance failure
+  - customer memory formation
+  - owner bottleneck
+  - delivery vs visibility conflict
+  - recognition system breakdown
+  - trust accumulation pattern
+  - consistency failure
+  - business becoming invisible
+  - authority erosion
+  - communication gap during busy periods
+  - platform reach change for small business
+  - referral and word-of-mouth mechanism
+  - silence and forgetting pattern
 
 avoid_categories:
-  - large company M&A with no small business visibility angle
+  - large company M&A with no small business visibility mechanism
   - generic AI hype and model releases
   - earnings reports and investor news
   - macroeconomic forecasts without owner-facing mechanism
-  - motivational content
-  - opinion-only without data or observation
-  - listicles without research
-  - generic social media tips without mechanism
+  - motivational content and success mindset
+  # The following are the hardest to filter — tips articles from small-biz sources
+  - listicles ("5 ways to...", "top tools for...")
+  - generic how-to advice without observable mechanism
+  - trend roundups without behavioral observation
+  - opinion-only without data or real business case
+  - social media tips without mechanism (posting frequency, hashtag advice)
