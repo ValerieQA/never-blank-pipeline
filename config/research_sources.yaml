@@ -1,25 +1,38 @@
 rss_feeds:
-  - name: CNBC Business
-    url: https://www.cnbc.com/id/10001147/device/rss/rss.html
+  # Small business and service business sources (primary)
+  - name: Small Business Trends
+    url: https://smallbiztrends.com/feed
     quality: high
-  - name: CNBC Finance
-    url: https://www.cnbc.com/id/10000664/device/rss/rss.html
+  - name: SCORE Small Business
+    url: https://www.score.org/blog/feed
     quality: high
-  - name: TechCrunch
-    url: https://techcrunch.com/feed/
+  - name: Entrepreneur Magazine
+    url: https://www.entrepreneur.com/latest.rss
+    quality: high
+  - name: Inc. Magazine
+    url: https://www.inc.com/rss.xml
+    quality: high
+  - name: HubSpot Marketing Blog
+    url: https://blog.hubspot.com/marketing/rss.xml
     quality: medium
-  - name: Bloomberg Technology
-    url: https://feeds.bloomberg.com/technology/news.rss
+  - name: Content Marketing Institute
+    url: https://contentmarketinginstitute.com/feed/
     quality: high
-  - name: Axios Business
-    url: https://api.axios.com/feed/
-    quality: high
+  - name: Search Engine Journal
+    url: https://www.searchenginejournal.com/feed/
+    quality: medium
+
+  # Business behavior and trust research (secondary — for mechanism evidence)
   - name: Harvard Business Review
     url: https://hbr.org/the-latest/rss
     quality: high
-  - name: Ars Technica Business
-    url: https://feeds.arstechnica.com/arstechnica/business
+  - name: Axios Business
+    url: https://api.axios.com/feed/
     quality: medium
+  - name: CNBC Small Business
+    url: https://www.cnbc.com/id/48427006/device/rss/rss.html
+    quality: high
+
   # Reuters/WSJ/AP blocked on GitHub Actions runners — kept below for reference
   # - name: Reuters Business
   #   url: https://feeds.reuters.com/reuters/businessNews
@@ -29,23 +42,30 @@ max_candidates: 30
 min_candidates: 5
 
 signal_categories:
-  - AI adoption
-  - hiring changes
-  - layoffs
-  - pricing pressure
-  - labor costs
-  - consumer behavior
-  - regulation
-  - small business pressure
-  - business trust
-  - visibility
-  - operational change
-  - platform changes
-  - technology adoption
+  # Core Never Blank territory — small business visibility and presence
+  - business visibility collapse
+  - presence system failure
+  - owner dependency on personal energy
+  - consistency and customer memory
+  - communication stopping during busy periods
+  - client work defeating content work
+  - trust built through repeated contact
+  - recognition and familiarity patterns
+  - silence and customer forgetting
+  - service business presence
+  # Secondary — business behavior with visibility mechanism
+  - platform behavior change affecting small business reach
+  - consumer trust and purchase decisions
+  - referral and word-of-mouth patterns
+  - small business marketing behavior
+  - business communication patterns
 
 avoid_categories:
-  - generic AI hype
+  - large company M&A with no small business visibility angle
+  - generic AI hype and model releases
+  - earnings reports and investor news
+  - macroeconomic forecasts without owner-facing mechanism
   - motivational content
-  - opinion-only
-  - listicles without data
-  - generic marketing tips
+  - opinion-only without data or observation
+  - listicles without research
+  - generic social media tips without mechanism
