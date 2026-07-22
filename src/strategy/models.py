@@ -88,6 +88,9 @@ class PatternRecord(BaseModel):
     pattern_id:                   str
     pattern_name:                 str
     observed_signals:             list[str] = Field(default_factory=list)
+    # Traceability: machine-readable links back to source research signals.
+    source_signal_ids:            list[str] = Field(default_factory=list)
+    source_urls:                  list[str] = Field(default_factory=list)
     small_business_situation:     str
     underlying_mechanism:         str
     customer_behavior:            str
@@ -192,6 +195,8 @@ class ContentPlanItem(BaseModel):
     seo_keywords:                 list[str]    = Field(default_factory=list)
     geo_questions:                list[str]    = Field(default_factory=list)
     internal_links:               list[str]    = Field(default_factory=list)
+    # Traceability: which pattern generated this item (machine-readable).
+    source_pattern_id:            Optional[str] = None
     status:                       str          = "planned"
 
     @field_validator("hook", "mechanism", "reframe", "sales_objective")

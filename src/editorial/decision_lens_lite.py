@@ -114,6 +114,16 @@ def generate_decision_lens(signal: dict) -> dict:
 
     Raises ValueError if the LLM output does not satisfy the schema.
     """
+    strategy_section = ""
+    if signal.get("STRATEGY_PRIMARY_MESSAGE"):
+        strategy_section = f"""
+Active campaign context — use this to align analysis framing:
+strategy_primary_message: {signal.get("STRATEGY_PRIMARY_MESSAGE", "")}
+strategy_selected_problem: {signal.get("STRATEGY_SELECTED_PROBLEM", "")}
+strategy_desired_reader_realization: {signal.get("STRATEGY_DESIRED_REALIZATION", "")}
+strategy_compound_presence_role: {signal.get("STRATEGY_COMPOUND_ROLE", "")}
+"""
+
     user = f"""HEADLINE: {signal.get('HEADLINE', '')}
 CORE_FACT: {signal.get('CORE_FACT', '')}
 CORE_TENSION: {signal.get('CORE_TENSION', '')}
@@ -124,8 +134,7 @@ Pattern Extractor output (owner-centered framing already extracted):
 visibility_pattern: {signal.get('visibility_pattern', '')}
 founder_scenario: {signal.get('founder_scenario', '')}
 mechanism: {signal.get('mechanism', '')}
-business_consequence: {signal.get('business_consequence', '')}
-
+business_consequence: {signal.get('business_consequence', '')}{strategy_section}
 Produce the Decision Lens JSON — focused on the owner's presence system."""
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_enrich())

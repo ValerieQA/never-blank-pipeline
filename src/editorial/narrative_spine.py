@@ -100,6 +100,15 @@ def build_narrative_spine(decision_lens: dict, signal: dict) -> dict:
     Raises ValueError if the LLM output does not satisfy the schema, including an
     invalid target_feeling value.
     """
+    strategy_section = ""
+    if signal.get("STRATEGY_PRIMARY_MESSAGE"):
+        strategy_section = f"""
+Active campaign context — the Spine must align to this framing:
+strategy_primary_message: {signal.get("STRATEGY_PRIMARY_MESSAGE", "")}
+strategy_desired_reader_realization: {signal.get("STRATEGY_DESIRED_REALIZATION", "")}
+strategy_compound_presence_role: {signal.get("STRATEGY_COMPOUND_ROLE", "")}
+"""
+
     user = f"""HEADLINE: {signal.get('HEADLINE', '')}
 
 visibility_pattern: {signal.get('visibility_pattern', '')}
@@ -110,8 +119,7 @@ owner_system_objective (from Decision Lens): {decision_lens.get('owner_system_ob
 delivery_vs_presence_conflict (from Decision Lens): {decision_lens.get('delivery_vs_presence_conflict', '')}
 customer_memory_consequence (from Decision Lens): {decision_lens.get('customer_memory_consequence', '')}
 structural_cause (from Decision Lens): {decision_lens.get('structural_cause', '')}
-never_blank_insight: {decision_lens.get('never_blank_insight', '')}
-
+never_blank_insight: {decision_lens.get('never_blank_insight', '')}{strategy_section}
 Produce the Narrative Spine JSON for this small business visibility pattern."""
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_enrich())

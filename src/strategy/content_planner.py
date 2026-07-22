@@ -62,7 +62,8 @@ Rules:
 - Compound Presence Connection: the semantic link between the mechanism and cumulative presence.
   Can be part of Reframe, or the transition to Echo. Not a required separate paragraph.
 - Echo: the thought that remains. Specific to this article. Not a summary, not advice.
-  If no strong Echo candidate exists, leave echo as an empty string — do not force a weak one.
+  If no strong Echo candidate exists, set echo to null — do not force a weak one.
+  A null echo must be accompanied by a brief echo_omission_reason string.
 - CTA: determined by cta_mode from the strategy. Never model discretion.
 - Company/brand: use only as evidence, never as protagonist.
   The article must survive if the company name is removed.
@@ -85,7 +86,8 @@ Return JSON matching this exact structure:
   "business_consequence": "",
   "reframe": "",
   "compound_presence_connection": "",
-  "echo": "",
+  "echo": null,
+  "echo_omission_reason": null,
   "cta": "",
   "website_angle": "",
   "linkedin_angle": "",
@@ -98,8 +100,8 @@ Return JSON matching this exact structure:
 }"""
 
 
-def _content_role_for_week(week: int, total_weeks: int = 4) -> ContentRole:
-    """Distribute content roles across the month."""
+def _content_role_for_slot(week: int, slot: int) -> ContentRole:
+    """Return the content role for a specific week/slot combination (slot = 0, 1, 2)."""
     roles_by_week = {
         1: [ContentRole.RECOGNITION, ContentRole.EDUCATION, ContentRole.RECOGNITION],
         2: [ContentRole.PROOF, ContentRole.REFRAME, ContentRole.RECOGNITION],
@@ -107,7 +109,7 @@ def _content_role_for_week(week: int, total_weeks: int = 4) -> ContentRole:
         4: [ContentRole.REFRAME, ContentRole.CONVERSION, ContentRole.RECOGNITION],
     }
     week_roles = roles_by_week.get(week, [ContentRole.RECOGNITION, ContentRole.EDUCATION, ContentRole.REFRAME])
-    return week_roles[0]
+    return week_roles[slot % len(week_roles)]
 
 
 def generate_content_item(
@@ -117,12 +119,13 @@ def generate_content_item(
     item_index: int,
     publication_date: Optional[date] = None,
     cta_mode: Optional[str] = None,
+    slot: int = 0,
 ) -> ContentPlanItem:
     """
     Generate one ContentPlanItem from a PatternRecord and active Strategy.
     """
     effective_cta = cta_mode or strategy.primary_cta_intent or "none"
-    role = _content_role_for_week(week)
+    role = _content_role_for_slot(week, slot)
 
     user = f"""Generate a content plan item for week {week} of the Never Blank content strategy.
 
@@ -163,12 +166,14 @@ Generate the content plan item. Return JSON only."""
 
     content_id = f"{strategy.strategy_id}-w{week}-{item_index:02d}"
 
+    raw_echo = data.get("echo") or None  # treat "" and missing as null
     item = ContentPlanItem(
         content_id=content_id,
         week=week,
         publication_date=publication_date,
         strategy_id=strategy.strategy_id,
         content_role=role,
+        source_pattern_id=pattern.pattern_id,
         topic=data.get("topic", pattern.pattern_name),
         working_title=data.get("working_title", ""),
         target_reader=data.get("target_reader", strategy.target_audience),
@@ -183,7 +188,8 @@ Generate the content plan item. Return JSON only."""
         business_consequence=data.get("business_consequence", pattern.business_risk),
         reframe=data.get("reframe", ""),
         compound_presence_connection=data.get("compound_presence_connection", ""),
-        echo=data.get("echo", ""),
+        echo=raw_echo,
+        echo_omission_reason=data.get("echo_omission_reason") or None,
         cta_mode=effective_cta,
         cta=data.get("cta", ""),
         website_angle=data.get("website_angle", ""),
@@ -221,26 +227,30 @@ def generate_monthly_content_plan(
     if not patterns:
         raise ValueError("Cannot generate content plan: no patterns provided")
 
+    # Cap at 3 items/week — schedule is Mon/Wed/Fri only.
+    if items_per_week > 3:
+        log.warning("items_per_week=%d capped to 3 (Mon/Wed/Fri schedule)", items_per_week)
+        items_per_week = 3
+
     if start_date is None:
         today = date.today()
         days_until_monday = (7 - today.weekday()) % 7 or 7
         start_date = today + timedelta(days=days_until_monday)
 
-    # CTA mode distribution for the month: weight toward strategy intent
-    # but vary to avoid monotony
     cta_distribution = _build_cta_distribution(strategy.primary_cta_intent, items_per_week * 4)
 
     items: list[ContentPlanItem] = []
     cta_idx = 0
+    expected_total = items_per_week * 4
 
     for week in range(1, 5):
         week_start = start_date + timedelta(weeks=week - 1)
         pub_dates = [week_start, week_start + timedelta(days=2), week_start + timedelta(days=4)]
 
-        for i in range(items_per_week):
-            pattern_idx = (len(items)) % len(patterns)
+        for slot in range(items_per_week):
+            pattern_idx = len(items) % len(patterns)
             pattern     = patterns[pattern_idx]
-            pub_date    = pub_dates[i] if i < len(pub_dates) else None
+            pub_date    = pub_dates[slot]
             cta_mode    = cta_distribution[cta_idx % len(cta_distribution)]
             cta_idx    += 1
             item_index  = len(items) + 1
@@ -253,10 +263,18 @@ def generate_monthly_content_plan(
                     item_index=item_index,
                     publication_date=pub_date,
                     cta_mode=cta_mode,
+                    slot=slot,
                 )
                 items.append(item)
             except Exception as exc:
-                log.error("Content planner: failed to generate item %d (week %d): %s", item_index, week, exc)
+                log.error("Content planner: failed to generate item %d (week %d, slot %d): %s",
+                          item_index, week, slot, exc)
+
+    if len(items) < expected_total:
+        raise ValueError(
+            f"Content plan incomplete: expected {expected_total} items, generated {len(items)}. "
+            "Check LLM errors above — some items failed generation."
+        )
 
     validate_content_plan(items, strategy.strategy_id)
     log.info("Content plan generated: %d items for strategy %s", len(items), strategy.strategy_id)
@@ -265,25 +283,29 @@ def generate_monthly_content_plan(
 
 def _build_cta_distribution(primary_intent: str, total: int) -> list[str]:
     """
-    Build a varied CTA mode list weighted toward the strategy's primary intent.
-    Avoids all-same distribution.
+    Build an interleaved CTA sequence.
+
+    Primary intent appears on even positions (roughly every other item).
+    Other modes fill odd positions in round-robin order.
+    No mode runs more than twice consecutively.
+
+    Example for primary_intent="reflection", total=12:
+      reflection, none, reflection, diagnostic, reflection, none,
+      reflection, example_request, reflection, none, reflection, diagnostic
     """
-    weights = {
-        "none":                 2,
-        "reflection":           3,
-        "diagnostic":           2,
-        "example_request":      1,
-        "direct_conversation":  1,
-    }
-    if primary_intent in weights:
-        weights[primary_intent] += 3
+    primary = primary_intent or "none"
+    others = [m for m in ["none", "reflection", "diagnostic", "example_request", "direct_conversation"]
+              if m != primary]
 
-    distribution = []
-    for mode, weight in weights.items():
-        distribution.extend([mode] * weight)
-
-    # Cycle through distribution for `total` items
-    return [distribution[i % len(distribution)] for i in range(total)]
+    result: list[str] = []
+    alt_idx = 0
+    for i in range(total):
+        if i % 2 == 0:
+            result.append(primary)
+        else:
+            result.append(others[alt_idx % len(others)])
+            alt_idx += 1
+    return result
 
 
 # ── Output renderers ───────────────────────────────────────────────────────────

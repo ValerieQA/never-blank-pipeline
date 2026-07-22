@@ -96,12 +96,18 @@ def analyze_signals(
     rejected: list[dict] = []
 
     for raw in signals:
-        signal_id = raw.get("SIGNAL_ID", "unknown")
-        headline  = raw.get("HEADLINE", "")[:80]
+        signal_id  = raw.get("SIGNAL_ID", "unknown")
+        source_url = raw.get("SOURCE_URL", "")
+        headline   = raw.get("HEADLINE", "")[:80]
 
         try:
             market_signal = discover_signal_to_market_signal(raw)
             pattern       = extract_strategic_pattern(market_signal)
+            # Inject traceability: link pattern back to the originating research signal.
+            pattern = pattern.model_copy(update={
+                "source_signal_ids": [signal_id],
+                "source_urls": [source_url] if source_url else [],
+            })
             accepted.append(pattern)
             log.info("market_analyzer: accepted — %r", pattern.pattern_name[:60])
         except SignalRejectedError as exc:

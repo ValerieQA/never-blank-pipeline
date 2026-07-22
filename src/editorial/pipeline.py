@@ -54,7 +54,11 @@ def _run_stage(stage_name: str, fn: Callable, *args, **kwargs):
             raise ArticleGenerationError(stage_name, exc2) from exc2
 
 
-def generate_article(signal: dict, cta_mode: str = "none") -> dict:
+def generate_article(
+    signal: dict,
+    cta_mode: str = "none",
+    strategy_context: dict | None = None,
+) -> dict:
     """
     Run the full Editorial Engine V2 pipeline for one enriched signal.
 
@@ -63,6 +67,9 @@ def generate_article(signal: dict, cta_mode: str = "none") -> dict:
         cta_mode: Explicit campaign directive for CTA. One of:
             none | reflection | diagnostic | example_request | direct_conversation.
             Defaults to "none". The model does NOT decide this — it is passed in.
+        strategy_context: Optional dict from loader.get_strategy_context(). Fields are
+            injected into the enriched signal as STRATEGY_* keys so Decision Lens and
+            Narrative Spine can align framing to the active campaign.
 
     Returns:
         {
@@ -89,9 +96,18 @@ def generate_article(signal: dict, cta_mode: str = "none") -> dict:
     except SignalRejectedError as exc:
         raise ArticleGenerationError("pattern_extractor", exc) from exc
 
-    # Merge pattern fields into signal so downstream stages receive owner-centered fields
-    # Pattern fields override any same-named signal fields
+    # Merge pattern fields into signal so downstream stages receive owner-centered fields.
+    # Pattern fields override same-named signal fields.
+    # Strategy context is injected last as STRATEGY_* keys (no collision with signal/pattern keys).
     enriched = {**signal, **pattern}
+    if strategy_context:
+        enriched["STRATEGY_PRIMARY_MESSAGE"]    = strategy_context.get("primary_message", "")
+        enriched["STRATEGY_SELECTED_PROBLEM"]   = strategy_context.get("selected_problem", "")
+        enriched["STRATEGY_DESIRED_REALIZATION"] = strategy_context.get("desired_reader_realization", "")
+        enriched["STRATEGY_COMPOUND_ROLE"]      = strategy_context.get("compound_presence_role", "")
+        enriched["STRATEGY_ID"]                 = strategy_context.get("strategy_id", "")
+        log.debug("Strategy context injected into enriched signal: strategy_id=%s",
+                  strategy_context.get("strategy_id", "none"))
 
     decision_lens = _run_stage("decision_lens_lite", generate_decision_lens, enriched)
     spine = _run_stage("narrative_spine", build_narrative_spine, decision_lens, enriched)

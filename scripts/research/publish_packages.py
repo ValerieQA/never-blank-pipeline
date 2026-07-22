@@ -195,7 +195,7 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
 
         # Generate and validate the entire package before the first publisher API call.
         try:
-            article = generate_article(signal, cta_mode=cta_mode)
+            article = generate_article(signal, cta_mode=cta_mode, strategy_context=strategy_context)
             platforms = article["platforms"]
             structured = article["structured_article"]
 
