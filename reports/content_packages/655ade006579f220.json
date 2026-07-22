@@ -1,0 +1,78 @@
+{
+  "SIGNAL_ID": "655ade006579f220",
+  "HEADLINE": "A Photo of a Croissant Got 1.6 Million Views and Filled Their Restaurant for Four Months. Here’s the Simple Strategy Behind It.",
+  "prepared_at": "2026-07-22 01:53 UTC",
+  "content": {
+    "blog": {
+      "headline": "How One Croissant Photo Packed a London Restaurant for Four Months",
+      "angle": "A viral photo created unpredictable buzz → Most small businesses chase volume with little payoff → Lili’s Bakehouse focused on quality content → Result: sustained customer traffic and a new model for acquisition"
+    },
+    "linkedin": {
+      "headline": "A single croissant photo did what months of marketing couldn’t: filled every seat for four months.",
+      "angle": "Viral content is unpredictable, but strategic quality content can deliver outsized returns for small businesses."
+    },
+    "facebook": {
+      "headline": "How did a photo of a croissant rack up 1.6 million views and keep a restaurant packed for months?",
+      "angle": "Lili’s Bakehouse’s viral content success raises the question: Are you betting on volume or quality in your marketing?"
+    },
+    "instagram": {
+      "headline": "One Croissant. 1.6M Views. 4 Months Packed.",
+      "angle": "When small businesses focus on high-quality content, one post can rewrite the rules of customer acquisition."
+    },
+    "threads": {
+      "thread_hook": "A single photo of a croissant did what months of ads couldn’t: packed a London restaurant for four months.",
+      "angle": "This thread breaks down why quality content beats quantity and how small businesses can replicate Lili’s Bakehouse’s unexpected win."
+    },
+    "stories": {
+      "story_question": "Can one piece of content fill your business for months?",
+      "angle": "Exploring the tension between chasing viral hits and building consistent, quality-driven marketing strategies."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685203/never-blank/posts/research/655ade006579f220/blog/1784685203.png",
+        "path": "reports/content_packages/images/655ade006579f220_blog.png",
+        "size": "1920x1080",
+        "reused": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685204/never-blank/posts/research/655ade006579f220/linkedin/1784685204.png",
+        "path": "reports/content_packages/images/655ade006579f220_linkedin.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685205/never-blank/posts/research/655ade006579f220/facebook/1784685205.png",
+        "path": "reports/content_packages/images/655ade006579f220_facebook.png",
+        "size": "1200x628",
+        "reused": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685206/never-blank/posts/research/655ade006579f220/instagram/1784685205.png",
+        "path": "reports/content_packages/images/655ade006579f220_instagram.png",
+        "size": "1080x1350",
+        "reused": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685206/never-blank/posts/research/655ade006579f220/threads/1784685206.png",
+        "path": "reports/content_packages/images/655ade006579f220_threads.png",
+        "size": "1080x1080",
+        "reused": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685207/never-blank/posts/research/655ade006579f220/stories/1784685207.png",
+        "path": "reports/content_packages/images/655ade006579f220_stories.png",
+        "size": "1080x1920",
+        "reused": false
+      }
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "light_message_card",
+    "hook_text": "A single croissant photo did what months of marketing couldn’t: it filled every seat, every day, for four months."
+  }
+}

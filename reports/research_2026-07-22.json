@@ -1,26 +1,26 @@
 {
   "date": "2026-07-22",
-  "candidates_found": 1,
+  "candidates_found": 6,
   "duplicates_skipped": 0,
-  "new_signals_added": 1,
+  "new_signals_added": 6,
   "selected_for_content": 1,
   "sheet_sync": "success",
   "archived": 0,
   "top_signals": [
-    "Nike to cut off thousands of online distributors in China, restructure digital f"
+    "A Photo of a Croissant Got 1.6 Million Views and Filled Their Restaurant for Fou"
   ],
   "publish_reports": [
     {
-      "signal_id": "8ddfd49067b27f4f",
-      "headline": "Nike to cut off thousands of online distributors in China, restructure digital footprint",
-      "published_at": "2026-07-22 01:32 UTC",
+      "signal_id": "655ade006579f220",
+      "headline": "A Photo of a Croissant Got 1.6 Million Views and Filled Their Restaurant for Four Months. Here\u2019s the Simple Strategy Behind It.",
+      "published_at": "2026-07-22 01:54 UTC",
       "mode": "live",
       "results": {
         "wix": {
           "platform": "wix",
           "status": "published_url_unavailable",
           "url": "",
-          "external_id": "91f7d2f1-a877-4101-95aa-f5769f0c0788",
+          "external_id": "4222440c-0b3e-43c0-a615-87cb07f51011",
           "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
           "raw_response_path": null
         },
@@ -28,68 +28,68 @@
           "platform": "linkedin",
           "status": "PUBLISHED",
           "url": "https://www.linkedin.com/feed/",
-          "external_id": "6a601d9072b8881b0ee633f7",
+          "external_id": "6a6022c1203d692ca79c3299",
           "error_message": null,
           "raw_response_path": "(with image, via Zernio)"
         },
         "facebook": {
           "platform": "facebook",
           "status": "PUBLISHED",
-          "url": "https://www.facebook.com/1219637131228622_122120172249356169",
-          "external_id": "1219637131228622_122120172249356169",
+          "url": "https://www.facebook.com/1219637131228622_122120176419356169",
+          "external_id": "1219637131228622_122120176419356169",
           "error_message": null,
           "raw_response_path": null
         },
         "instagram": {
           "platform": "instagram",
           "status": "PUBLISHED",
-          "url": "https://www.instagram.com/p/DbE6syqjv2I/",
-          "external_id": "18080394350285302",
+          "url": "https://www.instagram.com/p/DbE9OoFFo7L/",
+          "external_id": "17952128112206478",
           "error_message": null,
           "raw_response_path": null
         },
         "threads": {
           "platform": "threads",
           "status": "PUBLISHED",
-          "url": "https://www.threads.net/t/18137628247605632",
-          "external_id": "18137628247605632",
+          "url": "https://www.threads.net/t/17926570356145266",
+          "external_id": "17926570356145266",
           "error_message": null,
           "raw_response_path": null
         },
         "telegram": {
           "platform": "telegram",
           "status": "PUBLISHED",
-          "url": "https://t.me/never_blank_inneros/32",
-          "external_id": "32",
+          "url": "https://t.me/never_blank_inneros/33",
+          "external_id": "33",
           "error_message": null,
           "raw_response_path": null
         }
       },
       "wix_url": "",
-      "generated_file": "reports/content_packages/8ddfd49067b27f4f_generated.json",
+      "generated_file": "reports/content_packages/655ade006579f220_generated.json",
       "platform_images": {
         "blog": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683859/never-blank/posts/research/8ddfd49067b27f4f/blog/1784683859.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685203/never-blank/posts/research/655ade006579f220/blog/1784685203.png",
           "size": "1920x1080"
         },
         "linkedin": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683863/never-blank/posts/research/8ddfd49067b27f4f/linkedin/1784683863.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685204/never-blank/posts/research/655ade006579f220/linkedin/1784685204.png",
           "size": "1200x628"
         },
         "facebook": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683867/never-blank/posts/research/8ddfd49067b27f4f/facebook/1784683867.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685205/never-blank/posts/research/655ade006579f220/facebook/1784685205.png",
           "size": "1200x628"
         },
         "instagram": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683874/never-blank/posts/research/8ddfd49067b27f4f/instagram/1784683874.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685206/never-blank/posts/research/655ade006579f220/instagram/1784685205.png",
           "size": "1080x1350"
         },
         "threads": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683880/never-blank/posts/research/8ddfd49067b27f4f/threads/1784683879.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685206/never-blank/posts/research/655ade006579f220/threads/1784685206.png",
           "size": "1080x1080"
         },
         "stories": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683887/never-blank/posts/research/8ddfd49067b27f4f/stories/1784683887.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685207/never-blank/posts/research/655ade006579f220/stories/1784685207.png",
           "size": "1080x1920"
         }
       },
@@ -97,9 +97,9 @@
       "telegram_signature": false,
       "wix_cover_image_attached": false,
       "image_design_version": "",
-      "image_hook_text": "Controlling distribution to stabilize pricing and regain growth.",
-      "image_visual_family": "light_paths",
-      "image_method": "gpt-image-1"
+      "image_hook_text": "A single croissant photo did what months of marketing couldn\u2019t: it filled every seat, every day, for four months.",
+      "image_visual_family": "light_message_card",
+      "image_method": "quote_card"
     }
   ],
   "content_packages": 1,
@@ -107,70 +107,70 @@
   "images_reused": 0,
   "_content_packages": [
     {
-      "SIGNAL_ID": "8ddfd49067b27f4f",
-      "HEADLINE": "Nike to cut off thousands of online distributors in China, restructure digital footprint",
-      "prepared_at": "2026-07-22 01:31 UTC",
+      "SIGNAL_ID": "655ade006579f220",
+      "HEADLINE": "A Photo of a Croissant Got 1.6 Million Views and Filled Their Restaurant for Four Months. Here\u2019s the Simple Strategy Behind It.",
+      "prepared_at": "2026-07-22 01:53 UTC",
       "content": {
         "blog": {
-          "headline": "Nike\u2019s China Shakeup: Why Cutting Distributors Beats Chasing Volume",
-          "angle": "Nike\u2019s move to cut thousands of online distributors in China exposes the tension between expanding reach and protecting brand equity, showing founders that sometimes growth means saying no to preserve pricing power."
+          "headline": "How One Croissant Photo Packed a London Restaurant for Four Months",
+          "angle": "A viral photo created unpredictable buzz \u2192 Most small businesses chase volume with little payoff \u2192 Lili\u2019s Bakehouse focused on quality content \u2192 Result: sustained customer traffic and a new model for acquisition"
         },
         "linkedin": {
-          "headline": "Nike\u2019s biggest competitor in China wasn\u2019t another brand\u2014it was its own distribution network.",
-          "angle": "When distribution channels spiral out of control, brand value and pricing integrity take the hit\u2014Nike\u2019s China strategy is a masterclass in reclaiming control."
+          "headline": "A single croissant photo did what months of marketing couldn\u2019t: filled every seat for four months.",
+          "angle": "Viral content is unpredictable, but strategic quality content can deliver outsized returns for small businesses."
         },
         "facebook": {
-          "headline": "Nike is slashing thousands of online distributors in China\u2014what\u2019s behind the move?",
-          "angle": "Nike\u2019s crackdown on its sprawling online network highlights the risk of uncontrolled reselling\u2014are you ready to tighten your own distribution before it costs you brand equity?"
+          "headline": "How did a photo of a croissant rack up 1.6 million views and keep a restaurant packed for months?",
+          "angle": "Lili\u2019s Bakehouse\u2019s viral content success raises the question: Are you betting on volume or quality in your marketing?"
         },
         "instagram": {
-          "headline": "When Growth Means Saying No",
-          "angle": "Nike\u2019s China purge shows that controlling distribution is the real power move behind maintaining brand value."
+          "headline": "One Croissant. 1.6M Views. 4 Months Packed.",
+          "angle": "When small businesses focus on high-quality content, one post can rewrite the rules of customer acquisition."
         },
         "threads": {
-          "thread_hook": "Nike just cut thousands of online distributors in China. Here\u2019s why that matters beyond sneakers.",
-          "angle": "This thread breaks down how unchecked distribution channels can erode brand pricing and equity, and why founders need to prioritize control over blind expansion."
+          "thread_hook": "A single photo of a croissant did what months of ads couldn\u2019t: packed a London restaurant for four months.",
+          "angle": "This thread breaks down why quality content beats quantity and how small businesses can replicate Lili\u2019s Bakehouse\u2019s unexpected win."
         },
         "stories": {
-          "story_question": "Is your distribution network quietly eating your brand\u2019s value?",
-          "angle": "Exploring the tension between chasing sales volume and protecting brand equity through tighter channel control."
+          "story_question": "Can one piece of content fill your business for months?",
+          "angle": "Exploring the tension between chasing viral hits and building consistent, quality-driven marketing strategies."
         }
       },
       "images": {
         "platform_images": {
           "blog": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683859/never-blank/posts/research/8ddfd49067b27f4f/blog/1784683859.png",
-            "path": "reports/content_packages/images/8ddfd49067b27f4f_blog.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685203/never-blank/posts/research/655ade006579f220/blog/1784685203.png",
+            "path": "reports/content_packages/images/655ade006579f220_blog.png",
             "size": "1920x1080",
             "reused": false
           },
           "linkedin": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683863/never-blank/posts/research/8ddfd49067b27f4f/linkedin/1784683863.png",
-            "path": "reports/content_packages/images/8ddfd49067b27f4f_linkedin.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685204/never-blank/posts/research/655ade006579f220/linkedin/1784685204.png",
+            "path": "reports/content_packages/images/655ade006579f220_linkedin.png",
             "size": "1200x628",
             "reused": false
           },
           "facebook": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683867/never-blank/posts/research/8ddfd49067b27f4f/facebook/1784683867.png",
-            "path": "reports/content_packages/images/8ddfd49067b27f4f_facebook.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685205/never-blank/posts/research/655ade006579f220/facebook/1784685205.png",
+            "path": "reports/content_packages/images/655ade006579f220_facebook.png",
             "size": "1200x628",
             "reused": false
           },
           "instagram": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683874/never-blank/posts/research/8ddfd49067b27f4f/instagram/1784683874.png",
-            "path": "reports/content_packages/images/8ddfd49067b27f4f_instagram.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685206/never-blank/posts/research/655ade006579f220/instagram/1784685205.png",
+            "path": "reports/content_packages/images/655ade006579f220_instagram.png",
             "size": "1080x1350",
             "reused": false
           },
           "threads": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683880/never-blank/posts/research/8ddfd49067b27f4f/threads/1784683879.png",
-            "path": "reports/content_packages/images/8ddfd49067b27f4f_threads.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685206/never-blank/posts/research/655ade006579f220/threads/1784685206.png",
+            "path": "reports/content_packages/images/655ade006579f220_threads.png",
             "size": "1080x1080",
             "reused": false
           },
           "stories": {
-            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683887/never-blank/posts/research/8ddfd49067b27f4f/stories/1784683887.png",
-            "path": "reports/content_packages/images/8ddfd49067b27f4f_stories.png",
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685207/never-blank/posts/research/655ade006579f220/stories/1784685207.png",
+            "path": "reports/content_packages/images/655ade006579f220_stories.png",
             "size": "1080x1920",
             "reused": false
           }
@@ -178,25 +178,25 @@
         "new_images": 1,
         "reused_images": 0,
         "reuse_rate": "0%",
-        "image_method": "gpt-image-1",
+        "image_method": "quote_card",
         "reuse_source": "n/a",
-        "visual_family": "light_paths",
-        "hook_text": "Controlling distribution to stabilize pricing and regain growth."
+        "visual_family": "light_message_card",
+        "hook_text": "A single croissant photo did what months of marketing couldn\u2019t: it filled every seat, every day, for four months."
       }
     }
   ],
   "_publish_reports": [
     {
-      "signal_id": "8ddfd49067b27f4f",
-      "headline": "Nike to cut off thousands of online distributors in China, restructure digital footprint",
-      "published_at": "2026-07-22 01:32 UTC",
+      "signal_id": "655ade006579f220",
+      "headline": "A Photo of a Croissant Got 1.6 Million Views and Filled Their Restaurant for Four Months. Here\u2019s the Simple Strategy Behind It.",
+      "published_at": "2026-07-22 01:54 UTC",
       "mode": "live",
       "results": {
         "wix": {
           "platform": "wix",
           "status": "published_url_unavailable",
           "url": "",
-          "external_id": "91f7d2f1-a877-4101-95aa-f5769f0c0788",
+          "external_id": "4222440c-0b3e-43c0-a615-87cb07f51011",
           "error_message": "published_without_cover_image: Wix cover requires Wix Media Manager ID, not external URL",
           "raw_response_path": null
         },
@@ -204,68 +204,68 @@
           "platform": "linkedin",
           "status": "PUBLISHED",
           "url": "https://www.linkedin.com/feed/",
-          "external_id": "6a601d9072b8881b0ee633f7",
+          "external_id": "6a6022c1203d692ca79c3299",
           "error_message": null,
           "raw_response_path": "(with image, via Zernio)"
         },
         "facebook": {
           "platform": "facebook",
           "status": "PUBLISHED",
-          "url": "https://www.facebook.com/1219637131228622_122120172249356169",
-          "external_id": "1219637131228622_122120172249356169",
+          "url": "https://www.facebook.com/1219637131228622_122120176419356169",
+          "external_id": "1219637131228622_122120176419356169",
           "error_message": null,
           "raw_response_path": null
         },
         "instagram": {
           "platform": "instagram",
           "status": "PUBLISHED",
-          "url": "https://www.instagram.com/p/DbE6syqjv2I/",
-          "external_id": "18080394350285302",
+          "url": "https://www.instagram.com/p/DbE9OoFFo7L/",
+          "external_id": "17952128112206478",
           "error_message": null,
           "raw_response_path": null
         },
         "threads": {
           "platform": "threads",
           "status": "PUBLISHED",
-          "url": "https://www.threads.net/t/18137628247605632",
-          "external_id": "18137628247605632",
+          "url": "https://www.threads.net/t/17926570356145266",
+          "external_id": "17926570356145266",
           "error_message": null,
           "raw_response_path": null
         },
         "telegram": {
           "platform": "telegram",
           "status": "PUBLISHED",
-          "url": "https://t.me/never_blank_inneros/32",
-          "external_id": "32",
+          "url": "https://t.me/never_blank_inneros/33",
+          "external_id": "33",
           "error_message": null,
           "raw_response_path": null
         }
       },
       "wix_url": "",
-      "generated_file": "reports/content_packages/8ddfd49067b27f4f_generated.json",
+      "generated_file": "reports/content_packages/655ade006579f220_generated.json",
       "platform_images": {
         "blog": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683859/never-blank/posts/research/8ddfd49067b27f4f/blog/1784683859.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685203/never-blank/posts/research/655ade006579f220/blog/1784685203.png",
           "size": "1920x1080"
         },
         "linkedin": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683863/never-blank/posts/research/8ddfd49067b27f4f/linkedin/1784683863.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685204/never-blank/posts/research/655ade006579f220/linkedin/1784685204.png",
           "size": "1200x628"
         },
         "facebook": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683867/never-blank/posts/research/8ddfd49067b27f4f/facebook/1784683867.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685205/never-blank/posts/research/655ade006579f220/facebook/1784685205.png",
           "size": "1200x628"
         },
         "instagram": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683874/never-blank/posts/research/8ddfd49067b27f4f/instagram/1784683874.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685206/never-blank/posts/research/655ade006579f220/instagram/1784685205.png",
           "size": "1080x1350"
         },
         "threads": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683880/never-blank/posts/research/8ddfd49067b27f4f/threads/1784683879.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685206/never-blank/posts/research/655ade006579f220/threads/1784685206.png",
           "size": "1080x1080"
         },
         "stories": {
-          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784683887/never-blank/posts/research/8ddfd49067b27f4f/stories/1784683887.png",
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1784685207/never-blank/posts/research/655ade006579f220/stories/1784685207.png",
           "size": "1080x1920"
         }
       },
@@ -273,9 +273,9 @@
       "telegram_signature": false,
       "wix_cover_image_attached": false,
       "image_design_version": "",
-      "image_hook_text": "Controlling distribution to stabilize pricing and regain growth.",
-      "image_visual_family": "light_paths",
-      "image_method": "gpt-image-1"
+      "image_hook_text": "A single croissant photo did what months of marketing couldn\u2019t: it filled every seat, every day, for four months.",
+      "image_visual_family": "light_message_card",
+      "image_method": "quote_card"
     }
   ]
 }
