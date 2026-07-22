@@ -19,8 +19,8 @@ from typing import Any, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
-# Allowed CTA mode values — matches editorial pipeline values (decision 45).
-CTAMode = Literal["none", "reflection", "diagnostic", "example_request", "direct_conversation"]
+# Re-export the single source of truth for CTA mode (decision 45).
+from src.models import CTAMode
 
 # Analytics metric: None = unavailable from API, 0 = confirmed zero,
 # "not_collected" = data retrieval not yet attempted.
@@ -142,7 +142,7 @@ class Strategy(BaseModel):
     supporting_messages:      list[str]      = Field(default_factory=list)
     compound_presence_role:   str
     desired_reader_realization: str
-    primary_cta_intent:       str
+    primary_cta_intent:       CTAMode
     success_criteria:         SuccessCriteria = Field(default_factory=SuccessCriteria)
     continuation_criteria:    ContinuationCriteria
     adjustment_criteria:      ContinuationCriteria

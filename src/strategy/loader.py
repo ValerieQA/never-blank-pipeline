@@ -40,14 +40,16 @@ def load_active_strategy() -> Optional[Strategy]:
 
 def get_cta_mode(strategy: Optional[Strategy]) -> str:
     """
-    Return the CTA mode for the current cycle.
-    Uses strategy.primary_cta_intent if available, otherwise "none".
+    Return the CTA mode string for the current cycle.
+    Uses strategy.primary_cta_intent.value if available, otherwise "none".
+    Returns a plain string (not the CTAMode enum) so callers can use it directly.
     """
     if strategy is None:
         return "none"
-    mode = strategy.primary_cta_intent or "none"
-    log.debug("CTA mode from strategy %s: %s", strategy.strategy_id, mode)
-    return mode
+    mode = strategy.primary_cta_intent
+    value = mode.value if hasattr(mode, "value") else str(mode)
+    log.debug("CTA mode from strategy %s: %s", strategy.strategy_id, value)
+    return value or "none"
 
 
 def get_strategy_context(strategy: Optional[Strategy]) -> dict:

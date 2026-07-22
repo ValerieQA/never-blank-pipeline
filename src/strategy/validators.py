@@ -96,8 +96,8 @@ def validate_content_plan_item(item: ContentPlanItem) -> None:
     # Echo: required unless explicitly null with a stated reason (decision 43).
     if item.echo is not None and not item.echo.strip():
         errors.append("echo cannot be an empty string; use null + echo_omission_reason")
-    if item.echo is None and not item.echo_omission_reason:
-        errors.append("echo is null but echo_omission_reason is missing; set a reason")
+    if item.echo is None and not (item.echo_omission_reason and item.echo_omission_reason.strip()):
+        errors.append("echo is null but echo_omission_reason is missing or blank; set a reason")
 
     if errors:
         raise ValueError(

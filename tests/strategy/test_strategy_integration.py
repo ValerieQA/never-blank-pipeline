@@ -296,3 +296,121 @@ class TestCTADistribution:
         dist = _build_cta_distribution("reflection", 12)
         for mode in dist:
             assert mode in valid, f"Invalid CTA mode: {mode}"
+
+
+# ── _validate_package: CPC blocking in publish path ───────────────────────────
+
+class TestValidatePackageCPCBlocking:
+    """
+    _validate_package must block publication when blog/linkedin text has no
+    Compound Presence Connection (0 presence keywords → clear fail).
+    """
+
+    _BLOG_WITH_CPC = (
+        "Agency owners go quiet when fully booked. Clients read quiet as available. "
+        "That is how you lose the next project to someone with a worse product. "
+        "Consistent presence is not about posting when you have time — it accumulates "
+        "over time into recognition and trust. A single viral moment is not a presence "
+        "system. The competitor who won that client was just present, week after week."
+    )
+
+    _BLOG_WITHOUT_CPC = (
+        "A London bakery became famous after a croissant photo went viral on social media. "
+        "Sales increased dramatically. The owner was surprised. Marketing can work."
+    )
+
+    _LINKEDIN = "Agency went quiet during Q4. Client chose a competitor. Pattern repeats consistently in B2B service businesses."
+    _FACEBOOK = "When you go dark, clients assume you are not available. Simple truth."
+    _INSTAGRAM = "The month you were booked solid was the month you went quiet."
+    _TELEGRAM = "Fully booked agencies go dark. Clients read silence as capacity."
+
+    def test_blog_with_cpc_passes(self):
+        from scripts.research.publish_packages import _validate_package
+        # Should not raise
+        _validate_package(
+            {
+                "blog":     self._BLOG_WITH_CPC,
+                "linkedin": self._LINKEDIN,
+                "facebook": self._FACEBOOK,
+                "instagram": self._INSTAGRAM,
+                "telegram": self._TELEGRAM,
+            },
+            threads=[self._INSTAGRAM, self._LINKEDIN, self._FACEBOOK],
+        )
+
+    def test_blog_without_cpc_blocks_publication(self):
+        from scripts.research.publish_packages import _validate_package
+        with pytest.raises(ValueError, match="Compound Presence"):
+            _validate_package(
+                {
+                    "blog":     self._BLOG_WITHOUT_CPC,
+                    "linkedin": self._LINKEDIN,
+                    "facebook": self._FACEBOOK,
+                    "instagram": self._INSTAGRAM,
+                    "telegram": self._TELEGRAM,
+                },
+                threads=[self._INSTAGRAM, self._LINKEDIN, self._FACEBOOK],
+            )
+
+    def test_linkedin_without_cpc_blocks_publication(self):
+        from scripts.research.publish_packages import _validate_package
+        linkedin_no_cpc = "Agency went dark in Q4. Client chose another agency."
+        with pytest.raises(ValueError, match="Compound Presence"):
+            _validate_package(
+                {
+                    "blog":     self._BLOG_WITH_CPC,
+                    "linkedin": linkedin_no_cpc,
+                    "facebook": self._FACEBOOK,
+                    "instagram": self._INSTAGRAM,
+                    "telegram": self._TELEGRAM,
+                },
+                threads=[self._INSTAGRAM, linkedin_no_cpc, self._FACEBOOK],
+            )
+
+
+# ── CTAMode shared type ────────────────────────────────────────────────────────
+
+class TestCTAModeSharedType:
+    def test_cta_mode_imported_from_src_models(self):
+        from src.strategy.models import CTAMode
+        from src.models import CTAMode as OriginalCTAMode
+        assert CTAMode is OriginalCTAMode
+
+    def test_strategy_primary_cta_intent_rejects_invalid_value(self):
+        with pytest.raises(Exception):
+            _make_strategy(primary_cta_intent="banana")
+
+    def test_strategy_primary_cta_intent_accepts_valid_values(self):
+        for valid in ["none", "reflection", "diagnostic", "example_request", "direct_conversation"]:
+            s = _make_strategy(primary_cta_intent=valid)
+            assert s.primary_cta_intent.value == valid
+
+    def test_get_cta_mode_returns_plain_string(self):
+        strategy = _make_strategy(primary_cta_intent="reflection")
+        result = get_cta_mode(strategy)
+        assert result == "reflection"
+        assert isinstance(result, str)
+        # Must be a plain string usable in str() without "CTAMode.REFLECTION"
+        assert "CTAMode" not in result
+
+    def test_echo_omission_reason_whitespace_fails(self):
+        from src.strategy.validators import validate_content_plan_item
+        from src.strategy.models import ContentPlanItem, ContentRole
+        item = ContentPlanItem(
+            content_id="t-001", week=1, strategy_id="2026-08-test",
+            content_role=ContentRole.RECOGNITION,
+            topic="t", working_title="t", target_reader="t", reader_problem="t",
+            market_signal="t", pattern="t", sales_objective="Sell something",
+            main_argument="t",
+            hook="Hook that opens a gap.",
+            recognition="t", mechanism="Structural cause here.",
+            business_consequence="t", reframe="Reframe here.",
+            compound_presence_connection="t",
+            echo=None,
+            echo_omission_reason="   ",  # whitespace only — should fail
+            cta_mode="none", cta="",
+            website_angle="t", linkedin_angle="t", instagram_angle="t",
+            facebook_angle="t", threads_angle="t", telegram_angle="t",
+        )
+        with pytest.raises(ValueError, match="echo_omission_reason"):
+            validate_content_plan_item(item)
