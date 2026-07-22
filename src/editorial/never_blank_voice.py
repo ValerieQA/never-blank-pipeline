@@ -74,8 +74,14 @@ You do not add analysis. Your job:
 
 3. Self-check the assembled piece against this checklist (all must be true):
    - hook creates a gap in the first 1-3 sentences
+   - hook does not require knowing the company name to make sense — if the hook only
+     lands for someone familiar with the corporate example, it has failed
+   - the first third of the article speaks to the owner's situation, not to the
+     company's situation
    - there is a Recognition moment where the reader sees their own situation specifically
    - evidence is traceable — no invented facts about specific businesses
+   - corporate evidence does not occupy more than 20-25% of the article — the article
+     must remain coherent if the company example is removed
    - reframe challenges the obvious explanation with something specific to this pattern
    - business meaning connects to commercial reality (trust, pipeline, future sales)
    - echo (if present) is specific to this article and not generic
@@ -180,6 +186,7 @@ Produce the Never Blank Voice JSON. Follow cta_mode exactly."""
         # Backward-compat: signature = echo when present, empty string when absent
         "signature": signature,
         "checklist_pass": checklist_pass,
+        "checklist_notes": checklist_notes,
         "echo_candidates": data.get("echo_candidates", []),
     }
 

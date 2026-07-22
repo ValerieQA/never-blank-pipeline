@@ -110,14 +110,22 @@ def assemble_story(discovery: dict, spine: dict, decision_lens: dict, signal: di
     is present but not a string.
     """
     user = f"""narrative_spine: {spine.get('narrative_spine', '')}
+visibility_pattern: {signal.get('visibility_pattern', '')}
+founder_scenario: {signal.get('founder_scenario', '')}
+mechanism: {signal.get('mechanism', '')}
+business_consequence: {signal.get('business_consequence', '')}
+owner_system_objective: {decision_lens.get('owner_system_objective', '')}
+delivery_vs_presence_conflict: {decision_lens.get('delivery_vs_presence_conflict', '')}
+customer_memory_consequence: {decision_lens.get('customer_memory_consequence', '')}
+structural_cause: {decision_lens.get('structural_cause', '')}
 first_wrong_explanation: {discovery.get('first_wrong_explanation', '')}
 puzzle: {discovery.get('puzzle', '')}
 investigation_sequence: {json.dumps(discovery.get('investigation_sequence', []))}
 aha_setup: {discovery.get('aha_setup', '')}
-strategic_objective: {decision_lens.get('strategic_objective', '')}
-strategic_objective_confidence: {decision_lens.get('strategic_objective_confidence', '')}
-business_lesson: {decision_lens.get('business_lesson', '')}
 OUTCOME_IF_KNOWN: {signal.get('OUTCOME_IF_KNOWN', '')}
+
+HARD REQUIREMENT: surviving_explanation must name the structural mechanism the owner
+experiences, not what the company decided.
 
 Produce the Story Assembly JSON."""
 

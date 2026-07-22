@@ -148,12 +148,21 @@ def build_discovery(hook: dict, spine: dict, decision_lens: dict, signal: dict) 
     user = f"""HEADLINE: {signal.get('HEADLINE', '')}
 selected_hook: {hook.get('selected_hook', '')}
 narrative_spine: {spine.get('narrative_spine', '')}
+founder_scenario: {signal.get('founder_scenario', '')}
+mechanism: {signal.get('mechanism', '')}
+business_consequence: {signal.get('business_consequence', '')}
+company_as_evidence_of: {signal.get('company_as_evidence_of', '')}
 CORE_FACT: {signal.get('CORE_FACT', '')}
 CORE_TENSION: {signal.get('CORE_TENSION', '')}
 RESPONSE_TAKEN: {signal.get('RESPONSE_TAKEN', '')}
 OUTCOME_IF_KNOWN: {signal.get('OUTCOME_IF_KNOWN', '')}
 COUNTER_EXAMPLE: {signal.get('COUNTER_EXAMPLE', '')}
-strategic_objective: {decision_lens.get('strategic_objective', '')}
+owner_system_objective: {decision_lens.get('owner_system_objective', '')}
+delivery_vs_presence_conflict: {decision_lens.get('delivery_vs_presence_conflict', '')}
+
+HARD REQUIREMENT: The investigation arc must be about the owner's situation. The corporate
+example, if used, must appear as supporting evidence in at most one beat of
+investigation_sequence. The article must remain coherent if the company name is removed.
 
 Produce the Discovery Builder JSON. The reader is being built toward the
 narrative_spine above - the aha_setup should leave them one sentence away from it."""

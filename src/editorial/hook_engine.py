@@ -116,10 +116,16 @@ def generate_hook(spine: dict, decision_lens: dict, signal: dict) -> dict:
     """
     user = f"""HEADLINE: {signal.get('HEADLINE', '')}
 narrative_spine: {spine.get('narrative_spine', '')}
+founder_scenario: {signal.get('founder_scenario', '')}
+visibility_pattern: {signal.get('visibility_pattern', '')}
+mechanism: {signal.get('mechanism', '')}
 never_blank_insight: {decision_lens.get('never_blank_insight', '')}
-strategic_objective: {decision_lens.get('strategic_objective', '')}
+owner_system_objective: {decision_lens.get('owner_system_objective', '')}
 CORE_FACT: {signal.get('CORE_FACT', '')}
 CORE_TENSION: {signal.get('CORE_TENSION', '')}
+
+HARD REQUIREMENT: Hooks must create recognition for the owner, not summarize a corporate
+event. A hook that requires knowing the company name to make sense has failed.
 
 Produce the Hook Engine JSON."""
 

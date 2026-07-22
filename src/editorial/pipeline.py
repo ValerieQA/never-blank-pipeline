@@ -2,20 +2,24 @@
 Editorial Engine V2 — orchestrator
 Spec: docs/NARRATIVE_SPINE.md, docs/EDITORIAL_ENGINE_V2.md
 
-Single entry point: generate_article(signal) runs Decision Lens Lite -> Narrative
-Spine -> Hook Engine -> Reader Context -> Discovery Builder -> Story Assembly ->
-Never Blank Voice -> Platform Composer, in that order, and returns the finished
-structured_article plus all five platform bodies.
+Single entry point: generate_article(signal) runs:
+  Pattern Extractor (mandatory gate) ->
+  Decision Lens Lite -> Narrative Spine -> Hook Engine -> Reader Context ->
+  Discovery Builder -> Story Assembly -> Never Blank Voice -> Platform Composer,
+  in that order, and returns the finished structured_article plus all five platform
+  bodies plus the pattern dict.
 
-Each stage is retried once on a schema-validation failure (ValueError raised by the
-stage module). A second failure raises ArticleGenerationError - this pipeline does
-not degrade to worse content on failure. Per the specs' own principle: a failed
-generation should skip publishing that signal, not publish a generic article to
-fill the gap.
+Each stage (except Pattern Extractor) is retried once on a schema-validation failure
+(ValueError raised by the stage module). A second failure raises ArticleGenerationError.
+Pattern Extractor rejection raises ArticleGenerationError immediately (no retry useful).
+
+Per the specs' own principle: a failed generation should skip publishing that signal,
+not publish a generic article to fill the gap.
 """
 
 from typing import Callable
 
+from src.editorial.pattern_extractor import extract_pattern, SignalRejectedError
 from src.editorial.decision_lens_lite import generate_decision_lens
 from src.editorial.narrative_spine import build_narrative_spine
 from src.editorial.hook_engine import generate_hook
@@ -30,7 +34,8 @@ log = get_logger("editorial.pipeline")
 
 
 class ArticleGenerationError(Exception):
-    """Raised when a pipeline stage fails schema validation twice in a row."""
+    """Raised when a pipeline stage fails schema validation twice in a row,
+    or when the Pattern Extractor rejects the signal."""
 
     def __init__(self, stage: str, original: Exception):
         self.stage = stage
@@ -61,6 +66,7 @@ def generate_article(signal: dict, cta_mode: str = "none") -> dict:
 
     Returns:
         {
+          "pattern": {...},              # Pattern Extractor output
           "decision_lens": {...},
           "narrative_spine": {...},
           "structured_article": {...},   # Never Blank Voice output
@@ -70,25 +76,38 @@ def generate_article(signal: dict, cta_mode: str = "none") -> dict:
           },
         }
 
-    Raises ArticleGenerationError if any stage fails schema validation twice.
+    Raises ArticleGenerationError if:
+    - Pattern Extractor rejects the signal (stage = "pattern_extractor")
+    - Any downstream stage fails schema validation twice
     """
     sig_id = signal.get("SIGNAL_ID", "unknown")
     log.info("Editorial Engine: starting generation for signal %s", sig_id)
 
-    decision_lens = _run_stage("decision_lens_lite", generate_decision_lens, signal)
-    spine = _run_stage("narrative_spine", build_narrative_spine, decision_lens, signal)
-    hook = _run_stage("hook_engine", generate_hook, spine, decision_lens, signal)
-    reader_context = _run_stage("reader_context", build_reader_context, signal)
-    discovery = _run_stage("discovery_builder", build_discovery, hook, spine, decision_lens, signal)
-    story = _run_stage("story_assembly", assemble_story, discovery, spine, decision_lens, signal)
+    # Stage 0: Pattern Extractor — mandatory gate
+    try:
+        pattern = _run_stage("pattern_extractor", extract_pattern, signal)
+    except SignalRejectedError as exc:
+        raise ArticleGenerationError("pattern_extractor", exc) from exc
+
+    # Merge pattern fields into signal so downstream stages receive owner-centered fields
+    # Pattern fields override any same-named signal fields
+    enriched = {**signal, **pattern}
+
+    decision_lens = _run_stage("decision_lens_lite", generate_decision_lens, enriched)
+    spine = _run_stage("narrative_spine", build_narrative_spine, decision_lens, enriched)
+    hook = _run_stage("hook_engine", generate_hook, spine, decision_lens, enriched)
+    reader_context = _run_stage("reader_context", build_reader_context, enriched)
+    discovery = _run_stage("discovery_builder", build_discovery, hook, spine, decision_lens, enriched)
+    story = _run_stage("story_assembly", assemble_story, discovery, spine, decision_lens, enriched)
     structured_article = _run_stage(
         "never_blank_voice", finalize_article,
-        hook, reader_context, discovery, story, spine, decision_lens, signal, cta_mode,
+        hook, reader_context, discovery, story, spine, decision_lens, enriched, cta_mode,
     )
-    platforms = _run_stage("platform_composer", compose_platforms, structured_article)
+    platforms = _run_stage("platform_composer", compose_platforms, structured_article, cta_mode=cta_mode)
 
     log.info("Editorial Engine: generation complete for signal %s", sig_id)
     return {
+        "pattern": pattern,
         "decision_lens": decision_lens,
         "narrative_spine": spine,
         "structured_article": structured_article,

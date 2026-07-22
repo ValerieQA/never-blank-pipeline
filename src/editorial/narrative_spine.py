@@ -102,10 +102,14 @@ def build_narrative_spine(decision_lens: dict, signal: dict) -> dict:
     """
     user = f"""HEADLINE: {signal.get('HEADLINE', '')}
 
-core_decision (from Decision Lens): {decision_lens.get('core_decision', '')}
-strategic_objective (from Decision Lens): {decision_lens.get('strategic_objective', '')}
-strategic_objective_confidence: {decision_lens.get('strategic_objective_confidence', '')}
-business_lesson: {decision_lens.get('business_lesson', '')}
+visibility_pattern: {signal.get('visibility_pattern', '')}
+founder_scenario: {signal.get('founder_scenario', '')}
+mechanism: {signal.get('mechanism', '')}
+business_consequence: {signal.get('business_consequence', '')}
+owner_system_objective (from Decision Lens): {decision_lens.get('owner_system_objective', '')}
+delivery_vs_presence_conflict (from Decision Lens): {decision_lens.get('delivery_vs_presence_conflict', '')}
+customer_memory_consequence (from Decision Lens): {decision_lens.get('customer_memory_consequence', '')}
+structural_cause (from Decision Lens): {decision_lens.get('structural_cause', '')}
 never_blank_insight: {decision_lens.get('never_blank_insight', '')}
 
 Produce the Narrative Spine JSON for this small business visibility pattern."""
