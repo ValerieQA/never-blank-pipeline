@@ -57,8 +57,10 @@ jobs:
           python -m py_compile src/strategy/history.py
           python -m py_compile src/strategy/echo_memory.py
           python -m py_compile src/analytics/collector_protocol.py
+          python -m py_compile src/analytics/base.py
           python -m py_compile src/analytics/scorer.py
           python -m py_compile src/analytics/orchestrator.py
+          python -m py_compile src/analytics/blog.py
           python -m py_compile scripts/strategy/build_monthly_plan.py
           python -m py_compile scripts/strategy/run_weekly_review.py
           python -m py_compile scripts/strategy/run_monthly_review.py

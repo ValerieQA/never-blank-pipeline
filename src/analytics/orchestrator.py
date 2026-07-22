@@ -27,6 +27,25 @@ from src.strategy.history import load_published_index, update_entry
 from src.strategy.models import AnalyticsRecord, PublishedEntry
 from src.utils.logger import get_logger
 
+def _is_stale(record: AnalyticsRecord, entry_index: dict[str, PublishedEntry]) -> bool:
+    """
+    Return True if record.collected_at is older than the entry's analytics_fetched_at.
+
+    Protects against accidental data regression when an API returns cached or
+    delayed data that is older than what is already stored in History.
+    """
+    entry = entry_index.get(record.content_id)
+    if entry is None or entry.analytics_fetched_at is None or record.collected_at is None:
+        return False
+    existing = entry.analytics_fetched_at
+    incoming = record.collected_at
+    from datetime import timezone
+    if existing.tzinfo is None:
+        existing = existing.replace(tzinfo=timezone.utc)
+    if incoming.tzinfo is None:
+        incoming = incoming.replace(tzinfo=timezone.utc)
+    return incoming < existing
+
 log = get_logger("analytics.orchestrator")
 
 
@@ -39,6 +58,7 @@ class AnalyticsPipelineResult:
     entries_updated:  int = 0
     collector_errors: list[str] = field(default_factory=list)
     skipped_no_score: int = 0
+    skipped_stale:    int = 0
 
 
 def run_analytics_pipeline(
@@ -64,6 +84,7 @@ def run_analytics_pipeline(
 
     entries = load_published_index(strategy_id=strategy_id)
     result.entries_loaded = len(entries)
+    entry_index: dict[str, PublishedEntry] = {e.content_id: e for e in entries}
     log.info(
         "orchestrator: loaded %d entries (strategy_id=%s)",
         len(entries), strategy_id or "all",
@@ -95,8 +116,24 @@ def run_analytics_pipeline(
         log.info("orchestrator: no records collected — exiting")
         return result
 
+    # ── Staleness guard ───────────────────────────────────────────────────────
+    # Drop records whose collected_at is older than what is already stored.
+    fresh_records: list[AnalyticsRecord] = []
+    for rec in all_records:
+        if _is_stale(rec, entry_index):
+            log.info(
+                "orchestrator: skipping stale record content_id=%s "
+                "(collected_at=%s < existing analytics_fetched_at=%s)",
+                rec.content_id,
+                rec.collected_at,
+                entry_index[rec.content_id].analytics_fetched_at,
+            )
+            result.skipped_stale += 1
+        else:
+            fresh_records.append(rec)
+
     # ── Score ─────────────────────────────────────────────────────────────────
-    patches = score_records(all_records)
+    patches = score_records(fresh_records)
     result.records_scored  = len(patches)
     result.skipped_no_score = len(all_records) - len(patches)
 
