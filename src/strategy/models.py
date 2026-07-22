@@ -329,6 +329,7 @@ class PublishedEntry(BaseModel):
     published_at:  datetime
     platform:      str = "blog"           # canonical platform; blog = primary
     url:           str = ""              # blog/Wix URL when available
+    platform_content_id: Optional[str] = None  # platform-native ID (Wix post_id, LinkedIn URN, etc.)
     echo:          Optional[str] = None  # echo_line used in the published article
     hook:          str = ""
     topic:         str = ""

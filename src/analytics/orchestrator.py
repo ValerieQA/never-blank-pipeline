@@ -21,6 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+from src.analytics.base import AuthorizationCollectorError
 from src.analytics.collector_protocol import AnalyticsCollector
 from src.analytics.scorer import score_records
 from src.strategy.history import load_published_index, update_entry
@@ -105,6 +106,12 @@ def run_analytics_pipeline(
                 collector.platform, len(records),
             )
             all_records.extend(records)
+        except AuthorizationCollectorError as exc:
+            # Auth failure means all remaining entries for this collector are
+            # also broken — record as a whole-collector failure and move on.
+            msg = f"{collector.platform}: authorization failed — {exc}"
+            log.error("orchestrator: %s", msg)
+            result.collector_errors.append(msg)
         except Exception as exc:
             msg = f"{collector.platform}: {exc}"
             log.error("orchestrator: collector error — %s", msg)
@@ -134,8 +141,8 @@ def run_analytics_pipeline(
 
     # ── Score ─────────────────────────────────────────────────────────────────
     patches = score_records(fresh_records)
-    result.records_scored  = len(patches)
-    result.skipped_no_score = len(all_records) - len(patches)
+    result.records_scored   = len(patches)
+    result.skipped_no_score = len(fresh_records) - len(patches)
 
     # ── Write back to History ─────────────────────────────────────────────────
     for patch in patches:

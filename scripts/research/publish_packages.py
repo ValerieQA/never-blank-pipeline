@@ -257,6 +257,7 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
 
         results: dict = {}
         wix_url = ""
+        wix_post_id: Optional[str] = None
         for name, publisher in _PUBLISHERS:
             platform_img = pimgs.get(name, {}).get("url") or draft.image_url
             use_draft = _swap_image(draft, platform_img) if name in ("linkedin", "facebook", "instagram") else draft
@@ -268,8 +269,11 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
                     telegram_text = final_telegram
                 else:
                     result = publisher.publish(use_draft, mode)
-                if name == "wix" and result.ok() and result.url:
-                    wix_url = result.url
+                if name == "wix" and result.ok():
+                    if result.url:
+                        wix_url = result.url
+                    if result.external_id:
+                        wix_post_id = result.external_id
                 result_dict = result.to_dict()
                 if result.ok() and not result.url:
                     result_dict["status"] = "published_url_unavailable"
@@ -310,6 +314,7 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
                     published_at=datetime.now(timezone.utc),
                     platform="blog",
                     url=wix_url,
+                    platform_content_id=wix_post_id,
                     echo=structured.get("echo_line") or None,
                     hook=structured.get("hook", ""),
                     topic=headline,

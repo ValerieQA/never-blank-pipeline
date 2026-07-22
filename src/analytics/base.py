@@ -41,7 +41,22 @@ _RATE_LIMIT_WAIT = 60  # seconds to wait on HTTP 429 before retrying
 
 
 class CollectorError(Exception):
-    """Raised by collectors when an API call cannot be completed after retries."""
+    """Base class for all collector failures."""
+
+
+class AuthorizationCollectorError(CollectorError):
+    """
+    Raised on HTTP 401 or 403. Signals that credentials are invalid or expired.
+    The orchestrator treats this as a whole-collector failure — it is not safe
+    to continue collecting other entries with the same broken credentials.
+    """
+
+
+class EntryCollectorError(CollectorError):
+    """
+    Raised when a single entry cannot be fetched (network timeout, 404, etc.).
+    The collector may skip this entry and continue with the rest.
+    """
 
 
 class BaseCollector:
@@ -94,7 +109,7 @@ class BaseCollector:
                     last_exc = exc
                     continue
                 elif exc.code in (401, 403):
-                    raise CollectorError(
+                    raise AuthorizationCollectorError(
                         f"{self.platform}: authorization failed (HTTP {exc.code}) — check API credentials"
                     ) from exc
                 elif exc.code >= 500:

@@ -1,71 +1,62 @@
 """
 Never Blank Analytics — Blog/Wix Collector (Phase 4D.1).
 
-Fetches post statistics from the Wix Blog Statistics API v2.
-Each PublishedEntry with platform="blog" and a non-empty url is queried.
+Fetches post metrics from the Wix Blog Posts Stats API v3:
+  GET https://www.wixapis.com/blog/v3/posts/{postId}/metrics
 
-API used:
-  POST https://www.wixapis.com/blog/v2/stats/post
-  Headers: Authorization: <NB_WIX_API_KEY>
-           wix-site-id:   <NB_WIX_SITE_ID>
+Response shape:
+  {"metrics": {"comments": 5, "likes": 8, "views": 31}}
 
-The post slug is extracted from PublishedEntry.url (last path segment, no query string).
-If PublishedEntry.url is empty, the entry is skipped with a warning.
+Each PublishedEntry with platform="blog" and a non-empty platform_content_id
+is queried. Entries without platform_content_id are skipped with a warning
+(platform_content_id is populated by publish_packages.py from PublishResult.external_id
+at the time of Wix publication).
 
-Metrics returned by Wix Blog stats:
-  - views (total post views)
-  - likes
-  - comments
-
-Wix Blog v2 stats do not expose reach, saves, shares, link_clicks, or leads —
-those fields remain None in the AnalyticsRecord. The scoring layer handles
-None gracefully (skips unavailable metrics).
+Metrics not available from Wix Blog metrics API (reach, saves, shares,
+link_clicks, leads, etc.) remain None in AnalyticsRecord. The scoring
+layer handles None gracefully (skips unavailable metrics).
 
 Env vars required:
   NB_WIX_API_KEY   — Wix API key (same as used by WixPublisher)
   NB_WIX_SITE_ID   — Wix site ID
 
-If env vars are missing, collect() raises CollectorError immediately (no API calls).
+AuthorizationCollectorError is propagated to the orchestrator immediately
+(invalid credentials affect all entries equally — no point continuing).
+Per-entry API errors (network timeout, 5xx) are non-fatal — entry is skipped.
 """
 
 from __future__ import annotations
 
-import json
 import os
-import re
-import urllib.request
 from datetime import datetime, timezone
 from typing import Optional
 
-from src.analytics.base import BaseCollector, CollectorError
+from src.analytics.base import (
+    AuthorizationCollectorError,
+    BaseCollector,
+    CollectorError,
+    EntryCollectorError,
+)
 from src.strategy.models import AnalyticsRecord, PublishedEntry
 from src.utils.logger import get_logger
 
 log = get_logger("analytics.blog")
 
-_API_BASE = "https://www.wixapis.com"
-_STATS_URL = f"{_API_BASE}/blog/v2/stats/post"
-
-
-def _slug_from_url(url: str) -> Optional[str]:
-    """
-    Extract post slug from a Wix blog URL.
-
-    Examples:
-      https://www.neverblank.co/post/the-dark-month  → the-dark-month
-      https://www.neverblank.co/post/agency-presence/ → agency-presence
-    """
-    url = url.rstrip("/").split("?")[0]
-    segments = [s for s in url.split("/") if s]
-    return segments[-1] if segments else None
+_API_BASE   = "https://www.wixapis.com"
+_METRICS_URL = _API_BASE + "/blog/v3/posts/{post_id}/metrics"
 
 
 class BlogCollector(BaseCollector):
     """
-    Fetches view/like/comment counts from Wix Blog Statistics API.
+    Fetches view/like/comment counts from Wix Blog Posts Stats API v3.
 
-    Filters PublishedEntry list to platform="blog" entries with non-empty url.
-    Skips entries with missing url (warns); raises CollectorError on auth failure.
+    Requires PublishedEntry.platform_content_id (Wix post ID stored at publish time).
+    Entries missing platform_content_id are skipped with a warning.
+
+    AuthorizationCollectorError is raised immediately on 401/403 so the
+    orchestrator can record the whole-collector failure and stop retrying.
+    Per-entry errors (network, 5xx, 404) are caught and logged; remaining
+    entries continue to be collected.
     """
 
     platform = "blog"
@@ -84,34 +75,46 @@ class BlogCollector(BaseCollector):
             "NB_WIX_SITE_ID": self._site_id,
         }.items() if not v]
         if missing:
-            raise CollectorError(
-                f"blog: missing required env vars: {missing}"
-            )
+            raise CollectorError(f"blog: missing required env vars: {missing}")
 
-    def _fetch_post_stats(self, slug: str) -> dict:
-        """
-        Fetch statistics for one blog post by slug.
-        Returns raw Wix API response dict.
-        Raises CollectorError on API or network failure.
-        """
-        url = f"{_STATS_URL}?postSlug={slug}"
-        headers = {
+    def _headers(self) -> dict[str, str]:
+        return {
             "Authorization": self._api_key,
             "wix-site-id":   self._site_id,
             "Content-Type":  "application/json",
         }
-        return self._fetch_with_retry(url, headers=headers)
+
+    def _fetch_post_metrics(self, post_id: str) -> dict:
+        """
+        Fetch metrics for one Wix blog post by its native post ID.
+
+        GET /blog/v3/posts/{postId}/metrics
+        Returns raw Wix API response dict.
+
+        AuthorizationCollectorError propagates up (stop the whole collector).
+        Other CollectorErrors become EntryCollectorError (skip this entry only).
+        """
+        url = _METRICS_URL.format(post_id=post_id)
+        try:
+            return self._fetch_with_retry(url, headers=self._headers())
+        except AuthorizationCollectorError:
+            raise   # propagate — invalid credentials affect all entries
+        except CollectorError as exc:
+            raise EntryCollectorError(str(exc)) from exc
 
     def collect(self, entries: list[PublishedEntry]) -> list[AnalyticsRecord]:
         """
-        Collect blog statistics for all platform="blog" entries with a url.
+        Collect blog metrics for all platform="blog" entries with a platform_content_id.
 
         Args:
             entries: full published index (unfiltered).
 
         Returns:
             list[AnalyticsRecord]: one record per successfully fetched post.
-            Entries without a URL or with API errors are skipped (logged).
+
+        Raises:
+            CollectorError: if credentials are missing (checked before any API call).
+            AuthorizationCollectorError: if Wix returns 401/403 (propagated from first call).
         """
         self._check_credentials()
 
@@ -124,15 +127,11 @@ class BlogCollector(BaseCollector):
         collected_at = self._now()
 
         for entry in blog_entries:
-            if not entry.url:
-                log.warning("blog: entry %s has no URL — skipping", entry.content_id)
-                continue
-
-            slug = _slug_from_url(entry.url)
-            if not slug:
+            if not entry.platform_content_id:
                 log.warning(
-                    "blog: cannot extract slug from URL %r (content_id=%s) — skipping",
-                    entry.url, entry.content_id,
+                    "blog: entry %s has no platform_content_id (Wix post ID) — "
+                    "re-publish or backfill platform_content_id to enable analytics",
+                    entry.content_id,
                 )
                 continue
 
@@ -144,23 +143,27 @@ class BlogCollector(BaseCollector):
                 continue
 
             try:
-                raw = self._fetch_post_stats(slug)
-            except CollectorError as exc:
-                log.warning("blog: failed to fetch stats for %s (%s): %s",
-                            entry.content_id, slug, exc)
+                raw = self._fetch_post_metrics(entry.platform_content_id)
+            except AuthorizationCollectorError:
+                raise   # stop the whole collector
+            except EntryCollectorError as exc:
+                log.warning(
+                    "blog: failed to fetch metrics for %s (post_id=%s): %s",
+                    entry.content_id, entry.platform_content_id, exc,
+                )
                 continue
 
-            stats = raw.get("stats", raw)  # Wix returns {"stats": {...}} or the object directly
+            metrics = raw.get("metrics", raw)
 
             record = AnalyticsRecord(
                 content_id=entry.content_id,
                 platform="blog",
                 published_at=entry.published_at,
                 collected_at=collected_at,
-                views=_metric(stats.get("views")),
-                likes=_metric(stats.get("likes")),
-                comments=_metric(stats.get("comments")),
-                # Not available via Wix Blog stats API
+                views=_metric(metrics.get("views")),
+                likes=_metric(metrics.get("likes")),
+                comments=_metric(metrics.get("comments")),
+                # Not available via Wix Blog metrics API
                 impressions=None,
                 reach=None,
                 shares=None,
@@ -175,8 +178,9 @@ class BlogCollector(BaseCollector):
             )
             records.append(record)
             log.info(
-                "blog: collected content_id=%s slug=%s views=%s likes=%s comments=%s",
-                entry.content_id, slug, record.views, record.likes, record.comments,
+                "blog: collected content_id=%s post_id=%s views=%s likes=%s comments=%s",
+                entry.content_id, entry.platform_content_id,
+                record.views, record.likes, record.comments,
             )
 
         log.info("blog: collected %d/%d blog entries", len(records), len(blog_entries))
@@ -184,11 +188,7 @@ class BlogCollector(BaseCollector):
 
 
 def _metric(value) -> Optional[int]:
-    """
-    Normalize a Wix API metric value.
-    None/missing → None (not collected, not zero).
-    Numeric → int.
-    """
+    """Normalize a Wix API metric value. None/missing → None. Numeric → int."""
     if value is None:
         return None
     try:
