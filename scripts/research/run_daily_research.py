@@ -61,7 +61,7 @@ def _append_jsonl(path: Path, signals: list[dict]) -> None:
     with open(path, "a") as f:
         for sig in signals:
             line = json.dumps(sig, ensure_ascii=False)
-            json.loads(line)  # validate before write
+            json.loads(line)
             f.write(line + "\n")
 
 
@@ -74,26 +74,29 @@ def _within_budget(count: int) -> bool:
     return True
 
 
+def _publishing_failures(reports: list[dict]) -> list[str]:
+    failures = []
+    for report in reports:
+        for platform, result in report.get("results", {}).items():
+            if result.get("status") == "FAILED":
+                failures.append(f"{platform}: {result.get('error_message', 'unknown error')}")
+    return failures
+
+
 def run() -> dict:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     summary = {
-        "date": today,
-        "candidates_found": 0,
-        "duplicates_skipped": 0,
-        "new_signals_added": 0,
-        "selected_for_content": 0,
-        "sheet_sync": "not_run",
-        "archived": 0,
-        "top_signals": [],
+        "date": today, "candidates_found": 0, "duplicates_skipped": 0,
+        "new_signals_added": 0, "selected_for_content": 0,
+        "sheet_sync": "not_run", "archived": 0, "top_signals": [],
         "publish_reports": [],
     }
 
-    cfg        = _load_weights()
+    cfg = _load_weights()
     thresholds = cfg.get("thresholds", {})
     select_min = thresholds.get("select_minimum", 7)
-    top_n_sel  = thresholds.get("top_n_to_select", 3)
-
-    seen     = _load_seen()
+    top_n_sel = thresholds.get("top_n_to_select", 3)
+    seen = _load_seen()
     seen_ids = set(seen.keys())
 
     log.info("=== Stage 1: Discovery ===")
@@ -103,26 +106,18 @@ def run() -> dict:
         log.info("No new candidates — pipeline complete")
         return summary
 
-    new_candidates, dupes = [], 0
-    for c in candidates:
-        if c["SIGNAL_ID"] not in seen_ids:
-            new_candidates.append(c)
-        else:
-            dupes += 1
-    summary["duplicates_skipped"] = dupes
-
+    new_candidates = [c for c in candidates if c["SIGNAL_ID"] not in seen_ids]
+    summary["duplicates_skipped"] = len(candidates) - len(new_candidates)
     if not new_candidates:
         return summary
 
     log.info("=== Stage 3: Scoring ===")
     scored = score_candidates(new_candidates)
-
     if not _within_budget(len(scored)):
         scored = scored[:max(3, len(scored) // 2)]
 
     log.info("=== Stage 4: Enrichment (%d candidates) ===", len(scored))
     enriched = enrich_candidates(scored)
-
     log.info("=== Stage 5: Angles ===")
     with_angles = add_angles(enriched)
 
@@ -135,7 +130,6 @@ def run() -> dict:
     log.info("=== Stage 6: Save ===")
     _append_jsonl(ACTIVE_FILE, final_signals)
     summary["new_signals_added"] = len(final_signals)
-
     now_ts = datetime.now(timezone.utc).isoformat()
     for sig in final_signals:
         seen[sig["SIGNAL_ID"]] = {"date": now_ts, "headline": sig.get("HEADLINE", "")}
@@ -143,11 +137,8 @@ def run() -> dict:
 
     selected = [
         s for s in final_signals
-        if (
-            # APPROVED_OVERRIDE bypasses quality gates entirely
-            str(s.get("APPROVED_OVERRIDE", "")).lower() == "true"
-        ) or (
-            # Both conditions required — recommendation AND minimum score
+        if str(s.get("APPROVED_OVERRIDE", "")).lower() == "true"
+        or (
             str(s.get("RECOMMENDED_FOR_ARTICLE", "false")).lower() == "true"
             and int(s.get("ARTICLE_READINESS_SCORE", "0") or "0") >= select_min
         )
@@ -158,58 +149,36 @@ def run() -> dict:
         summary["selected_for_content"] = len(selected)
         summary["top_signals"] = [s.get("HEADLINE", "")[:80] for s in selected]
 
-    # Stage 10 — Content Package Preparation
     log.info("=== Stage 10: Content Package Preparation ===")
     content_packages = []
     if selected:
-        try:
-            content_packages = prepare_content_packages(selected)
-            summary["content_packages"] = len(content_packages)
-            total_new    = sum(p["images"].get("new_images", 0) for p in content_packages)
-            total_reused = sum(p["images"].get("reused_images", 0) for p in content_packages)
-            summary["images_new"]    = total_new
-            summary["images_reused"] = total_reused
-            visual_families = [p.get("images", {}).get("visual_family", "") for p in content_packages if p.get("images", {}).get("visual_family")]
-            log.info(
-                "Content packages: %d | new images: %d | reused: %d | families: %s",
-                len(content_packages), total_new, total_reused,
-                ", ".join(visual_families) or "n/a",
-            )
-        except Exception as exc:
-            log.error("Content package preparation failed: %s", exc)
-            summary["content_packages"] = 0
+        content_packages = prepare_content_packages(selected)
+        if not content_packages:
+            raise RuntimeError("Selected signals produced no content packages; publishing aborted")
+        summary["content_packages"] = len(content_packages)
+        summary["images_new"] = sum(p["images"].get("new_images", 0) for p in content_packages)
+        summary["images_reused"] = sum(p["images"].get("reused_images", 0) for p in content_packages)
 
-    # Stage 11 — Live Publishing
     publish_enabled = os.environ.get("NB_RESEARCH_PUBLISH_ENABLED", "false").lower() == "true"
     log.info("=== Stage 11: Live Publishing (enabled=%s) ===", publish_enabled)
     publish_reports = []
-    if selected and content_packages:
-        try:
-            publish_reports = publish_packages(selected, content_packages)
-            summary["publish_reports"] = publish_reports
-            published_ok = sum(
-                1 for r in publish_reports
-                for res in r.get("results", {}).values()
-                if res.get("status") in ("PUBLISHED", "DRAFT_CREATED")
-            )
-            published_fail = sum(
-                1 for r in publish_reports
-                for res in r.get("results", {}).values()
-                if res.get("status") == "FAILED"
-            )
-            log.info("Publishing done — ok: %d, failed: %d", published_ok, published_fail)
-        except Exception as exc:
-            log.error("Publishing failed: %s", exc)
+    if selected and content_packages and publish_enabled:
+        publish_reports = publish_packages(selected, content_packages)
+        summary["publish_reports"] = publish_reports
+        failures = _publishing_failures(publish_reports)
+        if failures:
+            # Fail the Actions run visibly. Editorial generation is completed and saved,
+            # but a blocked package must never look like a successful publication.
+            raise RuntimeError("Live publishing blocked/failed: " + " | ".join(failures))
+        if not publish_reports:
+            raise RuntimeError("Publishing was enabled but produced no publish report")
 
     log.info("=== Stage 7: Sheets Sync ===")
     summary["sheet_sync"] = "success" if sync_to_sheets() else "failed"
-
     log.info("=== Stage 9: Archive ===")
     summary["archived"] = run_archive()
-
-    summary["_content_packages"] = content_packages   # for report rendering
-    summary["_publish_reports"]  = publish_reports    # for report rendering
-
+    summary["_content_packages"] = content_packages
+    summary["_publish_reports"] = publish_reports
     return summary
 
 
@@ -221,16 +190,12 @@ def _print_summary(s: dict) -> None:
     print(f"Duplicates skipped:    {s['duplicates_skipped']}")
     print(f"Sheet sync:            {s['sheet_sync']}")
     print(f"Archive moved:         {s['archived']}")
-    if s["top_signals"]:
-        print("Top signals:")
-        for i, h in enumerate(s["top_signals"], 1):
-            print(f"  {i}. {h}")
-    packages = s.get("_content_packages", [])
-    if packages:
-        print(format_package_preview(packages))
-    pub_reports = s.get("_publish_reports", [])
-    if pub_reports:
-        print(format_publish_summary(pub_reports))
+    for i, headline in enumerate(s.get("top_signals", []), 1):
+        print(f"  {i}. {headline}")
+    if s.get("_content_packages"):
+        print(format_package_preview(s["_content_packages"]))
+    if s.get("_publish_reports"):
+        print(format_publish_summary(s["_publish_reports"]))
 
 
 if __name__ == "__main__":
