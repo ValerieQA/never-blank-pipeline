@@ -10,7 +10,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from src.content.output_guard import validate_platform_output
+from src.content.output_guard import repeated_cross_platform_phrases, validate_platform_output
 from src.models import ContentBrief, ContentMatrix, ContentPackage
 from src.utils.config_loader import load_prompt
 from src.utils.llm_client import chat_json
@@ -83,8 +83,12 @@ def _build_context(brief: ContentBrief, matrix: ContentMatrix, blog_body: str = 
 
 def _call(prompt_name: str, context: dict[str, Any]) -> dict:
     prompt = load_prompt(prompt_name)
+    user = _fill(prompt["user"], context)
+    correction = str(context.get("output_correction", "")).strip()
+    if correction:
+        user += f"\n\nMANDATORY REGENERATION CORRECTION:\n{correction}"
     log.info("Calling OpenAI for: %s", prompt_name)
-    return chat_json(prompt["system"], _fill(prompt["user"], context))
+    return chat_json(prompt["system"], user)
 
 
 def _call_validated(
@@ -93,7 +97,6 @@ def _call_validated(
     platform: str,
     text_getter: Callable[[dict], str],
 ) -> dict:
-    """Generate and validate once; retry once with explicit correction on failure."""
     result = _call(prompt_name, context)
     try:
         validate_platform_output(platform, text_getter(result))
@@ -163,7 +166,6 @@ def generate_threads(brief: ContentBrief, matrix: ContentMatrix, blog_body: str)
 
 
 def generate_telegram(brief: ContentBrief, matrix: ContentMatrix) -> dict:
-    """Generate a strict Telegram signal post; malformed output fails the channel."""
     ctx = _build_context(brief, matrix)
     result = _call_validated("telegram_post", ctx, "telegram", lambda x: x.get("text", ""))
     return {"text": result.get("text", "").strip()}
@@ -185,6 +187,33 @@ def generate_stories(brief: ContentBrief, matrix: ContentMatrix) -> list[dict]:
     return frames
 
 
+def _validate_cross_platform_outputs(
+    blog: str,
+    linkedin: str,
+    instagram: str,
+    facebook: str,
+    threads: list[str],
+    telegram: str,
+) -> None:
+    repeated = repeated_cross_platform_phrases(
+        {
+            "blog": blog,
+            "linkedin": linkedin,
+            "instagram": instagram,
+            "facebook": facebook,
+            "threads": " ".join(threads),
+            "telegram": telegram,
+        }
+    )
+    if repeated:
+        preview = "; ".join(
+            f"{item['platforms']}: {item['phrase'][:80]}" for item in repeated[:3]
+        )
+        raise ValueError(
+            "Cross-platform copy detected. Each platform must receive native wording. " + preview
+        )
+
+
 def generate_content_package(brief: ContentBrief, matrix: ContentMatrix) -> ContentPackage:
     """Generate every platform body and fail closed when any active output is malformed."""
     _require_api_key()
@@ -198,6 +227,15 @@ def generate_content_package(brief: ContentBrief, matrix: ContentMatrix) -> Cont
     thr = generate_threads(brief, matrix, blog_body=body)
     tg = generate_telegram(brief, matrix)
     st = generate_stories(brief, matrix)
+
+    _validate_cross_platform_outputs(
+        body,
+        li.get("text", ""),
+        ig.get("caption", ""),
+        fb.get("text", ""),
+        thr.get("sequence", []),
+        tg.get("text", ""),
+    )
 
     log.info(
         "Content generation complete: blog=%d linkedin=%d ig=%d fb=%d threads=%d tg=%d stories=%d",
