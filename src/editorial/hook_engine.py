@@ -2,8 +2,10 @@
 Hook Engine — Editorial Engine V2 Module 1
 Spec: docs/EDITORIAL_ENGINE_V2.md, Module 1
 
-Generates 5-7 candidate hooks across distinct types, then selects the one that
-names something a reader would not have derived from the headline alone.
+Generates 5-7 candidate hooks across distinct types for small business visibility
+patterns, then selects the one that makes a business owner stop and recognize
+their own situation.
+
 A single hook generated first is almost never the strongest one.
 """
 
@@ -17,35 +19,58 @@ log = get_logger("editorial.hook_engine")
 _MIN_CANDIDATES = 5
 
 _HOOK_TYPES = {
-    "contradiction", "invisible_signal", "surprising_question",
-    "wrong_consensus", "hidden_decision", "false_narrative",
+    "hidden_cost",
+    "invisible_pattern",
+    "false_comfort",
+    "timing_contradiction",
+    "recognition_gap",
+    "accumulated_effect",
 }
 
 _SYSTEM_PROMPT = """You are the Hook Engine for Never Blank.
 
-Question: why would a person stop scrolling for this? Not "how do I start elegantly"
-but "what is the thing in this investigation a reader would not expect?"
+Never Blank is a research-driven observer of the patterns that make small businesses
+visible, recognizable, remembered, and commercially present. The reader is a small
+business owner who must recognize their own situation in the first three lines.
 
-Generate 5-7 candidate hooks, spanning as many of these types as make sense for this
-signal:
+Question: what observation would make a business owner stop scrolling and think
+"this is about my business"? Not "how do I start elegantly" — but "what is the
+uncomfortable truth about visibility that this business owner has not yet named?"
 
-- contradiction: states something that seems wrong but is true
-- invisible_signal: names something everyone saw but nobody read correctly
-- surprising_question: opens with the question the investigation answered
-- wrong_consensus: names the incorrect interpretation the market held
-- hidden_decision: reveals the visible event was not the actual decision
-- false_narrative: dismantles the frame before establishing the real one
+Generate 5-7 candidate hooks, spanning as many of these types as make sense:
 
-Selection rule: choose the hook that names something the reader would not have
-derived from the headline alone. If the hook could be written without reading the
-investigation, it is wrong. The hook must not summarize - it must create a gap the
-reader does not yet know how to resolve. It must not reveal the narrative_spine
-early - the reader earns the spine at the end of the article.
+- hidden_cost: names what the silence or absence is actually costing, in commercial terms
+  Example: "The most expensive post may be the one that never appeared."
+- invisible_pattern: names something the reader does regularly without realizing its effect
+  Example: "Good businesses rarely disappear in one day."
+- false_comfort: states a belief the reader holds that the evidence contradicts
+  Example: "Being busy is not the same as being visible. Your clients cannot see
+  the difference."
+- timing_contradiction: exposes that the pattern happens at exactly the wrong moment
+  Example: "Founders go quiet during their busiest periods. The same weeks the pipeline
+  for next quarter is being decided."
+- recognition_gap: names the gap between what the business does and what is visible outside
+  Example: "Your customers do not know that you are busy. They only know that you went silent."
+- accumulated_effect: reveals that small repeated absences compound into a large problem
+  Example: "A business can be successful and still be gradually forgotten."
+
+Selection rule: choose the hook that:
+1. A business owner stops at because they recognize their own situation
+2. Cannot be written without understanding this specific pattern (not a generic opener)
+3. Creates a gap — something the reader feels is true but cannot yet explain
+4. Does NOT summarize the article
+5. Does NOT reveal the narrative_spine early — the reader earns the spine at the end
+
+FORBIDDEN hook patterns:
+- "In today's..." / "It's not about..." / "Many founders..."
+- Opening with a question
+- Stating the article's conclusion in the first line
+- "Here's what research shows about..."
 
 Return ONLY valid JSON:
 {
   "hook_candidates": [
-    {"type": "contradiction|invisible_signal|surprising_question|wrong_consensus|hidden_decision|false_narrative", "text": "string"}
+    {"type": "hidden_cost|invisible_pattern|false_comfort|timing_contradiction|recognition_gap|accumulated_effect", "text": "string"}
   ],
   "selected_hook": "string - must be the exact text of one of the hook_candidates"
 }"""
@@ -84,7 +109,7 @@ def _validate(data: dict) -> dict:
 
 def generate_hook(spine: dict, decision_lens: dict, signal: dict) -> dict:
     """
-    Produce hook candidates and a selection.
+    Produce hook candidates and a selection for a small business visibility pattern.
 
     Raises ValueError if fewer than 5 candidates are returned, any candidate has an
     invalid type, or selected_hook does not exactly match a candidate's text.

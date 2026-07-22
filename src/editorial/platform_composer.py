@@ -4,19 +4,21 @@ Spec: docs/EDITORIAL_ENGINE_V2.md, Module 7
 
 Structural editor, not a text editor. Receives the structured_article object from
 Never Blank Voice and produces five platform-specific bodies, each governed by a
-fixed per-block full/compressed/skip table - not by word-count truncation. Word
-count is a consequence of reading behavior, not the target.
+fixed per-block full/compressed/skip table.
 
-Invariant across all five formats: narrative_spine, hook, discovery moment, aha
-moment, and signature are present in every format (per-block table below - `full`
-or `compressed`, never `skip`, for those). Only investigation depth changes.
+Updated for the new 9-step visibility/presence arc:
+- New blocks: reframe, echo (formerly signature), cta
+- echo is optional (can be absent from article — not forced)
+- cta is optional (varies by article — not in every post)
+- reader_context is now rarely used (small business patterns don't need company context)
 
-One LLM call per format: Python decides which blocks are full/compressed/skip and
-only passes the blocks that are not skipped into the prompt (skipped blocks are not
-given to the LLM at all, so they cannot leak in). The LLM performs the compression
-judgment itself - compression is a cognitive operation ("remove sentences that
-explain what the previous sentence already showed"), not something Python can do
-mechanically.
+Block table from EDITORIAL_ENGINE_V2.md, Section 5:
+  hook, reader_context, observation (first_wrong_explanation), recognition (aha_setup),
+  evidence_pattern (puzzle+investigation_sequence), explanation (surviving_explanation),
+  reframe, business_meaning (business_translation), echo (signature), cta
+
+Invariant across all formats: narrative_spine, hook, recognition, echo (when present)
+are present in every format (compressed or full, never skip for these core blocks).
 """
 
 import json
@@ -26,38 +28,68 @@ from src.utils.logger import get_logger
 
 log = get_logger("editorial.platform_composer")
 
-# block -> ("full" | "compressed" | "skip") per format, from EDITORIAL_ENGINE_V2.md
-# "Per-block behavior by format" table.
+# Maps structured_article field names to logical block names used in the table.
+# Some blocks aggregate multiple source fields.
 _BLOCK_TABLE = {
     "long": {
-        "hook": "full", "reader_context": "full", "first_wrong_explanation": "full",
-        "puzzle": "full", "investigation_sequence": "full", "aha_setup": "full",
-        "surviving_explanation": "full", "remaining_uncertainty": "full",
-        "business_translation": "full", "signature": "full",
+        "hook": "full",
+        "reader_context": "full",
+        "observation": "full",       # first_wrong_explanation repurposed as Observation
+        "recognition": "full",       # aha_setup repurposed as Recognition
+        "evidence_pattern": "full",  # puzzle + investigation_sequence
+        "explanation": "full",       # surviving_explanation
+        "reframe": "full",
+        "business_meaning": "full",  # business_translation
+        "echo": "full",              # signature/echo_line
+        "cta": "full",
     },
     "reading": {
-        "hook": "full", "reader_context": "skip", "first_wrong_explanation": "full",
-        "puzzle": "full", "investigation_sequence": "compressed", "aha_setup": "full",
-        "surviving_explanation": "compressed", "remaining_uncertainty": "skip",
-        "business_translation": "compressed", "signature": "full",
+        "hook": "full",
+        "reader_context": "skip",
+        "observation": "full",
+        "recognition": "full",
+        "evidence_pattern": "compressed",
+        "explanation": "full",
+        "reframe": "compressed",
+        "business_meaning": "compressed",
+        "echo": "full",
+        "cta": "full",
     },
     "medium": {
-        "hook": "compressed", "reader_context": "skip", "first_wrong_explanation": "compressed",
-        "puzzle": "compressed", "investigation_sequence": "skip", "aha_setup": "compressed",
-        "surviving_explanation": "skip", "remaining_uncertainty": "skip",
-        "business_translation": "compressed", "signature": "full",
+        "hook": "compressed",
+        "reader_context": "skip",
+        "observation": "compressed",
+        "recognition": "compressed",
+        "evidence_pattern": "compressed",
+        "explanation": "compressed",
+        "reframe": "compressed",
+        "business_meaning": "compressed",
+        "echo": "full",
+        "cta": "compressed",
     },
     "instagram": {
-        "hook": "compressed", "reader_context": "skip", "first_wrong_explanation": "compressed",
-        "puzzle": "compressed", "investigation_sequence": "skip", "aha_setup": "compressed",
-        "surviving_explanation": "skip", "remaining_uncertainty": "skip",
-        "business_translation": "skip", "signature": "full",
+        "hook": "compressed",
+        "reader_context": "skip",
+        "observation": "compressed",
+        "recognition": "compressed",
+        "evidence_pattern": "skip",
+        "explanation": "skip",
+        "reframe": "skip",
+        "business_meaning": "skip",
+        "echo": "full",
+        "cta": "skip",
     },
     "short": {
-        "hook": "compressed", "reader_context": "skip", "first_wrong_explanation": "skip",
-        "puzzle": "skip", "investigation_sequence": "skip", "aha_setup": "skip",
-        "surviving_explanation": "skip", "remaining_uncertainty": "skip",
-        "business_translation": "skip", "signature": "full",
+        "hook": "compressed",
+        "reader_context": "skip",
+        "observation": "skip",
+        "recognition": "skip",
+        "evidence_pattern": "skip",
+        "explanation": "skip",
+        "reframe": "skip",
+        "business_meaning": "skip",
+        "echo": "full",
+        "cta": "skip",
     },
 }
 
@@ -70,63 +102,79 @@ _WORD_RANGE = {
 }
 
 _READING_BEHAVIOR = {
-    "long": "Reads at a desk. Wants full evidence, timeline, uncertainty.",
-    "reading": "Reads the whole thing. Wants narrative and discovery, not evidence density.",
-    "medium": "Reads in a feed. Needs a complete standalone arc: Hook -> Discovery -> Aha -> Lesson -> Signature.",
-    "instagram": "Reads on a phone, one screen at a time. Shorter paragraphs, stronger rhythm, one dominant insight. Not a shortened LinkedIn post.",
-    "short": "Reads one idea. Hook or Spine only. Does not summarize the investigation.",
+    "long": "Reads at a desk. Wants full evidence arc, mechanism, and reframe.",
+    "reading": "Reads the whole thing. Wants narrative and recognition, not evidence density.",
+    "medium": "Reads in a feed. Needs a complete standalone arc: Hook → Recognition → Explanation → Reframe → Echo.",
+    "instagram": "Reads on a phone, one screen at a time. Make them feel the pattern before they understand it.",
+    "short": "Reads one idea. Hook or Echo only. Does not attempt to summarize the pattern.",
 }
 
 _FORMAT_CONSTRAINTS = {
     "long": (
-        "Full evidence, timeline, and uncertainty. Flowing prose, not a bulleted report."
+        "Full nine-step arc. Hook → Observation → Recognition → Evidence → Explanation "
+        "→ Reframe → Business Meaning → Echo (if present) → CTA (if present). "
+        "Flowing prose, not a bulleted report."
     ),
     "reading": (
-        "Preserve the narrative arc. Remove evidence citations and analytical qualifications "
-        "that slow reading pace. A reader should feel the investigation without cataloguing "
-        "the evidence. Target: readable in 2-4 minutes without stopping."
+        "Preserve the narrative arc. Remove evidence citations that slow reading pace. "
+        "A reader should feel the pattern without cataloguing the evidence. "
+        "Target: readable in 2-4 minutes without stopping."
     ),
     "medium": (
-        "Must be a complete standalone text. A reader who has never heard of the company must "
-        "reach the Aha and the Spine without needing the Long version. No dangling references "
-        "to evidence not present in this version."
+        "Must be a complete standalone text. A reader who does not know the research context "
+        "must reach the Recognition and the Reframe without needing the Long version. "
+        "No dangling references to evidence not present in this version."
     ),
     "instagram": (
-        "The most literary format in the system. Its job is not to explain the investigation - "
-        "it is to make the reader feel the moment the first explanation broke. No analysis. No "
-        "qualifications. No stacked facts. Only the emotional sequence: something was true, then "
-        "one thing changed, then nothing was the same. One idea per paragraph - blank lines are "
-        "part of the storytelling. Never name a statistic unless it is the puzzle itself. Never "
-        "write a sentence that could appear in a LinkedIn post. The reader should finish thinking "
-        "'I just realized something' - not 'I just read an analysis.'"
+        "The most literary format. Make the reader feel the visibility pattern before they "
+        "understand it analytically. No analysis. No qualifications. No stacked facts. "
+        "Only the emotional sequence: something was assumed, then one moment changed it. "
+        "One idea per paragraph — blank lines are part of the storytelling. "
+        "The reader should finish thinking 'I just recognized something' — not "
+        "'I just read an analysis.'"
     ),
     "short": (
-        "One idea. Either the Hook that opens the gap, or the Spine that closes it. Does not "
-        "attempt to compress the investigation into a summary - that produces a summary, not an "
-        "insight."
+        "One idea. Either the Hook that opens the gap, or the Echo that closes it. "
+        "Does not attempt to compress the pattern into a summary — that produces summaries, "
+        "not insights."
     ),
 }
 
 _COMPRESSION_RULE = (
     "The rule for compressing a block: remove sentences that explain what the previous "
     "sentence already showed. Do not remove sentences that move the reader to the next "
-    "cognitive position. Never summarize a block - compress it to its cognitive minimum."
+    "cognitive position. Never summarize a block — compress it to its cognitive minimum."
 )
 
 
 def _block_content(structured_article: dict, block: str) -> str | None:
+    """Map logical block names to structured_article fields."""
     discovery = structured_article.get("discovery", {})
+
+    # Aggregate evidence_pattern from puzzle + investigation_sequence
+    puzzle = discovery.get("puzzle", "")
+    investigation_seq = discovery.get("investigation_sequence", [])
+    evidence_combined = puzzle
+    if investigation_seq:
+        evidence_combined = puzzle + " " + " ".join(investigation_seq) if puzzle else " ".join(investigation_seq)
+
     mapping = {
         "hook": structured_article.get("hook", ""),
         "reader_context": structured_article.get("reader_context"),
-        "first_wrong_explanation": discovery.get("first_wrong_explanation", ""),
-        "puzzle": discovery.get("puzzle", ""),
-        "investigation_sequence": " ".join(discovery.get("investigation_sequence", [])),
-        "aha_setup": discovery.get("aha_setup", ""),
-        "surviving_explanation": structured_article.get("surviving_explanation", ""),
-        "remaining_uncertainty": structured_article.get("remaining_uncertainty"),
-        "business_translation": structured_article.get("business_translation", ""),
-        "signature": structured_article.get("signature", ""),
+        # Observation = first_wrong_explanation repurposed as "the named pattern"
+        "observation": discovery.get("first_wrong_explanation", ""),
+        # Recognition = aha_setup repurposed as "reader recognizes their situation"
+        "recognition": discovery.get("aha_setup", ""),
+        # Evidence = puzzle + investigation_sequence
+        "evidence_pattern": evidence_combined or None,
+        # Explanation = surviving_explanation (the mechanism)
+        "explanation": structured_article.get("surviving_explanation", ""),
+        "reframe": structured_article.get("reframe", ""),
+        # Business meaning = business_translation
+        "business_meaning": structured_article.get("business_translation", ""),
+        # Echo = echo_line (optional) — falls back to signature for backward compat
+        "echo": structured_article.get("echo_line") or structured_article.get("signature") or None,
+        "cta": structured_article.get("cta_line"),
     }
     return mapping.get(block)
 
@@ -136,7 +184,7 @@ def _build_user_prompt(structured_article: dict, format_key: str) -> str:
     lo, hi = _WORD_RANGE[format_key]
 
     lines = [
-        f"narrative_spine (identical across all formats - do not alter its meaning): "
+        f"narrative_spine (do not state verbatim — the article must earn it): "
         f"{structured_article.get('narrative_spine', '')}",
         f"Target length: {lo}-{hi} words.",
         f"Reading behavior: {_READING_BEHAVIOR[format_key]}",
@@ -155,14 +203,22 @@ def _build_user_prompt(structured_article: dict, format_key: str) -> str:
     lines.append(f"Format-specific constraints: {_FORMAT_CONSTRAINTS[format_key]}")
     lines.append(_COMPRESSION_RULE)
     lines.append("")
-    lines.append("Assemble the final body text for this format now, in the order the blocks "
-                  "are listed above (narrative_spine is context, not a block to include verbatim - "
-                  "it must be earned by the piece, not stated).")
+    lines.append(
+        "Assemble the final body text for this format now, in the order the blocks "
+        "are listed above. The narrative_spine is context — it must be EARNED by the "
+        "piece, not stated. "
+        "If the 'cta' block is present, it must appear BEFORE the 'echo' block in the "
+        "assembled text. "
+        "If the 'echo' block is absent, do not invent one."
+    )
 
     return "\n".join(lines)
 
 
 _SYSTEM_PROMPT = """You are the Platform Composer for Never Blank.
+
+Never Blank writes for small business owners who must recognize their own situation
+in the content — not study someone else's company. The reader is the central character.
 
 You are a structural editor, not a text editor: you do not receive an article and
 cut sentences. You receive a fixed set of named blocks and assemble them into one
@@ -170,47 +226,39 @@ platform's body text, respecting exactly which blocks are full, compressed, or
 omitted for this format (given in the user message). Preserve every cognitive step
 of the blocks you are given. Compress only exposition.
 
-VOICE — DO NOT FLATTEN INTO ANALYSIS:
-The discovery blocks (first_wrong_explanation, puzzle, investigation_sequence,
-aha_setup) are written in first person, as a narrator investigating in real time.
-Your job is to assemble them, not to translate them into third-person analytical
-prose. If a block reads "I assumed X. Then one fact didn't fit," it must still
-read that way in the final body - not rewritten into "X initially appeared true,
-however evidence suggests otherwise." A version of this piece that reads like an
-analyst's memo instead of an investigator's account has failed, even if every
-fact is preserved.
+NINE-STEP ARC — preserve the arc structure:
+The article moves: Hook → Observation → Recognition → Evidence → Explanation →
+Reframe → Business Meaning → (CTA if present, always before Echo) → Echo (if present).
+Do not reorder these steps. Reframe must come after Explanation. CTA must come before Echo.
+
+VOICE — READER IS THE CENTRAL CHARACTER:
+The observation and recognition blocks are written from the perspective of someone
+watching a pattern in the reader's own business. Your job is to assemble them, not
+to translate them into third-person analytical prose. If a block reads in second
+person ("Your clients see silence, not busy"), it must stay in second person — not
+be rewritten into "businesses that do not communicate are perceived negatively."
 
 DO NOT RESOLVE TOO FAST:
-The most common failure is stating the conclusion within the first few sentences
-after the hook. surviving_explanation exists to confirm what the reader already
-arrived at via aha_setup - it must not appear early, restated, or hedge-free as
-if it were the obvious reading all along. If the piece would read the same with
-surviving_explanation moved to paragraph two, the discovery arc did not survive
-assembly - keep the full investigative distance between the puzzle and the
-confirmation.
+The most common failure is stating the business meaning within the first few sentences
+after the hook. Business_meaning and reframe arrive late in the arc — they must not
+appear early, restated, or hedge-free before the reader has been through the
+recognition and explanation steps.
 
-THE ENDING MUST ECHO THE SPINE, NOT JUST GESTURE AT IT:
-narrative_spine is not background context to keep in mind - it is the sentence
-the reader must recognize by the end. business_translation and the moment right
-before signature should land on language that clearly rhymes with narrative_spine
-(reusing its central image or claim, not just a related theme), so a reader who
-reaches the end recognizes "that's the sentence this was building to." A
-business_translation that is generic enough to paste under a different company's
-headline unchanged is a failure - it must depend on the specific narrative_spine
-and discovery above it.
+THE ECHO MUST EARN ITS PLACE:
+If an echo block is provided, it must appear verbatim at the very end of the body.
+Do not paraphrase it. Do not add text after it.
+If no echo block is provided, do not invent one.
 
-FORMATTING — PARAGRAPH SPACING (presentation only, changes no content decision):
+CTA PLACEMENT:
+If a cta block is provided, it must appear BEFORE the echo block, not after it.
+Do not add a CTA if none is provided.
+
+FORMATTING — PARAGRAPH SPACING:
 Put a blank line between paragraphs. Keep paragraphs short enough to read on a
-phone without feeling like a wall of text - roughly 2-4 sentences for long,
-reading, and medium. For instagram, one sentence per paragraph (this is the
-same one-idea-per-paragraph rhythm already required above - make the blank
-lines between them explicit rather than running them together). For short,
-keep it a single unbroken block - its length is too small for internal breaks.
-This never changes which sentences appear or their order, only where the
-blank lines between them fall.
+phone — roughly 2-4 sentences for long, reading, and medium formats. For instagram,
+one sentence per paragraph with explicit blank lines. For short, a single unbroken block.
 
-Never invent evidence, facts, or claims not present in the blocks provided.
-The signature block must appear verbatim (it is always `full`) at the very end.
+Never invent evidence, statistics, or business facts not present in the blocks provided.
 
 Return ONLY valid JSON:
 {"body": "string - the assembled body text for this format"}"""
@@ -233,18 +281,22 @@ def _compose_one(structured_article: dict, format_key: str) -> dict:
 
     word_count = len(body.split())
     lo, hi = _WORD_RANGE[format_key]
-    # Soft tolerance: 40% either side. LLM word counts are approximate; do not
-    # hard-fail generation over a length miss, but log so drift is visible.
+    # Soft tolerance: 40% either side. LLM word counts are approximate.
     if not (lo * 0.6 <= word_count <= hi * 1.4):
         log.warning(
             "Platform Composer (%s): word_count=%d outside expected %d-%d range",
             format_key, word_count, lo, hi,
         )
 
-    signature = structured_article.get("signature", "")
-    if signature and signature not in body:
-        log.warning("Platform Composer (%s): signature missing from body, appending", format_key)
-        body = f"{body}\n\n{signature}"
+    # Echo safety-net: if an echo was produced and is missing from the body, append it.
+    echo = (
+        structured_article.get("echo_line")
+        or structured_article.get("signature")
+        or ""
+    )
+    if echo and echo not in body:
+        log.warning("Platform Composer (%s): echo missing from body, appending", format_key)
+        body = f"{body}\n\n{echo}"
         word_count = len(body.split())
 
     return {"word_count": word_count, "body": body}

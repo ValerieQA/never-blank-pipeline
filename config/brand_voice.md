@@ -2,50 +2,55 @@
 
 ## What Never Blank Is
 
-Never Blank is a content strategy practice for founder-led businesses.
-The core product is intelligence made visible through content.
+Never Blank is a research-driven observer of the patterns that make businesses visible,
+recognizable, remembered, and commercially present.
 
-Every piece of content is evidence. Not content about content strategy.
-Not advice. Not encouragement. Evidence that the author sees something
-most founders have not yet named.
+Every piece of content is evidence — not content about content strategy, not advice,
+not encouragement. Evidence that the author sees something most small business owners
+have not yet named about their own situation.
 
 ## Voice in One Sentence
 
-Sharp, observant, commercially aware. Writes like a smart peer,
-not like a consultant billing by the hour.
+Sharp, observant, commercially aware. Writes like a peer who has studied the pattern
+for longer than the reader has, not like a consultant billing by the hour.
 
 ## The Reader
 
-A founder or senior operator who:
-- Has read all the standard business content
-- Is tired of advice columns that state the obvious
-- Wants to feel understood, not taught
-- Recognises good thinking and skips everything else
+A small business owner or founder who:
+- Is fully booked and knows something is wrong with their presence but cannot name it
+- Watches competitors with worse products stay visible
+- Has clients who go quiet between projects and then use someone else
+- Is tired of advice that states the obvious without naming the mechanism
+- Wants to feel recognized, not taught
 
-Write for that person. Not for a beginner. Not for an algorithm.
+Write for that person. Not for a large company. Not for a marketing team. Not for an algorithm.
 
 ## Voice Characteristics
 
 **Sharp** — Every sentence earns its place. No wind-up. No qualification before the point.
 
-**Observational** — States what is actually happening, not what should be happening.
-Names patterns that already exist in the reader's experience.
+**Observational** — States what is actually happening in small businesses, not what should
+be happening. Names patterns that already exist in the reader's experience.
 
 **Confident** — Does not hedge. Does not soften. Does not say "this might be relevant to you."
 
 **Clean** — No corporate vocabulary. No inflated language. No metaphors that obscure.
 
-**Direct** — Observation first. Mechanism second. Implication last.
-Never the reverse.
+**Direct** — Observation first. Mechanism second. Implication last. Never the reverse.
 
 **Commercially aware** — Understands that visibility is not a personality trait.
 It is a business system. Speaks in outcomes, not aspirations.
+
+**Reader-centered** — The reader is the central character. The article succeeds when they
+think "this is exactly what is happening in my business," not "here is what Never Blank
+can do."
 
 ## What Never Blank Is NOT
 
 - Not motivational. Not "you can do this."
 - Not academic. Not "research suggests that."
 - Not agency-speak. Not "let us help you grow."
+- Not large-company strategy analysis. Not "what Getty's deal tells us about AI."
 - Not a newsletter. Not "this week I learned."
 - Not generic AI marketing. Not "in today's landscape."
 - Not preachy. Not "it's important to remember."
@@ -56,7 +61,8 @@ After writing, ask: does this make the reader think "that is exactly it"?
 
 If it makes them think "that's good advice" — rewrite.
 If it makes them feel taught — rewrite.
-If it could have been written by any content marketer — rewrite.
+If it could have been written about any business in any industry — rewrite.
+If a large company's marketing team could have published this — rewrite.
 
 ## Voice Examples
 
@@ -77,8 +83,7 @@ If it could have been written by any content marketer — rewrite.
 
 ### Blog Opening (RIGHT)
 > A founder who is fully booked often has no content. Not because they have
-> nothing to say — because they assume being busy communicates value.
-> It does not.
+> nothing to say — because they assume being busy communicates value. It does not.
 
 ---
 
@@ -119,9 +124,59 @@ If it could have been written by any content marketer — rewrite.
 
 ---
 
-## Forbidden Phrases (Auto-Fail)
+## The Echo
 
-These phrases indicate the content has slipped into generic mode:
+The Echo is the final thought designed to remain in the reader's mind. It is the core
+Never Blank editorial device and must be treated as such.
+
+**An Echo is NOT:**
+- A summary of the article
+- A slogan pasted onto every article
+- A generic motivational line
+- Always a CTA
+- Always the phrase "Never Blank"
+
+**An Echo IS:**
+- Specific to this article's pattern and argument
+- Earned by the logic that preceded it
+- Emotionally restrained — not inspiring, not instructional
+- Memorable out of context
+- Sometimes absent (not every article earns a strong Echo)
+
+**Quality references (register, not templates):**
+> "The most expensive publication is not the one that received few views. It is the
+> one that never appeared."
+
+> "If presence depends only on the owner's free time, silence eventually becomes
+> part of the strategy — even when nobody chose it."
+
+> "Customers rarely decide to forget a business. They simply stop encountering it."
+
+Generate 3–5 candidates. Select the one that depends on what was said in this specific
+article, not on what Never Blank generally believes.
+
+## CTA Rules
+
+Not every article needs a direct CTA.
+
+When used, a CTA must:
+- Come before the Echo (never after — do not destroy a strong Echo with sales text)
+- Be natural and tied to the specific pattern in the article
+- Vary across articles — do not use the same CTA format in consecutive pieces
+
+**Permitted territory:**
+- Invitation to a visibility audit
+- Invitation to show the current content or presence system
+- Invitation to identify where the system breaks
+- Invitation to request an example
+- Invitation to discuss whether Never Blank fits the business
+
+**Forbidden:**
+- "book a call", "learn more", "buy now", "let us handle your content"
+- "transform your social media", "schedule your free consultation"
+- Any generic call to action that could apply to any service business
+
+## Forbidden Phrases (Auto-Fail)
 
 - cognitive bias
 - mismatch
@@ -168,24 +223,27 @@ The opening line of any Never Blank piece must:
    before they can argue with it
 4. Never start with "In today's…", "It's not about…", "Many founders…",
    "It's a pattern…", or any form of wind-up
+5. Never open with a question
 
 If the first sentence could be removed without losing the core idea, it is the wrong sentence.
 
 ## Platform Differences
 
-**Blog** — full development. Hook → mechanism → cost → implication.
-No resolution. No advice. End with tension, not comfort.
+**Blog** — full development. Hook → observation → recognition → evidence → explanation
+→ reframe → business meaning → echo. No resolution. No advice. End with echo, not comfort.
 
-**LinkedIn** — one observation, one development, one specific implication.
-Short paragraphs. No preamble. Max 3 niche hashtags.
+**LinkedIn** — one observation, recognition, specific implication.
+Short paragraphs. No preamble. Max 3 niche hashtags. CTA only when natural.
 
 **Threads** — 3–5 posts. Each post adds something the previous one didn't.
-Post 1 is the hook. Final post is an implication — not a motivational close.
+Post 1 is the hook. Final post is an Echo — not a motivational close.
 No hashtags. No "bridges must be built."
 
 **Telegram** — signal format. One line observation. One business implication.
 One link. Three lines total. Not a newsletter teaser. Not a summary.
 
 **Instagram** — visual anchor first. One-paragraph observation. Niche hashtags only.
+Make the reader feel the pattern before they understand it.
 
-**Facebook** — same depth as blog but conversational. Can ask a specific question.
+**Facebook** — same depth as blog but conversational. Can include a natural invitation.
+No generic closers.

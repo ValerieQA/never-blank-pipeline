@@ -4,9 +4,13 @@ Spec: docs/EDITORIAL_ENGINE_V2.md, "Story Builder", "Evidence Reveal", "Business
 
 These three modules are merged into one LLM call: they are sequential text-production
 steps operating on the same discovery output with no independent-regeneration value
-between them (unlike Hook Engine or Discovery Builder, which benefit from generating
-candidates and selecting). Python still enforces the constraints the spec assigns to
-each of them individually (see _validate).
+between them. Python still enforces the constraints the spec assigns to each individually.
+
+For the new editorial identity (small business visibility patterns):
+- surviving_explanation becomes Step 5 (Explanation — the mechanism named clearly)
+- reframe is new: Step 6 (challenging the obvious interpretation)
+- business_translation becomes Step 7 (Business and sales meaning — commercial reality)
+- remaining_uncertainty is preserved as an open question or null
 """
 
 import json
@@ -19,73 +23,67 @@ log = get_logger("editorial.story_assembly")
 _SYSTEM_PROMPT = """You are the Story Assembly module for Never Blank (Story Builder +
 Evidence Reveal + Business Translation combined).
 
-Given the Discovery Builder output (first_wrong_explanation, puzzle,
-investigation_sequence, aha_setup) and the Narrative Spine, produce:
+Never Blank investigates patterns that make small businesses visible, recognizable,
+remembered, and commercially present. The reader is a small business owner who must
+recognize their own situation — not study someone else's company.
 
-1. surviving_explanation - the moment it clicked, still in the narrator's first-
-   person investigating voice ("Now I saw it" / "That's when it made sense"),
-   not a third-person analyst's summary ("The evidence suggests..."). This
-   arrives AFTER the aha_setup - the reader already has the answer; this
-   confirms it in 1-3 sentences, evidence-textured (reference what was shown,
-   not "based on the above"). It must be framed as an inference the narrator
-   drew from what was just shown, not a fact stated with more certainty than
-   the evidence supports - avoid phrasing like "X isn't just doing A - it's
-   doing B" stated as settled truth; prefer "which meant X wasn't just A. It
-   was B" as a realization, not a verdict.
+Given the Discovery Builder output and the Narrative Spine, produce four fields:
 
-2. remaining_uncertainty - one sentence naming a genuine open question this
-   investigation could not resolve, framed as an open question rather than a
-   caveat that undercuts the piece. Return null (not a placeholder string) if there
-   is nothing material left open given the provided facts - do not invent a fake
-   uncertainty just to fill the field.
+1. surviving_explanation - the MECHANISM stated clearly after the reader has already
+   arrived at it through the discovery sequence. This is Step 5 (Explanation):
+   - Name WHY this visibility pattern happens specifically
+   - Not "consistency matters" — name the actual mechanism:
+     "non-urgent visibility work is repeatedly displaced by urgent operational work,"
+     "repeated exposure creates recognition before trust, not after,"
+     "silence breaks accumulated familiarity faster than presence builds it"
+   - 2-4 sentences. First-person investigative voice, not analytical summary.
+   - Must be traceable to the discovery sequence provided — do not add new facts.
 
-3. business_translation - what this decision means for a company with nothing to
-   do with this one, facing the same TYPE of structural choice. Must be derived
-   from strategic_objective/business_lesson provided below, not invented. It must
-   also clearly rhyme with narrative_spine - reuse its central image or claim so
-   a reader recognizes the connection, not a generic lesson that happens to be
-   nearby in topic.
+2. reframe - Step 6: a single specific intellectual move that challenges the obvious
+   interpretation of the pattern.
+   - Not a discipline problem — a system-design problem.
+   - Not a lack-of-ideas problem — a continuity problem.
+   - Must be specific to THIS pattern, not a generic reframe about content marketing.
+   - 1-3 sentences. Does not repeat surviving_explanation.
+   - If removed, the article loses something important. If it could appear in any
+     article about content, it is too generic — rewrite.
 
-   LENGTH — ONE MOVE, NOT A RE-EXPLANATION: 1-2 sentences maximum. By this
-   point the reader has already understood the lesson from surviving_
-   explanation - business_translation only needs to make the single move of
-   generalizing it beyond this company. If you find yourself restating what
-   surviving_explanation already established, you are explaining twice; cut
-   the repetition and leave only the generalizing move.
+3. remaining_uncertainty - one sentence naming a genuine open question this
+   investigation could not resolve, framed as an open question rather than a caveat.
+   Return null (not a placeholder string) if there is nothing material left open.
+   Do not invent fake uncertainty just to fill the field.
 
-   HARD REQUIREMENT - reject your own draft if it fails this test: read
-   business_translation with the company name removed. If it would paste
-   unchanged under a headline about a completely different company in a
-   different industry, it is too generic - rewrite it so it depends on the
-   specific narrative_spine and discovery above, not on the general category
-   of decision.
-
-   Banned pattern: "If your company's goal is X, then Y" / "Companies facing
-   Z should consider W" - this formula is what generic AI business advice
-   sounds like, not a lesson earned from this investigation. Bad example (the
-   exact kind of ending to avoid): "If your company's strategic goal is to
-   compete directly with incumbents and expand into regulated markets, it may
-   be necessary to accept higher regulatory burdens." That sentence has
-   nothing in it that required this investigation - delete every word that
-   could apply to any company and see what, if anything, is left.
+4. business_translation - Step 7 (Business and sales meaning): what this visibility
+   pattern means for the business owner's commercial reality.
+   - Connect to: trust, recognition, future buying decisions, referrals, pipeline,
+     sales conversations, future revenue.
+   - NOT a product pitch. NOT generic advice. NOT "companies should..."
+   - Must clearly rhyme with the narrative_spine — reuse its central image or claim.
+   - 1-2 sentences. By this point the reader already understands the lesson;
+     business_translation only makes the commercial consequence explicit.
+   - HARD REQUIREMENT: read it with the pattern removed. If it would paste unchanged
+     under a different article, it is too generic. Rewrite until it depends on this
+     specific pattern and narrative_spine.
+   - Banned pattern: "If your goal is X, then Y" / "Businesses facing Z should consider W"
 
 Rules:
 - Every claim in surviving_explanation must be traceable to the discovery sequence
-  or signal facts provided - do not add new facts.
-- business_translation must not be generic advice; it must fail (be visibly
-  wrong or irrelevant) for at least some real companies - if it applies to
-  every situation, it applies to none.
+  or signal facts provided — do not add new facts.
+- reframe must be specific to this pattern — generic reframes fail.
+- business_translation must not be generic advice; it must depend on the specific
+  narrative_spine above it.
 
 Return ONLY valid JSON:
 {
   "surviving_explanation": "string",
+  "reframe": "string",
   "remaining_uncertainty": "string or null",
   "business_translation": "string"
 }"""
 
 
 def _validate(data: dict) -> dict:
-    for field in ("surviving_explanation", "business_translation"):
+    for field in ("surviving_explanation", "reframe", "business_translation"):
         value = data.get(field, "")
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"Story Assembly: field {field!r} missing or empty in LLM output")
@@ -98,6 +96,7 @@ def _validate(data: dict) -> dict:
 
     return {
         "surviving_explanation": data["surviving_explanation"].strip(),
+        "reframe": data["reframe"].strip(),
         "remaining_uncertainty": uncertainty,
         "business_translation": data["business_translation"].strip(),
     }
@@ -105,7 +104,7 @@ def _validate(data: dict) -> dict:
 
 def assemble_story(discovery: dict, spine: dict, decision_lens: dict, signal: dict) -> dict:
     """
-    Produce surviving_explanation, remaining_uncertainty, and business_translation.
+    Produce surviving_explanation, reframe, remaining_uncertainty, and business_translation.
 
     Raises ValueError if required fields are missing/empty, or remaining_uncertainty
     is present but not a string.

@@ -1,48 +1,43 @@
 # Editorial Engine V2
 ## The Layer That Turns Investigation Into Story
 
-**Version:** v0.1 — Specification Only  
+**Version:** v0.2 — Updated for small-business visibility editorial identity  
 **Branch:** main  
-**Status:** Spec. No code yet.  
-**Depends on:** LERA_OPERATING_SYSTEM.md, EVIDENCE_COLLECTOR_MVP.md
+**Status:** Live  
+**Depends on:** NEVER_BLANK_EDITORIAL_WORLDVIEW.md, LERA_OPERATING_SYSTEM.md, EVIDENCE_COLLECTOR_MVP.md
 
 ---
 
 ## 1. The Problem This Solves
 
-The Investigation Layer (Curiosity Engine + Evidence Collector + Decision Lens) produces an excellent internal document.
+The Investigation Layer (Curiosity Engine + Evidence Collector + Decision Lens) produces
+an excellent internal document. Nobody should ever read it.
 
-Nobody should ever read it.
+It is dry by design. It names hypotheses, evidence statuses, unknown reasons, and surviving
+conclusions. Its job is to be correct.
 
-It is dry by design. It names hypotheses, evidence statuses, unknown reasons, and surviving conclusions. It does not care if you finish reading it. Its job is to be correct.
-
-The Editorial Engine has a different job: **make a person choose to read the next sentence.**
+The Editorial Engine has a different job: **make a small business owner recognize their own
+situation in the next sentence.**
 
 These are not the same job. They must never be the same module.
-
-**What went wrong before V2:**
-
-```
-Investigation Output → Article
-```
-
-The system collapsed two distinct responsibilities into one output. The result was structurally correct analysis with no reason to read it. The investigation answered "what is true." The article never answered "why should I care right now."
 
 **The fix:**
 
 ```
-Investigation Output
+Investigation Output (visibility/presence pattern signals)
       ↓
 Decision Lens
       ↓
 Narrative Spine          ← establishes what the article is actually about
       ↓
-Editorial Engine (6 modules)
+Editorial Engine (7 modules)
       ↓
-Article
+Article (9-step reader-facing arc)
 ```
 
-The Editorial Engine receives `investigation_evidence_report`, Decision Lens output, and the Narrative Spine. It does not re-investigate. It does not add conclusions. It takes what the investigation found and builds a path for a reader through it — toward the Spine.
+The Editorial Engine receives `investigation_evidence_report`, Decision Lens output, and the
+Narrative Spine. It does not re-investigate. It takes what the investigation found and builds
+a path for a reader through it — toward the moment of recognition.
 
 See: [NARRATIVE_SPINE.md](NARRATIVE_SPINE.md)
 
@@ -52,24 +47,23 @@ See: [NARRATIVE_SPINE.md](NARRATIVE_SPINE.md)
 
 From `narrative_spine` (NARRATIVE_SPINE.md — run before any module):
 
-- `core_decision` — the underlying decision the article investigates
+- `core_decision` — the underlying pattern the article investigates
 - `narrative_spine` — the one sentence the article is built to earn
 - `target_feeling` — the emotional register the last line must produce
-- `company_as_evidence_of` — what the company proves, not what it did
+- `pattern_as_evidence_of` — what the pattern proves, not merely what it describes
 
 From `investigation_evidence_report`:
 
 - `safe_conclusions` — what can be stated with evidence
 - `blocked_conclusions` — what cannot be stated as fact
 - `hypothesis_history` — which explanations were tested and eliminated
-- `inferences` — what was concluded from evidence, with motive_status labels
+- `inferences` — what was concluded from evidence, with confidence labels
 - `remaining_uncertainty` — what is still unknown, and whether it changes the conclusion
-- `timeline` — reconstructed sequence of prior decisions
 
 From Decision Lens (upstream):
 
-- `decision` — the core business decision being examined
-- `business_lesson` — what this decision reveals about organizational logic
+- `decision` — the core pattern being examined
+- `business_lesson` — what this pattern reveals about small business visibility
 - `never_blank_insight` — the specific observation that is non-obvious
 
 **The Editorial Engine may not:**
@@ -77,574 +71,326 @@ From Decision Lens (upstream):
 - Add conclusions not present in `safe_conclusions`
 - Upgrade an `inferred` finding to a stated fact
 - Drop `remaining_uncertainty` items where `would_change_conclusion_if_resolved: true`
-- Invent context about the company not present in the signal or investigation
+- Invent statistics, customer histories, or private business data not present in research inputs
 
 ---
 
-## 3. The Six Modules
-
-### Module 1 — Hook Engine
-
-**Question:** Why would a person stop scrolling for this?
-
-Not: "How do I start elegantly?"  
-But: "What is the thing in this investigation that a reader would not expect?"
-
-The Hook Engine generates **5–7 candidate hooks** before selecting one. A single hook generated first is almost never the strongest one.
-
-**Hook types to generate across:**
-
-| Type | What it does | Example frame |
-|---|---|---|
-| `contradiction` | States something that seems wrong but is true | "Getty wasn't losing. That's what makes the deal interesting." |
-| `invisible_signal` | Names something everyone saw but nobody read correctly | "Everyone noticed the partnership. Almost nobody noticed what Getty stopped trying to win." |
-| `surprising_question` | Opens with the question the investigation answered | "What does a copyright lawsuit cost when AI is rewriting the market faster than courts move?" |
-| `wrong_consensus` | Names the incorrect interpretation the market held | "The press called it a retreat. The CEO's exact words suggest the opposite." |
-| `hidden_decision` | Reveals that the visible event was not the actual decision | "The deal with OpenAI wasn't the decision. The decision was made in 2022, when Getty banned AI uploads from its own platform." |
-| `false_narrative` | Dismantles the frame before establishing the real one | "Getty didn't stop suing because it lost. It stopped because winning the wrong war is still losing." |
-
-**Selection rule:** Choose the hook that names something the reader would not have derived from the headline alone. If the hook could be written without reading the investigation, it is wrong.
-
-**The hook must not summarize.** It must create a gap — something the reader does not yet know how to resolve.
-
----
-
-### Module 2 — Reader Context
-
-**Question:** Does the reader know what this company fundamentally does — and does the Hook work without knowing?
-
-Reader Context is **mandatory** unless the company is universally recognizable.
-
-Universally recognizable means: Apple, Microsoft, Google, Amazon, Meta, Tesla, Toyota, Samsung — companies where any adult in any country would immediately understand the business without explanation. Everything else requires Reader Context.
-
-**Placement — this is determined by the Hook, not by the company:**
-
-**Hook-first** (default): The Hook works without knowing the company. Reader Context follows immediately after.
-```
-Hook
-↓
-Reader Context
-↓
-Discovery
-```
-> *Getty filed one of the biggest copyright suits in AI history. Then it partnered with the defendant.*
-> *Getty Images licenses photographs and video to media companies and advertisers worldwide.*
-
-The hook lands on its own. Context arrives to make the next paragraph make sense.
-
-**Context-first**: The Hook is impossible to understand without knowing what the company does.
-```
-Reader Context
-↓
-Hook
-↓
-Discovery
-```
-> *Polymarket operates a prediction market where users trade on real-world event outcomes.*
-> *For three years, it blocked US users. Then it quietly reopened. The press couldn't explain why now.*
-
-Without the first sentence, "Polymarket blocked US users" has no weight. The reader doesn't know why they should care.
-
-The test: read only the Hook. If a reader unfamiliar with the company would understand why it matters — Hook-first. If not — Context-first.
-
-**Rules:**
-- One sentence. Maximum 10–20 words.
-- Describe only what the company fundamentally does.
-- Never include analysis, opinion, or anything about the current story.
-- Never summarize what happened.
-
-**Format:**
-```
-[Company] [does what] [for whom / in what context].
-```
-
-**Examples:**
-
-> Polymarket operates a prediction market where users trade on real-world event outcomes.
-
-> Getty Images licenses photographs and video to media companies and advertisers worldwide.
-
-> Lucid Motors builds premium electric vehicles focused on maximum driving range.
-
-> Stability AI develops open-source generative AI models for image and text creation.
-
-One sentence. What the company does. Nothing else.
-
----
-
-### Module 3 — Discovery Builder
-
-**Question:** How does the reader experience the moment of discovery — not the conclusion?
-
-The Discovery Builder constructs the investigation experience for the reader. Its job is not to deliver the surviving explanation — it is to make the reader arrive at it themselves, one step ahead of the article confirming it.
-
-The difference from Story Builder is the voice:
-
-- Story Builder: *Here is the correct interpretation.*
-- Discovery Builder: *Here is why I stopped believing the first interpretation.*
-
-The reader is not a student receiving analysis. They are a co-investigator watching the obvious explanation break.
-
-**The four beats:**
-
-**Beat 1 — The First Wrong Explanation**
-
-Name the interpretation everyone held, including the narrator, before the investigation.
-
-Not a straw man. Not "critics said." The actual obvious conclusion.
-
-> *I thought Getty had blinked.*
-
-This is the starting position. The reader holds it too.
-
-**Beat 2 — The Puzzle**
-
-One specific fact that does not fit the first explanation. Not a "crack" — a contradiction.
-
-A crack invites qualification. A contradiction forces a new explanation.
-
-> *Except the lawsuit wasn't dropped. It's still active. A company that ran out of options doesn't keep the case open.*
-
-The reader stops. The first explanation no longer holds. They don't yet have a replacement.
-
-**Beat 3 — Investigation Reveal**
-
-Walk through the evidence in the order it narrowed the space. Not conclusion-first. Sequence-first.
-
-Each piece of evidence eliminates one possible explanation. The reader watches the field narrow.
-
-> *So I went back to the timeline.*  
-> *Getty banned AI-generated images from its own platform — September 2022.*  
-> *The lawsuit came after.*  
-> *The deal came after the lawsuit.*  
-> *That's not the sequence of a company reacting. It's the sequence of a company setting terms.*
-
-The surviving explanation is not stated here. The reader can see it forming.
-
-**Beat 4 — The Aha**
-
-The moment the reader's model flips. The article does not announce it. The article presents the last piece of evidence, and the reader arrives one sentence ahead of the text.
-
-> *Here's what the CEO said when the deal closed:*  
-> *"We want to be part of the solution, not just the opposition."*  
-> *Companies that run out of options don't frame themselves as having previously been the opposition.*
-
-The article does not then say "therefore Getty planned this." The reader already knows.
-
-**Rules:**
-
-The first explanation must be one the reader genuinely held — not a weak position set up to be knocked down.
-
-The puzzle must be a single fact, not a list of concerns. One contradiction is stronger than five doubts.
-
-The investigation reveal must show sequence, not summary. "The timeline shows X" is summary. "First this happened. Then this. Then this." is sequence.
-
-The Aha must arrive before the article states the conclusion. If the article has to explain the Aha, the Aha didn't land.
-
-**What Discovery Builder receives:**
-
-- `hook` — from Hook Engine
-- `hypothesis_history` — which explanations were contradicted and why
-- `narrative_spine` — the conclusion the reader is being built toward
-- `contradicted_hypotheses` — the first wrong explanation and the specific fact that broke it
-- `safe_conclusions` — the evidence sequence
-
-**What Discovery Builder returns:**
-
-- `first_wrong_explanation` — the obvious interpretation, stated directly
-- `puzzle` — the single fact that breaks it
-- `investigation_sequence` — ordered evidence beats (3–5 items)
-- `aha_setup` — the last piece of evidence before the reader flips, without stating the conclusion
-
----
-
-### Module 4 — Story Builder
-
-**Question:** In what order should the full article be assembled?
-
-The Story Builder receives Discovery Builder output and assembles the complete article sequence. Its job is to place the discovery experience within the full arc — what comes before it, and what comes after.
-
-**Full article sequence:**
+## 3. The Nine-Step Reader-Facing Arc
+
+Every article moves through this arc. Steps may be compressed or implied, but none may be
+inverted. The reader must arrive at recognition before they receive explanation, and they must
+receive the Echo before a CTA (if one is used at all).
 
 ```
 1. Hook
-2. Context (0–2 sentences, or skip)
-3. Discovery Builder output
-   a. First wrong explanation
-   b. Puzzle
-   c. Investigation reveal
-   d. Aha setup
-4. Surviving explanation (stated — reader already has it)
-5. Remaining uncertainty (if would_change_conclusion_if_resolved = true)
-6. Business meaning — what this decision reveals beyond this company
-7. Never Blank line
+2. Observation
+3. Recognition
+4. Evidence / specific pattern
+5. Explanation
+6. Reframe
+7. Business and sales meaning
+8. Echo
+9. Natural invitation (when appropriate — not every article)
 ```
 
-**Story Builder decisions:**
+### Step 1 — Hook
 
-- Whether to include Reader Context (Module 2) before or after the hook
-- How much of `hypothesis_history` to surface explicitly vs. let inform framing
-- Where to place `remaining_uncertainty` — before or after surviving explanation
-- Length: which beats to compress and which to expand
+Expose a contradiction, hidden cost, invisible pattern, or uncomfortable truth.
 
-**Rule:** The surviving explanation (step 4) arrives after the Aha setup. The reader has the answer. The article confirms it.
+The Hook must NOT merely summarize the article. It must create immediate tension.
+The reader should feel it is true before they can argue with it.
 
-**Rule:** `blocked_conclusions` cannot appear as narrative beats. They can only shape what is *not* claimed.
+**Forbidden openings:** "In today's...", "It's not about...", "Many founders...",
+"It's a pattern...", "At the core of...", any wind-up phrase, any question.
+
+**Target territory:**
+- "The most expensive post may be the one that never appeared."
+- "Good businesses rarely disappear in one day."
+- "Your customers do not know that you are busy. They only know that you went silent."
+- "A business can be successful and still be gradually forgotten."
+
+If the first sentence could be removed without losing the core idea — it is the wrong sentence.
+
+### Step 2 — Observation
+
+Name the external business pattern being investigated.
+
+Avoid leading with "I researched / I analyzed / I looked at." Prefer the finding over narration
+about the act of researching. The observation must be something a reader can picture happening
+in the world, not a methodological statement.
+
+### Step 3 — Recognition
+
+Connect the pattern to the lived reality of the reader. Show situations like:
+
+- client work defeating content work in the same week
+- publishing stopping during busy periods without a conscious decision to stop
+- competitors remaining visible despite not being better
+- clients going quiet between projects and then using someone else
+
+The reader should feel seen, not lectured. The recognition step is where the reader thinks
+"this is about my business."
+
+### Step 4 — Evidence or specific pattern
+
+Concrete research finding, contradiction, sequence, or sourced observation.
+
+Never fabricate volume, customer history, or private data. Use permitted formulations:
+- "this pattern appeared repeatedly in the businesses examined"
+- "the available research points to the same recurring failure"
+- "the evidence suggests"
+
+### Step 5 — Explanation
+
+Explain the mechanism. Not just "consistency matters." Examples of strong explanation:
+
+- non-urgent visibility work is repeatedly displaced by urgent operational work
+- repeated exposure creates recognition, not the other way around
+- recognition lowers the cognitive cost of trust
+- silence breaks accumulated familiarity faster than presence builds it
+
+### Step 6 — Reframe
+
+Challenge the obvious explanation. This is the intellectual move that distinguishes
+Never Blank from advice columns.
+
+Not a discipline problem — a system-design problem.
+Not a lack-of-ideas problem — a continuity problem.
+Not a marketing problem — a structural presence problem.
+
+Do not repeat the same reframe every article. The reframe must be earned by the specific
+pattern being investigated.
+
+### Step 7 — Business and sales meaning
+
+Connect visibility to commercial reality: trust, recognition, future buying decisions,
+referrals, pipeline, sales conversations.
+
+Not a product pitch. Not generic advice. The commercial consequence of the specific
+pattern described in this article.
+
+### Step 8 — Echo
+
+A distinct final thought designed to remain in the reader's mind.
+
+The Echo is the core Never Blank editorial device. It is NOT:
+- a summary of the article
+- a slogan pasted onto every article
+- a generic motivational quote
+- always a CTA
+- always the phrase "Never Blank"
+
+**Generate 3–5 candidate Echoes internally. Select the one that is:**
+- specific to this article's pattern and argument
+- earned by the logic that preceded it
+- emotionally restrained (not inspirational, not instructional)
+- memorable and works out of context
+- not generic enough to paste under a different article unchanged
+
+**Quality references (do NOT hardcode — treat as examples of register):**
+- "The most expensive publication is not the one that received few views. It is the one
+  that never appeared."
+- "If presence depends only on the owner's free time, silence eventually becomes part of
+  the strategy — even when nobody chose it."
+- "Customers rarely decide to forget a business. They simply stop encountering it."
+
+Every second article should normally contain a strong Echo. More often when naturally earned,
+but never formulaic. An Echo can be omitted when no strong candidate emerged.
+
+### Step 9 — Natural invitation (optional)
+
+Not every article needs a direct CTA. When used:
+
+- Place before the Echo or integrate before it — do not destroy a strong Echo with generic
+  sales text appended after it
+- Vary the type across articles
+- Never use: "book a call", "learn more", "buy now", "let us handle your content",
+  "transform your social media"
+
+**CTA types to rotate:**
+- invitation to a visibility audit
+- invitation to show the current content or presence system
+- invitation to identify where the system breaks
+- invitation to request an example
+- invitation to discuss whether Never Blank fits the business
 
 ---
 
-### Module 4 — Evidence Reveal
+## 4. The Seven Modules
 
-**Question:** How does the reader experience the evidence without reading a research report?
+### Module 1 — Hook Engine
 
-The Evidence Reveal module takes `safe_conclusions` and `hypothesis_history` and transforms them into the texture of the story — not a footnote, not a citation, but the moment when the reader sees why the conclusion holds.
+Generates 5–7 candidate hooks across distinct types, then selects the one that names
+something a reader would not have derived from the signal alone.
 
-**Wrong approach (pre-V2):**
-> Getty's CEO stated that the company wanted to be "part of the solution." This is consistent with a deliberate strategic pivot rather than a forced capitulation.
+Hook types for visibility/presence patterns:
 
-This is an analyst memo. It states the evidence and draws the conclusion in the same sentence.
-
-**Right approach:**
-> Here's what Getty's CEO actually said at the time:  
-> *"We want to be part of the solution, not just the opposition."*  
-> That's not the language of a company that ran out of options.
-
-The evidence lands first. The reader draws the conclusion. Then the article confirms it.
-
-**Techniques:**
-
-| Technique | When to use |
+| Type | What it does |
 |---|---|
-| Direct quote with attribution | When `motive_status = stated` — the source said it explicitly |
-| Behavioral evidence | When action reveals more than statement ("Getty banned AI uploads from its own platform") |
-| Eliminated alternative | When a `contradicted_hypothesis` makes the surviving explanation stronger ("The lawsuit wasn't lost — the case was still active") |
-| Explicit uncertainty | When `remaining_uncertainty.would_change_conclusion_if_resolved = true` — must surface, not omit |
+| `hidden_cost` | Names what the silence or absence is actually costing, in commercial terms |
+| `invisible_pattern` | Names something the reader does regularly without realizing its effect |
+| `false_comfort` | States a belief the reader holds that the evidence contradicts |
+| `timing_contradiction` | Exposes that the pattern happens at exactly the wrong moment |
+| `recognition_gap` | Names the gap between what the business does and what is visible outside |
+| `accumulated_effect` | Reveals that small repeated absences compound into a large problem |
 
-**Rule:** Every piece of evidence in the article must trace back to a `safe_conclusion` or `inference` in the investigation report. The Editorial Engine does not generate evidence. It reveals what was already found.
+Selection rule: choose the hook that makes a business owner stop and feel recognized.
+If the hook could have been written by a generic content marketer — it is wrong.
 
----
+### Module 2 — Reader Context
 
-### Module 5 — Business Translation
+In the new editorial identity, Reader Context is used sparingly. Small business visibility
+patterns do not require explaining what a company does — the reader IS the company.
 
-**Question:** What does this decision mean for a company that has nothing to do with Getty or AI?
+Use Reader Context only when the article draws on a specific research source, named business
+sector, or documented precedent that requires 1–2 sentences of grounding before the pattern
+can land.
 
-This is the layer that gives Never Blank its universal value. The investigation is about one company. The business lesson must work for any company facing the same structural choice.
+When used: one sentence maximum. Describe the research context, not the company.
 
-**The translation question:**
-> "If I run a company in a different industry facing the same type of decision, what does this tell me?"
+### Module 3 — Discovery Builder
 
-**Translation types:**
+Constructs the reader's experience of encountering the pattern.
 
-| Type | Frame |
-|---|---|
-| Resource allocation | When to own vs. partner vs. litigate vs. wait |
-| Timing logic | When moving first loses and when waiting costs more than acting |
-| Narrative vs. reality | When the public explanation and the strategic logic diverge |
-| Protected priority | What a company was unwilling to trade, and what that reveals |
-| Cost transfer | Who ends up paying for the decision, and why it was designed that way |
+The four beats (adapted for visibility/presence patterns):
 
-**Rules:**
-- The lesson must be specific enough to be actionable, not generic enough to apply to everything
-- "Companies should think long-term" is not a business lesson — it is a platitude
-- The lesson must be derived from the `decision` field in Decision Lens output — not invented by the Editorial Engine
-- The lesson should fail for at least some companies — if it applies to every situation, it applies to none
+**Beat 1 — The Observation**
+Name the pattern externally. Not as advice. Not as analysis. As something observable.
 
-**Getty example — wrong:**
-> Businesses facing disruption should consider partnering with the disruptors.
+**Beat 2 — The Recognition Moment**
+One specific situation that the reader will recognize from their own experience.
+Not a generalization. A specific moment: "the Monday after a project closes."
 
-**Getty example — right:**
-> The moment a lawsuit stops being about winning and starts being about delaying, the deal was always going to happen. The only question is the price. Getty moved while the price was still high.
+**Beat 3 — Evidence Sequence**
+The research or observation sequence that confirms the pattern is not random.
+Show the mechanism forming, not the conclusion.
 
----
+**Beat 4 — The Explanation Lands**
+The moment the mechanism becomes clear. The reader understands why this happens,
+not just that it happens.
 
-### Module 6 — Never Blank Voice
+### Module 4 — Story Assembly (Story Builder + Evidence Reveal + Business Translation)
 
-**Question:** Does this sound like Never Blank?
+Assembles the full article sequence from discovery output.
 
-This is the final pass. It does not add content. It checks that the content that exists has the qualities that distinguish Never Blank from analytical content that happens to be well-written.
+Produces:
+- `surviving_explanation` — the mechanism stated clearly after the reader has already arrived at it
+- `reframe` — the specific intellectual move that reframes the obvious explanation
+- `remaining_uncertainty` — genuine open question, or null
+- `business_translation` — commercial reality connection: what this pattern means for pipeline,
+  trust, future sales conversations
 
-**Checklist — the article must have:**
+### Module 5 — Evidence Reveal
 
-- [ ] A hook that creates a gap in the first 1–3 sentences
-- [ ] At least one moment where the reader encounters something they didn't expect
-- [ ] A point where tension is introduced and a point where it resolves
-- [ ] A business lesson specific enough to be wrong for some companies
-- [ ] A Never Blank signature line that doesn't repeat the headline
-- [ ] An ending stronger than the opening — the last sentence must earn its place
+Transforms research findings into the texture of the article.
+Not a citation. Not a footnote. The moment the reader encounters why the pattern is real.
 
-**Checklist — the article must not have:**
+Every claim must trace back to a `safe_conclusion` or `inference` in the investigation report.
+The Editorial Engine does not generate evidence. It reveals what was already found.
 
-- [ ] Generic advice ("companies should be strategic about...")
-- [ ] A conclusion in the first paragraph
-- [ ] Evidence presented without the reader experiencing its weight
-- [ ] A summary at the end that repeats what was already said
-- [ ] The word "pivoted" used without irony
-- [ ] A business lesson that could have been written without reading the investigation
+### Module 6 — Never Blank Voice (Echo + CTA generation)
 
-**Never Blank Voice characteristics:**
+Final pass. Generates:
 
-*Precision over volume.* One specific observation is worth more than three general ones.
+1. **Echo** — 3–5 candidates, selects the one most specific to this article's argument.
+   Can return null if no strong candidate emerged (do not force an Echo into every article).
 
-*Tension before resolution.* The reader should not know where the article is going until they're almost there.
+2. **CTA** — optional natural invitation. Null if this article does not warrant one.
+   When non-null, must be specific to the pattern in this article, not a generic sales line.
 
-*Evidence before conclusion.* Show the crack in the obvious interpretation before naming the real one.
+3. **Checklist self-assessment** — all items must pass before the article is final.
 
-*The non-obvious is the product.* If a reader could have written this paragraph from the headline alone, the paragraph should not exist.
-
-*The signature line is not a summary.* It is an observation that lingers. It should work out of context.
-
-**Signature line format:**
-```
-Never Blank — [one observation that reframes the signal]
-```
-
-Not: "Never Blank — the signal is rarely the event itself." (generic)  
-But: "Never Blank — Getty didn't stop suing because it lost. It stopped because winning the wrong war is still losing." (specific, derived from this investigation)
-
----
+Checklist items:
+- [ ] Hook creates gap in first 1–3 sentences
+- [ ] Article contains a Recognition moment where reader sees their own situation
+- [ ] Evidence is traceable — no invented facts
+- [ ] Reframe challenges the obvious explanation with a specific alternative
+- [ ] Business meaning connects to commercial reality, not to abstract visibility concepts
+- [ ] Echo (if present) is specific to this article and not generic
+- [ ] CTA (if present) matches one of the permitted types and does not follow the Echo
 
 ### Module 7 — Platform Composer
 
-**Each platform has one job:**
-- Blog — prove it.
-- Telegram — tell it.
-- LinkedIn / Facebook — explain it.
-- Instagram — make them feel it.
-- Threads — leave a thought that lives on its own.
+Each platform has one job:
+- Blog — prove the pattern with full evidence arc
+- Telegram — tell the pattern as a narrative
+- LinkedIn / Facebook — create the recognition moment in a feed
+- Instagram — make the reader feel the pattern before they understand it
+- Threads — leave one thought that lives on its own
 
+See the per-block table in Section 5 for format-specific behavior.
 
+---
 
-**Question:** How does each platform's reading behavior change what the article needs to do?
+## 5. Block Table (Platform Composer)
 
-The Platform Composer is not a text editor. It does not receive an article and cut sentences. It receives a structured JSON of named blocks from Never Blank Voice and produces five platform-specific versions — each optimized for how that audience actually reads, not just for length.
-
-Word count is a consequence of reading behavior. It is not the target.
-
-**The core principle:** Preserve every cognitive step. Compress only exposition. Optimize for reading behavior.
-
-The invariant across all five formats:
-- Narrative Spine — identical in every version
-- Hook — present in every version
-- Discovery moment — present in every version
-- Aha moment — present in every version
-- Never Blank signature — present in every version
-
-Only investigation depth changes between formats. The business insight must remain identical.
-
-**What the Platform Composer receives:**
-
-Never Blank Voice outputs a structured article object — not a flat body string:
-
-```json
-{
-  "signal_id": "string",
-  "narrative_spine": "string",
-  "hook": "string",
-  "reader_context": "string | null",
-  "discovery": {
-    "first_wrong_explanation": "string",
-    "puzzle": "string",
-    "investigation_sequence": ["string"],
-    "aha_setup": "string"
-  },
-  "surviving_explanation": "string",
-  "remaining_uncertainty": "string | null",
-  "business_translation": "string",
-  "signature": "string"
-}
-```
-
-**Format → platform mapping:**
-
-| Format | Platforms | Words | Reading behavior |
-|---|---|---|---|
-| Long | Blog | 700–1000 | Reads at a desk. Wants full evidence, timeline, uncertainty. |
-| Reading | Telegram | 350–600 | Reads the whole thing. Wants narrative and discovery, not evidence density. |
-| Medium | LinkedIn, Facebook | 120–220 | Reads in a feed. Needs a complete standalone arc: Hook → Discovery → Aha → Lesson → Signature. |
-| Instagram | Instagram | 80–150 | Reads on a phone, one screen at a time. Shorter paragraphs, stronger rhythm, one dominant insight. Not a shortened LinkedIn post. |
-| Short | Threads | 40–80 | Reads one idea. Hook or Spine only. Does not summarize the investigation. |
-
-**Per-block behavior by format:**
+Blocks in the structured article object, with behavior per format:
 
 | Block | Long | Reading | Medium | Instagram | Short |
 |---|---|---|---|---|---|
 | `hook` | full | full | compressed | compressed | compressed |
 | `reader_context` | full | skip | skip | skip | skip |
-| `discovery.first_wrong_explanation` | full | full | compressed | compressed | skip |
-| `discovery.puzzle` | full | full | compressed | compressed | skip |
-| `discovery.investigation_sequence` | full | compressed | skip | skip | skip |
-| `discovery.aha_setup` | full | full | compressed | compressed | skip |
-| `surviving_explanation` | full | compressed | skip | skip | skip |
-| `remaining_uncertainty` | full | skip | skip | skip | skip |
-| `business_translation` | full | compressed | compressed | skip | skip |
-| `signature` | full | full | full | full | full |
+| `observation` | full | full | compressed | compressed | skip |
+| `recognition` | full | full | compressed | compressed | skip |
+| `evidence_pattern` | full | compressed | compressed | skip | skip |
+| `explanation` | full | full | compressed | skip | skip |
+| `reframe` | full | compressed | compressed | skip | skip |
+| `business_meaning` | full | compressed | compressed | skip | skip |
+| `echo` | full | full | full | full | full |
+| `cta` | full | full | compressed | skip | skip |
 
 `skip` — block is omitted entirely.
-`compressed` — block is present, reduced to its cognitive minimum. Never summarized, never merged.
+`compressed` — block is present, reduced to its cognitive minimum. Never summarized.
 `full` — block appears as written by Never Blank Voice.
 
-**Format-specific constraints:**
-
-*Reading (Telegram):* Preserve the narrative arc. Remove evidence citations and analytical qualifications that slow reading pace. A reader should feel the investigation without cataloguing the evidence. Target: readable in 2–4 minutes without stopping.
-
-*Medium (LinkedIn, Facebook):* Must be a complete standalone text. A reader who has never heard of the company must reach the Aha and the Spine without needing the Long version. No dangling references to evidence not present in this version.
-
-*Instagram:* Instagram is the most literary format in the system. Its job is not to explain the investigation — it is to make the reader feel the moment the first explanation broke.
-
-No analysis. No qualifications. No stacked facts. Only the emotional sequence: something was true, then one thing changed, then nothing was the same.
-
-Rules for Instagram:
-- Keep the Hook — compressed to its sharpest form.
-- Keep the moment the first explanation broke — not as analysis, as sensation.
-- Keep the Aha — as implication, not as statement.
-- Keep the Narrative Spine — the one sentence the post is built to earn.
-- One idea per paragraph. Blank lines are part of the storytelling.
-- Prefer movement and implication over fact and qualification.
-- Never name a statistic unless it is the puzzle itself.
-- Never write a sentence that could appear in a LinkedIn post.
-
-The reader should finish thinking: *I just realized something* — not *I just read an analysis.*
-
-The investigation is the source. It is not the content.
-
-*Short (Threads):* One idea. Either the Hook that opens the gap, or the Spine that closes it. Does not attempt to compress the investigation into 60 words — that produces summaries, not insights.
-
-**The rule for compressing a block:**
-
-Remove sentences that explain what the previous sentence already showed. Do not remove sentences that move the reader to the next cognitive position.
-
-Wrong compression of `discovery.investigation_sequence` for Reading:
-> Getty's timeline shows a deliberate strategy: ban, then lawsuit, then partnership.
-
-That is a summary. The sequence is gone.
-
-Right compression:
-> Ban first. Then lawsuit. Then partnership. That sequence only makes sense one way.
-
-Same cognitive move. Half the words.
-
-**Output format:**
-
-```json
-{
-  "signal_id": "string",
-  "narrative_spine": "string — identical across all formats",
-  "long":      { "word_count": 0, "body": "string" },
-  "reading":   { "word_count": 0, "body": "string" },
-  "medium":    { "word_count": 0, "body": "string" },
-  "instagram": { "word_count": 0, "body": "string" },
-  "short":     { "word_count": 0, "body": "string" }
-}
-```
-
-The Platform Composer does not rewrite the article. It selects blocks, applies format-specific constraints, and assembles. The investigation and the insight are the same in every version.
-
 ---
 
-## 4. The Full Flow
-
-```
-investigation_evidence_report
-          +
-    Decision Lens output
-          ↓
-  ┌───────────────────┐
-  │  Narrative Spine  │  → core_decision + spine sentence + target_feeling
-  └───────────────────┘
-          ↓
-  ┌───────────────────┐
-  │   Hook Engine     │  → 5–7 candidates → select hook that earns the Spine
-  └───────────────────┘
-          ↓
-  ┌───────────────────┐
-  │  Reader Context   │  → 0–2 sentences (or skip)
-  └───────────────────┘
-          ↓
-  ┌───────────────────────────┐
-  │    Discovery Builder      │  → first wrong explanation → puzzle →
-  │                           │    investigation reveal → aha setup
-  └───────────────────────────┘
-          ↓
-  ┌───────────────────┐
-  │  Story Builder    │  → assembles full article sequence around discovery
-  └───────────────────┘
-          ↓
-  ┌───────────────────┐
-  │  Evidence Reveal  │  → transform findings into texture
-  └───────────────────┘
-          ↓
-  ┌───────────────────┐
-  │Business Translation│ → translates the Spine into universal terms
-  └───────────────────┘
-          ↓
-  ┌───────────────────┐
-  │ Never Blank Voice │  → checks article earns the Spine by the last line
-  └───────────────────┘
-          ↓
-  ┌───────────────────┐
-  │Platform Composer │  → 5 formats, optimized by reading behavior
-  └───────────────────┘
-          ↓
-  Long (blog) / Reading (Telegram) / Medium (LinkedIn+FB) / Instagram / Short (Threads)
-```
-
----
-
-## 5. What Each Module Receives and Returns
+## 6. What Each Module Receives and Returns
 
 | Module | Receives | Returns |
 |---|---|---|
-| Narrative Spine | Decision Lens output (core_decision + strategic_objective) | narrative_spine, target_feeling, company_as_evidence_of |
+| Narrative Spine | Decision Lens output | narrative_spine, target_feeling, pattern_as_evidence_of |
 | Hook Engine | safe_conclusions, narrative_spine, never_blank_insight | hook_candidates[], selected_hook |
-| Reader Context | headline, company name, signal type | context_line (string or null) |
-| Discovery Builder | hook, hypothesis_history, contradicted_hypotheses, safe_conclusions, narrative_spine | first_wrong_explanation, puzzle, investigation_sequence[], aha_setup |
-| Story Builder | discovery_builder output, remaining_uncertainty, business_lesson, narrative_spine | full_article_sequence[] |
-| Evidence Reveal | full_article_sequence, safe_conclusions, inferences, hypothesis_history | article_body (draft) |
-| Business Translation | narrative_spine, business_lesson, article_body | article_body + lesson_paragraph |
-| Never Blank Voice | article_body (complete), narrative_spine, target_feeling | structured_article (hook, discovery, aha, business_translation, signature, …), checklist_pass (bool) |
+| Reader Context | signal type, research domain | context_line (string or null) |
+| Discovery Builder | hook, hypothesis_history, safe_conclusions, narrative_spine | observation, recognition, evidence_sequence[], explanation_setup |
+| Story Assembly | discovery output, spine, decision_lens, signal | surviving_explanation, reframe, remaining_uncertainty, business_translation |
+| Never Blank Voice | complete article blocks, spine | echo (string or null), cta (string or null), checklist_pass, structured_article |
 | Platform Composer | structured_article JSON | long / reading / medium / instagram / short |
 
 ---
 
-## 6. Quality Gates
+## 7. Quality Gates
 
 The Editorial Engine may not produce a final article if:
 
-1. `Hook Engine` selected a hook that could have been written from the headline alone
-2. `Discovery Builder` first_wrong_explanation is a straw man — an interpretation nobody actually held
-3. `Discovery Builder` puzzle is a list of doubts rather than a single contradiction
-4. `Discovery Builder` Aha is stated by the article rather than arrived at by the reader
-5. `Evidence Reveal` contains a claim not traceable to `safe_conclusions`
-6. `Business Translation` lesson applies to all companies without qualification
-7. `Never Blank Voice` checklist has any item marked false
-8. `remaining_uncertainty` item with `would_change_conclusion_if_resolved: true` was omitted from the article
-9. `Platform Composer` Medium or Short removed the puzzle or the Aha setup
+1. Hook Engine selected a hook that could have been written without reading the investigation
+2. Discovery Builder Recognition moment is generic rather than a specific, recognizable situation
+3. Evidence Reveal contains a claim not traceable to `safe_conclusions`
+4. Story Assembly Reframe is not specific to this pattern (applies to any business article)
+5. Never Blank Voice Echo (if present) is generic enough to appear in a different article
+6. CTA (if present) uses any of the forbidden phrases
+7. Checklist has any item marked false
 
 If any gate fails, the module returns to the relevant stage — not to the beginning.
 
 ---
 
-## 7. Relationship to Investigation Layer
+## 8. Relationship to Investigation Layer
 
 The Editorial Engine is downstream. It cannot:
-
 - Send signals back to the Investigation Layer
 - Request additional research
 - Override evidence status in the investigation report
 - Omit material uncertainty to produce a cleaner narrative
 
 It can:
-
-- Choose which `safe_conclusions` to foreground and which to leave implicit
-- Select the strongest hook from multiple candidates
-- Shape the order of revelation to maximize reader engagement
+- Choose which `safe_conclusions` to foreground
+- Shape the Recognition moment to match the reader's likely experience
 - Frame `remaining_uncertainty` as an open question rather than a caveat
 
-The investigation determines what is true.  
+The investigation determines what is true about the pattern.
 The Editorial Engine determines how the reader encounters it.
-
-These are different skills. Both are required.
 
 ---
 
-*Implementation follows specification approval.*
+*The reader is the central character. The article succeeds when they recognize themselves.*

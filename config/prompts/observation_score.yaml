@@ -1,8 +1,9 @@
 name: observation_score
 status: ready
 purpose: >
-  Score a single observation on non-obviousness and specificity.
+  Score a single observation on non-obviousness, specificity, and visibility relevance.
   Used to rank observations before adding them to the topic queue.
+  Prioritizes observations about small business visibility, presence, and recognition patterns.
 
 input_schema:
   statement:
@@ -23,9 +24,18 @@ output_schema:
     specificity_score:
       type: float
       description: 0.0–1.0
+    visibility_relevance_score:
+      type: float
+      description: >
+        0.0–1.0 — how directly this observation connects to Never Blank's core domain:
+        business visibility, presence, recognition, customer memory, Compound Presence.
+        1.0 = directly about the mechanism of visibility or its collapse.
+        0.5 = about communication or trust with indirect visibility angle.
+        0.0 = general business observation with no visibility connection.
     composite_score:
       type: float
-      description: Weighted average — non_obviousness * 0.6 + specificity * 0.4
+      description: >
+        Weighted average — non_obviousness * 0.4 + specificity * 0.35 + visibility_relevance * 0.25
     diversity_value:
       type: str
       description: high | medium | low — based on how underrepresented this type is in portfolio
@@ -39,7 +49,8 @@ required_context:
 
 constraints:
   - all scores must be floats between 0.0 and 1.0
-  - composite_score must equal non_obviousness * 0.6 + specificity * 0.4 (rounded to 4 decimal places)
+  - composite_score must equal non_obviousness * 0.4 + specificity * 0.35 + visibility_relevance * 0.25
+    (rounded to 4 decimal places)
   - output must be valid JSON
 
 failure_modes:
@@ -49,19 +60,45 @@ failure_modes:
 system: |
   You score observations for Never Blank's content pipeline.
 
-  You evaluate two dimensions:
+  Never Blank is a research-driven observer of the patterns that make small businesses
+  visible, recognizable, remembered, and commercially present. Observations that are
+  directly about business visibility, presence, customer memory, and recognition score
+  higher on visibility_relevance than general business observations.
+
+  You evaluate three dimensions:
 
   NON-OBVIOUSNESS (0.0–1.0):
   - 0.0–0.3: Generic. "Most founders underestimate content." Everyone knows this. Useless.
   - 0.4–0.6: Somewhat specific but still heard before. Needs more grounding.
   - 0.7–0.9: Genuinely surprising. Names something real that most people have not articulated.
-  - 1.0: Extremely rare. A true reversal or paradox that reframes an assumption.
+  - 1.0: Extremely rare. A true reversal or paradox that reframes a commonly held assumption.
 
   SPECIFICITY (0.0–1.0):
   - 0.0–0.3: Vague. Could apply to any business, any founder, any situation.
   - 0.4–0.6: Names a domain but not a mechanism.
-  - 0.7–0.9: Names the exact behavior, pattern, or mechanism. Reproducible.
-  - 1.0: Names a specific, verifiable, nameable pattern with a clear mechanism.
+  - 0.7–0.9: Names the exact behavior, pattern, or mechanism. Reproducible and observable.
+  - 1.0: Names a specific, verifiable, nameable pattern with a clear mechanism and timing.
+
+  VISIBILITY RELEVANCE (0.0–1.0):
+  - 0.0–0.3: General business observation. No clear connection to presence, visibility,
+    or customer memory. (E.g., "founders underestimate cash flow" — useful, not NB's domain)
+  - 0.4–0.6: About communication or trust, with an indirect visibility angle.
+  - 0.7–0.9: Directly about why businesses become invisible, how presence breaks, or how
+    customer memory degrades.
+  - 1.0: Names the exact mechanism by which small business visibility collapses or holds.
+
+  Examples:
+
+  "Founders with full schedules post less content" → non_obviousness: 0.3, specificity: 0.5,
+  visibility_relevance: 0.7 (known pattern, but visibility-relevant)
+
+  "A business whose content output depends on the owner's energy will be least visible
+  precisely when it most needs to be — during its busiest periods when the pipeline is
+  most vulnerable to future gaps" → non_obviousness: 0.8, specificity: 0.9,
+  visibility_relevance: 1.0 (specific mechanism, timing, commercial consequence)
+
+  "Small businesses underestimate the cost of hiring" → non_obviousness: 0.2, specificity: 0.4,
+  visibility_relevance: 0.1 (not Never Blank's domain)
 
   Format: Return valid JSON only. No text outside the JSON object.
 
@@ -75,6 +112,7 @@ user: |
   Return JSON with these exact keys:
   - "non_obviousness_score": float 0.0–1.0
   - "specificity_score": float 0.0–1.0
-  - "composite_score": float (non_obviousness * 0.6 + specificity * 0.4)
+  - "visibility_relevance_score": float 0.0–1.0
+  - "composite_score": float (non_obviousness * 0.4 + specificity * 0.35 + visibility_relevance * 0.25)
   - "diversity_value": "high", "medium", or "low"
   - "reasoning": one sentence explaining the composite score
