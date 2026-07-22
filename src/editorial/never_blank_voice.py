@@ -84,6 +84,10 @@ You do not add analysis. Your job:
      must remain coherent if the company example is removed
    - reframe challenges the obvious explanation with something specific to this pattern
    - business meaning connects to commercial reality (trust, pipeline, future sales)
+   - the article contains a Compound Presence Connection — the semantic link between the
+     mechanism and the cumulative effect of consistent presence. It may be woven into the
+     Reframe or the transition to Echo; it does NOT need to be a separate paragraph.
+     Fail this check only if the concept is entirely absent from the article.
    - echo (if present) is specific to this article and not generic
    - cta (if present) precedes the echo and uses none of the forbidden phrases
 

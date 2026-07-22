@@ -19,6 +19,7 @@ from src.content.output_guard import (
     validate_platform_output,
     validate_telegram,
 )
+from src.strategy.loader import get_cta_mode, get_strategy_context, load_active_strategy
 from src.editorial.pipeline import ArticleGenerationError, generate_article
 from src.publishing import formatting
 from src.publishing.base import DraftPackage
@@ -173,12 +174,19 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
     pkg_map = {p.get("SIGNAL_ID"): p for p in packages}
     reports = []
 
+    # Load active strategy once — used for cta_mode and strategy context injection
+    active_strategy  = load_active_strategy()
+    strategy_cta     = get_cta_mode(active_strategy)
+    strategy_context = get_strategy_context(active_strategy)
+    log.info("Strategy context: id=%s cta_mode=%s", strategy_context.get("strategy_id"), strategy_cta)
+
     for signal in signals:
         sig_id = signal.get("SIGNAL_ID", "unknown")
         headline = signal.get("HEADLINE", "")
         package = pkg_map.get(sig_id, {})
         pimgs = package.get("images", {}).get("platform_images", {})
-        cta_mode = str(signal.get("CTA_MODE", "none") or "none")
+        # Signal-level CTA_MODE overrides strategy (allows per-article override via content plan)
+        cta_mode = str(signal.get("CTA_MODE") or strategy_cta or "none")
 
         # Generate and validate the entire package before the first publisher API call.
         try:
