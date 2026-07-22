@@ -1,0 +1,32 @@
+name: Editorial Publishing Preflight
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/research/**"
+      - "src/editorial/**"
+      - "src/content/output_guard.py"
+      - "tests/test_output_guard.py"
+      - ".github/workflows/editorial_preflight.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test dependencies
+        run: pip install --quiet pytest openai PyYAML requests Pillow cloudinary
+      - name: Compile publishing path
+        run: |
+          python -m py_compile scripts/research/run_daily_research.py
+          python -m py_compile scripts/research/publish_packages.py
+          python -m py_compile src/content/output_guard.py
+          python -m py_compile src/editorial/pipeline.py
+      - name: Run output guard tests
+        run: pytest -q tests/test_output_guard.py
