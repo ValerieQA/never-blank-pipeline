@@ -319,7 +319,13 @@ class TestValidatePackageCPCBlocking:
         "Sales increased dramatically. The owner was surprised. Marketing can work."
     )
 
-    _LINKEDIN = "Agency went quiet during Q4. Client chose a competitor. Pattern repeats consistently in B2B service businesses."
+    _LINKEDIN = (
+        "Agency went quiet during Q4. The client chose a competitor. "
+        "This is not a discipline problem — it is structural. "
+        "Consistent presence accumulates into recognition and trust over time. "
+        "A business that disappears when busy is not competing on quality. "
+        "It is competing on memory, and silence erases that memory week after week."
+    )
     _FACEBOOK = "When you go dark, clients assume you are not available. Simple truth."
     _INSTAGRAM = "The month you were booked solid was the month you went quiet."
     _TELEGRAM = "Fully booked agencies go dark. Clients read silence as capacity."
@@ -392,6 +398,29 @@ class TestCTAModeSharedType:
         assert isinstance(result, str)
         # Must be a plain string usable in str() without "CTAMode.REFLECTION"
         assert "CTAMode" not in result
+
+    def test_echo_and_omission_reason_both_set_fails(self):
+        from src.strategy.validators import validate_content_plan_item
+        from src.strategy.models import ContentPlanItem, ContentRole
+        item = ContentPlanItem(
+            content_id="t-002", week=1, strategy_id="2026-08-test",
+            content_role=ContentRole.RECOGNITION,
+            topic="t", working_title="t", target_reader="t", reader_problem="t",
+            market_signal="t", pattern="t", sales_objective="Sell something",
+            main_argument="t",
+            hook="Hook that opens a gap.",
+            recognition="t", mechanism="Structural cause here.",
+            business_consequence="t", reframe="Reframe here.",
+            compound_presence_connection="t",
+            echo="The competitor was just present.",
+            echo_omission_reason="No strong candidate",  # contradictory
+            cta_mode="none", cta="",
+            website_angle="t", linkedin_angle="t", instagram_angle="t",
+            facebook_angle="t", threads_angle="t", telegram_angle="t",
+            source_pattern_id="pat-test000000001",
+        )
+        with pytest.raises(ValueError, match="echo_omission_reason"):
+            validate_content_plan_item(item)
 
     def test_echo_omission_reason_whitespace_fails(self):
         from src.strategy.validators import validate_content_plan_item

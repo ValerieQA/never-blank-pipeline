@@ -1,0 +1,52 @@
+name: Strategy Engine Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/strategy/**"
+      - "src/editorial/pipeline.py"
+      - "src/editorial/decision_lens_lite.py"
+      - "src/editorial/narrative_spine.py"
+      - "src/models.py"
+      - "scripts/strategy/**"
+      - "scripts/research/publish_packages.py"
+      - "strategy/current/strategy.json"
+      - "strategy/current/strategy.md"
+      - "tests/strategy/**"
+      - ".github/workflows/strategy_tests.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/strategy/**"
+      - "tests/strategy/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --quiet pytest pydantic openai PyYAML requests
+
+      - name: Compile strategy modules
+        run: |
+          python -m py_compile src/strategy/models.py
+          python -m py_compile src/strategy/validators.py
+          python -m py_compile src/strategy/pattern_extractor.py
+          python -m py_compile src/strategy/loader.py
+          python -m py_compile src/strategy/market_analyzer.py
+          python -m py_compile src/strategy/content_planner.py
+          python -m py_compile scripts/strategy/build_monthly_plan.py
+
+      - name: Run strategy tests
+        run: pytest tests/strategy/ -v --tb=short

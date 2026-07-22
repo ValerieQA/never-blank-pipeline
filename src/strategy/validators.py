@@ -98,6 +98,9 @@ def validate_content_plan_item(item: ContentPlanItem) -> None:
         errors.append("echo cannot be an empty string; use null + echo_omission_reason")
     if item.echo is None and not (item.echo_omission_reason and item.echo_omission_reason.strip()):
         errors.append("echo is null but echo_omission_reason is missing or blank; set a reason")
+    # Contradictory state: echo present AND omission reason set.
+    if item.echo and item.echo_omission_reason and item.echo_omission_reason.strip():
+        errors.append("echo_omission_reason must be null when echo is set")
 
     if errors:
         raise ValueError(
