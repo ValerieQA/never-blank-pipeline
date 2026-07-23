@@ -13,6 +13,17 @@ on:
         default: "false"
         type: choice
         options: ["false", "true"]
+      from_package:
+        description: "from_package=true: skip LLM, publish the existing _generated.json (editorial pass)"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+      delete_wix_post_id:
+        description: "Wix post ID to delete before publishing (use when replacing an existing post)"
+        required: false
+        default: ""
+        type: string
 
 jobs:
   generate-and-publish:
@@ -77,9 +88,11 @@ jobs:
           NB_ZERNIO_API_KEY:              ${{ secrets.NB_ZERNIO_API_KEY }}
           NB_ZERNIO_LINKEDIN_ACCOUNT_ID:  ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
         run: |
-          DRY=""
-          [ "${{ inputs.dry_run }}" = "true" ] && DRY="--dry-run"
-          python scripts/generate_and_publish.py --signal-id "${{ inputs.signal_id }}" $DRY
+          FLAGS=""
+          [ "${{ inputs.dry_run }}"       = "true" ] && FLAGS="$FLAGS --dry-run"
+          [ "${{ inputs.from_package }}"  = "true" ] && FLAGS="$FLAGS --from-package"
+          [ -n "${{ inputs.delete_wix_post_id }}" ] && FLAGS="$FLAGS --delete-wix-post-id ${{ inputs.delete_wix_post_id }}"
+          python scripts/generate_and_publish.py --signal-id "${{ inputs.signal_id }}" $FLAGS
 
       - name: Upload generated package
         if: always()

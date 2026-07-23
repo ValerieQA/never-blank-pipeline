@@ -182,13 +182,18 @@ def main() -> int:
     parser.add_argument("--signal-id", required=True)
     parser.add_argument("--dry-run",   action="store_true",
                         help="Generate and validate, save _generated.json, but do not publish")
+    parser.add_argument("--from-package", action="store_true",
+                        help="Skip LLM generation — publish the existing _generated.json as-is (must pass staleness check)")
+    parser.add_argument("--delete-wix-post-id",
+                        help="Delete this Wix post ID before publishing (use when replacing an existing post)")
     args = parser.parse_args()
     signal_id = args.signal_id
 
+    mode = "dry-run (no publish)" if args.dry_run else ("from-package" if args.from_package else "live (LLM generate)")
     print(f"\n{SEP}")
     print("  Never Blank — Generate + Publish")
     print(f"  Signal: {signal_id}")
-    print(f"  Mode:   {'dry-run (no publish)' if args.dry_run else 'live'}")
+    print(f"  Mode:   {mode}")
     print(SEP)
 
     # ── 1. Load active strategy (required) ────────────────────────────────────
@@ -223,73 +228,125 @@ def main() -> int:
     blog_image_url: Optional[str] = pimgs.get("blog", {}).get("url") or None
     print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
 
-    # ── 3. Generate content ───────────────────────────────────────────────────
-    print(f"\n[3/6] Generating content (LLM — Editorial Engine V2)…")
-    print(f"  strategy context injected: strategy_id={strategy_id}")
-    try:
-        article    = generate_article(signal, cta_mode=cta_mode, strategy_context=strategy_context)
-        platforms  = article["platforms"]
-        structured = article["structured_article"]
-    except ArticleGenerationError as exc:
-        print(f"  ERROR: Editorial Engine failed at stage {exc.stage!r}: {exc.original}")
-        return 1
-
-    blog_body      = platforms["long"]["body"]
-    linkedin_text  = platforms["medium"]["body"]
-    facebook_text  = platforms["reading"]["body"]
-    instagram_text = platforms["instagram"]["body"]
-    threads_seq    = _build_threads(structured)
-    telegram_text  = _build_telegram(structured)
-
-    print(f"  ✓  blog:      {len(blog_body)} chars")
-    print(f"  ✓  linkedin:  {len(linkedin_text)} chars")
-    print(f"  ✓  threads:   {len(threads_seq)} posts")
-
-    print(f"\n  LinkedIn preview (first 400 chars):")
-    print(f"  {linkedin_text[:400].replace(chr(10), chr(10)+'  ')}")
-
-    # ── 4. Validate ───────────────────────────────────────────────────────────
-    print(f"\n[4/6] Validating generated content…")
-    errors: list[str] = []
-    for platform, text in [("blog", blog_body), ("linkedin", linkedin_text)]:
-        try:
-            validate_article_for_publish(text, platform=platform)
-            print(f"  ✓  {platform} validation passed")
-        except Exception as exc:
-            print(f"  ✗  {platform} validation FAILED: {exc}")
-            errors.append(f"{platform}: {exc}")
-
-    if errors:
-        print(f"\n  ERROR: {len(errors)} validation error(s) — not publishing")
-        return 1
-
-    # ── 5. Apply formatting + save generated package ──────────────────────────
-    source_name = signal.get("SOURCE_NAME", "")
-    source_url  = signal.get("SOURCE_URL", "")
-    blog_body      += formatting.source_line(source_name, source_url, "blog_markdown")
-    linkedin_text   = formatting.append_hashtags(
-        formatting.bold_signature_prefix(linkedin_text, "unicode") +
-        formatting.source_line(source_name, source_url, "bare_url"),
-        generate_hashtags(signal, "linkedin"),
-    )
-    facebook_text   = (
-        formatting.bold_signature_prefix(facebook_text, "unicode") +
-        formatting.source_line(source_name, source_url, "bare_url")
-    )
-    instagram_text  = formatting.append_hashtags(
-        formatting.bold_signature_prefix(instagram_text, "unicode"),
-        generate_hashtags(signal, "instagram"),
-    )
-
     generated_path = PACKAGES_DIR / f"{signal_id}_generated.json"
-    _save_generated(
-        generated_path, signal_id, headline,
-        blog_body, linkedin_text, facebook_text, instagram_text,
-        threads_seq, telegram_text, "",
-        strategy_id, strategy_started_at,
-    )
-    print(f"\n  ✓  Saved {generated_path}")
-    print(f"       strategy_id={strategy_id}  generated_at=now")
+    echo_line = ""
+
+    if args.from_package:
+        # ── 3a. Load existing package (skip LLM) ─────────────────────────────
+        print(f"\n[3/6] Loading existing package (--from-package, no LLM)…")
+        if not generated_path.exists():
+            print(f"  ERROR: {generated_path} not found — run without --from-package to generate")
+            return 1
+        pkg = json.loads(generated_path.read_text(encoding="utf-8"))
+
+        # Staleness check (fail-closed)
+        pkg_strategy_id = pkg.get("strategy_id", "")
+        if not pkg_strategy_id:
+            print("  ERROR: Package has no strategy_id — cannot verify staleness")
+            return 1
+        if pkg_strategy_id != strategy_id:
+            print(f"  ERROR: strategy_id mismatch: package={pkg_strategy_id!r} active={strategy_id!r}")
+            return 1
+        raw_gen_at = pkg.get("generated_at", "")
+        try:
+            from datetime import date
+            gen_dt = datetime.fromisoformat(raw_gen_at).date() if raw_gen_at else None
+        except ValueError:
+            gen_dt = None
+        if gen_dt is None:
+            print(f"  ERROR: generated_at {raw_gen_at!r} could not be parsed")
+            return 1
+        strategy_start = active_strategy.started_at if active_strategy and active_strategy.started_at else None
+        if strategy_start and isinstance(strategy_start, str):
+            from datetime import date
+            strategy_start = date.fromisoformat(strategy_start)
+        if strategy_start and gen_dt < strategy_start:
+            print(f"  ERROR: Package generated BEFORE active strategy started ({gen_dt} < {strategy_start})")
+            return 1
+
+        headline       = pkg.get("headline", headline)
+        blog_body      = pkg.get("blog_article", "")
+        linkedin_text  = pkg.get("linkedin_post", "")
+        facebook_text  = pkg.get("facebook_post", "")
+        instagram_text = pkg.get("instagram_caption", "")
+        threads_seq    = pkg.get("threads_sequence", [])
+        telegram_text  = pkg.get("telegram_text", "")
+        echo_line      = pkg.get("echo_line", "")
+
+        print(f"  ✓  headline:  {headline[:70]}")
+        print(f"  ✓  blog:      {len(blog_body)} chars")
+        print(f"  ✓  linkedin:  {len(linkedin_text)} chars")
+        print(f"  ✓  strategy_id matches, generated_at={raw_gen_at[:10]}")
+        print(f"\n  LinkedIn preview (first 400 chars):")
+        print(f"  {linkedin_text[:400].replace(chr(10), chr(10)+'  ')}")
+
+    else:
+        # ── 3b. Generate content via LLM ─────────────────────────────────────
+        print(f"\n[3/6] Generating content (LLM — Editorial Engine V2)…")
+        print(f"  strategy context injected: strategy_id={strategy_id}")
+        try:
+            article    = generate_article(signal, cta_mode=cta_mode, strategy_context=strategy_context)
+            platforms  = article["platforms"]
+            structured = article["structured_article"]
+        except ArticleGenerationError as exc:
+            print(f"  ERROR: Editorial Engine failed at stage {exc.stage!r}: {exc.original}")
+            return 1
+
+        blog_body      = platforms["long"]["body"]
+        linkedin_text  = platforms["medium"]["body"]
+        facebook_text  = platforms["reading"]["body"]
+        instagram_text = platforms["instagram"]["body"]
+        threads_seq    = _build_threads(structured)
+        telegram_text  = _build_telegram(structured)
+        echo_line      = structured.get("echo_line", "")
+
+        print(f"  ✓  blog:      {len(blog_body)} chars")
+        print(f"  ✓  linkedin:  {len(linkedin_text)} chars")
+        print(f"  ✓  threads:   {len(threads_seq)} posts")
+        print(f"\n  LinkedIn preview (first 400 chars):")
+        print(f"  {linkedin_text[:400].replace(chr(10), chr(10)+'  ')}")
+
+        # ── 4. Validate ───────────────────────────────────────────────────────
+        print(f"\n[4/6] Validating generated content…")
+        errors: list[str] = []
+        for platform, text in [("blog", blog_body), ("linkedin", linkedin_text)]:
+            try:
+                validate_article_for_publish(text, platform=platform)
+                print(f"  ✓  {platform} validation passed")
+            except Exception as exc:
+                print(f"  ✗  {platform} validation FAILED: {exc}")
+                errors.append(f"{platform}: {exc}")
+
+        if errors:
+            print(f"\n  ERROR: {len(errors)} validation error(s) — not publishing")
+            return 1
+
+        # ── 5. Apply formatting + save ─────────────────────────────────────────
+        source_name = signal.get("SOURCE_NAME", "")
+        source_url  = signal.get("SOURCE_URL", "")
+        blog_body      += formatting.source_line(source_name, source_url, "blog_markdown")
+        linkedin_text   = formatting.append_hashtags(
+            formatting.bold_signature_prefix(linkedin_text, "unicode") +
+            formatting.source_line(source_name, source_url, "bare_url"),
+            generate_hashtags(signal, "linkedin"),
+        )
+        facebook_text   = (
+            formatting.bold_signature_prefix(facebook_text, "unicode") +
+            formatting.source_line(source_name, source_url, "bare_url")
+        )
+        instagram_text  = formatting.append_hashtags(
+            formatting.bold_signature_prefix(instagram_text, "unicode"),
+            generate_hashtags(signal, "instagram"),
+        )
+
+        _save_generated(
+            generated_path, signal_id, headline,
+            blog_body, linkedin_text, facebook_text, instagram_text,
+            threads_seq, telegram_text, "",
+            strategy_id, strategy_started_at,
+        )
+        print(f"\n  ✓  Saved {generated_path}")
+        print(f"       strategy_id={strategy_id}  generated_at=now")
 
     if args.dry_run:
         print(f"\n{SEP}")
@@ -299,6 +356,29 @@ def main() -> int:
 
     # ── 6. Publish: Wix + LinkedIn ────────────────────────────────────────────
     print(f"\n[5/6] Publishing…")
+
+    # Delete old Wix post if requested (e.g. when republishing with corrections)
+    if args.delete_wix_post_id:
+        print(f"  Deleting old Wix post {args.delete_wix_post_id}…")
+        try:
+            import requests
+            wix_api_key  = os.getenv("NB_WIX_API_KEY", "")
+            wix_site_id  = os.getenv("NB_WIX_SITE_ID", "")
+            del_resp = requests.delete(
+                f"https://www.wixapis.com/blog/v3/posts/{args.delete_wix_post_id}",
+                headers={
+                    "Authorization": wix_api_key,
+                    "wix-site-id": wix_site_id,
+                },
+                timeout=15,
+            )
+            if del_resp.status_code in (200, 204):
+                print(f"  ✓  Deleted Wix post {args.delete_wix_post_id}")
+            else:
+                print(f"  WARNING: Wix delete returned {del_resp.status_code} — continuing anyway")
+        except Exception as exc:
+            print(f"  WARNING: Wix delete failed ({exc}) — continuing anyway")
+
     wix_slug = _slugify(headline)
     draft = DraftPackage(
         draft_dir=PACKAGES_DIR,
@@ -381,8 +461,8 @@ def main() -> int:
         publications=publications,
         topic=headline,
         cta_mode=cta_mode,
-        echo=structured.get("echo_line") or None,
-        hook=structured.get("hook", ""),
+        echo=echo_line or None,
+        hook=structured.get("hook", "") if not args.from_package else "",
     )
     try:
         append_published_entry(entry)
