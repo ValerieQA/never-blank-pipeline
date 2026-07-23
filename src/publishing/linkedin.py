@@ -115,4 +115,10 @@ class LinkedInPublisher(BasePublisher):
             )
 
         err_msg = resp.get("message", resp.get("error", resp.get("_raw", "")))[:200] if isinstance(resp, dict) else str(resp)[:200]
+
+        # 409 = duplicate content within 24h — content was already posted successfully.
+        # Treat as SKIPPED rather than FAILED so the pipeline doesn't halt on re-runs.
+        if code == 409:
+            return self._skip(f"Zernio 409: duplicate content — post already exists ({err_msg[:120]})")
+
         return self._fail(f"Zernio HTTP {code}: {err_msg}")
