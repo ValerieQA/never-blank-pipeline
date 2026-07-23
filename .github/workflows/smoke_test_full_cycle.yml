@@ -1,0 +1,154 @@
+name: Smoke Test — Full Publish + Analytics Cycle
+
+on:
+  workflow_dispatch:
+    inputs:
+      signal_id:
+        description: "Signal ID to publish (must have a _generated.json in reports/content_packages/)"
+        required: true
+        default: "655ade006579f220"
+
+jobs:
+  smoke-test:
+    name: Publish → History → Analytics (${{ inputs.signal_id }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install --quiet -r requirements.txt
+
+      - name: Check required secrets are set
+        run: |
+          MISSING=""
+          [ -z "$NB_WIX_API_KEY" ]                  && MISSING="$MISSING NB_WIX_API_KEY"
+          [ -z "$NB_WIX_SITE_ID" ]                  && MISSING="$MISSING NB_WIX_SITE_ID"
+          [ -z "$NB_WIX_POST_OWNER_ID" ]            && MISSING="$MISSING NB_WIX_POST_OWNER_ID"
+          [ -z "$NB_ZERNIO_API_KEY" ]               && MISSING="$MISSING NB_ZERNIO_API_KEY"
+          [ -z "$NB_ZERNIO_LINKEDIN_ACCOUNT_ID" ]   && MISSING="$MISSING NB_ZERNIO_LINKEDIN_ACCOUNT_ID"
+          if [ -n "$MISSING" ]; then
+            echo "ERROR: missing secrets:$MISSING"
+            exit 1
+          fi
+          echo "✓ All required secrets present"
+          echo "  NB_WIX_API_KEY                = [SET]"
+          echo "  NB_WIX_SITE_ID                = [SET]"
+          echo "  NB_WIX_POST_OWNER_ID          = [SET]"
+          echo "  NB_ZERNIO_API_KEY             = [SET]"
+          echo "  NB_ZERNIO_LINKEDIN_ACCOUNT_ID = [SET]"
+        env:
+          NB_WIX_API_KEY:                  ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:                  ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_POST_OWNER_ID:            ${{ secrets.NB_WIX_POST_OWNER_ID }}
+          NB_ZERNIO_API_KEY:               ${{ secrets.NB_ZERNIO_API_KEY }}
+          NB_ZERNIO_LINKEDIN_ACCOUNT_ID:   ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
+
+      - name: Confirm generated package exists
+        run: |
+          FILE="reports/content_packages/${{ inputs.signal_id }}_generated.json"
+          if [ ! -f "$FILE" ]; then
+            echo "ERROR: $FILE not found — run generate pipeline first"
+            exit 1
+          fi
+          echo "✓ Package found: $FILE"
+          python3 -c "
+          import json
+          data = json.load(open('$FILE'))
+          print('  headline:', data.get('headline','')[:70])
+          print('  blog_article:', len(data.get('blog_article','')), 'chars')
+          print('  linkedin_post:', len(data.get('linkedin_post','')), 'chars')
+          "
+
+      - name: Run smoke test — publish + History + analytics
+        env:
+          NB_WIX_API_KEY:                  ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:                  ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_POST_OWNER_ID:            ${{ secrets.NB_WIX_POST_OWNER_ID }}
+          NB_WIX_BLOG_CATEGORY_ID:         ${{ secrets.NB_WIX_BLOG_CATEGORY_ID }}
+          NB_WIX_BLOG_TAG_IDS:             ${{ secrets.NB_WIX_BLOG_TAG_IDS }}
+          NB_ZERNIO_API_KEY:               ${{ secrets.NB_ZERNIO_API_KEY }}
+          NB_ZERNIO_LINKEDIN_ACCOUNT_ID:   ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
+        run: |
+          python scripts/smoke_test_publish_analytics.py --signal-id ${{ inputs.signal_id }}
+
+      - name: Show published_content_index.jsonl entry
+        if: always()
+        run: |
+          FILE="strategy/published_content_index.jsonl"
+          if [ ! -f "$FILE" ]; then
+            echo "No History file found"
+            exit 0
+          fi
+          echo "=== History entry for ${{ inputs.signal_id }} ==="
+          python3 -c "
+          import json, sys
+          signal_id = '${{ inputs.signal_id }}'
+          with open('$FILE') as f:
+              for line in f:
+                  obj = json.loads(line)
+                  if obj.get('content_id') == signal_id:
+                      # Sanitize: remove any field that looks like a key/token
+                      safe = {k: v for k, v in obj.items() if 'key' not in k.lower() and 'token' not in k.lower() and 'secret' not in k.lower()}
+                      print(json.dumps(safe, indent=2, default=str))
+                      sys.exit(0)
+          print('Entry not found in History')
+          "
+
+      - name: Re-run analytics (30s after publish — may still be 202 pending)
+        if: always()
+        env:
+          NB_WIX_API_KEY:                  ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:                  ${{ secrets.NB_WIX_SITE_ID }}
+          NB_ZERNIO_API_KEY:               ${{ secrets.NB_ZERNIO_API_KEY }}
+          NB_ZERNIO_LINKEDIN_ACCOUNT_ID:   ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
+        run: |
+          echo "Waiting 30s before re-checking analytics…"
+          sleep 30
+          echo ""
+          echo "=== Analytics pipeline re-run ==="
+          python scripts/run_analytics.py || true
+
+      - name: Write step summary
+        if: always()
+        run: |
+          echo "## Smoke Test — ${{ inputs.signal_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          FILE="strategy/published_content_index.jsonl"
+          if [ -f "$FILE" ]; then
+            python3 -c "
+          import json, sys
+          signal_id = '${{ inputs.signal_id }}'
+          with open('$FILE') as f:
+              for line in f:
+                  obj = json.loads(line)
+                  if obj.get('content_id') == signal_id:
+                      pubs = obj.get('publications', {})
+                      print('### Publications')
+                      for platform, pub in pubs.items():
+                          print(f'**{platform}**')
+                          print(f'- external_id: \`{pub.get(\"external_id\") or \"—\"}\`')
+                          print(f'- url: {pub.get(\"url\") or \"—\"}')
+                          print(f'- status: {pub.get(\"status\")}')
+                          print()
+                      sys.exit(0)
+          print('No entry found in History')
+          " >> $GITHUB_STEP_SUMMARY || true
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-${{ inputs.signal_id }}-${{ github.run_id }}
+          path: |
+            strategy/published_content_index.jsonl
+            reports/content_packages/${{ inputs.signal_id }}_generated.json
+          retention-days: 7
