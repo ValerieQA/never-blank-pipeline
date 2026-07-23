@@ -1,0 +1,42 @@
+name: Smoke Test — Wix Cover Image
+
+on:
+  workflow_dispatch:
+
+jobs:
+  wix-image-test:
+    name: Wix coverMedia.image end-to-end
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet -r requirements.txt
+
+      - name: Check Wix secrets
+        run: |
+          MISSING=""
+          [ -z "$NB_WIX_API_KEY" ]        && MISSING="$MISSING NB_WIX_API_KEY"
+          [ -z "$NB_WIX_SITE_ID" ]        && MISSING="$MISSING NB_WIX_SITE_ID"
+          [ -z "$NB_WIX_POST_OWNER_ID" ]  && MISSING="$MISSING NB_WIX_POST_OWNER_ID"
+          if [ -n "$MISSING" ]; then echo "ERROR: missing:$MISSING"; exit 1; fi
+          echo "✓ NB_WIX_API_KEY       = [SET]"
+          echo "✓ NB_WIX_SITE_ID       = [SET]"
+          echo "✓ NB_WIX_POST_OWNER_ID = [SET]"
+        env:
+          NB_WIX_API_KEY:        ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:        ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_POST_OWNER_ID:  ${{ secrets.NB_WIX_POST_OWNER_ID }}
+
+      - name: Run Wix cover image smoke test
+        env:
+          NB_WIX_API_KEY:        ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:        ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_POST_OWNER_ID:  ${{ secrets.NB_WIX_POST_OWNER_ID }}
+          NB_WIX_BLOG_CATEGORY_ID: ${{ secrets.NB_WIX_BLOG_CATEGORY_ID }}
+          NB_WIX_BLOG_TAG_IDS:   ${{ secrets.NB_WIX_BLOG_TAG_IDS }}
+          NB_WIX_SITE_BASE_URL:  ${{ secrets.NB_WIX_SITE_BASE_URL }}
+        run: python scripts/smoke_test_wix_image.py
