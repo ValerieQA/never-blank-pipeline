@@ -182,8 +182,10 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
     # Load active strategy once — used for cta_mode and strategy context injection
     active_strategy  = load_active_strategy()
     strategy_cta     = get_cta_mode(active_strategy)
-    strategy_context = get_strategy_context(active_strategy)
-    log.info("Strategy context: id=%s cta_mode=%s", strategy_context.get("strategy_id"), strategy_cta)
+    strategy_context    = get_strategy_context(active_strategy)
+    _strategy_id        = strategy_context.get("strategy_id", "")
+    _strategy_started_at = str(active_strategy.started_at) if active_strategy and active_strategy.started_at else ""
+    log.info("Strategy context: id=%s cta_mode=%s", _strategy_id, strategy_cta)
 
     for signal in signals:
         sig_id = signal.get("SIGNAL_ID", "unknown")
@@ -253,7 +255,8 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
         )
         generated_path = PACKAGES_DIR / f"{sig_id}_generated.json"
         _save_generated(generated_path, sig_id, headline, blog_body, linkedin_text,
-                        facebook_text, instagram_text, threads_seq, telegram_text, "")
+                        facebook_text, instagram_text, threads_seq, telegram_text, "",
+                        strategy_id=_strategy_id, strategy_started_at=_strategy_started_at)
 
         results: dict = {}
         wix_url = ""
@@ -285,7 +288,8 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
                 ).to_dict()
 
         _save_generated(generated_path, sig_id, headline, blog_body, linkedin_text,
-                        facebook_text, instagram_text, threads_seq, telegram_text, wix_url)
+                        facebook_text, instagram_text, threads_seq, telegram_text, wix_url,
+                        strategy_id=_strategy_id, strategy_started_at=_strategy_started_at)
         # Append to published content index (History Engine 4B.3).
         # Non-fatal: index failure must never block a completed publish.
         _pub_strategy_id = strategy_context.get("strategy_id", "")
@@ -376,18 +380,21 @@ def _swap_image(draft: DraftPackage, image_url: str) -> DraftPackage:
 
 
 def _save_generated(path: Path, sig_id, headline, blog_body, linkedin, facebook,
-                    instagram, threads, telegram, wix_url):
+                    instagram, threads, telegram, wix_url,
+                    strategy_id: str = "", strategy_started_at: str = ""):
     path.write_text(json.dumps({
-        "signal_id": sig_id,
-        "headline": headline,
-        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        "wix_url": wix_url,
-        "blog_article": blog_body,
-        "linkedin_post": linkedin,
-        "facebook_post": facebook,
-        "instagram_caption": instagram,
-        "threads_sequence": threads,
-        "telegram_text": telegram,
+        "signal_id":           sig_id,
+        "headline":            headline,
+        "generated_at":        datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "strategy_id":         strategy_id,
+        "strategy_started_at": strategy_started_at,
+        "wix_url":             wix_url,
+        "blog_article":        blog_body,
+        "linkedin_post":       linkedin,
+        "facebook_post":       facebook,
+        "instagram_caption":   instagram,
+        "threads_sequence":    threads,
+        "telegram_text":       telegram,
     }, indent=2, ensure_ascii=False), encoding="utf-8")
 
 

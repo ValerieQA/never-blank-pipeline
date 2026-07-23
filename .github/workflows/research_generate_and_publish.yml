@@ -1,0 +1,80 @@
+name: Research — Generate + Publish (Full LLM Cycle)
+
+on:
+  workflow_dispatch:
+    inputs:
+      signal_id:
+        description: "SIGNAL_ID from data/research/selected_signals.jsonl"
+        required: true
+        type: string
+      dry_run:
+        description: "Generate and validate only — do NOT publish"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+
+jobs:
+  generate-and-publish:
+    name: "Generate + Publish (${{ inputs.signal_id }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet -r requirements.txt
+
+      - name: Check required secrets
+        run: |
+          MISSING=""
+          [ -z "$NB_OPENAI_API_KEY" ]             && MISSING="$MISSING NB_OPENAI_API_KEY"
+          [ -z "$NB_WIX_API_KEY" ]                && MISSING="$MISSING NB_WIX_API_KEY"
+          [ -z "$NB_WIX_SITE_ID" ]                && MISSING="$MISSING NB_WIX_SITE_ID"
+          [ -z "$NB_WIX_POST_OWNER_ID" ]          && MISSING="$MISSING NB_WIX_POST_OWNER_ID"
+          [ -z "$NB_ZERNIO_API_KEY" ]             && MISSING="$MISSING NB_ZERNIO_API_KEY"
+          [ -z "$NB_ZERNIO_LINKEDIN_ACCOUNT_ID" ] && MISSING="$MISSING NB_ZERNIO_LINKEDIN_ACCOUNT_ID"
+          if [ -n "$MISSING" ]; then
+            echo "ERROR: missing secrets:$MISSING"
+            exit 1
+          fi
+          echo "✓ NB_OPENAI_API_KEY              = [SET]"
+          echo "✓ NB_WIX_API_KEY                 = [SET]"
+          echo "✓ NB_WIX_SITE_ID                 = [SET]"
+          echo "✓ NB_WIX_POST_OWNER_ID           = [SET]"
+          echo "✓ NB_ZERNIO_API_KEY              = [SET]"
+          echo "✓ NB_ZERNIO_LINKEDIN_ACCOUNT_ID  = [SET]"
+        env:
+          NB_OPENAI_API_KEY:              ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_WIX_API_KEY:                 ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:                 ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_POST_OWNER_ID:           ${{ secrets.NB_WIX_POST_OWNER_ID }}
+          NB_ZERNIO_API_KEY:              ${{ secrets.NB_ZERNIO_API_KEY }}
+          NB_ZERNIO_LINKEDIN_ACCOUNT_ID:  ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
+
+      - name: "Generate + Publish — ${{ inputs.signal_id }}"
+        env:
+          NB_OPENAI_API_KEY:              ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_OPENAI_CHAT_MODEL:           ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          NB_WIX_API_KEY:                 ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:                 ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_POST_OWNER_ID:           ${{ secrets.NB_WIX_POST_OWNER_ID }}
+          NB_WIX_BLOG_CATEGORY_ID:        ${{ secrets.NB_WIX_BLOG_CATEGORY_ID }}
+          NB_WIX_BLOG_TAG_IDS:            ${{ secrets.NB_WIX_BLOG_TAG_IDS }}
+          NB_WIX_SITE_BASE_URL:           ${{ secrets.NB_WIX_SITE_BASE_URL }}
+          NB_ZERNIO_API_KEY:              ${{ secrets.NB_ZERNIO_API_KEY }}
+          NB_ZERNIO_LINKEDIN_ACCOUNT_ID:  ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
+        run: |
+          DRY=""
+          [ "${{ inputs.dry_run }}" = "true" ] && DRY="--dry-run"
+          python scripts/generate_and_publish.py --signal-id "${{ inputs.signal_id }}" $DRY
+
+      - name: Upload generated package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "generated-${{ inputs.signal_id }}"
+          path: "reports/content_packages/${{ inputs.signal_id }}_generated.json"
+          if-no-files-found: ignore

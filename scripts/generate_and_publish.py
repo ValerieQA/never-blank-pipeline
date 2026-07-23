@@ -1,0 +1,415 @@
+"""
+Never Blank — Full Generation + Publish cycle.
+
+Runs the complete path for one signal:
+  load signal → generate_article (LLM) → validate → save _generated.json → publish → History → analytics
+
+Unlike smoke_test_publish_analytics.py, this script ALWAYS regenerates content
+using the currently active strategy. It will refuse to run if no active strategy
+is loaded.
+
+The generated package is saved with strategy provenance fields:
+  strategy_id, strategy_started_at, generated_at
+
+Usage (local):
+    NB_OPENAI_API_KEY=... python scripts/generate_and_publish.py --signal-id <id> [--dry-run]
+
+Args:
+    --signal-id  : SIGNAL_ID from data/research/selected_signals.jsonl or signals_active.jsonl
+    --dry-run    : Generate and validate content, save _generated.json, but do NOT publish
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from dotenv import load_dotenv
+load_dotenv()
+
+from src.analytics.blog import BlogCollector
+from src.analytics.linkedin import LinkedInCollector
+from src.analytics.orchestrator import run_analytics_pipeline
+from src.editorial.pipeline import ArticleGenerationError, generate_article
+from src.publishing import formatting
+from src.publishing.base import DraftPackage
+from src.publishing.hashtags import generate_hashtags
+from src.publishing.linkedin import LinkedInPublisher
+from src.publishing.result import PublishStatus
+from src.publishing.wix import WixPublisher
+from src.strategy.history import append_published_entry
+from src.strategy.loader import get_cta_mode, get_strategy_context, load_active_strategy
+from src.strategy.models import PlatformPublication, PublishedEntry
+from src.strategy.validators import validate_article_for_publish
+from src.utils.logger import get_logger
+
+log = get_logger("generate_and_publish")
+
+PACKAGES_DIR   = Path("reports/content_packages")
+SIGNALS_FILES  = [
+    Path("data/research/selected_signals.jsonl"),
+    Path("data/research/signals_active.jsonl"),
+]
+HISTORY_FILE   = Path("strategy/published_content_index.jsonl")
+SEP            = "─" * 64
+_OK_STATUSES   = {"PUBLISHED", "DRAFT_CREATED", "published_url_unavailable"}
+
+
+def _load_signal(signal_id: str) -> dict:
+    for path in SIGNALS_FILES:
+        if not path.exists():
+            continue
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+                if obj.get("SIGNAL_ID") == signal_id:
+                    return obj
+            except Exception:
+                pass
+    raise FileNotFoundError(
+        f"Signal {signal_id!r} not found in:\n"
+        + "\n".join(f"  {p}" for p in SIGNALS_FILES)
+    )
+
+
+def _load_package_images(signal_id: str) -> dict:
+    path = PACKAGES_DIR / f"{signal_id}.json"
+    if path.exists():
+        try:
+            data = json.loads(path.read_text())
+            return data.get("images", {}).get("platform_images", {})
+        except Exception:
+            pass
+    return {}
+
+
+def _slugify(text: str) -> str:
+    slug = re.sub(r"[^\w\s-]", "", text.lower().strip())
+    return re.sub(r"[\s_]+", "-", slug)[:80]
+
+
+def _build_threads(structured: dict) -> list[str]:
+    discovery = structured.get("discovery", {})
+    candidates = [
+        structured.get("hook", ""),
+        discovery.get("aha_setup") or discovery.get("first_wrong_explanation", ""),
+        structured.get("surviving_explanation", ""),
+        structured.get("reframe", ""),
+        structured.get("echo_line", ""),
+    ]
+    sequence: list[str] = []
+    seen: set[str] = set()
+    for value in candidates:
+        post = re.sub(r"\s+", " ", (value or "").strip())
+        words = post.split()
+        if len(words) > 55:
+            post = " ".join(words[:55]).rstrip(" ,;:") + "."
+        key = post.lower()
+        if post and key not in seen:
+            sequence.append(post)
+            seen.add(key)
+    if not 3 <= len(sequence) <= 5:
+        raise ValueError(f"Threads requires 3–5 distinct posts; generated {len(sequence)}")
+    return sequence
+
+
+def _clean_line(value: str, max_words: int = 34) -> str:
+    value = re.sub(r"\s+", " ", (value or "").strip())
+    words = value.split()
+    if len(words) <= max_words:
+        return value
+    return " ".join(words[:max_words]).rstrip(" ,;:") + "."
+
+
+def _build_telegram(structured: dict, wix_url: str = "") -> str:
+    discovery = structured.get("discovery", {})
+    observation = (
+        discovery.get("aha_setup")
+        or discovery.get("first_wrong_explanation")
+        or structured.get("hook")
+        or structured.get("narrative_spine")
+    )
+    implication = structured.get("business_translation") or structured.get("reframe")
+    lines = [_clean_line(observation), _clean_line(implication)]
+    if wix_url:
+        lines.append(wix_url.strip())
+    return "\n".join(line for line in lines if line)
+
+
+def _save_generated(
+    path: Path,
+    signal_id: str,
+    headline: str,
+    blog_body: str,
+    linkedin: str,
+    facebook: str,
+    instagram: str,
+    threads: list[str],
+    telegram: str,
+    wix_url: str,
+    strategy_id: str,
+    strategy_started_at: str,
+) -> None:
+    path.write_text(json.dumps({
+        "signal_id":           signal_id,
+        "headline":            headline,
+        "generated_at":        datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "strategy_id":         strategy_id,
+        "strategy_started_at": strategy_started_at,
+        "wix_url":             wix_url,
+        "blog_article":        blog_body,
+        "linkedin_post":       linkedin,
+        "facebook_post":       facebook,
+        "instagram_caption":   instagram,
+        "threads_sequence":    threads,
+        "telegram_text":       telegram,
+    }, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Generate + publish one signal end-to-end")
+    parser.add_argument("--signal-id", required=True)
+    parser.add_argument("--dry-run",   action="store_true",
+                        help="Generate and validate, save _generated.json, but do not publish")
+    args = parser.parse_args()
+    signal_id = args.signal_id
+
+    print(f"\n{SEP}")
+    print("  Never Blank — Generate + Publish")
+    print(f"  Signal: {signal_id}")
+    print(f"  Mode:   {'dry-run (no publish)' if args.dry_run else 'live'}")
+    print(SEP)
+
+    # ── 1. Load active strategy (required) ────────────────────────────────────
+    print("\n[1/6] Loading active strategy…")
+    active_strategy = load_active_strategy()
+    if active_strategy is None:
+        print("  ERROR: No active strategy found at strategy/current/strategy.json")
+        print("  Cannot generate content without an active strategy.")
+        return 1
+
+    strategy_context    = get_strategy_context(active_strategy)
+    cta_mode            = get_cta_mode(active_strategy)
+    strategy_id         = strategy_context.get("strategy_id", "")
+    strategy_started_at = str(active_strategy.started_at) if active_strategy.started_at else ""
+
+    print(f"  ✓  strategy_id:   {strategy_id}")
+    print(f"  ✓  started_at:    {strategy_started_at}")
+    print(f"  ✓  cta_mode:      {cta_mode}")
+
+    # ── 2. Load signal ─────────────────────────────────────────────────────────
+    print(f"\n[2/6] Loading signal {signal_id}…")
+    try:
+        signal = _load_signal(signal_id)
+    except FileNotFoundError as exc:
+        print(f"  ERROR: {exc}")
+        return 1
+
+    headline = signal.get("HEADLINE", signal_id)
+    print(f"  ✓  Headline: {headline[:70]}")
+
+    pimgs = _load_package_images(signal_id)
+    blog_image_url: Optional[str] = pimgs.get("blog", {}).get("url") or None
+    print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
+
+    # ── 3. Generate content ───────────────────────────────────────────────────
+    print(f"\n[3/6] Generating content (LLM — Editorial Engine V2)…")
+    print(f"  strategy context injected: strategy_id={strategy_id}")
+    try:
+        article    = generate_article(signal, cta_mode=cta_mode, strategy_context=strategy_context)
+        platforms  = article["platforms"]
+        structured = article["structured_article"]
+    except ArticleGenerationError as exc:
+        print(f"  ERROR: Editorial Engine failed at stage {exc.stage!r}: {exc.original}")
+        return 1
+
+    blog_body      = platforms["long"]["body"]
+    linkedin_text  = platforms["medium"]["body"]
+    facebook_text  = platforms["reading"]["body"]
+    instagram_text = platforms["instagram"]["body"]
+    threads_seq    = _build_threads(structured)
+    telegram_text  = _build_telegram(structured)
+
+    print(f"  ✓  blog:      {len(blog_body)} chars")
+    print(f"  ✓  linkedin:  {len(linkedin_text)} chars")
+    print(f"  ✓  threads:   {len(threads_seq)} posts")
+
+    print(f"\n  LinkedIn preview (first 400 chars):")
+    print(f"  {linkedin_text[:400].replace(chr(10), chr(10)+'  ')}")
+
+    # ── 4. Validate ───────────────────────────────────────────────────────────
+    print(f"\n[4/6] Validating generated content…")
+    errors: list[str] = []
+    for platform, text in [("blog", blog_body), ("linkedin", linkedin_text)]:
+        try:
+            validate_article_for_publish(text, platform=platform)
+            print(f"  ✓  {platform} validation passed")
+        except Exception as exc:
+            print(f"  ✗  {platform} validation FAILED: {exc}")
+            errors.append(f"{platform}: {exc}")
+
+    if errors:
+        print(f"\n  ERROR: {len(errors)} validation error(s) — not publishing")
+        return 1
+
+    # ── 5. Apply formatting + save generated package ──────────────────────────
+    source_name = signal.get("SOURCE_NAME", "")
+    source_url  = signal.get("SOURCE_URL", "")
+    blog_body      += formatting.source_line(source_name, source_url, "blog_markdown")
+    linkedin_text   = formatting.append_hashtags(
+        formatting.bold_signature_prefix(linkedin_text, "unicode") +
+        formatting.source_line(source_name, source_url, "bare_url"),
+        generate_hashtags(signal, "linkedin"),
+    )
+    facebook_text   = (
+        formatting.bold_signature_prefix(facebook_text, "unicode") +
+        formatting.source_line(source_name, source_url, "bare_url")
+    )
+    instagram_text  = formatting.append_hashtags(
+        formatting.bold_signature_prefix(instagram_text, "unicode"),
+        generate_hashtags(signal, "instagram"),
+    )
+
+    generated_path = PACKAGES_DIR / f"{signal_id}_generated.json"
+    _save_generated(
+        generated_path, signal_id, headline,
+        blog_body, linkedin_text, facebook_text, instagram_text,
+        threads_seq, telegram_text, "",
+        strategy_id, strategy_started_at,
+    )
+    print(f"\n  ✓  Saved {generated_path}")
+    print(f"       strategy_id={strategy_id}  generated_at=now")
+
+    if args.dry_run:
+        print(f"\n{SEP}")
+        print("  DRY RUN — generation + validation complete, not publishing.")
+        print(SEP)
+        return 0
+
+    # ── 6. Publish: Wix + LinkedIn ────────────────────────────────────────────
+    print(f"\n[5/6] Publishing…")
+    wix_slug = _slugify(headline)
+    draft = DraftPackage(
+        draft_dir=PACKAGES_DIR,
+        blog_title=headline,
+        blog_body=blog_body,
+        blog_meta={
+            "title": headline,
+            "wix_slug": wix_slug,
+            "wix_category_id": os.getenv("NB_WIX_BLOG_CATEGORY_ID", ""),
+            "wix_tags": [x.strip() for x in os.getenv("NB_WIX_BLOG_TAG_IDS", "").split(",") if x.strip()],
+        },
+        linkedin_text=linkedin_text,
+        instagram_text=instagram_text,
+        facebook_text=facebook_text,
+        threads_sequence=threads_seq,
+        telegram_text=telegram_text,
+        image_url=blog_image_url,
+        wix_slug=wix_slug,
+        wix_category_id=os.getenv("NB_WIX_BLOG_CATEGORY_ID", ""),
+        wix_tags=[x.strip() for x in os.getenv("NB_WIX_BLOG_TAG_IDS", "").split(",") if x.strip()],
+        metadata={"signal_id": signal_id},
+    )
+
+    results: dict = {}
+    wix_post_id: Optional[str] = None
+    wix_url = ""
+
+    for name, publisher in [("wix", WixPublisher()), ("linkedin", LinkedInPublisher())]:
+        try:
+            result = publisher.publish(draft, "live")
+            results[name] = result.to_dict()
+            if name == "wix" and result.ok():
+                wix_post_id = result.external_id
+                wix_url     = result.url or ""
+        except Exception as exc:
+            log.error("%s publish error: %s", name, exc)
+            results[name] = {
+                "platform": name, "status": "FAILED",
+                "error_message": str(exc), "external_id": None, "url": None,
+            }
+
+    print()
+    for platform, res in results.items():
+        status = res.get("status", "?")
+        icon   = "✓" if status in _OK_STATUSES else "✗"
+        print(f"  {icon}  {platform:<12} status={status}")
+        print(f"           id={res.get('external_id') or '—'}")
+        print(f"           url={(res.get('url') or '—')[:80]}")
+        if res.get("error_message"):
+            print(f"           error={res['error_message']}")
+
+    # Update generated JSON with final wix_url
+    _save_generated(
+        generated_path, signal_id, headline,
+        blog_body, linkedin_text, facebook_text, instagram_text,
+        threads_seq, telegram_text, wix_url,
+        strategy_id, strategy_started_at,
+    )
+
+    # ── Write to History ──────────────────────────────────────────────────────
+    published_at    = datetime.now(timezone.utc)
+    publications: dict[str, PlatformPublication] = {}
+    for pub_name, pub_dict in results.items():
+        if pub_dict.get("status") in _OK_STATUSES:
+            publications[pub_name] = PlatformPublication(
+                platform=pub_name,
+                external_id=pub_dict.get("external_id") or None,
+                url=pub_dict.get("url") or "",
+                published_at=published_at,
+                status=pub_dict.get("status", "published").lower(),
+            )
+
+    entry = PublishedEntry(
+        content_id=signal_id,
+        strategy_id=strategy_id,
+        published_at=published_at,
+        platform="blog",
+        url=wix_url,
+        platform_content_id=wix_post_id,
+        publications=publications,
+        topic=headline,
+        cta_mode=cta_mode,
+        echo=structured.get("echo_line") or None,
+        hook=structured.get("hook", ""),
+    )
+    try:
+        append_published_entry(entry)
+        print(f"\n  ✓  History entry written (strategy_id={strategy_id})")
+    except Exception as exc:
+        print(f"\n  WARNING: History write failed (non-fatal): {exc}")
+
+    # ── Run analytics ─────────────────────────────────────────────────────────
+    print(f"\n[6/6] Running analytics…")
+    print("  (LinkedIn analytics may return 404 immediately after publish — expected)")
+    print()
+    analytics_result = run_analytics_pipeline([BlogCollector(), LinkedInCollector()])
+    print(analytics_result.format_summary())
+
+    # ── Summary ───────────────────────────────────────────────────────────────
+    print(f"\n{SEP}")
+    failed = [p for p, r in results.items() if r.get("status") not in _OK_STATUSES]
+    if failed:
+        print(f"  PARTIAL — failed channels: {failed}")
+        print(SEP)
+        return 1
+    print("  DONE — all channels published.")
+    print(f"  Wix:     {wix_url or wix_post_id or '—'}")
+    print(f"  strategy_id: {strategy_id}")
+    print(SEP)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,17 +1,24 @@
 """
-Smoke test: full publish → History → analytics cycle for one signal.
+Smoke test: publish → History → analytics cycle for one signal.
 
-Uses the already-generated content package (_generated.json) — no LLM calls.
+Publishes a PRE-GENERATED content package (_generated.json) — no LLM calls.
+This script is for infrastructure/plumbing tests only (Wix API, LinkedIn API,
+History write, analytics pipeline). It does NOT test content generation or strategy.
+
+STALENESS GUARD: if the package was generated before the active strategy started,
+this script will refuse to publish and print a clear error. Use
+scripts/generate_and_publish.py instead to regenerate with the active strategy.
 
 Usage:
     python scripts/smoke_test_publish_analytics.py --signal-id 655ade006579f220
 
 What it does:
     1. Loads pre-generated content from {signal_id}_generated.json
-    2. Publishes to Wix + LinkedIn only via their publishers directly
-    3. Writes the entry to published_content_index.jsonl
-    4. Verifies the entry has both platform IDs in publications map
-    5. Runs run_analytics_pipeline() — analytics may be 202 pending right after publish
+    2. Checks that generated_at >= strategy.started_at (staleness guard)
+    3. Publishes to Wix + LinkedIn only via their publishers directly
+    4. Writes the entry to published_content_index.jsonl
+    5. Verifies the entry has both platform IDs in publications map
+    6. Runs run_analytics_pipeline() — analytics may be 202 pending right after publish
 """
 
 from __future__ import annotations
@@ -41,6 +48,8 @@ from src.strategy.loader import get_cta_mode, get_strategy_context, load_active_
 from src.strategy.models import PlatformPublication, PublishedEntry
 from src.utils.logger import get_logger
 
+_STALE_CUTOFF_SENTINEL = "unknown"  # generated_at value meaning no provenance info
+
 log = get_logger("smoke_test")
 
 PACKAGES_DIR = Path("reports/content_packages")
@@ -53,6 +62,39 @@ def _load_generated(signal_id: str) -> dict:
     if not path.exists():
         raise FileNotFoundError(f"Generated package not found: {path}")
     return json.loads(path.read_text())
+
+
+def _check_staleness(gen: dict) -> tuple[bool, str]:
+    """
+    Return (is_stale, message).
+    Stale = package was generated before the active strategy started.
+    Missing provenance (no strategy_id in package) is also treated as stale.
+    """
+    pkg_strategy_id  = gen.get("strategy_id", "")
+    pkg_generated_at = gen.get("generated_at", "")
+
+    active = load_active_strategy()
+    if active is None:
+        return False, ""  # no active strategy — can't check
+
+    if not pkg_strategy_id:
+        return True, (
+            f"Package has no strategy_id — it was generated before strategy provenance "
+            f"was added to the pipeline.\n"
+            f"  Active strategy: {active.strategy_id} (started {active.started_at})\n"
+            f"  Use scripts/generate_and_publish.py to regenerate with the active strategy."
+        )
+
+    if pkg_strategy_id != active.strategy_id:
+        return True, (
+            f"Package strategy_id={pkg_strategy_id!r} does not match "
+            f"active strategy_id={active.strategy_id!r}.\n"
+            f"  Generated at: {pkg_generated_at}\n"
+            f"  Strategy started: {active.started_at}\n"
+            f"  Use scripts/generate_and_publish.py to regenerate with the active strategy."
+        )
+
+    return False, ""
 
 
 def _snapshot_history() -> set[str]:
@@ -91,9 +133,21 @@ def main() -> int:
     headline     = gen.get("headline", "")
     blog_body    = gen.get("blog_article", "")
     linkedin_txt = gen.get("linkedin_post", "")
-    print(f"  ✓  Headline: {headline[:70]}")
-    print(f"  ✓  Blog body: {len(blog_body)} chars")
-    print(f"  ✓  LinkedIn:  {len(linkedin_txt)} chars")
+    pkg_strategy = gen.get("strategy_id", "— (none)")
+    pkg_gen_at   = gen.get("generated_at", "— (unknown)")
+    print(f"  ✓  Headline:      {headline[:70]}")
+    print(f"  ✓  Blog body:     {len(blog_body)} chars")
+    print(f"  ✓  LinkedIn:      {len(linkedin_txt)} chars")
+    print(f"  ✓  strategy_id:   {pkg_strategy}")
+    print(f"  ✓  generated_at:  {pkg_gen_at}")
+
+    is_stale, stale_msg = _check_staleness(gen)
+    if is_stale:
+        print(f"\n  ERROR: Stale package — refusing to publish.")
+        print(f"  {stale_msg.replace(chr(10), chr(10)+'  ')}")
+        return 1
+    else:
+        print(f"  ✓  Staleness check passed")
 
     if not blog_body or not linkedin_txt:
         print("  ERROR: missing blog_article or linkedin_post in generated package")
