@@ -43,9 +43,11 @@ from typing import Optional
 from src.publishing.base import BasePublisher, DraftPackage, _fetch
 from src.publishing.result import PublishResult, PublishStatus
 from src.publishing.wix_media import WixMediaAsset, WixMediaImportError, import_image
+from src.utils.logger import get_logger
 
 
 _API = "https://www.wixapis.com"
+_log = get_logger("wix.publisher")
 
 
 # ── Typed errors ───────────────────────────────────────────────────────────────
@@ -195,6 +197,11 @@ class WixPublisher(BasePublisher):
                 f"{_API}/blog/v3/draft-posts",
                 method="POST", headers=headers, body=draft_body,
             )
+            _log.info(
+                "wix step3 draft-create: HTTP %s | keys=%s | draftPost.id=%s",
+                code, list(resp.keys()),
+                resp.get("draftPost", {}).get("id", "—"),
+            )
             if code not in (200, 201):
                 err = resp.get("message", resp.get("_raw", ""))[:200]
                 raise WixDraftCreationError(f"HTTP {code}: {err}")
@@ -217,6 +224,12 @@ class WixPublisher(BasePublisher):
                 f"{_API}/blog/v3/draft-posts/{draft_id}/publish",
                 method="POST", headers=headers, body=b"{}",
             )
+            _log.info(
+                "wix step5 publish: HTTP %s | top-level keys=%s | post keys=%s | raw=%.600s",
+                code2, list(resp2.keys()),
+                list(resp2.get("post", {}).keys()),
+                str(resp2)[:600],
+            )
             if code2 not in (200, 201):
                 err = resp2.get("message", resp2.get("_raw", ""))[:200]
                 raise WixPublishError(f"HTTP {code2}: {err}")
@@ -226,12 +239,6 @@ class WixPublisher(BasePublisher):
             post_url = post.get("url", "")
 
             if not post_id:
-                import logging as _logging
-                _logging.getLogger("wix.publisher").warning(
-                    "publish response keys: %s | post keys: %s | raw snippet: %.500s",
-                    list(resp2.keys()), list(post.keys()),
-                    str(resp2)[:500],
-                )
                 raise WixPublishError(
                     "Publish returned 2xx but no post ID in response — "
                     "cannot record a valid platform_content_id"
@@ -265,6 +272,12 @@ def _verify_draft(
     code, resp, _ = _fetch(
         f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
         method="GET", headers=headers,
+    )
+    _log.info(
+        "wix step4 draft-verify: HTTP %s | keys=%s | draftPost.status=%s | draftPost.media=%s",
+        code, list(resp.keys()),
+        resp.get("draftPost", {}).get("status", "—"),
+        str(resp.get("draftPost", {}).get("media", "—"))[:200],
     )
     if code not in (200, 201):
         raise WixDraftMediaVerificationError(
