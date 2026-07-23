@@ -4,8 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       signal_id:
-        description: "SIGNAL_ID from data/research/selected_signals.jsonl"
-        required: true
+        description: "SIGNAL_ID (leave empty for auto-select from signals_active.jsonl)"
+        required: false
+        default: ""
         type: string
       dry_run:
         description: "dry_run=true: generate + validate only, no publish (needs only OpenAI key)"
@@ -24,10 +25,14 @@ on:
         required: false
         default: ""
         type: string
+  schedule:
+    # 3am ET (EDT = UTC-4): Mon, Wed, Fri, Sun at 07:00 UTC
+    # During EST (winter, UTC-5) this fires at 2am ET — acceptable
+    - cron: "0 7 * * 1,3,5,0"
 
 jobs:
   generate-and-publish:
-    name: "Generate + Publish (${{ inputs.signal_id }})"
+    name: "Generate + Publish"
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -37,6 +42,37 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install --quiet -r requirements.txt
+
+      # Auto-select signal if none provided (scheduled runs)
+      - name: Resolve signal ID
+        id: resolve
+        run: |
+          SIGNAL_ID="${{ inputs.signal_id }}"
+          if [ -z "$SIGNAL_ID" ]; then
+            SIGNAL_ID=$(python - <<'EOF'
+          import json, pathlib
+
+          active = pathlib.Path("data/research/signals_active.jsonl")
+          published = pathlib.Path("data/research/published_signal_ids.txt")
+          done = set(published.read_text().splitlines()) if published.exists() else set()
+
+          for line in active.read_text().splitlines():
+              line = line.strip()
+              if not line:
+                  continue
+              try:
+                  obj = json.loads(line)
+                  sid = obj.get("SIGNAL_ID", "")
+                  if sid and sid not in done:
+                      print(sid)
+                      break
+              except Exception:
+                  pass
+          EOF
+            )
+            echo "Auto-selected signal: $SIGNAL_ID"
+          fi
+          echo "signal_id=$SIGNAL_ID" >> $GITHUB_OUTPUT
 
       # Always required: OpenAI for LLM generation
       - name: Check OpenAI secret
@@ -59,23 +95,31 @@ jobs:
           [ -z "$NB_WIX_POST_OWNER_ID" ]          && MISSING="$MISSING NB_WIX_POST_OWNER_ID"
           [ -z "$NB_ZERNIO_API_KEY" ]             && MISSING="$MISSING NB_ZERNIO_API_KEY"
           [ -z "$NB_ZERNIO_LINKEDIN_ACCOUNT_ID" ] && MISSING="$MISSING NB_ZERNIO_LINKEDIN_ACCOUNT_ID"
+          [ -z "$NB_META_FB_PAGE_ID" ]            && MISSING="$MISSING NB_META_FB_PAGE_ID"
+          [ -z "$NB_META_FB_PAGE_TOKEN" ]         && MISSING="$MISSING NB_META_FB_PAGE_TOKEN"
+          [ -z "$NB_META_IG_USER_ID" ]            && MISSING="$MISSING NB_META_IG_USER_ID"
+          [ -z "$NB_THREADS_ACCESS_TOKEN" ]       && MISSING="$MISSING NB_THREADS_ACCESS_TOKEN"
+          [ -z "$NB_TELEGRAM_BOT_TOKEN" ]         && MISSING="$MISSING NB_TELEGRAM_BOT_TOKEN"
+          [ -z "$NB_TELEGRAM_CHANNEL_ID" ]        && MISSING="$MISSING NB_TELEGRAM_CHANNEL_ID"
           if [ -n "$MISSING" ]; then
             echo "ERROR: missing publish secrets:$MISSING"
             exit 1
           fi
-          echo "✓ NB_WIX_API_KEY                 = [SET]"
-          echo "✓ NB_WIX_SITE_ID                 = [SET]"
-          echo "✓ NB_WIX_POST_OWNER_ID           = [SET]"
-          echo "✓ NB_ZERNIO_API_KEY              = [SET]"
-          echo "✓ NB_ZERNIO_LINKEDIN_ACCOUNT_ID  = [SET]"
+          echo "✓ All publish secrets = [SET]"
         env:
           NB_WIX_API_KEY:                 ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID:                 ${{ secrets.NB_WIX_SITE_ID }}
           NB_WIX_POST_OWNER_ID:           ${{ secrets.NB_WIX_POST_OWNER_ID }}
           NB_ZERNIO_API_KEY:              ${{ secrets.NB_ZERNIO_API_KEY }}
           NB_ZERNIO_LINKEDIN_ACCOUNT_ID:  ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
+          NB_META_FB_PAGE_ID:             ${{ secrets.NB_META_FB_PAGE_ID }}
+          NB_META_FB_PAGE_TOKEN:          ${{ secrets.NB_META_FB_PAGE_TOKEN }}
+          NB_META_IG_USER_ID:             ${{ secrets.NB_META_IG_USER_ID }}
+          NB_THREADS_ACCESS_TOKEN:        ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
+          NB_TELEGRAM_BOT_TOKEN:          ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
+          NB_TELEGRAM_CHANNEL_ID:         ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
 
-      - name: "Generate + Publish — ${{ inputs.signal_id }}"
+      - name: "Generate + Publish — ${{ steps.resolve.outputs.signal_id }}"
         env:
           NB_OPENAI_API_KEY:              ${{ secrets.NB_OPENAI_API_KEY }}
           NB_OPENAI_CHAT_MODEL:           ${{ secrets.NB_OPENAI_CHAT_MODEL }}
@@ -87,17 +131,34 @@ jobs:
           NB_WIX_SITE_BASE_URL:           ${{ secrets.NB_WIX_SITE_BASE_URL }}
           NB_ZERNIO_API_KEY:              ${{ secrets.NB_ZERNIO_API_KEY }}
           NB_ZERNIO_LINKEDIN_ACCOUNT_ID:  ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
+          NB_META_FB_PAGE_ID:             ${{ secrets.NB_META_FB_PAGE_ID }}
+          NB_META_FB_PAGE_TOKEN:          ${{ secrets.NB_META_FB_PAGE_TOKEN }}
+          NB_META_IG_USER_ID:             ${{ secrets.NB_META_IG_USER_ID }}
+          NB_THREADS_ACCESS_TOKEN:        ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
+          NB_TELEGRAM_BOT_TOKEN:          ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
+          NB_TELEGRAM_CHANNEL_ID:         ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
         run: |
           FLAGS=""
           [ "${{ inputs.dry_run }}"       = "true" ] && FLAGS="$FLAGS --dry-run"
           [ "${{ inputs.from_package }}"  = "true" ] && FLAGS="$FLAGS --from-package"
           [ -n "${{ inputs.delete_wix_post_id }}" ] && FLAGS="$FLAGS --delete-wix-post-id ${{ inputs.delete_wix_post_id }}"
-          python scripts/generate_and_publish.py --signal-id "${{ inputs.signal_id }}" $FLAGS
+          python scripts/generate_and_publish.py --signal-id "${{ steps.resolve.outputs.signal_id }}" $FLAGS
+
+      # Mark signal as published so next scheduled run picks the next one
+      - name: Mark signal as published
+        if: success() && inputs.dry_run != 'true'
+        run: |
+          echo "${{ steps.resolve.outputs.signal_id }}" >> data/research/published_signal_ids.txt
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/research/published_signal_ids.txt
+          git diff --staged --quiet || git commit -m "Mark signal ${{ steps.resolve.outputs.signal_id }} as published [skip ci]"
+          git push
 
       - name: Upload generated package
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: "generated-${{ inputs.signal_id }}"
-          path: "reports/content_packages/${{ inputs.signal_id }}_generated.json"
+          name: "generated-${{ steps.resolve.outputs.signal_id }}"
+          path: "reports/content_packages/${{ steps.resolve.outputs.signal_id }}_generated.json"
           if-no-files-found: ignore

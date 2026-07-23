@@ -42,8 +42,12 @@ from src.editorial.pipeline import ArticleGenerationError, generate_article
 from src.publishing import formatting
 from src.publishing.base import DraftPackage
 from src.publishing.hashtags import generate_hashtags
+from src.publishing.facebook import FacebookPublisher
+from src.publishing.instagram import InstagramPublisher
 from src.publishing.linkedin import LinkedInPublisher
 from src.publishing.result import PublishStatus
+from src.publishing.telegram import TelegramPublisher
+from src.publishing.threads import ThreadsPublisher
 from src.publishing.wix import WixPublisher
 from src.strategy.history import append_published_entry
 from src.strategy.loader import get_cta_mode, get_strategy_context, load_active_strategy
@@ -406,7 +410,14 @@ def main() -> int:
     wix_post_id: Optional[str] = None
     wix_url = ""
 
-    for name, publisher in [("wix", WixPublisher()), ("linkedin", LinkedInPublisher())]:
+    for name, publisher in [
+        ("wix",       WixPublisher()),
+        ("linkedin",  LinkedInPublisher()),
+        ("facebook",  FacebookPublisher()),
+        ("instagram", InstagramPublisher()),
+        ("threads",   ThreadsPublisher()),
+        ("telegram",  TelegramPublisher()),
+    ]:
         try:
             result = publisher.publish(draft, "live")
             results[name] = result.to_dict()
