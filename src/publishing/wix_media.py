@@ -25,13 +25,16 @@ Errors:
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from typing import Optional
 
 from src.publishing.base import _fetch
+from src.utils.logger import get_logger
 
-
+_log = get_logger("wix.media")
 _IMPORT_URL = "https://www.wixapis.com/site-media/v1/files/import"
+_GET_FILE_URL = "https://www.wixapis.com/site-media/v1/files/{file_id}"
 
 
 class WixMediaImportError(Exception):
@@ -115,11 +118,55 @@ def import_image(
             f"Response keys: {list(file_obj.keys())}"
         )
 
-    # Normalize: Wix returns URL as "url" or "fileUrl"
-    file_url = file_obj.get("url") or file_obj.get("fileUrl") or None
+    file_state = file_obj.get("state", "—")
+    file_url   = file_obj.get("url") or file_obj.get("fileUrl") or None
+    _log.info(
+        "wix media import: file_id=%s state=%s url=%s",
+        file_id, file_state, (file_url or "—")[:80],
+    )
+
+    # Wix Media import is asynchronous. The file must reach state READY before
+    # it can be referenced in a blog draft. Poll up to ~10s (5 × 2s).
+    if file_state != "READY":
+        file_id, file_url = _wait_for_ready(file_id, headers, max_attempts=5, interval=2)
 
     return WixMediaAsset(
         file_id=file_id,
         url=file_url,
         display_name=display_name,
+    )
+
+
+def _wait_for_ready(
+    file_id:     str,
+    headers:     dict,
+    max_attempts: int = 5,
+    interval:    float = 2.0,
+) -> tuple[str, Optional[str]]:
+    """
+    Poll GET /site-media/v1/files/{file_id} until state == READY.
+    Returns (file_id, url) once ready.
+    Raises WixMediaImportError if not ready after max_attempts.
+    """
+    url = _GET_FILE_URL.format(file_id=file_id)
+    for attempt in range(1, max_attempts + 1):
+        time.sleep(interval)
+        code, resp, _ = _fetch(url, method="GET", headers=headers)
+        file_obj = resp.get("file", resp)
+        state    = file_obj.get("state", "—")
+        file_url = file_obj.get("url") or file_obj.get("fileUrl") or None
+        _log.info(
+            "wix media poll %d/%d: HTTP %s state=%s url=%s",
+            attempt, max_attempts, code, state, (file_url or "—")[:80],
+        )
+        if state == "READY":
+            return file_id, file_url
+        if state in ("FAILED", "ERROR"):
+            raise WixMediaImportError(
+                f"Wix Media file {file_id} import failed in background: state={state}"
+            )
+
+    raise WixMediaImportError(
+        f"Wix Media file {file_id} not READY after {max_attempts} polls "
+        f"({max_attempts * interval:.0f}s). Last state unknown."
     )
