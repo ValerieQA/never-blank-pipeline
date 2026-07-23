@@ -144,6 +144,82 @@ class BaseCollector:
             f"{self.platform}: all {_MAX_RETRIES} retries exhausted"
         ) from last_exc
 
+    def _fetch_with_status(
+        self,
+        url: str,
+        headers: Optional[dict[str, str]] = None,
+        timeout: int = 15,
+    ) -> tuple[int, dict]:
+        """
+        HTTP GET with retry; returns (http_status_code, parsed_response_dict).
+
+        Unlike _fetch_with_retry, exposes the HTTP status code of 2xx responses
+        so callers can distinguish e.g. 200 (ready) from 202 (pending).
+
+        Error handling is identical to _fetch_with_retry:
+          401/403 → AuthorizationCollectorError (propagates immediately)
+          429     → wait _RATE_LIMIT_WAIT seconds, retry
+          5xx     → exponential backoff, retry
+          other 4xx → CollectorError with "HTTP {code}" in message
+          network/JSON → CollectorError
+        """
+        headers = headers or {}
+        last_exc: Optional[Exception] = None
+
+        for attempt in range(_MAX_RETRIES):
+            try:
+                req = urllib.request.Request(url, headers=headers, method="GET")
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    body = resp.read().decode("utf-8")
+                    code = resp.status
+                    try:
+                        data = json.loads(body) if body.strip() else {}
+                    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+                        raise CollectorError(
+                            f"{self.platform}: invalid JSON response from API"
+                        ) from exc
+                    return code, data
+
+            except urllib.error.HTTPError as exc:
+                if exc.code == 429:
+                    log.warning(
+                        "%s: rate limited (HTTP 429) — waiting %ds before retry %d/%d",
+                        self.platform, _RATE_LIMIT_WAIT, attempt + 1, _MAX_RETRIES,
+                    )
+                    time.sleep(_RATE_LIMIT_WAIT)
+                    last_exc = exc
+                    continue
+                elif exc.code in (401, 403):
+                    raise AuthorizationCollectorError(
+                        f"{self.platform}: authorization failed (HTTP {exc.code}) — check API credentials"
+                    ) from exc
+                elif exc.code >= 500:
+                    log.warning(
+                        "%s: server error HTTP %d (attempt %d/%d)",
+                        self.platform, exc.code, attempt + 1, _MAX_RETRIES,
+                    )
+                    last_exc = exc
+                else:
+                    raise CollectorError(
+                        f"{self.platform}: HTTP {exc.code} — {exc.reason}"
+                    ) from exc
+
+            except urllib.error.URLError as exc:
+                log.warning(
+                    "%s: network error (attempt %d/%d): %s",
+                    self.platform, attempt + 1, _MAX_RETRIES, exc.reason,
+                )
+                last_exc = exc
+
+            if attempt < _MAX_RETRIES - 1:
+                wait = _BACKOFF_BASE ** attempt
+                log.info("%s: retrying in %.1fs...", self.platform, wait)
+                time.sleep(wait)
+
+        raise CollectorError(
+            f"{self.platform}: all {_MAX_RETRIES} retries exhausted"
+        ) from last_exc
+
     def _now(self) -> datetime:
         return datetime.now(tz=timezone.utc)
 
