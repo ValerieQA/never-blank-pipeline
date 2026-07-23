@@ -7,10 +7,10 @@ Publishing flow:
        b. If import fails → return WixDraftCreationError (Wix channel fails,
           other channels are unaffected)
   2. Build richContent nodes from Markdown body
-  3. POST /blog/v3/draft-posts (with coverMedia.image when available)
+  3. POST /blog/v3/draft-posts (with media.wixMedia.id when available)
   4. Verify draft: GET /blog/v3/draft-posts/{id}
-       — if image_url was set, verify that draft coverMedia contains the imported file_id
-       — if media is missing, return WixDraftMediaVerificationError
+       — if image_url was set, verify that draft media.wixMedia.id matches imported file_id
+       — if media.wixMedia.id is missing, return WixDraftMediaVerificationError
   5. In live mode: POST /blog/v3/draft-posts/{id}/publish
        — read post_id and actual URL from response
        — if URL absent, GET /blog/v3/posts/{post_id} to resolve it
@@ -181,10 +181,13 @@ class WixPublisher(BasePublisher):
             "richContent": {"nodes": nodes},
         }
         if media_asset:
-            cover_image: dict = {"id": media_asset.file_id}
-            if media_asset.url:
-                cover_image["url"] = media_asset.url
-            post_payload["coverMedia"] = {"image": cover_image}
+            # Wix Blog v3 schema: media.wixMedia.id (WixMedia GUID)
+            # media.custom must be True to use this instead of auto-selecting first content image
+            post_payload["media"] = {
+                "wixMedia":  {"id": media_asset.file_id},
+                "displayed": True,
+                "custom":    True,
+            }
 
         draft_body = json.dumps({"draftPost": post_payload}).encode()
 
@@ -272,12 +275,10 @@ def _verify_draft(
         method="GET", headers=headers,
     )
     _log.info(
-        "wix step4 draft-verify: HTTP %s | draftPost.keys=%s | status=%s | coverMedia=%s | media=%s",
+        "wix step4 draft-verify: HTTP %s | status=%s | media=%s",
         code,
-        list(resp.get("draftPost", {}).keys()),
         resp.get("draftPost", {}).get("status", "—"),
-        str(resp.get("draftPost", {}).get("coverMedia", "—"))[:200],
-        str(resp.get("draftPost", {}).get("media", "—"))[:200],
+        str(resp.get("draftPost", {}).get("media", "—"))[:300],
     )
     if code not in (200, 201):
         raise WixDraftMediaVerificationError(
@@ -288,13 +289,13 @@ def _verify_draft(
     if media_asset is None:
         return  # no cover image expected — draft existence is sufficient
 
-    draft_post   = resp.get("draftPost", {})
-    cover_media  = draft_post.get("coverMedia", {})
-    image_id     = cover_media.get("image", {}).get("id", "")
+    draft_post = resp.get("draftPost", {})
+    media      = draft_post.get("media", {})
+    image_id   = media.get("wixMedia", {}).get("id", "")
 
     if not image_id:
         raise WixDraftMediaVerificationError(
-            f"Draft {draft_id} was created but coverMedia is missing. "
+            f"Draft {draft_id} was created but media.wixMedia.id is missing. "
             f"Expected Wix file_id={media_asset.file_id!r}. "
             "The cover image will not appear on the published post."
         )
