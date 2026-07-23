@@ -215,6 +215,33 @@ image_text:
     - "Here are 3 ways…"
     - Corporate slogans
 
+instagram_grid_qa:
+  # Visual regression check — run before every Instagram publish
+  # Goal: the grid should look like a curated publication, not a mixed collection
+  principle: "Grid first. Every cover is evaluated next to the previous posts, not in isolation."
+
+  hard_rules:
+    - Dark premium aesthetic on every card — no white backgrounds unless strong editorial reason
+    - Logo always bottom-right, same size and opacity
+    - Headline must be fully readable in 1×1 grid preview — never cropped
+    - Consistent margins on all covers (never text touching edge)
+    - Blue light element is supporting visual only — never main subject
+
+  checklist:
+    - Does this look like a Never Blank post?
+    - Does it fit the existing grid visually?
+    - Is the headline fully readable in the grid preview (not cropped)?
+    - Is the logo visible but not distracting?
+    - Would this look consistent next to the previous 9 posts?
+
+  thresholds:
+    min_dark_pixel_ratio: 0.55   # at least 55% of pixels must be dark (<100 brightness)
+    max_white_pixel_ratio: 0.20  # no more than 20% near-white pixels (>220 brightness)
+    logo_bottom_right: true       # logo must be in bottom-right quadrant
+    headline_max_font_scale: 0.08 # headline font max 8% of image height
+
+  failure_action: "warn"  # warn | block — warn logs issue, block prevents publish
+
 rotation_rules:
   window: 6  # last N posts for repetition check
   max_same_family_in_window: 2

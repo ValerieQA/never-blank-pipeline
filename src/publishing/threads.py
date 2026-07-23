@@ -16,6 +16,7 @@ Requires: NB_THREADS_ACCESS_TOKEN
 """
 import json
 import os
+import time
 import urllib.parse
 
 from src.publishing.base import BasePublisher, DraftPackage, _fetch
@@ -113,8 +114,10 @@ class ThreadsPublisher(BasePublisher):
             if err:
                 if i == 0:
                     return self._fail(f"First post container failed: {err}")
-                # Subsequent posts: warn and stop the chain
                 break
+
+            # Threads requires container to finish processing before publish
+            time.sleep(5)
 
             media_id, err = _publish_container(token, user_id, container_id)
             if err:

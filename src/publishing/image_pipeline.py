@@ -62,6 +62,53 @@ ELECTRIC_BLUE = (66, 160, 255)
 TEXT_COLOR    = (255, 255, 255)
 
 
+# ── Brand QA ──────────────────────────────────────────────────────────────────
+
+def brand_qa_check(img: "Image.Image", platform: str = "instagram") -> list[str]:
+    """
+    Visual regression check against instagram_grid_qa rules in visual_system.yaml.
+    Returns a list of warning strings (empty = passed).
+    Only runs for instagram platform.
+    """
+    if platform != "instagram":
+        return []
+    try:
+        vs = _load_visual_system()
+        qa = vs.get("instagram_grid_qa", {})
+        thresholds = qa.get("thresholds", {})
+    except Exception:
+        return []
+
+    warnings: list[str] = []
+    W, H = img.size
+    total = W * H
+
+    # Convert to grayscale for brightness analysis
+    grey = img.convert("L")
+    pixels = list(grey.getdata())
+
+    min_dark  = thresholds.get("min_dark_pixel_ratio", 0.55)
+    max_white = thresholds.get("max_white_pixel_ratio", 0.20)
+
+    dark_count  = sum(1 for p in pixels if p < 100)
+    white_count = sum(1 for p in pixels if p > 220)
+    dark_ratio  = dark_count / total
+    white_ratio = white_count / total
+
+    if dark_ratio < min_dark:
+        warnings.append(
+            f"QA: image too light — dark pixels {dark_ratio:.0%} < {min_dark:.0%} minimum. "
+            f"Never Blank grid requires dark premium aesthetic."
+        )
+    if white_ratio > max_white:
+        warnings.append(
+            f"QA: too many white pixels — {white_ratio:.0%} > {max_white:.0%} maximum. "
+            f"White backgrounds are rarely appropriate for Never Blank covers."
+        )
+
+    return warnings
+
+
 # ── Config loaders ─────────────────────────────────────────────────────────────
 
 def _load_visual_system() -> dict:
@@ -107,7 +154,14 @@ def resize_for_platform(image: "Image.Image", platform: str) -> "Image.Image":
     # Center crop to exact target
     left = (scaled_w - target_w) // 2
     top  = (scaled_h - target_h) // 2
-    return scaled.crop((left, top, left + target_w, top + target_h))
+    result = scaled.crop((left, top, left + target_w, top + target_h))
+
+    # Brand QA check for Instagram
+    qa_warnings = brand_qa_check(result, platform)
+    for w in qa_warnings:
+        print(f"  ⚠  {w}")
+
+    return result
 
 
 # ── Visual registry ────────────────────────────────────────────────────────────
