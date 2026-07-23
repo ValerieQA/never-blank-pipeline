@@ -316,11 +316,13 @@ def _resolve_post_url(post_id: str, headers: dict) -> str:
         f"https://www.wixapis.com/blog/v3/posts/{post_id}",
         method="GET", headers=headers,
     )
+    post_obj = resp.get("post", {})
     _log.info(
-        "wix step6 resolve-url: HTTP %s | keys=%s | post.url=%s | raw=%.400s",
-        code, list(resp.keys()),
-        resp.get("post", {}).get("url", "—"),
-        str(resp)[:400],
+        "wix step6 resolve-url: HTTP %s | keys=%s | post keys=%s | post.url=%s | post.slug=%s | raw=%.600s",
+        code, list(resp.keys()), list(post_obj.keys()),
+        post_obj.get("url", "—"),
+        post_obj.get("slug", "—"),
+        str(resp)[:600],
     )
     if code in (200, 201):
         return resp.get("post", {}).get("url", "")
