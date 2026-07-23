@@ -226,6 +226,12 @@ class WixPublisher(BasePublisher):
             post_url = post.get("url", "")
 
             if not post_id:
+                import logging as _logging
+                _logging.getLogger("wix.publisher").warning(
+                    "publish response keys: %s | post keys: %s | raw snippet: %.500s",
+                    list(resp2.keys()), list(post.keys()),
+                    str(resp2)[:500],
+                )
                 raise WixPublishError(
                     "Publish returned 2xx but no post ID in response — "
                     "cannot record a valid platform_content_id"
