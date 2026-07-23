@@ -7,10 +7,10 @@ Publishing flow:
        b. If import fails → return WixDraftCreationError (Wix channel fails,
           other channels are unaffected)
   2. Build richContent nodes from Markdown body
-  3. POST /blog/v3/draft-posts (with media.wixMedia.id when available)
+  3. POST /blog/v3/draft-posts (with media.wixMedia.image.{id,url} when available)
   4. Verify draft: GET /blog/v3/draft-posts/{id}
-       — if image_url was set, verify that draft media.wixMedia.id matches imported file_id
-       — if media.wixMedia.id is missing, return WixDraftMediaVerificationError
+       — if image_url was set, verify draft media.wixMedia.image.id matches imported file_id
+       — if media.wixMedia.image.id missing, return WixDraftMediaVerificationError
   5. In live mode: POST /blog/v3/draft-posts/{id}/publish
        — read post_id and actual URL from response
        — if URL absent, GET /blog/v3/posts/{post_id} to resolve it
@@ -181,10 +181,16 @@ class WixPublisher(BasePublisher):
             "richContent": {"nodes": nodes},
         }
         if media_asset:
-            # Wix Blog v3 schema: media.wixMedia.id (WixMedia GUID)
-            # media.custom must be True to use this instead of auto-selecting first content image
+            # Wix Blog v3 actual response shape (confirmed from live posts):
+            # media.wixMedia.image.{id, url} — both id and url are required.
+            # custom:True means this image is used instead of auto-selecting from content.
             post_payload["media"] = {
-                "wixMedia":  {"id": media_asset.file_id},
+                "wixMedia": {
+                    "image": {
+                        "id":  media_asset.file_id,
+                        "url": media_asset.url or "",
+                    }
+                },
                 "displayed": True,
                 "custom":    True,
             }
@@ -198,10 +204,10 @@ class WixPublisher(BasePublisher):
                 method="POST", headers=headers, body=draft_body,
             )
             _log.info(
-                "wix step3 draft-create: HTTP %s | keys=%s | draftPost.id=%s | coverMedia_sent=%s",
+                "wix step3 draft-create: HTTP %s | keys=%s | draftPost.id=%s | media_sent=%s",
                 code, list(resp.keys()),
                 resp.get("draftPost", {}).get("id", "—"),
-                str(post_payload.get("coverMedia", "not_sent"))[:200],
+                str(post_payload.get("media", "not_sent"))[:200],
             )
             if code not in (200, 201):
                 err = resp.get("message", resp.get("_raw", ""))[:200]
@@ -291,7 +297,7 @@ def _verify_draft(
 
     draft_post = resp.get("draftPost", {})
     media      = draft_post.get("media", {})
-    image_id   = media.get("wixMedia", {}).get("id", "")
+    image_id   = media.get("wixMedia", {}).get("image", {}).get("id", "")
 
     if not image_id:
         raise WixDraftMediaVerificationError(
