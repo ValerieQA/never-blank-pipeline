@@ -125,9 +125,10 @@ def import_image(
         file_id, file_state, (file_url or "—")[:80],
     )
 
-    # Wix Media import is asynchronous. The file must reach state READY before
-    # it can be referenced in a blog draft. Poll up to ~10s (5 × 2s).
-    if file_state != "READY":
+    # Wix Media import is asynchronous. The file must be in a usable state before
+    # it can be referenced in a blog draft. Wix returns "OK" or "READY" when done.
+    # Poll up to ~10s (5 × 2s) if neither is returned immediately.
+    if file_state not in ("OK", "READY"):
         file_id, file_url = _wait_for_ready(file_id, headers, max_attempts=5, interval=2)
 
     return WixMediaAsset(
@@ -159,7 +160,7 @@ def _wait_for_ready(
             "wix media poll %d/%d: HTTP %s state=%s url=%s",
             attempt, max_attempts, code, state, (file_url or "—")[:80],
         )
-        if state == "READY":
+        if state in ("OK", "READY"):
             return file_id, file_url
         if state in ("FAILED", "ERROR"):
             raise WixMediaImportError(
