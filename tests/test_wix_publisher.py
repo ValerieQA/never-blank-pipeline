@@ -303,17 +303,19 @@ class TestWixPublisherDraftVerification:
         assert result.status == PublishStatus.FAILED
         assert "mismatch" in result.error_message
 
-    def test_draft_get_failure_does_not_block_publish(self, monkeypatch):
-        """Verification GET failure is non-fatal — draft may still be fine."""
+    def test_draft_get_failure_blocks_publish(self, monkeypatch):
+        """Verification GET failure is fatal — fail-closed, do not publish unverified draft."""
         _wix_env(monkeypatch)
         asset = WixMediaAsset(file_id="wix-abc-123")
+        publish_calls = []
 
         def fake_fetch(url, *, method="GET", headers=None, body=None, timeout=20):
             if method == "POST" and "draft-posts" in url and "publish" not in url:
                 return 201, {"draftPost": {"id": "draft-001"}}, ""
             if method == "GET" and "draft-posts" in url:
-                return 0, {}, "network error"    # GET failed
+                return 503, {}, "service unavailable"   # verification GET failed
             if method == "POST" and "publish" in url:
+                publish_calls.append(url)
                 return 200, {"post": {"id": "post-001", "url": "https://neverblank.co/post/x"}}, ""
             return 200, {}, ""
 
@@ -321,7 +323,9 @@ class TestWixPublisherDraftVerification:
             with patch("src.publishing.wix._fetch", side_effect=fake_fetch):
                 result = WixPublisher().publish(_draft_package(), "live")
 
-        assert result.status == PublishStatus.PUBLISHED
+        assert result.status == PublishStatus.FAILED
+        assert "HTTP 503" in result.error_message
+        assert publish_calls == []   # publish endpoint was never called
 
     def test_valid_verified_draft_publishes(self, monkeypatch):
         _wix_env(monkeypatch)
@@ -394,6 +398,26 @@ class TestWixPublisherUrlResolution:
 
         assert result.status == PublishStatus.FAILED
         assert "HTTP 500" in result.error_message
+
+    def test_publish_2xx_without_post_id_returns_failed(self, monkeypatch):
+        """2xx publish response with no post ID must fail — draft_id must not be used as fallback."""
+        _wix_env(monkeypatch)
+
+        def fake_fetch(url, *, method="GET", headers=None, body=None, timeout=20):
+            if method == "POST" and "draft-posts" in url and "publish" not in url:
+                return 201, {"draftPost": {"id": "draft-001"}}, ""
+            if method == "GET":
+                return 200, {"draftPost": {}}, ""
+            if method == "POST" and "publish" in url:
+                return 200, {"post": {}}, ""   # 2xx but no id field
+            return 200, {}, ""
+
+        with patch("src.publishing.wix._fetch", side_effect=fake_fetch):
+            result = WixPublisher().publish(_draft_package(image_url=None), "live")
+
+        assert result.status == PublishStatus.FAILED
+        assert "no post ID" in result.error_message
+        assert result.external_id is None   # draft_id must never be stored here
 
 
 class TestWixPublisherDraftOnly:

@@ -189,52 +189,56 @@ class WixPublisher(BasePublisher):
 
         draft_body = json.dumps({"draftPost": post_payload}).encode()
 
-        # ── Step 3: Create draft ──────────────────────────────────────────────
-        code, resp, _ = _fetch(
-            f"{_API}/blog/v3/draft-posts",
-            method="POST", headers=headers, body=draft_body,
-        )
-        if code not in (200, 201):
-            err = resp.get("message", resp.get("_raw", ""))[:200]
-            return self._fail(f"Draft creation failed (HTTP {code}): {err}")
-
-        draft_id = resp.get("draftPost", {}).get("id", "")
-        if not draft_id:
-            return self._fail("Draft created but no ID returned in response")
-
-        # ── Step 4: Verify draft (always, not just for media) ─────────────────
         try:
-            _verify_draft(draft_id, media_asset, headers)
-        except WixDraftMediaVerificationError as exc:
-            return self._fail(str(exc))
-
-        if mode == "draft_only":
-            return self._draft(
-                external_id=draft_id,
-                url=f"https://manage.wix.com/dashboard/{site_id}/blog/draft-posts/{draft_id}",
+            # ── Step 3: Create draft ──────────────────────────────────────────
+            code, resp, _ = _fetch(
+                f"{_API}/blog/v3/draft-posts",
+                method="POST", headers=headers, body=draft_body,
             )
+            if code not in (200, 201):
+                err = resp.get("message", resp.get("_raw", ""))[:200]
+                raise WixDraftCreationError(f"HTTP {code}: {err}")
 
-        # ── Step 5: Publish ───────────────────────────────────────────────────
-        code2, resp2, _ = _fetch(
-            f"{_API}/blog/v3/draft-posts/{draft_id}/publish",
-            method="POST", headers=headers, body=b"{}",
-        )
-        if code2 not in (200, 201):
-            err = resp2.get("message", resp2.get("_raw", ""))[:200]
-            return self._fail(f"Publish failed (HTTP {code2}): {err}")
+            draft_id = resp.get("draftPost", {}).get("id", "")
+            if not draft_id:
+                raise WixDraftCreationError("POST /draft-posts returned 2xx but no draft ID")
 
-        post     = resp2.get("post", {})
-        post_id  = post.get("id", "")
-        post_url = post.get("url", "")
+            # ── Step 4: Verify draft ──────────────────────────────────────────
+            _verify_draft(draft_id, media_asset, headers)
 
-        # ── Step 6: Resolve URL if not in publish response ────────────────────
-        if post_id and not post_url:
-            post_url = _resolve_post_url(post_id, headers)
+            if mode == "draft_only":
+                return self._draft(
+                    external_id=draft_id,
+                    url=f"https://manage.wix.com/dashboard/{site_id}/blog/draft-posts/{draft_id}",
+                )
 
-        if not post_id:
-            post_id = draft_id  # fallback: use draft_id; URL will be empty
+            # ── Step 5: Publish ───────────────────────────────────────────────
+            code2, resp2, _ = _fetch(
+                f"{_API}/blog/v3/draft-posts/{draft_id}/publish",
+                method="POST", headers=headers, body=b"{}",
+            )
+            if code2 not in (200, 201):
+                err = resp2.get("message", resp2.get("_raw", ""))[:200]
+                raise WixPublishError(f"HTTP {code2}: {err}")
 
-        return self._published(external_id=post_id, url=post_url)
+            post     = resp2.get("post", {})
+            post_id  = post.get("id", "")
+            post_url = post.get("url", "")
+
+            if not post_id:
+                raise WixPublishError(
+                    "Publish returned 2xx but no post ID in response — "
+                    "cannot record a valid platform_content_id"
+                )
+
+            # ── Step 6: Resolve URL if not in publish response ────────────────
+            if not post_url:
+                post_url = _resolve_post_url(post_id, headers)
+
+            return self._published(external_id=post_id, url=post_url)
+
+        except WixPublisherError as exc:
+            return self._fail(str(exc))
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -245,20 +249,22 @@ def _verify_draft(
     headers:     dict,
 ) -> None:
     """
-    GET the draft and check it exists. If a media_asset was imported,
-    verify the draft's media.wixMedia.image.id matches the imported file_id.
+    GET the draft to confirm it exists and, when a cover image was imported,
+    verify that the draft's media.wixMedia.image.id matches the imported file_id.
 
-    Raises WixDraftMediaVerificationError if verification fails.
-    Non-fatal on GET failure (network error) — logs warning, does not block.
+    Always raises WixDraftMediaVerificationError on failure — fail-closed.
+    A non-2xx GET means we cannot confirm the draft is well-formed; publishing
+    a draft we cannot verify risks silently delivering a broken post.
     """
     code, resp, _ = _fetch(
         f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
         method="GET", headers=headers,
     )
     if code not in (200, 201):
-        # Verification call failed — do not block publishing; Wix may have
-        # just created the draft successfully. Treat as unverified, not failed.
-        return
+        raise WixDraftMediaVerificationError(
+            f"Draft {draft_id} verification GET returned HTTP {code} — "
+            "cannot confirm draft state before publishing"
+        )
 
     if media_asset is None:
         return  # no cover image expected — draft existence is sufficient
