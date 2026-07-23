@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       dry_run:
-        description: "Generate and validate only — do NOT publish"
+        description: "dry_run=true: generate + validate only, no publish (needs only OpenAI key)"
         required: false
         default: "false"
         type: choice
@@ -27,27 +27,37 @@ jobs:
           python-version: "3.12"
       - run: pip install --quiet -r requirements.txt
 
-      - name: Check required secrets
+      # Always required: OpenAI for LLM generation
+      - name: Check OpenAI secret
+        run: |
+          if [ -z "$NB_OPENAI_API_KEY" ]; then
+            echo "ERROR: NB_OPENAI_API_KEY is not set"
+            exit 1
+          fi
+          echo "✓ NB_OPENAI_API_KEY = [SET]"
+        env:
+          NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
+
+      # Only required when publishing (dry_run=false)
+      - name: Check publish secrets
+        if: inputs.dry_run == 'false'
         run: |
           MISSING=""
-          [ -z "$NB_OPENAI_API_KEY" ]             && MISSING="$MISSING NB_OPENAI_API_KEY"
           [ -z "$NB_WIX_API_KEY" ]                && MISSING="$MISSING NB_WIX_API_KEY"
           [ -z "$NB_WIX_SITE_ID" ]                && MISSING="$MISSING NB_WIX_SITE_ID"
           [ -z "$NB_WIX_POST_OWNER_ID" ]          && MISSING="$MISSING NB_WIX_POST_OWNER_ID"
           [ -z "$NB_ZERNIO_API_KEY" ]             && MISSING="$MISSING NB_ZERNIO_API_KEY"
           [ -z "$NB_ZERNIO_LINKEDIN_ACCOUNT_ID" ] && MISSING="$MISSING NB_ZERNIO_LINKEDIN_ACCOUNT_ID"
           if [ -n "$MISSING" ]; then
-            echo "ERROR: missing secrets:$MISSING"
+            echo "ERROR: missing publish secrets:$MISSING"
             exit 1
           fi
-          echo "✓ NB_OPENAI_API_KEY              = [SET]"
           echo "✓ NB_WIX_API_KEY                 = [SET]"
           echo "✓ NB_WIX_SITE_ID                 = [SET]"
           echo "✓ NB_WIX_POST_OWNER_ID           = [SET]"
           echo "✓ NB_ZERNIO_API_KEY              = [SET]"
           echo "✓ NB_ZERNIO_LINKEDIN_ACCOUNT_ID  = [SET]"
         env:
-          NB_OPENAI_API_KEY:              ${{ secrets.NB_OPENAI_API_KEY }}
           NB_WIX_API_KEY:                 ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID:                 ${{ secrets.NB_WIX_SITE_ID }}
           NB_WIX_POST_OWNER_ID:           ${{ secrets.NB_WIX_POST_OWNER_ID }}

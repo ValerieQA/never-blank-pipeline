@@ -27,7 +27,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -64,34 +64,84 @@ def _load_generated(signal_id: str) -> dict:
     return json.loads(path.read_text())
 
 
+def _parse_generated_at(value: str) -> datetime | None:
+    """
+    Parse generated_at from the package JSON.
+    Accepts ISO 8601 format (new) and the legacy "2026-07-23 22:15 UTC" format.
+    Returns None if unparseable.
+    """
+    if not value:
+        return None
+    # ISO 8601 (new format written by generate_and_publish.py and publish_packages.py)
+    for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S.%f%z"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            pass
+    # Legacy format: "2026-07-23 22:15 UTC"
+    try:
+        return datetime.strptime(value, "%Y-%m-%d %H:%M UTC").replace(tzinfo=timezone.utc)
+    except ValueError:
+        pass
+    return None
+
+
 def _check_staleness(gen: dict) -> tuple[bool, str]:
     """
-    Return (is_stale, message).
-    Stale = package was generated before the active strategy started.
-    Missing provenance (no strategy_id in package) is also treated as stale.
+    Return (is_stale, message). Fail-closed on any ambiguity.
+
+    Stale conditions (any one is sufficient to block):
+      1. No active strategy could be loaded.
+      2. Package has no strategy_id (pre-provenance package).
+      3. Package strategy_id != active strategy_id.
+      4. Package generated_at < active strategy started_at.
     """
     pkg_strategy_id  = gen.get("strategy_id", "")
     pkg_generated_at = gen.get("generated_at", "")
 
     active = load_active_strategy()
     if active is None:
-        return False, ""  # no active strategy — can't check
+        return True, (
+            "Active strategy could not be loaded from strategy/current/strategy.json.\n"
+            "Publication blocked — cannot verify package is aligned with current strategy.\n"
+            "Fix strategy.json or use scripts/generate_and_publish.py."
+        )
 
     if not pkg_strategy_id:
         return True, (
-            f"Package has no strategy_id — it was generated before strategy provenance "
-            f"was added to the pipeline.\n"
+            "Package has no strategy_id — generated before strategy provenance was added.\n"
             f"  Active strategy: {active.strategy_id} (started {active.started_at})\n"
-            f"  Use scripts/generate_and_publish.py to regenerate with the active strategy."
+            "  Use scripts/generate_and_publish.py to regenerate with the active strategy."
         )
 
     if pkg_strategy_id != active.strategy_id:
         return True, (
-            f"Package strategy_id={pkg_strategy_id!r} does not match "
-            f"active strategy_id={active.strategy_id!r}.\n"
+            f"strategy_id mismatch: package={pkg_strategy_id!r}  active={active.strategy_id!r}\n"
             f"  Generated at: {pkg_generated_at}\n"
             f"  Strategy started: {active.started_at}\n"
-            f"  Use scripts/generate_and_publish.py to regenerate with the active strategy."
+            "  Use scripts/generate_and_publish.py to regenerate with the active strategy."
+        )
+
+    # Date check: generated_at must be >= strategy started_at
+    gen_dt = _parse_generated_at(pkg_generated_at)
+    if gen_dt is None:
+        return True, (
+            f"Package generated_at={pkg_generated_at!r} could not be parsed.\n"
+            "  Cannot verify freshness — publication blocked.\n"
+            "  Use scripts/generate_and_publish.py to regenerate."
+        )
+    strategy_start = datetime(
+        active.started_at.year, active.started_at.month, active.started_at.day,
+        tzinfo=timezone.utc,
+    ) if isinstance(active.started_at, date) else None
+
+    if strategy_start and gen_dt < strategy_start:
+        return True, (
+            f"Package was generated BEFORE the active strategy started.\n"
+            f"  generated_at:    {pkg_generated_at}\n"
+            f"  strategy started: {active.started_at}\n"
+            f"  strategy_id:     {active.strategy_id}\n"
+            "  Use scripts/generate_and_publish.py to regenerate with the active strategy."
         )
 
     return False, ""

@@ -385,7 +385,7 @@ def _save_generated(path: Path, sig_id, headline, blog_body, linkedin, facebook,
     path.write_text(json.dumps({
         "signal_id":           sig_id,
         "headline":            headline,
-        "generated_at":        datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "generated_at":        datetime.now(timezone.utc).isoformat(),
         "strategy_id":         strategy_id,
         "strategy_started_at": strategy_started_at,
         "wix_url":             wix_url,
