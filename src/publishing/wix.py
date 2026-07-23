@@ -317,13 +317,17 @@ def _resolve_post_url(post_id: str, headers: dict) -> str:
         method="GET", headers=headers,
     )
     post_obj = resp.get("post", {})
+    slug = post_obj.get("slug", "")
     _log.info(
-        "wix step6 resolve-url: HTTP %s | keys=%s | post keys=%s | post.url=%s | post.slug=%s | raw=%.600s",
-        code, list(resp.keys()), list(post_obj.keys()),
-        post_obj.get("url", "—"),
-        post_obj.get("slug", "—"),
-        str(resp)[:600],
+        "wix step6 resolve-url: HTTP %s | post.slug=%s | post.url=%s",
+        code, slug or "—", post_obj.get("url", "—"),
     )
-    if code in (200, 201):
-        return resp.get("post", {}).get("url", "")
-    return ""
+    if code not in (200, 201):
+        return ""
+    # Wix Blog v3 returns slug, not url. Build from NB_WIX_SITE_BASE_URL env var.
+    url = post_obj.get("url", "")
+    if not url and slug:
+        base = os.getenv("NB_WIX_SITE_BASE_URL", "").rstrip("/")
+        if base:
+            url = f"{base}/blog/{slug}"
+    return url
