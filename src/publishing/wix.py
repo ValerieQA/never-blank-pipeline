@@ -195,9 +195,10 @@ class WixPublisher(BasePublisher):
                 method="POST", headers=headers, body=draft_body,
             )
             _log.info(
-                "wix step3 draft-create: HTTP %s | keys=%s | draftPost.id=%s",
+                "wix step3 draft-create: HTTP %s | keys=%s | draftPost.id=%s | coverMedia_sent=%s",
                 code, list(resp.keys()),
                 resp.get("draftPost", {}).get("id", "—"),
+                str(post_payload.get("coverMedia", "not_sent"))[:200],
             )
             if code not in (200, 201):
                 err = resp.get("message", resp.get("_raw", ""))[:200]
@@ -271,10 +272,12 @@ def _verify_draft(
         method="GET", headers=headers,
     )
     _log.info(
-        "wix step4 draft-verify: HTTP %s | keys=%s | draftPost.status=%s | draftPost.coverMedia=%s",
-        code, list(resp.keys()),
+        "wix step4 draft-verify: HTTP %s | draftPost.keys=%s | status=%s | coverMedia=%s | media=%s",
+        code,
+        list(resp.get("draftPost", {}).keys()),
         resp.get("draftPost", {}).get("status", "—"),
         str(resp.get("draftPost", {}).get("coverMedia", "—"))[:200],
+        str(resp.get("draftPost", {}).get("media", "—"))[:200],
     )
     if code not in (200, 201):
         raise WixDraftMediaVerificationError(
