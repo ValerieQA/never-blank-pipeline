@@ -1,0 +1,25 @@
+name: Run Analytics Pipeline
+
+on:
+  workflow_dispatch:
+
+jobs:
+  analytics:
+    name: Analytics only (no publish)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet -r requirements.txt
+
+      - name: Run analytics pipeline
+        env:
+          NB_WIX_API_KEY:                ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:                ${{ secrets.NB_WIX_SITE_ID }}
+          NB_ZERNIO_API_KEY:             ${{ secrets.NB_ZERNIO_API_KEY }}
+          NB_ZERNIO_LINKEDIN_ACCOUNT_ID: ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
+        run: python scripts/run_analytics.py
