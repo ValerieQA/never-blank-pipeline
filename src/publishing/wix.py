@@ -235,7 +235,7 @@ class WixPublisher(BasePublisher):
                 raise WixPublishError(f"HTTP {code2}: {err}")
 
             post     = resp2.get("post", {})
-            post_id  = post.get("id", "")
+            post_id  = post.get("id", "") or resp2.get("postId", "")
             post_url = post.get("url", "")
 
             if not post_id:
