@@ -30,6 +30,11 @@ on:
     # During EST (winter, UTC-5) this fires at 2am ET — acceptable
     - cron: "0 7 * * 1,3,5,0"
 
+# Serialize publish runs to prevent concurrent writes to published_content_index.jsonl
+concurrency:
+  group: never-blank-publish
+  cancel-in-progress: false
+
 jobs:
   generate-and-publish:
     name: "Generate + Publish"
@@ -148,11 +153,19 @@ jobs:
       - name: Mark signal as published
         if: success() && inputs.dry_run != 'true'
         run: |
-          echo "${{ steps.resolve.outputs.signal_id }}" >> data/research/published_signal_ids.txt
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Pull latest to avoid conflicts if another run committed while this one was running.
+          # Concurrency group serializes runs, but rebase is a safety net for manual triggers.
+          git pull --rebase origin main
+
+          echo "${{ steps.resolve.outputs.signal_id }}" >> data/research/published_signal_ids.txt
           git add data/research/published_signal_ids.txt
-          git diff --staged --quiet || git commit -m "Mark signal ${{ steps.resolve.outputs.signal_id }} as published [skip ci]"
+
+          # Commit history index if it was updated by this run
+          git add strategy/published_content_index.jsonl 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "Publish ${{ steps.resolve.outputs.signal_id }}: mark signal + update history [skip ci]"
           git push
 
       - name: Upload generated package

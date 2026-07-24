@@ -317,23 +317,49 @@ def _resolve_post_url(post_id: str, headers: dict) -> str:
     """
     GET /blog/v3/posts/{post_id} to find the actual published URL.
     Returns empty string on failure (URL is non-critical — post is published).
+
+    Fallback: if Wix confirms the post exists (HTTP 200) but post.url is absent,
+    and both slug and NB_WIX_SITE_BASE_URL are available, constructs the canonical
+    URL locally. This is Never Blank-specific (assumes /blog/{slug} path format).
+    Logs the URL source so future readers can tell whether the URL came from the
+    Wix API or was constructed locally.
     """
     code, resp, _ = _fetch(
         f"https://www.wixapis.com/blog/v3/posts/{post_id}",
         method="GET", headers=headers,
     )
     post_obj = resp.get("post", {})
-    slug = post_obj.get("slug", "")
+    slug     = post_obj.get("slug", "")
+    api_url  = post_obj.get("url", "")
+
     _log.info(
         "wix step6 resolve-url: HTTP %s | post.slug=%s | post.url=%s",
-        code, slug or "—", post_obj.get("url", "—"),
+        code, slug or "—", api_url or "—",
     )
+
     if code not in (200, 201):
         return ""
-    # Wix Blog v3 returns slug, not url. Build from NB_WIX_SITE_BASE_URL env var.
-    url = post_obj.get("url", "")
-    if not url and slug:
+
+    # URL came directly from Wix API — preferred path
+    if api_url:
+        _log.info("wix URL source: api | url=%s", api_url)
+        return api_url
+
+    # Fallback: Wix confirmed the post exists (HTTP 200) but returned no url.
+    # Construct from base + slug only when all conditions are met:
+    #   1. slug is confirmed from the GET /posts/{id} response (not constructed locally)
+    #   2. NB_WIX_SITE_BASE_URL is configured
+    # This is NB-specific: assumes public blog path is {base}/blog/{slug}.
+    if slug:
         base = os.getenv("NB_WIX_SITE_BASE_URL", "").rstrip("/")
         if base:
             url = f"{base}/blog/{slug}"
-    return url
+            _log.info("wix URL source: fallback_base_plus_slug | base=%s | url=%s", base, url)
+            return url
+        else:
+            _log.warning(
+                "wix URL source: fallback skipped — slug=%s but NB_WIX_SITE_BASE_URL is empty",
+                slug,
+            )
+
+    return ""
