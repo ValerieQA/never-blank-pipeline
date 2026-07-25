@@ -91,6 +91,7 @@ jobs:
           fi
 
       - name: Upload research artifacts
+        id: upload_artifacts
         if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v4
@@ -100,6 +101,13 @@ jobs:
             reports/research_*.json
           retention-days: 7
           if-no-files-found: ignore
+
+      - name: Warn if artifact upload failed
+        if: always() && steps.upload_artifacts.outcome == 'failure'
+        run: |
+          echo "⚠️ **Artifact upload failed** — the core pipeline completed successfully." >> $GITHUB_STEP_SUMMARY
+          echo "Most likely cause: GitHub Actions storage quota is exhausted." >> $GITHUB_STEP_SUMMARY
+          echo "Fix: delete old artifacts at github.com/ValerieQA/never-blank-pipeline/actions" >> $GITHUB_STEP_SUMMARY
 
       - name: Print step summary
         if: always()
