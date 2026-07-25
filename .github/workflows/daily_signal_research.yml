@@ -74,13 +74,15 @@ jobs:
           NB_THREADS_ACCESS_TOKEN:           ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
           NB_TELEGRAM_BOT_TOKEN:             ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
           NB_TELEGRAM_CHANNEL_ID:            ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
+          NB_GOOGLE_DRIVE_PACKAGES_FOLDER_ID: ${{ secrets.NB_GOOGLE_DRIVE_PACKAGES_FOLDER_ID }}
         run: python scripts/research/run_daily_research.py
 
       - name: Commit research data
         run: |
           git config user.name  "never-blank-bot"
           git config user.email "bot@never-blank.com"
-          git add data/research/ data/memory/ reports/research_*.json reports/content_packages/ 2>/dev/null || true
+          # content_packages/ is now stored on Google Drive — do NOT add it here
+          git add data/research/ data/memory/ reports/research_*.json 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
@@ -94,12 +96,9 @@ jobs:
         with:
           name: research-${{ github.run_id }}
           path: |
-            data/research/signals_active.jsonl
-            data/research/selected_signals.jsonl
-            data/research/image_library.json
             reports/research_*.json
-            reports/content_packages/
-          retention-days: 30
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Print step summary
         if: always()
