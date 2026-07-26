@@ -12,7 +12,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.research.discover import run_discovery
-from src.utils.google_drive import upload_package
 from scripts.research.score import score_candidates, _load_weights
 from scripts.research.enrich import enrich_candidates
 from scripts.research.angles import add_angles
@@ -24,11 +23,9 @@ from src.utils.logger import get_logger
 
 log = get_logger("research.daily")
 
-ACTIVE_FILE    = Path("data/research/signals_active.jsonl")
-SELECTED_FILE  = Path("data/research/selected_signals.jsonl")
-SEEN_FILE      = Path("data/research/seen_index.json")
-PACKAGES_DIR   = Path("reports/content_packages")
-MANIFEST_FILE  = Path("data/research/packages_manifest.jsonl")
+ACTIVE_FILE   = Path("data/research/signals_active.jsonl")
+SELECTED_FILE = Path("data/research/selected_signals.jsonl")
+SEEN_FILE     = Path("data/research/seen_index.json")
 
 SCHEMA_DEFAULTS = {
     "CORE_FACT": "", "WHY_IT_MATTERS_TO_BUSINESS": "", "BUSINESS_RESPONSES_OBSERVED": "",
@@ -75,40 +72,6 @@ def _within_budget(count: int) -> bool:
         log.warning("Estimated cost $%.2f exceeds budget $%.2f — capping", est_cost, max_cost)
         return False
     return True
-
-
-def _upload_packages_to_drive(packages: list[dict]) -> None:
-    """
-    Upload each content package JSON to Google Drive and append a lightweight
-    manifest entry to data/research/packages_manifest.jsonl (committed to Git).
-    Non-fatal: Drive errors are logged as warnings, not exceptions.
-    """
-    MANIFEST_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(MANIFEST_FILE, "a") as mf:
-        for pkg in packages:
-            sig_id = pkg.get("SIGNAL_ID", "unknown")
-            pkg_path = PACKAGES_DIR / f"{sig_id}.json"
-            if not pkg_path.exists():
-                log.warning("drive: package file missing, skipping: %s", pkg_path)
-                continue
-            try:
-                file_id, web_url = upload_package(pkg_path)
-            except Exception as exc:
-                log.warning("drive: upload failed for %s — %s", sig_id, exc)
-                file_id, web_url = "", ""
-            entry = {
-                "signal_id":    sig_id,
-                "headline":     pkg.get("HEADLINE", "")[:100],
-                "generated_at": pkg.get("prepared_at", ""),
-                "drive_file_id": file_id,
-                "drive_url":    web_url,
-                "status":       "generated",
-            }
-            mf.write(json.dumps(entry, ensure_ascii=False) + "\n")
-            if file_id:
-                log.info("manifest: %s → %s", sig_id, web_url)
-            else:
-                log.warning("manifest: %s — no Drive URL (check NB_GOOGLE_DRIVE_PACKAGES_FOLDER_ID)", sig_id)
 
 
 def _publishing_failures(reports: list[dict]) -> list[str]:
@@ -195,7 +158,6 @@ def run() -> dict:
         summary["content_packages"] = len(content_packages)
         summary["images_new"] = sum(p["images"].get("new_images", 0) for p in content_packages)
         summary["images_reused"] = sum(p["images"].get("reused_images", 0) for p in content_packages)
-        _upload_packages_to_drive(content_packages)
 
     publish_enabled = os.environ.get("NB_RESEARCH_PUBLISH_ENABLED", "false").lower() == "true"
     log.info("=== Stage 11: Live Publishing (enabled=%s) ===", publish_enabled)

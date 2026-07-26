@@ -18,11 +18,10 @@ data/research/*
 !data/research/seen_index.json
 !data/research/image_library.json
 !data/research/published_signal_ids.txt
-!data/research/packages_manifest.jsonl
 data/research/archive/*
 !data/research/archive/.gitkeep
-# content packages live in Google Drive; only the manifest is tracked in Git
-reports/content_packages/
+# PNG images are already on Cloudinary — do not store in Git
+reports/content_packages/images/
 # logo and fonts are tracked assets — must NOT be ignored
 __pycache__/
 *.py[cod]

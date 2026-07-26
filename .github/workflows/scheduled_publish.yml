@@ -75,7 +75,7 @@ jobs:
         with:
           name: scheduled-publish-report-${{ github.run_id }}
           path: reports/scheduled_publish_report.*
-          retention-days: 90
+          retention-days: 7
 
       - name: Print step summary
         if: always()
