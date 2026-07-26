@@ -231,6 +231,21 @@ def main() -> int:
 
     pimgs = _load_package_images(signal_id)
     blog_image_url: Optional[str] = pimgs.get("blog", {}).get("url") or None
+
+    if not blog_image_url:
+        print(f"  — No pre-generated image found for {signal_id} — generating now…")
+        try:
+            from scripts.research.prepare_content import prepare_content_packages
+            pkgs = prepare_content_packages([signal])
+            if pkgs:
+                pimgs = pkgs[0].get("images", {}).get("platform_images", {})
+                blog_image_url = pimgs.get("blog", {}).get("url") or None
+                print(f"  ✓  Image generated: {blog_image_url[:60] if blog_image_url else '(none)'}")
+            else:
+                print(f"  ⚠  Image generation returned no packages — Instagram will be skipped")
+        except Exception as exc:
+            print(f"  ⚠  Image generation failed ({exc}) — Instagram will be skipped")
+
     print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
 
     generated_path = PACKAGES_DIR / f"{signal_id}_generated.json"
