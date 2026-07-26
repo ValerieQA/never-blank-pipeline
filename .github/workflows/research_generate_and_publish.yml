@@ -142,6 +142,9 @@ jobs:
           NB_THREADS_ACCESS_TOKEN:        ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
           NB_TELEGRAM_BOT_TOKEN:          ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
           NB_TELEGRAM_CHANNEL_ID:         ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
+          NB_CLOUDINARY_CLOUD_NAME:       ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
+          NB_CLOUDINARY_API_KEY:          ${{ secrets.NB_CLOUDINARY_API_KEY }}
+          NB_CLOUDINARY_API_SECRET:       ${{ secrets.NB_CLOUDINARY_API_SECRET }}
         run: |
           FLAGS=""
           [ "${{ inputs.dry_run }}"       = "true" ] && FLAGS="$FLAGS --dry-run"
