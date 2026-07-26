@@ -58,6 +58,7 @@ from src.utils.logger import get_logger
 log = get_logger("generate_and_publish")
 
 PACKAGES_DIR   = Path("reports/content_packages")
+PACKAGES_DIR.mkdir(parents=True, exist_ok=True)
 SIGNALS_FILES  = [
     Path("data/research/selected_signals.jsonl"),
     Path("data/research/signals_active.jsonl"),
