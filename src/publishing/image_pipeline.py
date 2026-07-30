@@ -14,13 +14,15 @@ Flow:
   10. Update data/memory/visual_registry.json
 
 Public API:
-  run_image_pipeline(draft_dir) -> str          # full pipeline, returns Cloudinary URL
+  generate_and_upload_card(spec: ImageSpec) -> str   # stream-agnostic entry point
+  run_image_pipeline(draft_dir) -> str               # editorial wrapper (file-based)
   composite_image(base_bytes, hook_text) -> PIL.Image
   choose_visual_family(title, observation, content_goal) -> dict  # visual spec
 """
 import json
 import math
 import os
+from dataclasses import dataclass, field
 import re
 import time
 import urllib.request
@@ -1400,6 +1402,131 @@ def upload_to_cloudinary(image_path: Path, slug: str) -> str:
     return result["secure_url"]
 
 
+# ── Stream-agnostic image spec ────────────────────────────────────────────────
+
+@dataclass
+class ImageSpec:
+    """
+    Minimal description of a post's image needs.
+    Any content stream (editorial, VI, future) fills this and calls
+    generate_and_upload_card() — no knowledge of file layout required.
+    """
+    title:        str
+    hook_text:    str
+    content_goal: str = "challenge"
+    slug:         str = "post"
+    # Optional: pin a visual family. None → auto-selected by rhythm + topic.
+    visual_family: str | None = None
+    # Extra context forwarded to choose_visual_family (e.g. real company name
+    # to strip from the AI image prompt).
+    company: str = ""
+    # Where to save the local PNG before upload. None → IMAGES_DIR / "image.png"
+    local_images_dir: Path | None = None
+
+
+def generate_and_upload_card(spec: ImageSpec, log=print) -> str:
+    """
+    Stream-agnostic image pipeline: visual selection → base image →
+    per-platform compositing → Cloudinary upload → registry update.
+
+    Returns the Cloudinary URL of the blog/master image.
+    The caller stores it in DraftPackage.image_url — publishers use it
+    regardless of which content stream the post came from.
+    """
+    images_dir = spec.local_images_dir or IMAGES_DIR
+    registry   = load_registry()
+
+    if spec.visual_family:
+        # Caller pinned a family — build a minimal spec around it
+        log(f"  Visual family (pinned): {spec.visual_family}")
+        vs_spec = {
+            "visual_family":    spec.visual_family,
+            "dominant_palette": "",
+            "image_prompt":     "",
+            "negative_prompt":  "",
+            "hook_text":        spec.hook_text,
+            "card_texture_family": "mountains_depth_layers",
+            "rationale":        "pinned by caller",
+        }
+    else:
+        log("  Selecting visual family…")
+        vs_spec = choose_visual_family(
+            title        = spec.title,
+            observation  = spec.hook_text,
+            content_goal = spec.content_goal,
+            registry     = registry,
+            log          = log,
+            company      = spec.company,
+        )
+
+    visual_family    = vs_spec["visual_family"]
+    dominant_palette = vs_spec["dominant_palette"]
+    image_prompt     = vs_spec["image_prompt"]
+    negative_prompt  = vs_spec.get("negative_prompt", "")
+    is_card          = visual_family in CARD_TYPES
+
+    # Resolve hook: prefer spec from visual selector, fall back to caller's hook
+    raw_hook  = vs_spec.get("hook_text") or spec.hook_text
+    hook_text = raw_hook if is_card else prepare_photo_overlay_hook(raw_hook)
+    if hook_text != raw_hook:
+        log(f"  Hook text (shortened at sentence boundary): {hook_text!r}")
+    else:
+        log(f"  Hook text: {hook_text!r}")
+    log(f"  Rationale: {vs_spec.get('rationale', '')}")
+
+    # Base image
+    if is_card:
+        base_bytes = None
+        method     = "quote_card"
+        card_texture_family = vs_spec.get("card_texture_family", "mountains_depth_layers")
+    else:
+        base_bytes, method = _generate_base_image(
+            image_prompt, visual_family, negative_prompt, log=log
+        )
+        log(f"  Base image: {len(base_bytes) // 1024}KB [{method}]")
+
+    # Per-platform compositing + upload
+    images_dir.mkdir(parents=True, exist_ok=True)
+    platform_images: dict[str, str] = {}
+    master_url = ""
+
+    for platform in PLATFORMS:
+        if is_card:
+            sized_img = compose_quote_card(hook_text, platform, visual_family, card_texture_family)
+        else:
+            sized_img = composite_for_platform(base_bytes, hook_text, platform)
+
+        img_path = images_dir / f"{spec.slug}_{platform}.png"
+        sized_img.save(str(img_path), "PNG", optimize=True)
+
+        try:
+            url = upload_to_cloudinary(img_path, slug=f"{spec.slug}/{platform}")
+        except Exception as exc:
+            log(f"  ⚠  Cloudinary upload failed for {platform}: {exc}")
+            url = str(img_path)
+
+        platform_images[platform] = url
+        if platform == "blog":
+            master_url = url
+
+    log(f"  Cloudinary URL (blog): {master_url}")
+
+    # Registry
+    registry = register_post(
+        registry,
+        content_slug     = spec.slug,
+        visual_family    = visual_family,
+        dominant_palette = dominant_palette,
+        hook_text        = hook_text,
+        image_url        = master_url,
+        source_topic     = spec.title,
+    )
+    save_registry(registry)
+    log(f"  Registry updated: {REGISTRY_PATH}")
+
+    return master_url
+
+
 # ── Full pipeline ──────────────────────────────────────────────────────────────
 
 def run_image_pipeline(
@@ -1408,77 +1535,29 @@ def run_image_pipeline(
     log=print,
 ) -> str:
     """
-    Full pipeline: visual selection → base image → composite → Cloudinary.
-    Writes image_url.txt and updates visual_registry.json.
+    Editorial wrapper: reads draft files, delegates to generate_and_upload_card,
+    writes image_url.txt for downstream publishers.
     Returns the Cloudinary URL.
     """
-    # Read draft
-    blog_meta = json.loads((draft_dir / "blog_meta.json").read_text(encoding="utf-8"))
-    metadata  = json.loads((draft_dir / "metadata.json").read_text(encoding="utf-8"))
+    blog_meta    = json.loads((draft_dir / "blog_meta.json").read_text(encoding="utf-8"))
+    metadata     = json.loads((draft_dir / "metadata.json").read_text(encoding="utf-8"))
 
-    title       = metadata.get("title", "")
-    observation = blog_meta.get("hook_sentence", title)
+    title        = metadata.get("title", "")
+    hook_text    = blog_meta.get("hook_sentence", title)
     content_goal = metadata.get("content_goal", "challenge")
     slug         = metadata.get("wix_slug", "post")
 
-    # Load registry
-    registry = load_registry()
-
-    # Choose visual family + build image spec
-    log("  Selecting visual family…")
-    spec = choose_visual_family(title, observation, content_goal, registry, log=log)
-
-    visual_family    = spec["visual_family"]
-    dominant_palette = spec["dominant_palette"]
-    image_prompt     = spec["image_prompt"]
-    raw_hook         = spec.get("hook_text", observation[:HOOK_MAX_CHARS])
-    negative_prompt  = spec.get("negative_prompt", "")
-
-    # Prepare hook: find a clean sentence boundary if too long; never cut mid-clause
-    hook_text = prepare_photo_overlay_hook(raw_hook)
-    if hook_text != raw_hook:
-        log(f"  Hook text (shortened at sentence boundary): {hook_text!r}")
-    else:
-        log(f"  Hook text: {hook_text!r}")
-    log(f"  Rationale: {spec.get('rationale', '')}")
-
-    # Generate base image
-    base_bytes, method = _generate_base_image(
-        image_prompt, visual_family, negative_prompt, log=log
+    spec = ImageSpec(
+        title             = title,
+        hook_text         = hook_text,
+        content_goal      = content_goal,
+        slug              = slug,
+        local_images_dir  = images_dir,
     )
-    log(f"  Base image: {len(base_bytes) // 1024}KB [{method}]")
+    url = generate_and_upload_card(spec, log=log)
 
-    # Composite
-    log("  Compositing logo + hook text…")
-    image = composite_image(base_bytes, hook_text)
-
-    # Save locally
-    images_dir.mkdir(parents=True, exist_ok=True)
-    local_path = images_dir / "image.png"
-    image.save(str(local_path), "PNG", optimize=True)
-    log(f"  Saved: {local_path}  ({local_path.stat().st_size // 1024}KB)")
-
-    # Upload to Cloudinary
-    log("  Uploading to Cloudinary…")
-    url = upload_to_cloudinary(local_path, slug)
-    log(f"  Cloudinary URL: {url}")
-
-    # Write image_url.txt (single URL reused across all platform publishers)
     url_file = draft_dir / "image_url.txt"
     url_file.write_text(url, encoding="utf-8")
     log(f"  Written: {url_file}")
-
-    # Update visual registry
-    registry = register_post(
-        registry,
-        content_slug    = slug,
-        visual_family   = visual_family,
-        dominant_palette = dominant_palette,
-        hook_text        = hook_text,
-        image_url        = url,
-        source_topic     = title,
-    )
-    save_registry(registry)
-    log(f"  Registry updated: {REGISTRY_PATH}")
 
     return url

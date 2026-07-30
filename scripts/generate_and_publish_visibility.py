@@ -36,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.editorial.vi_pipeline import generate_vi_post, to_generated_package
 from src.publishing.base import DraftPackage
+from src.publishing.image_pipeline import ImageSpec, generate_and_upload_card
 from src.publishing.facebook import FacebookPublisher
 from src.publishing.instagram import InstagramPublisher
 from src.publishing.linkedin import LinkedInPublisher
@@ -331,7 +332,7 @@ def main(argv: list[str] | None = None) -> int:
     print(SEP)
 
     # ── 1. Load strategy ──────────────────────────────────────────────────────
-    print("\n[1/7] Loading active strategy…")
+    print("\n[1/8] Loading active strategy…")
     active_strategy = load_active_strategy()
     if active_strategy is None:
         print("  ERROR: No active strategy at strategy/current/strategy.json")
@@ -343,7 +344,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  ✓ Strategy: {strategy_id}")
 
     # ── 2. Claim item (queued → processing) ───────────────────────────────────
-    print("\n[2/7] Claiming queue item…")
+    print("\n[2/8] Claiming queue item…")
     items = _load_queue()
     if not items:
         print("  ERROR: visibility_queue.jsonl is empty or missing")
@@ -362,7 +363,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"    category={claimed.product_category.value} format={claimed.content_format}")
 
     # ── 3. Quota check (warn, never block) ────────────────────────────────────
-    print("\n[3/7] Quota check…")
+    print("\n[3/8] Quota check…")
     # Reconstruct published queue items from history snapshots (source_queue_item field)
     this_month_history: list[VisibilityQueueItem] = []
     if HISTORY_FILE.exists():
@@ -388,7 +389,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  ✓ Quota OK ({quota_result.ai_visibility_count} AI / {quota_result.brand_concept_count} Brand)")
 
     # ── 4. Generate VI package ────────────────────────────────────────────────
-    print("\n[4/7] Generating VI content (LLM)…")
+    print("\n[4/8] Generating VI content (LLM)…")
     try:
         package = generate_vi_post(claimed, strategy_context, cta_mode)
     except Exception as exc:
@@ -406,12 +407,29 @@ def main(argv: list[str] | None = None) -> int:
     pkg_path.write_text(json.dumps(package, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"  ✓ Package saved: {pkg_path.name}")
 
-    # ── 5. Publish platforms ──────────────────────────────────────────────────
-    print("\n[5/7] Publishing platforms…")
+    # ── 5. Generate image ─────────────────────────────────────────────────────
+    print("\n[5/7] Generating image…")
+    image_url: Optional[str] = None
+    if not args.dry_run:
+        try:
+            img_spec = ImageSpec(
+                title        = package.get("headline", claimed.headline),
+                hook_text    = package.get("hook_text", package.get("headline", "")),
+                content_goal = "challenge",
+                slug         = f"vi/{claimed.id}",
+            )
+            image_url = generate_and_upload_card(img_spec, log=print)
+            print(f"  ✓ Image: {image_url[:80]}")
+        except Exception as exc:
+            print(f"  ⚠  Image generation failed ({exc.__class__.__name__}: {str(exc)[:200]})"
+                  " — continuing without image (Facebook/Instagram will skip)")
+
+    # ── 6. Publish platforms ──────────────────────────────────────────────────
+    print("\n[6/7] Publishing platforms…")
     prior_history = _load_history_for(claimed.id)
     prior_results = prior_history.get("platform_results", {}) if prior_history else {}
 
-    draft = _build_draft(package, image_url=None)  # image_url: VI v1 has no pre-generated Cloudinary image
+    draft = _build_draft(package, image_url=image_url)
     results, wix_url, wix_post_id = _publish_platforms(draft, prior_results, args.dry_run)
 
     print()
@@ -424,9 +442,9 @@ def main(argv: list[str] | None = None) -> int:
         if res.get("error_message") and res.get("error_message") != "dry-run":
             print(f"           error={res['error_message'][:120]}")
 
-    # ── 6. Append immutable history snapshot ──────────────────────────────────
+    # ── 7. Append immutable history snapshot ──────────────────────────────────
     if not args.dry_run:
-        print("\n[6/7] Writing history snapshot…")
+        print("\n[7/8] Writing history snapshot…")
         now = datetime.now(timezone.utc)
         history_entry = {
             "content_id":       claimed.id,
@@ -446,8 +464,8 @@ def main(argv: list[str] | None = None) -> int:
         _append_history(history_entry)
         print("  ✓ History appended")
 
-        # ── 7. Update queue status ────────────────────────────────────────────
-        print("\n[7/7] Updating queue status…")
+        # ── 8. Update queue status ────────────────────────────────────────────
+        print("\n[8/8] Updating queue status…")
         failed_platforms = [p for p, r in results.items() if r.get("status") not in _OK_STATUSES | {"SKIPPED"}]
         final_status = "published" if not failed_platforms else "published_with_errors"
         if all(r.get("status") not in _OK_STATUSES for r in results.values() if r.get("status") != "SKIPPED"):
@@ -466,8 +484,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  ⚠  Failed platforms: {failed_platforms}")
             print("  Re-run with --item-id to retry only failed platforms")
     else:
-        print("\n[6/7] Skipped (dry-run)")
-        print("[7/7] Skipped (dry-run)")
+        print("\n[7/8] Skipped (dry-run)")
+        print("[8/8] Skipped (dry-run)")
 
     print(f"\n{SEP}")
     print(f"  Done — {claimed.id}")

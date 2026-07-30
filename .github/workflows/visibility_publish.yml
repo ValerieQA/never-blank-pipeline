@@ -43,7 +43,9 @@ jobs:
             pydantic \
             PyYAML \
             python-dotenv \
-            requests
+            requests \
+            Pillow \
+            cloudinary
 
       - name: Generate + Publish
         id: vi_publish
@@ -51,6 +53,11 @@ jobs:
           NB_OPENAI_API_KEY:               ${{ secrets.NB_OPENAI_API_KEY }}
           NB_OPENAI_CHAT_MODEL:            ${{ secrets.NB_OPENAI_CHAT_MODEL }}
           NB_OPENAI_TEMPERATURE:           "0.7"
+
+          # Cloudinary (image upload)
+          NB_CLOUDINARY_CLOUD_NAME:        ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
+          NB_CLOUDINARY_API_KEY:           ${{ secrets.NB_CLOUDINARY_API_KEY }}
+          NB_CLOUDINARY_API_SECRET:        ${{ secrets.NB_CLOUDINARY_API_SECRET }}
 
           # LinkedIn (via Zernio)
           NB_ZERNIO_API_KEY:               ${{ secrets.NB_ZERNIO_API_KEY }}
