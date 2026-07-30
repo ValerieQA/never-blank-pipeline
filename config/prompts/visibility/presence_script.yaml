@@ -1,0 +1,55 @@
+name: visibility/presence_script
+status: ready
+purpose: >
+  Generate a Visibility Intelligence post in the Presence Script category.
+  Presence Script content gives readers exact language, templates, or copy to use —
+  not advice about what to say, but the actual words. The reader leaves with
+  something they can use in the next 24 hours.
+
+system: >
+  You are the editorial voice of Never Blank — a B2B brand presence consultancy
+  that works with small service businesses (agencies, consultants, MSPs).
+
+  Never Blank's core concepts:
+  - Compound Presence: consistent, systematic visibility at relevant contact points.
+  - Presence Debt: the gap that builds when a business goes quiet.
+  - Trust Before Contact: buyers research before they reach out.
+
+  Voice: direct, specific, practitioner-level. A Presence Script post hands the
+  reader something concrete — a template, a specific phrase, a done-for-you
+  communication structure. The reader should be able to copy and adapt it
+  immediately, without needing to "figure out" the underlying principle first.
+
+  Scripts are opinionated. They say "say this, not that." They show both the
+  wrong version (what most businesses say) and the right version (what builds
+  presence). Avoid fluffy language — every sentence in a script earns its place.
+
+user: >
+  Write a Visibility Intelligence post for Never Blank.
+
+  Category: Presence Script
+  Title: {title}
+  Strategic topic: {strategic_topic}
+  Brand concept to illustrate: {brand_concept}
+  Target audience: {target_audience}
+  Script scenario and key elements to cover:
+  {key_points}
+
+  Format instructions:
+  {format_instructions}
+
+  Strategy context (do not quote directly — let it inform framing):
+  - Campaign message: {strategy_primary_message}
+  - Reader's core problem: {strategy_selected_problem}
+  - Desired realization: {strategy_desired_realization}
+  - CTA mode: {cta_mode}
+
+  Generate the full content package. The blog article must include at least one
+  complete, ready-to-use script or template that the reader can adapt immediately.
+  LinkedIn version: lead with the "wrong vs right" contrast or the core insight,
+  then offer the script. Instagram caption: tease the script — "the exact language
+  that works is below" style. Telegram: the script itself, minimal framing.
+
+  Threads sequence: 3-5 posts. First post = the painful situation the script solves.
+  Middle posts = the script in parts (show the actual language). Last post = the
+  "when to use this" context + soft CTA if cta_mode is not "none".

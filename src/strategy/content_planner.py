@@ -341,6 +341,7 @@ _CSV_COLUMNS = [
     "Website Angle", "LinkedIn Angle", "Instagram Angle",
     "Facebook Angle", "Threads Angle", "Telegram Angle",
     "SEO Keywords", "GEO Questions", "Status",
+    "Product Category", "Strategic Topic", "Brand Concept",
 ]
 
 
@@ -380,6 +381,9 @@ def _save_csv(items: list[ContentPlanItem], path: Path) -> None:
                 "SEO Keywords":              ", ".join(item.seo_keywords),
                 "GEO Questions":             " | ".join(item.geo_questions),
                 "Status":                    item.status,
+                "Product Category":          item.product_category.value if item.product_category else "",
+                "Strategic Topic":           item.strategic_topic.value if item.strategic_topic else "",
+                "Brand Concept":             item.brand_concept.value if item.brand_concept else "",
             })
 
 

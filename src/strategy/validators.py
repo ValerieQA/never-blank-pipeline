@@ -17,10 +17,16 @@ Fail-closed semantics:
 from __future__ import annotations
 
 import json
+import math
 import re
-from typing import Optional
+from typing import Optional, Protocol, Sequence, runtime_checkable
 
-from src.strategy.models import ContentPlanItem, Strategy
+from src.strategy.models import (
+    ContentPlanItem,
+    Strategy,
+    StrategicTopic,
+    VisibilityQuotaResult,
+)
 from src.utils.logger import get_logger
 
 log = get_logger("strategy.validators")
@@ -385,3 +391,75 @@ def validate_article_for_publish(
         validate_compound_presence_semantic(text, use_llm=use_llm_compound_check, llm_fn=llm_fn)
 
     log.info("Article pre-publish validation passed: platform=%s", platform)
+
+
+# ── Visibility Intelligence quota ─────────────────────────────────────────────
+
+@runtime_checkable
+class _HasStrategicTopic(Protocol):
+    """Structural protocol satisfied by both ContentPlanItem and VisibilityHistoryEntry."""
+    strategic_topic: Optional[StrategicTopic]
+
+
+def validate_visibility_quota(
+    items: Sequence[_HasStrategicTopic],
+) -> VisibilityQuotaResult:
+    """Check 40% AI Visibility / 60% Brand Concept quota across visibility items.
+
+    Never raises. Returns VisibilityQuotaResult with is_valid=False and
+    populated warnings when thresholds are not met.
+
+    Caller is responsible for scoping `items` to the relevant time window
+    (e.g. published_this_month + [candidate]).  Recognition posts must be
+    excluded by the caller — items without strategic_topic are skipped here
+    and do not count toward the denominator.
+
+    Quotas are planning instruments, not hard gates.  The caller logs warnings
+    and continues; it does not exit on is_valid=False.
+
+    Note on small-sample math:
+        ceil(n × 0.40) + ceil(n × 0.60) > n for most small n.
+        Example: n=8 → required 4 + 5 = 9 > 8.
+        Both thresholds cannot be satisfied simultaneously with fewer than 10 items.
+        This is expected behavior: the validator issues warnings for both when the
+        sample is small, and the caller treats them as advisory.  Do not treat this
+        as a validator bug — it is a deliberate property of the chosen formula.
+    """
+    total = len(items)
+    if total == 0:
+        return VisibilityQuotaResult(
+            total_items=0,
+            ai_visibility_count=0,
+            brand_concept_count=0,
+            ai_visibility_required=0,
+            brand_concept_required=0,
+            is_valid=True,
+        )
+
+    ai_count    = sum(1 for i in items if i.strategic_topic == StrategicTopic.AI_VISIBILITY)
+    brand_count = sum(1 for i in items if i.strategic_topic == StrategicTopic.BRAND_CONCEPT)
+
+    ai_required    = math.ceil(total * 0.40)
+    brand_required = math.ceil(total * 0.60)
+
+    warnings: list[str] = []
+    if ai_count < ai_required:
+        warnings.append(
+            f"AI Visibility underrepresented: {ai_count}/{total} posts "
+            f"(required ≥{ai_required}, i.e. 40% of {total})"
+        )
+    if brand_count < brand_required:
+        warnings.append(
+            f"Brand Concept underrepresented: {brand_count}/{total} posts "
+            f"(required ≥{brand_required}, i.e. 60% of {total})"
+        )
+
+    return VisibilityQuotaResult(
+        total_items=total,
+        ai_visibility_count=ai_count,
+        brand_concept_count=brand_count,
+        ai_visibility_required=ai_required,
+        brand_concept_required=brand_required,
+        is_valid=len(warnings) == 0,
+        warnings=warnings,
+    )

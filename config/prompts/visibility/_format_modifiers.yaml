@@ -1,0 +1,46 @@
+name: visibility/_format_modifiers
+status: ready
+purpose: >
+  Lookup table of content_format → formatting instructions injected into
+  category-level VI prompts. The pipeline loads the matching key and passes
+  it as {FORMAT_INSTRUCTIONS} into the base prompt.
+  If a content_format is not listed here, an empty string is used — the base
+  prompt's category-level structure guidance takes over.
+
+modifiers:
+  checklist: >
+    Structure the content as a numbered checklist of 5-7 specific, concrete items.
+    Each item must be a short, scannable statement — not a paragraph. The reader
+    should be able to read the full list in under 60 seconds and immediately know
+    which items apply to their business. End with a brief "if you checked 4+ items"
+    interpretation line.
+
+  how_to: >
+    Structure as step-by-step instructions numbered 1 through N (5-7 steps ideal).
+    Each step starts with an action verb. Include a brief "why this works" sentence
+    after each step — not a paragraph, one sentence. The reader must be able to
+    follow the steps without additional context.
+
+  myth_bust: >
+    Open with the misconception stated plainly as the reader would hold it
+    (not as a strawman). Then systematically dismantle it in 3-5 points.
+    Close with the corrected mental model in one or two clear sentences.
+    Tone: confident, not condescending. The reader should feel informed, not corrected.
+
+  stat_context: >
+    Lead with a single striking data point stated with full precision.
+    Follow with 3-4 sentences explaining what this number means specifically
+    for small B2B service businesses — not in general, not for enterprise.
+    Close with one concrete implication for the reader's presence decisions.
+
+  audit: >
+    Frame as a self-assessment with 6-8 yes/no questions.
+    Each question tests one specific, observable condition — not an opinion.
+    After the questions, provide a score interpretation:
+    6-8 yes = [result], 3-5 yes = [result], 0-2 yes = [result].
+
+  scorecard: >
+    Rate 5-7 dimensions of presence on a 1-5 scale.
+    For each dimension: name, what score 1 looks like, what score 5 looks like.
+    Provide a total score interpretation at the end.
+    The reader should be able to complete the scorecard in under 3 minutes.

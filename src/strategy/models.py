@@ -13,6 +13,7 @@ Key design decisions:
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field as dc_field
 from datetime import date, datetime
 from enum import Enum
 from typing import Any, Literal, Optional, Union
@@ -55,6 +56,32 @@ class ContentRole(str, Enum):
     REFRAME     = "reframe"
     OBJECTION   = "objection"
     CONVERSION  = "conversion"
+
+
+# ── Visibility Intelligence stream enums ───────────────────────────────────────
+# ProductCategory = NB's signal type (what the post does for the reader).
+# StrategicTopic  = quota-tracking bucket (40% AI Visibility / 60% Brand Concept).
+# BrandConcept    = verified Never Blank proprietary terms only; do not add here
+#                   until a term is confirmed as part of the brand language.
+# content_format  = editorial implementation detail (checklist, how_to, etc.) —
+#                   lives as a plain string in visibility_queue.jsonl only, not here.
+
+class ProductCategory(str, Enum):
+    PRESENCE_CHECK       = "presence_check"        # audit: is your presence working?
+    PRESENCE_SCRIPT      = "presence_script"        # action: exact language / template
+    VISIBILITY_FRAMEWORK = "visibility_framework"   # mental model for presence decisions
+
+
+class StrategicTopic(str, Enum):
+    AI_VISIBILITY  = "ai_visibility"   # AI search, LLM findability
+    BRAND_CONCEPT  = "brand_concept"   # presence frameworks, NB concepts
+    CUSTOMER_TRUST = "customer_trust"  # trust signals, proof
+
+
+class BrandConcept(str, Enum):
+    COMPOUND_PRESENCE    = "compound_presence"      # verified NB term
+    PRESENCE_DEBT        = "presence_debt"           # verified NB term
+    TRUST_BEFORE_CONTACT = "trust_before_contact"   # verified NB term
 
 
 class StrategyStatus(str, Enum):
@@ -199,12 +226,147 @@ class ContentPlanItem(BaseModel):
     source_pattern_id:            Optional[str] = None
     status:                       str          = "planned"
 
+    # Visibility Intelligence stream metadata (None for recognition posts).
+    product_category:             Optional[ProductCategory] = None
+    strategic_topic:              Optional[StrategicTopic]  = None
+    brand_concept:                Optional[BrandConcept]    = None
+
     @field_validator("hook", "mechanism", "reframe", "sales_objective")
     @classmethod
     def must_be_nonempty(cls, v: str) -> str:
         if not v or not v.strip():
             raise ValueError("Required content plan field cannot be empty")
         return v
+
+
+# ── Visibility Intelligence history & quota ────────────────────────────────────
+
+class VisibilityHistoryEntry(BaseModel):
+    """Immutable snapshot written to visibility_history.jsonl at publish time.
+
+    Decoupled from PublishedEntry intentionally: recognition and visibility
+    streams maintain separate histories so neither contaminates the other.
+    """
+    content_id:        str
+    published_at:      datetime
+    product_category:  Optional[ProductCategory] = None
+    strategic_topic:   Optional[StrategicTopic]  = None
+    brand_concept:     Optional[BrandConcept]     = None
+    # Open string — not an enum; new formats added without code change.
+    content_format:    str                        = ""
+    source_queue_item: dict[str, Any]             = Field(default_factory=dict)
+
+    @field_validator("content_id")
+    @classmethod
+    def must_be_nonempty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("content_id cannot be empty")
+        return v
+
+
+@dataclass
+class VisibilityQuotaResult:
+    """Result of validate_visibility_quota().  Never raises — always returns this."""
+    total_items:             int
+    ai_visibility_count:     int
+    brand_concept_count:     int
+    ai_visibility_required:  int          # ceil(total * 0.40)
+    brand_concept_required:  int          # ceil(total * 0.60)
+    is_valid:                bool
+    warnings:                list[str] = dc_field(default_factory=list)
+
+
+# ── Visibility Intelligence queue & generation models ─────────────────────────
+
+class VisibilityQueueItem(BaseModel):
+    """One entry in data/strategy/visibility_queue.jsonl."""
+    id:               str
+    title:            str
+    product_category: ProductCategory
+    # content_format is an open string (not an enum) — new formats added in the
+    # queue file without changing Python code. Examples: "checklist", "how_to",
+    # "myth_bust", "stat_context", "audit", "scorecard".
+    content_format:   str
+    strategic_topic:  StrategicTopic
+    brand_concept:    Optional[BrandConcept]                    = None
+    target_audience:  str                                       = ""
+    key_points:       list[str]                                 = Field(default_factory=list)
+    # State machine: queued → processing → published | published_with_errors | failed | skipped
+    # processing is a transient guard against double-claiming the same item.
+    status:                  Literal[
+                                 "queued",
+                                 "processing",
+                                 "published",
+                                 "published_with_errors",
+                                 "failed",
+                                 "skipped",
+                             ] = "queued"
+    # Operational fields — written by the publishing script, not by editorial curation.
+    attempt_count:           int              = 0
+    last_error:              Optional[str]    = None
+    processing_started_at:   Optional[datetime] = None
+    published_at:            Optional[datetime]  = None
+
+    @field_validator("id", "title")
+    @classmethod
+    def must_be_nonempty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Required VisibilityQueueItem field cannot be empty")
+        return v
+
+
+class VIGeneratedOutput(BaseModel):
+    """Domain model for LLM-generated Visibility Intelligence content.
+
+    Architectural Principle — Partial Regeneration:
+        Recognition content is generated as a narrative chain where each stage
+        depends on the previous one. Partial regeneration is therefore unsafe.
+
+        Visibility Intelligence content is generated as a structured object.
+        Individual platform outputs are independent of each other. A failed
+        field may be regenerated individually without regenerating the entire
+        package. This is an intentional property of the VI generation design,
+        not an implementation detail.
+
+    This model is the LLM output boundary. It does NOT know about _generated.json
+    or any downstream transport format. Use to_generated_package() to map it.
+    """
+    headline:          str
+    blog_article:      str
+    linkedin_post:     str
+    facebook_post:     str
+    instagram_caption: str
+    threads_sequence:  list[str]
+    telegram_text:     str
+    echo:              Optional[str] = None
+
+    @field_validator("headline", "blog_article", "linkedin_post",
+                     "facebook_post", "instagram_caption", "telegram_text")
+    @classmethod
+    def must_be_nonempty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("VIGeneratedOutput field cannot be empty — LLM returned no content")
+        return v
+
+    @field_validator("threads_sequence")
+    @classmethod
+    def threads_min_items(cls, v: list[str]) -> list[str]:
+        if len(v) < 3:
+            raise ValueError(f"threads_sequence must have at least 3 items, got {len(v)}")
+        return v
+
+
+@dataclass
+class RepairRequest:
+    """Describes one failed constraint to be fixed by a targeted repair call.
+
+    The repair LLM receives current_value + failed_constraints so it knows
+    exactly what to fix — not the full generation context. This keeps repair
+    calls focused and deterministic.
+    """
+    field_name:          str
+    current_value:       str
+    failed_constraints:  list[str]   = dc_field(default_factory=list)
 
 
 # ── Analytics ──────────────────────────────────────────────────────────────────

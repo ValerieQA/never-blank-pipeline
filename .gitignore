@@ -5,6 +5,7 @@ data/*
 !data/images/
 !data/memory/
 !data/research/
+!data/strategy/
 data/drafts/*
 !data/drafts/.gitkeep
 data/images/*

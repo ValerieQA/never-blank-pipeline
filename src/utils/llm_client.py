@@ -1,8 +1,11 @@
 import os
 import json
-from typing import Any
+from typing import Any, TypeVar
+from pydantic import BaseModel as PydanticBaseModel
 from openai import OpenAI, BadRequestError
 from src.utils.logger import get_logger
+
+_T = TypeVar("_T", bound=PydanticBaseModel)
 
 log = get_logger("llm_client")
 
@@ -156,6 +159,59 @@ def chat_qc_json(system: str, user: str) -> dict:
     """QC variant: low temperature + json_mode, returns parsed dict."""
     raw = chat_qc(system, user, json_mode=True)
     return json.loads(raw)
+
+
+def chat_parsed(
+    system: str,
+    user: str,
+    response_model: type[_T],
+    model: str | None = None,
+) -> _T:
+    """Call OpenAI with structured output (strict schema).
+
+    Uses client.beta.chat.completions.parse() which enforces the Pydantic
+    model schema server-side. Returns a validated instance of response_model.
+
+    Raises pydantic.ValidationError if the model returns content that fails
+    schema validation (should not happen with strict mode, but is possible
+    with older model versions that don't support strict structured output).
+
+    Use this instead of chat_json() when the output schema is critical and
+    partial regeneration logic depends on a typed object.
+    """
+    client = _get_client()
+    model = model or _model()
+    log.debug("chat_parsed() model=%s response_model=%s", model, response_model.__name__)
+    try:
+        response = client.beta.chat.completions.parse(
+            model=model,
+            temperature=_temperature(),
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            response_format=response_model,
+        )
+    except BadRequestError as exc:
+        if "temperature" in str(exc):
+            log.warning("Model %s rejected temperature — retrying without it", model)
+            response = client.beta.chat.completions.parse(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                response_format=response_model,
+            )
+        else:
+            raise
+    parsed = response.choices[0].message.parsed
+    if parsed is None:
+        raise ValueError(
+            f"chat_parsed() returned None — model may have refused or content_filter triggered. "
+            f"Model: {model}"
+        )
+    return parsed
 
 
 def embed(text: str) -> list[float]:

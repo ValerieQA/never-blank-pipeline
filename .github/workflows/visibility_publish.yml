@@ -1,0 +1,101 @@
+name: Visibility Intelligence — Generate + Publish
+
+on:
+  schedule:
+    # Every Tuesday and Thursday at 07:00 UTC
+    - cron: "0 7 * * 2"
+    - cron: "0 7 * * 4"
+  workflow_dispatch:
+    inputs:
+      item_id:
+        description: "Queue item ID to process (default: auto-select first queued)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Dry run (generate only, skip publish)"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  visibility-publish:
+    name: VI Generate + Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --quiet \
+            openai \
+            pydantic \
+            PyYAML \
+            python-dotenv \
+            requests
+
+      - name: Generate + Publish
+        id: vi_publish
+        env:
+          NB_OPENAI_API_KEY:               ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_OPENAI_CHAT_MODEL:            ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          NB_OPENAI_TEMPERATURE:           "0.7"
+
+          # LinkedIn (via Zernio)
+          ZERNIO_TOKEN:                    ${{ secrets.ZERNIO_TOKEN }}
+          ZERNIO_LINKEDIN_ACCOUNT_ID:      ${{ secrets.ZERNIO_LINKEDIN_ACCOUNT_ID }}
+
+          # Facebook
+          NB_FB_PAGE_ACCESS_TOKEN:         ${{ secrets.NB_FB_PAGE_ACCESS_TOKEN }}
+          NB_FB_PAGE_ID:                   ${{ secrets.NB_FB_PAGE_ID }}
+
+          # Instagram
+          NB_IG_ACCESS_TOKEN:              ${{ secrets.NB_IG_ACCESS_TOKEN }}
+          NB_IG_USER_ID:                   ${{ secrets.NB_IG_USER_ID }}
+
+          # Threads
+          NB_THREADS_ACCESS_TOKEN:         ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
+          NB_THREADS_USER_ID:              ${{ secrets.NB_THREADS_USER_ID }}
+
+          # Telegram
+          NB_TELEGRAM_BOT_TOKEN:           ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
+          NB_TELEGRAM_CHANNEL_ID:          ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
+
+          # Wix
+          NB_WIX_API_KEY:                  ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID:                  ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_BLOG_CATEGORY_ID:         ${{ secrets.NB_WIX_BLOG_CATEGORY_ID }}
+          NB_WIX_BLOG_TAG_IDS:             ${{ secrets.NB_WIX_BLOG_TAG_IDS }}
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.item_id }}" ]; then
+            ARGS="--item-id ${{ inputs.item_id }}"
+          fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          python scripts/generate_and_publish_visibility.py $ARGS
+
+      - name: Commit queue + history updates
+        if: ${{ inputs.dry_run != 'true' }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/strategy/visibility_queue.jsonl
+          git add data/strategy/visibility_history.jsonl
+          git add reports/content_packages/ || true
+          if git diff --cached --quiet; then
+            echo "Nothing to commit — queue unchanged"
+          else
+            git commit -m "chore(vi): publish run $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
+            git push
+          fi
