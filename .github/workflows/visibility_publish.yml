@@ -51,20 +51,16 @@ jobs:
           NB_OPENAI_TEMPERATURE:           "0.7"
 
           # LinkedIn (via Zernio)
-          ZERNIO_TOKEN:                    ${{ secrets.ZERNIO_TOKEN }}
-          ZERNIO_LINKEDIN_ACCOUNT_ID:      ${{ secrets.ZERNIO_LINKEDIN_ACCOUNT_ID }}
+          NB_ZERNIO_API_KEY:               ${{ secrets.NB_ZERNIO_API_KEY }}
+          NB_ZERNIO_LINKEDIN_ACCOUNT_ID:   ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
 
-          # Facebook
-          NB_FB_PAGE_ACCESS_TOKEN:         ${{ secrets.NB_FB_PAGE_ACCESS_TOKEN }}
-          NB_FB_PAGE_ID:                   ${{ secrets.NB_FB_PAGE_ID }}
-
-          # Instagram
-          NB_IG_ACCESS_TOKEN:              ${{ secrets.NB_IG_ACCESS_TOKEN }}
-          NB_IG_USER_ID:                   ${{ secrets.NB_IG_USER_ID }}
+          # Facebook + Instagram (shared token)
+          NB_META_FB_PAGE_TOKEN:           ${{ secrets.NB_META_FB_PAGE_TOKEN }}
+          NB_META_FB_PAGE_ID:              ${{ secrets.NB_META_FB_PAGE_ID }}
+          NB_META_IG_USER_ID:              ${{ secrets.NB_META_IG_USER_ID }}
 
           # Threads
           NB_THREADS_ACCESS_TOKEN:         ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
-          NB_THREADS_USER_ID:              ${{ secrets.NB_THREADS_USER_ID }}
 
           # Telegram
           NB_TELEGRAM_BOT_TOKEN:           ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
@@ -73,6 +69,8 @@ jobs:
           # Wix
           NB_WIX_API_KEY:                  ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID:                  ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_SITE_BASE_URL:            ${{ secrets.NB_WIX_SITE_BASE_URL }}
+          NB_WIX_POST_OWNER_ID:            ${{ secrets.NB_WIX_POST_OWNER_ID }}
           NB_WIX_BLOG_CATEGORY_ID:         ${{ secrets.NB_WIX_BLOG_CATEGORY_ID }}
           NB_WIX_BLOG_TAG_IDS:             ${{ secrets.NB_WIX_BLOG_TAG_IDS }}
         run: |
