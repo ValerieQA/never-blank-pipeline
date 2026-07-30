@@ -146,7 +146,7 @@ def _generate_signal_image(signal: dict) -> dict:
         compose_quote_card,
         CARD_TYPES,
         upload_to_cloudinary,
-        trim_hook_text,
+        prepare_photo_overlay_hook,
         PLATFORM_SIZES,
         CURRENT_DESIGN_VERSION,
     )
@@ -209,11 +209,12 @@ def _generate_signal_image(signal: dict) -> dict:
     platform_images: dict[str, dict] = {}
     master_url: str = ""
 
+    prepared_hook = prepare_photo_overlay_hook(hook_text)
     for platform in PLATFORMS:
         if is_card:
             sized_img = compose_quote_card(hook_text, platform, visual_family, card_texture_family)
         else:
-            sized_img = composite_for_platform(base_bytes, hook_text, platform)
+            sized_img = composite_for_platform(base_bytes, prepared_hook, platform)
         w, h      = PLATFORM_SIZES.get(platform, (1080, 1080))
         img_path  = out_dir / f"{sig_id}_{platform}.png"
         sized_img.save(str(img_path), "PNG", optimize=True)

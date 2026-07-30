@@ -42,7 +42,51 @@ IMG_GEN_PROMPT = REPO_ROOT / "config" / "prompts" / "image_generation.yaml"
 
 IMAGE_SIZE     = (1080, 1080)
 HOOK_MAX_WORDS      = 7    # preferred max words on image
-HOOK_MAX_WORDS_HARD = 10   # absolute ceiling — never exceed
+HOOK_MAX_WORDS_HARD = 10   # absolute ceiling for photo overlay (prepare_photo_overlay_hook)
+
+# Photo overlay: upper word limit before the renderer is allowed to shrink
+# font freely. Above this, the renderer still works (no hard truncation), but
+# very long hooks become small on a cluttered photo background.
+HOOK_OVERLAY_MAX_WORDS = 14
+
+# Words that signal an incomplete clause boundary — cutting after these produces
+# a dangling fragment. Used by prepare_photo_overlay_hook() to reject bad splits.
+_INCOMPLETE_ENDINGS: frozenset[str] = frozenset({
+    # coordinating conjunctions
+    "and", "or", "but", "nor", "yet", "so",
+    # subordinating conjunctions / prepositions
+    "to", "for", "in", "on", "at", "of", "with", "by", "from",
+    "into", "through", "between", "while", "because", "if",
+    "although", "when", "as", "since", "until", "unless",
+    # articles / determiners
+    "the", "a", "an", "this", "that", "these", "those",
+    # auxiliaries
+    "is", "are", "was", "were", "has", "have", "had",
+    "be", "been", "being", "will", "would", "could", "should",
+    # common transitive verbs frequently left dangling in news hooks
+    "regain", "stabilize", "increase", "reduce", "improve",
+    "achieve", "create", "build", "develop", "establish",
+    "expand", "maintain", "drive", "support", "enable",
+    "announce", "acquire", "launch", "raise", "cut",
+})
+
+# ── Editorial composition tokens ───────────────────────────────────────────────
+# Single source of truth for column width across all card types.
+# The column is defined as a % of canvas width — NOT derived from padding.
+# "Padding" is only a visual floor for extreme edge cases; the column token
+# is the design constraint. Override per card type ONLY with a documented reason.
+#
+# Monocle / Economist reference: headline column ≈ 55-65% of cover width.
+# Never Blank dark cards: 58% — more vertical depth, less horizontal spread.
+# Photo overlay cards:    62% — richer background can carry slightly wider type.
+# Legacy square (1:1):   62% — same as photo overlay.
+
+_COL_QUOTE   = 0.58   # dark_insight_card / light_message_card / sand_pause_card
+_COL_PHOTO   = 0.62   # composite_for_platform (photo background overlay)
+_COL_LEGACY  = 0.62   # composite_image (legacy 1:1 square)
+
+# Sep (blue line) is always narrower than the column — reads as accent, not underline.
+_SEP_RATIO   = 0.14   # fraction of canvas width (applies to all card types)
 
 # Increment when the image design changes to force regeneration of old library entries
 CURRENT_DESIGN_VERSION = "3"
@@ -134,6 +178,41 @@ def trim_hook_text(text: str, max_words: int = HOOK_MAX_WORDS) -> str:
     if len(words) <= cap:
         return " ".join(words)
     return " ".join(words[:cap])
+
+
+def prepare_photo_overlay_hook(hook_text: str) -> str:
+    """Prepare hook text for photo overlay rendering without cutting meaning.
+
+    Renderer contract: receives ready-to-render text; never truncates mid-clause.
+
+    Rules (applied in order):
+      1. Hook ≤ HOOK_OVERLAY_MAX_WORDS → return as-is; renderer fits font naturally.
+      2. Hook has a sentence boundary (.!?;) within HOOK_OVERLAY_MAX_WORDS words
+         AND the last word before that boundary is not in _INCOMPLETE_ENDINGS
+         → cut there (complete thought preserved).
+      3. No clean boundary found → return full hook text; renderer uses a smaller
+         font and extra lines rather than amputating the sentence.
+
+    Does not call LLM. Caller is responsible for supplying a semantically complete
+    hook (e.g. the POTENTIAL_HOOK or POSSIBLE_SIGNATURE_LINE from the signal, not
+    raw CORE_FACT). If the source is known to be long, pass a pre-shortened variant.
+    """
+    text  = hook_text.strip()
+    words = text.split()
+
+    if len(words) <= HOOK_OVERLAY_MAX_WORDS:
+        return text
+
+    # Scan from HOOK_OVERLAY_MAX_WORDS down to 3, prefer the longest clean cut
+    for i in range(HOOK_OVERLAY_MAX_WORDS, 2, -1):
+        candidate  = " ".join(words[:i])
+        last_word  = words[i - 1].rstrip(".,;:!?—").lower()
+        ends_clean = candidate[-1] in ".!?;"
+        if ends_clean and last_word not in _INCOMPLETE_ENDINGS:
+            return candidate
+
+    # No clean sentence boundary — pass through; renderer handles layout
+    return text
 
 
 def resize_for_platform(image: "Image.Image", platform: str) -> "Image.Image":
@@ -784,14 +863,9 @@ def compose_quote_card(
     canvas = Image.alpha_composite(canvas.convert("RGBA"), band).convert("RGB")
     draw = ImageDraw.Draw(canvas)
 
-    # Generous negative space and calmer type size — the previous version
-    # started at ~7.5% of width in system Bold, which read as an oversized
-    # poster rather than editorial type. Semibold (weight=600) at a smaller
-    # scale, with more line-height, gives the headline room to breathe.
-    padding    = max(64, int(target_w * 0.13))
-    max_tw     = target_w - padding * 2
+    max_tw     = int(target_w * _COL_QUOTE)
     max_th     = int((text_zone_bottom - text_zone_top) * 0.82)
-    font_start = max(28, int(target_w * 0.05))
+    font_start = max(28, int(target_w * 0.052))
 
     font, lines = _fit_text_dynamic(
         hook, max_tw, max_th, font_start=font_start, font_min=24, max_lines=5, weight=600,
@@ -808,7 +882,7 @@ def compose_quote_card(
         draw.text((x, y_start + i * line_h), line, font=font, fill=text_color)
 
     sep_y = y_start + block_h + max(28, int(target_h * 0.035))
-    sep_w = min(int(target_w * 0.14), 140)
+    sep_w = int(target_w * _SEP_RATIO)
     draw.line(
         [(target_w // 2 - sep_w // 2, sep_y), (target_w // 2 + sep_w // 2, sep_y)],
         fill=ELECTRIC_BLUE, width=2,
@@ -853,7 +927,9 @@ def composite_for_platform(
     This ensures text and logo are never distorted by post-composition crop.
     """
     target_w, target_h = PLATFORM_SIZES.get(platform, IMAGE_SIZE)
-    hook = trim_hook_text(hook_text)
+    # Renderer draws text as-is. Caller is responsible for passing a
+    # semantically complete hook via prepare_photo_overlay_hook().
+    hook = hook_text.strip()
 
     # ── Step 1: resize base to platform size ──────────────────────────────────
     base = Image.open(BytesIO(base_bytes)).convert("RGBA")
@@ -882,10 +958,9 @@ def composite_for_platform(
     canvas = Image.alpha_composite(canvas, grad)
 
     draw = ImageDraw.Draw(canvas)
-    padding  = max(40, int(target_w * 0.06))
-    max_tw   = target_w - padding * 2
+    max_tw     = int(target_w * _COL_PHOTO)
     # Reserve top 55% height for text block
-    max_th   = int(target_h * 0.45)
+    max_th     = int(target_h * 0.45)
     font_start = max(28, int(target_w * 0.055))
 
     # ── Step 3: dynamic font — fit hook text ─────────────────────────────────
@@ -1226,7 +1301,7 @@ def composite_image(base_bytes: bytes, hook_text: str) -> Image.Image:
     Logo is overlaid from LOGO_PATH — never drawn by the image model.
     """
     W, H = IMAGE_SIZE
-    hook = trim_hook_text(hook_text, max_words=HOOK_MAX_WORDS_HARD)
+    hook = hook_text.strip()
 
     base   = Image.open(BytesIO(base_bytes)).convert("RGBA").resize((W, H), Image.LANCZOS)
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 255))
@@ -1247,10 +1322,9 @@ def composite_image(base_bytes: bytes, hook_text: str) -> Image.Image:
     draw = ImageDraw.Draw(canvas)
 
     # ── Hook text ─────────────────────────────────────────────────────────────
-    padding    = 72
     font_hook  = _find_font(72)
     font_label = _find_font(26)
-    max_text_w = W - padding * 2
+    max_text_w = int(W * _COL_LEGACY)
 
     lines  = _wrap_text(hook, font_hook, max_text_w)
     line_h = int(72 * 1.25)
@@ -1357,11 +1431,15 @@ def run_image_pipeline(
     visual_family    = spec["visual_family"]
     dominant_palette = spec["dominant_palette"]
     image_prompt     = spec["image_prompt"]
-    hook_text        = spec.get("hook_text", observation[:HOOK_MAX_CHARS])
+    raw_hook         = spec.get("hook_text", observation[:HOOK_MAX_CHARS])
     negative_prompt  = spec.get("negative_prompt", "")
 
-    log(f"  Visual family: {visual_family}")
-    log(f"  Hook text: {hook_text!r}")
+    # Prepare hook: find a clean sentence boundary if too long; never cut mid-clause
+    hook_text = prepare_photo_overlay_hook(raw_hook)
+    if hook_text != raw_hook:
+        log(f"  Hook text (shortened at sentence boundary): {hook_text!r}")
+    else:
+        log(f"  Hook text: {hook_text!r}")
     log(f"  Rationale: {spec.get('rationale', '')}")
 
     # Generate base image
