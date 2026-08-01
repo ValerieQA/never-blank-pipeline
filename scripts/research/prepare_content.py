@@ -239,6 +239,7 @@ def _generate_signal_image(signal: dict) -> dict:
             "design_version": CURRENT_DESIGN_VERSION,
             "hook_text":      hook_text,
         }
+        platform_images["_design_version"] = CURRENT_DESIGN_VERSION
         return {
             "platform_images": platform_images,
             "new_images":      1,
@@ -260,6 +261,7 @@ def _generate_signal_image(signal: dict) -> dict:
         }
 
     # Fallback: no Cloudinary URL at all (local paths only)
+    platform_images["_design_version"] = CURRENT_DESIGN_VERSION
     return {
         "platform_images": platform_images,
         "new_images":      1,

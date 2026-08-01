@@ -53,7 +53,8 @@ class LinkedInPublisher(BasePublisher):
             return self._skip("LinkedIn does not support draft posts — skipped in draft_only mode")
 
         text      = draft.linkedin_text
-        has_image = bool(draft.image_url)
+        image_url = draft.image_for("linkedin")
+        has_image = bool(image_url)
         if not text:
             return self._fail("linkedin.txt is empty")
 
@@ -81,7 +82,7 @@ class LinkedInPublisher(BasePublisher):
         }
 
         if has_image:
-            post["mediaItems"] = [{"type": "image", "url": draft.image_url}]
+            post["mediaItems"] = [{"type": "image", "url": image_url}]
 
         code, resp, _ = _fetch(
             _ZERNIO_POSTS_URL,

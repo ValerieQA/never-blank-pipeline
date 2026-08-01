@@ -40,6 +40,8 @@ jobs:
     name: "Generate + Publish"
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -159,9 +161,8 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Pull latest to avoid conflicts if another run committed while this one was running.
-          # Concurrency group serializes runs, but rebase is a safety net for manual triggers.
-          git pull --rebase origin main
+          # Pull latest (autostash handles any generated files left in the working tree)
+          git pull --rebase --autostash origin main
 
           echo "${{ steps.resolve.outputs.signal_id }}" >> data/research/published_signal_ids.txt
           git add data/research/published_signal_ids.txt

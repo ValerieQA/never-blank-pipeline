@@ -144,8 +144,9 @@ class WixPublisher(BasePublisher):
         }
         nodes = _md_to_rich_nodes(draft.blog_body)
 
+        image_url = draft.image_for("blog")
         if mode == "dry_run":
-            image_status = "pending_import" if draft.image_url else "no_image"
+            image_status = "pending_import" if image_url else "no_image"
             return PublishResult(
                 platform=self.name,
                 status=PublishStatus.SKIPPED,
@@ -158,11 +159,11 @@ class WixPublisher(BasePublisher):
 
         # ── Step 1: Import cover image into Wix Media ─────────────────────────
         media_asset: Optional[WixMediaAsset] = None
-        if draft.image_url:
+        if image_url:
             safe_title = re.sub(r"[^a-zA-Z0-9_-]", "_", draft.blog_title[:60])
             try:
                 media_asset = import_image(
-                    source_url=draft.image_url,
+                    source_url=image_url,
                     display_name=f"NB_{safe_title}",
                     api_key=api_key,
                     site_id=site_id,

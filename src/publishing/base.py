@@ -9,6 +9,7 @@ import urllib.request
 import urllib.error
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import Dict
 from pathlib import Path
 from typing import Optional
 
@@ -29,10 +30,18 @@ class DraftPackage:
     threads_sequence: list[str]
     telegram_text:  str
     image_url:      Optional[str] # Cloudinary URL, None if not yet generated
-    wix_slug:       str
-    wix_category_id: str
-    wix_tags:       list[str]
-    metadata:       dict
+    # Per-platform image URLs. Publishers resolve: platform_image_urls[platform] or image_url.
+    # Allows each platform to receive its correctly-sized asset (e.g. Instagram 1080×1350
+    # vs blog 1920×1080) instead of sharing one blog-sized URL across all channels.
+    platform_image_urls: Dict[str, Optional[str]] = field(default_factory=dict)
+    wix_slug:       str = ""
+    wix_category_id: str = ""
+    wix_tags:       list = field(default_factory=list)
+    metadata:       dict = field(default_factory=dict)
+
+    def image_for(self, platform: str) -> Optional[str]:
+        """Return the best image URL for this platform, falling back to image_url."""
+        return self.platform_image_urls.get(platform) or self.image_url
 
 
 def load_draft(base_dir: Optional[Path] = None) -> DraftPackage:

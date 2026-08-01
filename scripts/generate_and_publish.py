@@ -41,6 +41,7 @@ from src.analytics.orchestrator import run_analytics_pipeline
 from src.editorial.pipeline import ArticleGenerationError, generate_article
 from src.publishing import formatting
 from src.publishing.base import DraftPackage
+from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
 from src.publishing.hashtags import generate_hashtags
 from src.publishing.facebook import FacebookPublisher
 from src.publishing.instagram import InstagramPublisher
@@ -230,23 +231,35 @@ def main() -> int:
     print(f"  ✓  Headline: {headline[:70]}")
 
     pimgs = _load_package_images(signal_id)
-    blog_image_url: Optional[str] = pimgs.get("blog", {}).get("url") or None
+    pkg_design_version = pimgs.get("_design_version") if pimgs else None
+    needs_regen = (
+        not pimgs.get("blog", {}).get("url")
+        or pkg_design_version != CURRENT_DESIGN_VERSION
+    )
 
-    if not blog_image_url:
-        print(f"  — No pre-generated image found for {signal_id} — generating now…")
+    if needs_regen:
+        reason = "no pre-generated image" if not pimgs else f"stale design v{pkg_design_version} (current: v{CURRENT_DESIGN_VERSION})"
+        print(f"  — {reason} — generating images for all platforms…")
         try:
             from scripts.research.prepare_content import prepare_content_packages
             pkgs = prepare_content_packages([signal])
             if pkgs:
                 pimgs = pkgs[0].get("images", {}).get("platform_images", {})
-                blog_image_url = pimgs.get("blog", {}).get("url") or None
-                print(f"  ✓  Image generated: {blog_image_url[:60] if blog_image_url else '(none)'}")
+                blog_url = pimgs.get("blog", {}).get("url") or ""
+                print(f"  ✓  Images generated: {blog_url[:60] if blog_url else '(none)'}")
             else:
-                print(f"  ⚠  Image generation returned no packages — Instagram will be skipped")
+                print(f"  ⚠  Image generation returned no packages — visual platforms will skip")
         except Exception as exc:
-            print(f"  ⚠  Image generation failed ({exc}) — Instagram will be skipped")
+            print(f"  ⚠  Image generation failed ({exc}) — visual platforms will skip")
 
+    blog_image_url: Optional[str] = pimgs.get("blog", {}).get("url") or None
+    platform_image_urls = {
+        p: (pimgs.get(p, {}).get("url") or None)
+        for p in ("blog", "linkedin", "facebook", "instagram", "threads", "stories")
+        if pimgs.get(p, {}).get("url")
+    }
     print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
+    print(f"  ✓  Platform images: {list(platform_image_urls.keys())}")
 
     generated_path = PACKAGES_DIR / f"{signal_id}_generated.json"
     echo_line = ""
@@ -416,6 +429,7 @@ def main() -> int:
         threads_sequence=threads_seq,
         telegram_text=telegram_text,
         image_url=blog_image_url,
+        platform_image_urls=platform_image_urls,
         wix_slug=wix_slug,
         wix_category_id=os.getenv("NB_WIX_BLOG_CATEGORY_ID", ""),
         wix_tags=[x.strip() for x in os.getenv("NB_WIX_BLOG_TAG_IDS", "").split(",") if x.strip()],

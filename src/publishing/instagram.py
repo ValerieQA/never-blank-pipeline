@@ -41,7 +41,8 @@ class InstagramPublisher(BasePublisher):
         if mode == "draft_only":
             return self._skip("Instagram has no draft concept — skipped in draft_only mode")
 
-        if not draft.image_url:
+        image_url = draft.image_for("instagram")
+        if not image_url:
             return self._skip(
                 "No image_url available. "
                 "Run image generation step to upload to Cloudinary first."
@@ -57,13 +58,13 @@ class InstagramPublisher(BasePublisher):
                 status=PublishStatus.SKIPPED,
                 error_message=(
                     f"dry_run: payload valid — {len(text)} chars, "
-                    f"image={draft.image_url!r}"
+                    f"image={image_url!r}"
                 ),
             )
 
         # Step 1: create media container
         container_params = urllib.parse.urlencode({
-            "image_url":    draft.image_url,
+            "image_url":    image_url,
             "caption":      text,
             "access_token": ig_token,
         }).encode()

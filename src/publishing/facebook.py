@@ -40,7 +40,8 @@ class FacebookPublisher(BasePublisher):
         if not text:
             return self._fail("facebook.txt is empty")
 
-        has_image = bool(draft.image_url)
+        image_url = draft.image_for("facebook")
+        has_image = bool(image_url)
 
         if mode == "dry_run":
             return PublishResult(
@@ -48,14 +49,14 @@ class FacebookPublisher(BasePublisher):
                 status=PublishStatus.SKIPPED,
                 error_message=(
                     f"dry_run: payload valid — {len(text)} chars, "
-                    f"image={'yes (' + draft.image_url + ')' if has_image else 'none (text-only post)'}"
+                    f"image={'yes (' + image_url + ')' if has_image else 'none (text-only post)'}"
                 ),
             )
 
         if has_image:
             # Photo post: image + caption
             params = {
-                "url":          draft.image_url,
+                "url":          image_url,
                 "caption":      text,
                 "access_token": page_token,
             }
