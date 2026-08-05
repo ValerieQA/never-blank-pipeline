@@ -26,6 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
 from src.utils.llm_client import chat, model_social
+from src.utils.config_loader import load_prompt
 
 log = get_logger("research.prepare_content")
 
@@ -34,57 +35,21 @@ PACKAGES_DIR  = Path("reports/content_packages")
 IMAGE_LIBRARY = Path("data/research/image_library.json")
 PLATFORMS     = ["blog", "linkedin", "facebook", "instagram", "threads", "stories"]
 
-CONTENT_SYSTEM = """You are a content strategist for Never Blank, a content practice for founders.
-
-For a given business signal, generate platform-specific content previews.
-
-Never Blank voice: sharp, observational, commercially aware. Not motivational. Not academic.
-Forbidden: "in today's world", "let's dive in", "game-changer", "unlock", "leverage", "hustle"
-
-Return JSON with this exact structure:
-{
-  "blog": {
-    "headline": "...",
-    "angle": "One sentence describing the article angle — Signal → Tension → Response → Lesson"
-  },
-  "linkedin": {
-    "headline": "Opening line (hook)",
-    "angle": "One-sentence format: Observation + Business implication"
-  },
-  "facebook": {
-    "headline": "Opening line",
-    "angle": "Signal + case + question format"
-  },
-  "instagram": {
-    "headline": "Visual anchor phrase (5–8 words)",
-    "angle": "One-sentence caption angle"
-  },
-  "threads": {
-    "thread_hook": "Opening post — one punchy observation, no hashtags",
-    "angle": "What the thread sequence reveals"
-  },
-  "stories": {
-    "story_question": "A question or tension framed for a 5-second swipe-up",
-    "angle": "The business tension this story explores"
-  }
-}"""
-
-
 def _generate_content_package(signal: dict) -> dict:
-    user = f"""Generate content package for this signal:
-
-HEADLINE: {signal.get('HEADLINE', '')}
-CORE_TENSION: {signal.get('CORE_TENSION', '')}
-BUSINESS_LESSON: {signal.get('BUSINESS_LESSON', '')}
-CORE_FACT: {signal.get('CORE_FACT', '')}
-REAL_COMPANY_EXAMPLE: {signal.get('REAL_COMPANY_EXAMPLE', 'none')}
-NEVER_BLANK_ANGLE: {signal.get('NEVER_BLANK_ANGLE', '')}
-POSSIBLE_SIGNATURE_LINE: {signal.get('POSSIBLE_SIGNATURE_LINE', '')}
-POTENTIAL_HOOK: {signal.get('POTENTIAL_HOOK', '')}
-TARGET_AUDIENCE: {signal.get('TARGET_AUDIENCE', 'founder')}"""
+    prompt = load_prompt("research/content_package", {
+        "headline":              signal.get("HEADLINE", ""),
+        "core_tension":         signal.get("CORE_TENSION", ""),
+        "business_lesson":      signal.get("BUSINESS_LESSON", ""),
+        "core_fact":            signal.get("CORE_FACT", ""),
+        "real_company_example": signal.get("REAL_COMPANY_EXAMPLE", "none"),
+        "never_blank_angle":    signal.get("NEVER_BLANK_ANGLE", ""),
+        "possible_signature_line": signal.get("POSSIBLE_SIGNATURE_LINE", ""),
+        "potential_hook":       signal.get("POTENTIAL_HOOK", ""),
+        "target_audience":      signal.get("TARGET_AUDIENCE", "founder"),
+    })
 
     try:
-        raw  = chat(CONTENT_SYSTEM, user, json_mode=True, model=model_social())
+        raw  = chat(prompt["system"], prompt["user"], json_mode=True, model=model_social())
         data = json.loads(raw) if isinstance(raw, str) else raw
         return data if isinstance(data, dict) else {}
     except Exception as exc:
