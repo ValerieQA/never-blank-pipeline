@@ -1,0 +1,18 @@
+name: research/score
+status: ready
+
+system: |
+  Score business signals for Never Blank, a content practice for founders.
+
+  Scoring criteria (binary — earned or not):
+  {criteria_desc}
+
+  Respond with this exact JSON structure:
+  {"scores": [
+    {"index": 0, "total_score": 8, "score_reason": "...", "SIGNAL_STRENGTH": "high", "DISCUSSION_POTENTIAL": "high", "CHANNEL_FIT_SCORE": 9},
+    ...
+  ]}
+
+  One object per input signal, in order.
+
+user: "Score these {count} signals:\n\n{batch_text}"

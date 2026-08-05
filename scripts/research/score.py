@@ -12,6 +12,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
 from src.utils.llm_client import chat, model_scoring
+from src.utils.config_loader import load_prompt
 
 log = get_logger("research.score")
 
@@ -36,20 +37,13 @@ def _llm_score_batch(candidates: list[dict], criteria: dict) -> list[dict]:
         for i, c in enumerate(candidates)
     )
 
-    system = f"""Score business signals for Never Blank, a content practice for founders.
-
-Scoring criteria (binary — earned or not):
-{criteria_desc}
-
-Respond with this exact JSON structure:
-{{"scores": [
-  {{"index": 0, "total_score": 8, "score_reason": "...", "SIGNAL_STRENGTH": "high", "DISCUSSION_POTENTIAL": "high", "CHANNEL_FIT_SCORE": 9}},
-  ...
-]}}
-
-One object per input signal, in order."""
-
-    user = f"Score these {len(candidates)} signals:\n\n{batch_text}"
+    prompt = load_prompt("research/score", {
+        "criteria_desc": criteria_desc,
+        "count":         str(len(candidates)),
+        "batch_text":    batch_text,
+    })
+    system = prompt["system"]
+    user   = prompt["user"]
 
     try:
         raw = chat(system, user, json_mode=True, model=model_scoring())
