@@ -19,6 +19,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
 from src.utils.llm_client import chat, model_discovery
+from src.utils.config_loader import load_prompt
 
 log = get_logger("research.discover")
 
@@ -95,41 +96,13 @@ def _llm_select_indices(items: list[dict], categories: list[str], avoid: list[st
         f"[{i}] {it['title']} | {it.get('summary', '')[:150]}"
         for i, it in enumerate(items)
     )
-    system = f"""You are a signal analyst for Never Blank, a content practice that observes how small business owners lose and rebuild visibility.
-
-Never Blank does NOT publish advice. It publishes OBSERVATIONS about observable business behavior patterns.
-
-The key distinction:
-- NOT a signal: "5 ways to stay consistent on social media" (tips article)
-- NOT a signal: "Why AI will change marketing forever" (opinion/trend)
-- NOT a signal: "Nike's rebrand strategy" (corporate case study, no owner mechanism)
-- IS a signal: "A bakery's single viral photo filled their restaurant for 3 weeks, then foot traffic dropped back to baseline" (observable mechanism: presence depends on rare lucky moments, not system)
-- IS a signal: Research or data showing that businesses that go quiet during busy seasons lose customer recall faster than expected
-- IS a signal: A pattern where service business owners stop communicating when they're at capacity, creating a gap that erodes client pipeline
-
-A signal must contain at least ONE of:
-  1. An observable behavioral pattern — something a business owner actually DID or DIDN'T DO, with a consequence
-  2. Data or research about how customer memory, trust, recognition, or awareness works
-  3. A mechanism: why a specific business became invisible or visible, not just that it did
-
-Signal mechanism types to look for: {', '.join(categories)}
-
-ALWAYS REJECT — no exceptions:
-  - "X tips/ways/steps to..." articles
-  - Trend roundups ("top marketing trends for 2025")
-  - Generic advice ("how to grow your audience")
-  - Large company M&A, earnings, product launches — unless they directly show a MECHANISM relevant to small business visibility
-  - Generic AI news (new models, investment rounds, chip shortages)
-  - Opinion pieces without data or real business observation
-  - Macro-economic and geopolitical news
-  - Avoid: {', '.join(avoid)}
-
-Respond with ONLY a JSON object:
-{{"selected": [0, 3, 7, 12]}}
-
-If nothing qualifies, return {{"selected": []}}. It is correct to return an empty list."""
-
-    user = f"Select relevant items from this list:\n\n{batch_text}"
+    prompt = load_prompt("research/signal_selector", {
+        "categories": ", ".join(categories),
+        "avoid":      ", ".join(avoid),
+        "batch_text": batch_text,
+    })
+    system = prompt["system"]
+    user   = prompt["user"]
 
     try:
         raw = chat(system, user, json_mode=True, model=model_discovery())
@@ -154,19 +127,13 @@ def _llm_enrich_candidates(items: list[dict], categories: list[str]) -> list[dic
         f"[{i}] HEADLINE: {it['title']}\nDATE: {it['published']}\nURL: {it['link']}\nSUMMARY: {it.get('summary','')[:400]}"
         for i, it in enumerate(items)
     )
-    system = f"""You are a business signal analyst. Enrich these news items with signal metadata.
-
-For each item return a JSON object with:
-- index: integer (from input)
-- REGION: "US" / "Global" / "EU"
-- INDUSTRY: main industry
-- SIGNAL_TYPE: one of [{', '.join(categories)}]
-- raw_summary: 2-3 sentence factual business summary
-- discovery_confidence: "high" / "medium" / "low"
-
-Respond with: {{"signals": [{{...}}, {{...}}]}}"""
-
-    user = f"Enrich these {len(items)} items:\n\n{batch_text}"
+    prompt = load_prompt("research/signal_enrichment", {
+        "categories": ", ".join(categories),
+        "count":      str(len(items)),
+        "batch_text": batch_text,
+    })
+    system = prompt["system"]
+    user   = prompt["user"]
 
     try:
         raw = chat(system, user, json_mode=True, model=model_discovery())
