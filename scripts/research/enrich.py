@@ -30,24 +30,37 @@ def determine_article_readiness(signal: dict) -> tuple[bool, str]:
     Scoring recommendation != factual article readiness.
     A signal becomes article-ready only after deterministic enrichment verification.
 
+    Two valid evidence paths (either satisfies SOURCE_PREMISE_VERIFIED):
+      1. Verified company case: REAL_COMPANY_EXAMPLE + SOURCE_FOR_CASE
+      2. Verified research/data: SOURCE_FOR_CASE alone with CONFIDENCE >= medium
+         (covers research on customer memory, trust, visibility without a named company)
+
     Returns (ready: bool, reason: str).
     """
     has_company  = bool(signal.get("REAL_COMPANY_EXAMPLE"))
     has_source   = bool(signal.get("SOURCE_FOR_CASE"))
     has_fact     = bool(signal.get("CORE_FACT", "").strip())
-    outcome_ok   = signal.get("OUTCOME_IF_KNOWN", "unknown") != "unknown"
     confidence   = signal.get("CONFIDENCE", "low")
-
-    premise_verified = has_company and has_source
     signal_strength_ok = confidence in ("high", "medium")
 
+    # Path 1: verified company case
+    company_case_verified = has_company and has_source
+    # Path 2: verified research/data — source present + sufficient confidence
+    research_verified = has_source and signal_strength_ok
+
+    premise_verified = company_case_verified or research_verified
+
     if not premise_verified:
-        return False, "SOURCE_PREMISE_VERIFIED=false: missing REAL_COMPANY_EXAMPLE or SOURCE_FOR_CASE"
+        if not has_source:
+            return False, "SOURCE_PREMISE_VERIFIED=false: missing SOURCE_FOR_CASE"
+        return False, (
+            "SOURCE_PREMISE_VERIFIED=false: SOURCE_FOR_CASE present but "
+            f"CONFIDENCE={confidence!r} is insufficient for research path "
+            "(need medium or high, or provide REAL_COMPANY_EXAMPLE)"
+        )
     if not has_fact:
         return False, "missing CORE_FACT"
-    if not signal_strength_ok:
-        return False, f"CONFIDENCE={confidence!r} — insufficient evidence quality"
-    return True, "all evidence fields present"
+    return True, "evidence verified" + (" (company case)" if company_case_verified else " (research/data)")
 
 
 def enrich_signal(signal: dict) -> dict:
@@ -74,15 +87,24 @@ def enrich_signal(signal: dict) -> dict:
     merged = dict(signal)
     merged.update(enriched)
 
-    if not merged.get("REAL_COMPANY_EXAMPLE") or not merged.get("SOURCE_FOR_CASE"):
+    # _NULL_CASE resets to safe defaults when no evidence source exists.
+    # SOURCE_FOR_CASE is required by both evidence paths; if absent, neither
+    # path can succeed. A signal without source is not article-ready.
+    # Note: signals with source but no company remain eligible via research path.
+    has_source_now = bool(merged.get("SOURCE_FOR_CASE"))
+    if not has_source_now:
         merged.update(_NULL_CASE)
         log.info("Signal %s: no case source — marked not article-ready", signal.get("SIGNAL_ID"))
 
     # Deterministic readiness fields — set after all evidence is merged.
     article_ready, reason = determine_article_readiness(merged)
-    premise_verified = (
-        bool(merged.get("REAL_COMPANY_EXAMPLE")) and bool(merged.get("SOURCE_FOR_CASE"))
-    )
+    # SOURCE_PREMISE_VERIFIED is true if either evidence path is satisfied:
+    # path 1 — company case: REAL_COMPANY_EXAMPLE + SOURCE_FOR_CASE
+    # path 2 — research/data: SOURCE_FOR_CASE + confidence >= medium
+    has_source   = bool(merged.get("SOURCE_FOR_CASE"))
+    has_company  = bool(merged.get("REAL_COMPANY_EXAMPLE"))
+    confidence   = merged.get("CONFIDENCE", "low")
+    premise_verified = (has_company and has_source) or (has_source and confidence in ("high", "medium"))
     merged["SOURCE_PREMISE_VERIFIED"] = str(premise_verified).lower()
     merged["ARTICLE_READY"]           = str(article_ready).lower()
     # Keep legacy field in sync so sheet consumers remain unaffected.

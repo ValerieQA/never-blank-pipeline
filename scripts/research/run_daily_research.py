@@ -140,20 +140,35 @@ def run() -> dict:
 
     # Selection requires BOTH score-based recommendation AND factual article readiness.
     # Scoring recommendation != factual article readiness — see enrich.determine_article_readiness.
-    selected = [
-        s for s in final_signals
-        if str(s.get("APPROVED_OVERRIDE", "")).lower() == "true"
-        or (
+    #
+    # FORCE_PUBLISH_OVERRIDE (formerly APPROVED_OVERRIDE) bypasses readiness for
+    # human-reviewed signals. It must be set intentionally; automated pipelines
+    # must not set it. Each override is logged as an audit event.
+    selected = []
+    for s in final_signals:
+        if str(s.get("FORCE_PUBLISH_OVERRIDE", "") or s.get("APPROVED_OVERRIDE", "")).lower() == "true":
+            log.warning(
+                "FORCE_PUBLISH_OVERRIDE: signal %s (%r) bypasses ARTICLE_READY check — "
+                "ensure this was intentionally approved",
+                s.get("SIGNAL_ID"), s.get("HEADLINE", "")[:60],
+            )
+            selected.append(s)
+        elif (
             str(s.get("SCORE_RECOMMENDED_FOR_ARTICLE", "false")).lower() == "true"
             and str(s.get("ARTICLE_READY", "false")).lower() == "true"
             and int(s.get("ARTICLE_READINESS_SCORE", "0") or "0") >= select_min
-        )
-    ][:top_n_sel]
+        ):
+            selected.append(s)
+    selected = selected[:top_n_sel]
 
     if selected:
         _append_jsonl(SELECTED_FILE, selected)
         summary["selected_for_content"] = len(selected)
         summary["top_signals"] = [s.get("HEADLINE", "")[:80] for s in selected]
+        summary["force_overrides"] = [
+            s.get("SIGNAL_ID") for s in selected
+            if str(s.get("FORCE_PUBLISH_OVERRIDE", "") or s.get("APPROVED_OVERRIDE", "")).lower() == "true"
+        ]
 
     log.info("=== Stage 10: Content Package Preparation ===")
     content_packages = []

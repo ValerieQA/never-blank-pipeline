@@ -581,12 +581,36 @@ class TestDetermineArticleReadiness:
         ready, reason = self.check(self._base())
         assert ready is True
 
-    def test_high_score_no_company_not_ready(self):
-        ready, reason = self.check(self._base(REAL_COMPANY_EXAMPLE=None))
+    def test_no_company_but_high_confidence_source_is_ready(self):
+        # Research/data path: source + confidence >= medium, no company required
+        ready, reason = self.check(self._base(REAL_COMPANY_EXAMPLE=None, CONFIDENCE="high"))
+        assert ready is True
+        assert "research/data" in reason
+
+    def test_no_company_medium_confidence_source_is_ready(self):
+        ready, reason = self.check(self._base(REAL_COMPANY_EXAMPLE=None, CONFIDENCE="medium"))
+        assert ready is True
+
+    def test_no_company_low_confidence_no_source_not_ready(self):
+        # No source at all → neither path satisfied
+        ready, reason = self.check(self._base(REAL_COMPANY_EXAMPLE=None, SOURCE_FOR_CASE=None))
         assert ready is False
         assert "SOURCE_PREMISE_VERIFIED=false" in reason
 
-    def test_high_score_no_source_not_ready(self):
+    def test_no_company_low_confidence_with_source_not_ready(self):
+        # Source present but confidence=low → research path fails; no company → company path fails
+        ready, reason = self.check(self._base(REAL_COMPANY_EXAMPLE=None, CONFIDENCE="low"))
+        assert ready is False
+        assert "SOURCE_PREMISE_VERIFIED=false" in reason
+        assert "CONFIDENCE" in reason
+
+    def test_company_case_path_passes_regardless_of_confidence(self):
+        # Company + source satisfies path 1; confidence check is only for research path
+        ready, reason = self.check(self._base(CONFIDENCE="low"))
+        assert ready is True
+        assert "company case" in reason
+
+    def test_no_source_not_ready(self):
         ready, reason = self.check(self._base(SOURCE_FOR_CASE=None))
         assert ready is False
         assert "SOURCE_PREMISE_VERIFIED=false" in reason
@@ -595,11 +619,6 @@ class TestDetermineArticleReadiness:
         ready, reason = self.check(self._base(CORE_FACT=""))
         assert ready is False
         assert "CORE_FACT" in reason
-
-    def test_low_confidence_not_ready(self):
-        ready, reason = self.check(self._base(CONFIDENCE="low"))
-        assert ready is False
-        assert "CONFIDENCE" in reason
 
     def test_returns_tuple(self):
         result = self.check(self._base())
@@ -767,3 +786,107 @@ class TestSpaceXRegressionFixture:
         ready, reason = determine_article_readiness(sig)
         assert ready is False
         assert "SOURCE_PREMISE_VERIFIED=false" in reason
+
+
+class TestForcePublishOverride:
+    """FORCE_PUBLISH_OVERRIDE bypasses readiness but must produce a warning and audit log."""
+
+    def _unready_signal(self):
+        return {
+            "SIGNAL_ID":                "override_test",
+            "HEADLINE":                 "Unverified signal",
+            "SCORE_RECOMMENDED_FOR_ARTICLE": "true",
+            "ARTICLE_READY":            "false",
+            "SOURCE_PREMISE_VERIFIED":  "false",
+            "ARTICLE_READINESS_SCORE":  "8",
+            "APPROVED_OVERRIDE":        "",
+            "FORCE_PUBLISH_OVERRIDE":   "",
+        }
+
+    def _gate(self, signals, select_min=7):
+        """Mirrors run_daily_research selection logic."""
+        selected = []
+        for s in signals:
+            is_override = str(
+                s.get("FORCE_PUBLISH_OVERRIDE", "") or s.get("APPROVED_OVERRIDE", "")
+            ).lower() == "true"
+            if is_override:
+                selected.append(s)
+            elif (
+                str(s.get("SCORE_RECOMMENDED_FOR_ARTICLE", "false")).lower() == "true"
+                and str(s.get("ARTICLE_READY", "false")).lower() == "true"
+                and int(s.get("ARTICLE_READINESS_SCORE", "0") or "0") >= select_min
+            ):
+                selected.append(s)
+        return selected
+
+    def test_unready_signal_without_override_not_selected(self):
+        sig = self._unready_signal()
+        assert self._gate([sig]) == []
+
+    def test_force_publish_override_selects_unready_signal(self):
+        sig = {**self._unready_signal(), "FORCE_PUBLISH_OVERRIDE": "true"}
+        result = self._gate([sig])
+        assert len(result) == 1
+
+    def test_approved_override_legacy_still_works(self):
+        """APPROVED_OVERRIDE (legacy sheet field) must still bypass gate."""
+        sig = {**self._unready_signal(), "APPROVED_OVERRIDE": "true"}
+        result = self._gate([sig])
+        assert len(result) == 1
+
+    def test_override_does_not_affect_normal_ready_signal(self):
+        """Ready signal is selected without any override."""
+        sig = {
+            **self._unready_signal(),
+            "ARTICLE_READY": "true",
+            "SOURCE_PREMISE_VERIFIED": "true",
+        }
+        result = self._gate([sig])
+        assert len(result) == 1
+
+
+class TestResearchEvidencePaths:
+    """Both evidence paths must produce SOURCE_PREMISE_VERIFIED=true in enrich_signal output."""
+
+    def test_company_case_path_sets_premise_verified(self):
+        from scripts.research.enrich import enrich_signal
+        signal = {"SIGNAL_ID": "ep1", "HEADLINE": "Company signal"}
+        with patch("scripts.research.enrich.chat") as mock:
+            mock.return_value = json.dumps({
+                "REAL_COMPANY_EXAMPLE": "BrandCo",
+                "SOURCE_FOR_CASE":      "https://source.com",
+                "CORE_FACT":            "Verified fact.",
+                "CONFIDENCE":           "low",  # company path doesn't need high confidence
+            })
+            result = enrich_signal(signal)
+        assert result["SOURCE_PREMISE_VERIFIED"] == "true"
+        assert result["ARTICLE_READY"] == "true"
+
+    def test_research_data_path_sets_premise_verified(self):
+        from scripts.research.enrich import enrich_signal
+        signal = {"SIGNAL_ID": "ep2", "HEADLINE": "Research signal"}
+        with patch("scripts.research.enrich.chat") as mock:
+            mock.return_value = json.dumps({
+                "REAL_COMPANY_EXAMPLE": None,
+                "SOURCE_FOR_CASE":      "https://hbr.org/research",
+                "CORE_FACT":            "Research finding about customer memory.",
+                "CONFIDENCE":           "high",
+            })
+            result = enrich_signal(signal)
+        assert result["SOURCE_PREMISE_VERIFIED"] == "true"
+        assert result["ARTICLE_READY"] == "true"
+
+    def test_no_source_at_all_not_verified(self):
+        from scripts.research.enrich import enrich_signal
+        signal = {"SIGNAL_ID": "ep3", "HEADLINE": "No source"}
+        with patch("scripts.research.enrich.chat") as mock:
+            mock.return_value = json.dumps({
+                "REAL_COMPANY_EXAMPLE": None,
+                "SOURCE_FOR_CASE":      None,
+                "CORE_FACT":            "some fact",
+                "CONFIDENCE":           "high",
+            })
+            result = enrich_signal(signal)
+        assert result["SOURCE_PREMISE_VERIFIED"] == "false"
+        assert result["ARTICLE_READY"] == "false"
