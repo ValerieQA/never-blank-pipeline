@@ -39,6 +39,9 @@ SCHEMA_DEFAULTS = {
     "CHANNEL_FIT_SCORE": "0", "POTENTIAL_HOOK": "", "INTERESTING_QUESTION": "",
     "NEVER_BLANK_ANGLE": "", "POSSIBLE_SIGNATURE_LINE": "", "SOURCE_QUALITY": "",
     "CONFIDENCE": "low", "RECOMMENDED_FOR_ARTICLE": "false",
+    "SCORE_RECOMMENDED_FOR_ARTICLE": "false",
+    "SOURCE_PREMISE_VERIFIED": "false",
+    "ARTICLE_READY": "false",
     "NOTES": "", "APPROVED_OVERRIDE": "", "score_reason": "",
     "raw_summary": "", "discovery_confidence": "",
 }
@@ -135,11 +138,14 @@ def run() -> dict:
         seen[sig["SIGNAL_ID"]] = {"date": now_ts, "headline": sig.get("HEADLINE", "")}
     _save_seen(seen)
 
+    # Selection requires BOTH score-based recommendation AND factual article readiness.
+    # Scoring recommendation != factual article readiness — see enrich.determine_article_readiness.
     selected = [
         s for s in final_signals
         if str(s.get("APPROVED_OVERRIDE", "")).lower() == "true"
         or (
-            str(s.get("RECOMMENDED_FOR_ARTICLE", "false")).lower() == "true"
+            str(s.get("SCORE_RECOMMENDED_FOR_ARTICLE", "false")).lower() == "true"
+            and str(s.get("ARTICLE_READY", "false")).lower() == "true"
             and int(s.get("ARTICLE_READINESS_SCORE", "0") or "0") >= select_min
         )
     ][:top_n_sel]

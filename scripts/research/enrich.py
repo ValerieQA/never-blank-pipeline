@@ -22,6 +22,34 @@ _NULL_CASE = {
     "RECOMMENDED_FOR_ARTICLE": "false",
 }
 
+
+def determine_article_readiness(signal: dict) -> tuple[bool, str]:
+    """
+    Deterministic, no-LLM, no-side-effects check for factual article readiness.
+
+    Scoring recommendation != factual article readiness.
+    A signal becomes article-ready only after deterministic enrichment verification.
+
+    Returns (ready: bool, reason: str).
+    """
+    has_company  = bool(signal.get("REAL_COMPANY_EXAMPLE"))
+    has_source   = bool(signal.get("SOURCE_FOR_CASE"))
+    has_fact     = bool(signal.get("CORE_FACT", "").strip())
+    outcome_ok   = signal.get("OUTCOME_IF_KNOWN", "unknown") != "unknown"
+    confidence   = signal.get("CONFIDENCE", "low")
+
+    premise_verified = has_company and has_source
+    signal_strength_ok = confidence in ("high", "medium")
+
+    if not premise_verified:
+        return False, "SOURCE_PREMISE_VERIFIED=false: missing REAL_COMPANY_EXAMPLE or SOURCE_FOR_CASE"
+    if not has_fact:
+        return False, "missing CORE_FACT"
+    if not signal_strength_ok:
+        return False, f"CONFIDENCE={confidence!r} — insufficient evidence quality"
+    return True, "all evidence fields present"
+
+
 def enrich_signal(signal: dict) -> dict:
     prompt = load_prompt("research/enrich", {
         "headline":    signal.get("HEADLINE", ""),
@@ -49,6 +77,19 @@ def enrich_signal(signal: dict) -> dict:
     if not merged.get("REAL_COMPANY_EXAMPLE") or not merged.get("SOURCE_FOR_CASE"):
         merged.update(_NULL_CASE)
         log.info("Signal %s: no case source — marked not article-ready", signal.get("SIGNAL_ID"))
+
+    # Deterministic readiness fields — set after all evidence is merged.
+    article_ready, reason = determine_article_readiness(merged)
+    premise_verified = (
+        bool(merged.get("REAL_COMPANY_EXAMPLE")) and bool(merged.get("SOURCE_FOR_CASE"))
+    )
+    merged["SOURCE_PREMISE_VERIFIED"] = str(premise_verified).lower()
+    merged["ARTICLE_READY"]           = str(article_ready).lower()
+    # Keep legacy field in sync so sheet consumers remain unaffected.
+    merged["RECOMMENDED_FOR_ARTICLE"] = str(article_ready).lower()
+
+    if not article_ready:
+        log.info("Signal %s: ARTICLE_READY=false — %s", signal.get("SIGNAL_ID"), reason)
 
     return merged
 

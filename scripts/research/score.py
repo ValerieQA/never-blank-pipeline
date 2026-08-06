@@ -77,13 +77,21 @@ def score_candidates(candidates: list[dict]) -> list[dict]:
             continue
         c = dict(candidates[idx])
         total = int(entry.get("total_score", 0))
+        # SCORE_RECOMMENDED_FOR_ARTICLE = numeric threshold only.
+        # Factual article readiness is determined later by enrich.py.
+        # Semantic field drift: one field must not represent different lifecycle
+        # states across pipeline stages.
+        score_rec = total >= thresholds.get("select_minimum", 7)
         c.update({
-            "SIGNAL_STRENGTH":       entry.get("SIGNAL_STRENGTH", "low"),
-            "DISCUSSION_POTENTIAL":  entry.get("DISCUSSION_POTENTIAL", "low"),
-            "CHANNEL_FIT_SCORE":     str(entry.get("CHANNEL_FIT_SCORE", 0)),
-            "ARTICLE_READINESS_SCORE": str(total),
-            "score_reason":          entry.get("score_reason", ""),
-            "RECOMMENDED_FOR_ARTICLE": str(total >= thresholds.get("select_minimum", 7)).lower(),
+            "SIGNAL_STRENGTH":              entry.get("SIGNAL_STRENGTH", "low"),
+            "DISCUSSION_POTENTIAL":         entry.get("DISCUSSION_POTENTIAL", "low"),
+            "CHANNEL_FIT_SCORE":            str(entry.get("CHANNEL_FIT_SCORE", 0)),
+            "ARTICLE_READINESS_SCORE":      str(total),
+            "score_reason":                 entry.get("score_reason", ""),
+            "SCORE_RECOMMENDED_FOR_ARTICLE": str(score_rec).lower(),
+            # Legacy alias kept for sheet sync and any external consumers;
+            # final meaning is set by enrich.py (ARTICLE_READY).
+            "RECOMMENDED_FOR_ARTICLE":      str(score_rec).lower(),
         })
         result.append((total, c))
 

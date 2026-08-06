@@ -232,32 +232,36 @@ def test_fit_text_dynamic_never_drops_words():
 
 
 def test_signal_selection_requires_both_conditions():
-    """Selected signals must have BOTH RECOMMENDED_FOR_ARTICLE=true AND score >= threshold."""
-    # Signal with recommendation but low score → should NOT be selected
-    signal_rec_only = {
-        "SIGNAL_ID": "sig1",
-        "RECOMMENDED_FOR_ARTICLE": "true",
-        "ARTICLE_READINESS_SCORE": "4",
-        "APPROVED_OVERRIDE": "",
-    }
-    # Signal with high score but no recommendation → should NOT be selected
+    """Selection gate requires SCORE_RECOMMENDED + ARTICLE_READY + score >= threshold."""
+    # Score rec only, not article-ready → NOT selected
     signal_score_only = {
-        "SIGNAL_ID": "sig2",
-        "RECOMMENDED_FOR_ARTICLE": "false",
-        "ARTICLE_READINESS_SCORE": "9",
-        "APPROVED_OVERRIDE": "",
-    }
-    # Signal with both → SHOULD be selected
-    signal_both = {
-        "SIGNAL_ID": "sig3",
-        "RECOMMENDED_FOR_ARTICLE": "true",
+        "SIGNAL_ID": "sig1",
+        "SCORE_RECOMMENDED_FOR_ARTICLE": "true",
+        "ARTICLE_READY": "false",
         "ARTICLE_READINESS_SCORE": "8",
         "APPROVED_OVERRIDE": "",
     }
-    # Signal with APPROVED_OVERRIDE → SHOULD be selected regardless
+    # Article ready but score too low → NOT selected
+    signal_ready_low_score = {
+        "SIGNAL_ID": "sig2",
+        "SCORE_RECOMMENDED_FOR_ARTICLE": "false",
+        "ARTICLE_READY": "true",
+        "ARTICLE_READINESS_SCORE": "4",
+        "APPROVED_OVERRIDE": "",
+    }
+    # Both score rec and article ready → SELECTED
+    signal_both = {
+        "SIGNAL_ID": "sig3",
+        "SCORE_RECOMMENDED_FOR_ARTICLE": "true",
+        "ARTICLE_READY": "true",
+        "ARTICLE_READINESS_SCORE": "8",
+        "APPROVED_OVERRIDE": "",
+    }
+    # APPROVED_OVERRIDE bypasses all checks → SELECTED
     signal_override = {
         "SIGNAL_ID": "sig4",
-        "RECOMMENDED_FOR_ARTICLE": "false",
+        "SCORE_RECOMMENDED_FOR_ARTICLE": "false",
+        "ARTICLE_READY": "false",
         "ARTICLE_READINESS_SCORE": "3",
         "APPROVED_OVERRIDE": "true",
     }
@@ -269,18 +273,19 @@ def test_signal_selection_requires_both_conditions():
             s for s in signals
             if str(s.get("APPROVED_OVERRIDE", "")).lower() == "true"
             or (
-                str(s.get("RECOMMENDED_FOR_ARTICLE", "false")).lower() == "true"
+                str(s.get("SCORE_RECOMMENDED_FOR_ARTICLE", "false")).lower() == "true"
+                and str(s.get("ARTICLE_READY", "false")).lower() == "true"
                 and int(s.get("ARTICLE_READINESS_SCORE", "0") or "0") >= select_min
             )
         ]
 
-    all_signals = [signal_rec_only, signal_score_only, signal_both, signal_override]
+    all_signals = [signal_score_only, signal_ready_low_score, signal_both, signal_override]
     result_ids  = {s["SIGNAL_ID"] for s in _select(all_signals)}
 
-    assert "sig1" not in result_ids   # rec but low score
-    assert "sig2" not in result_ids   # score but no rec
-    assert "sig3" in result_ids       # both
-    assert "sig4" in result_ids       # override
+    assert "sig1" not in result_ids   # score rec but not article-ready
+    assert "sig2" not in result_ids   # article-ready but score too low
+    assert "sig3" in result_ids       # both conditions met
+    assert "sig4" in result_ids       # override bypasses all
 
 
 # --- Sheets sync failure is non-fatal ---
@@ -550,3 +555,215 @@ def test_register_post_persisted_by_build_image_plan(tmp_path, monkeypatch):
     mock_save.assert_called_once_with({"posts": [fake_registry_update]})
     assert "_registry_update" not in result
     assert lib_entry == {"url": "https://x/1.png"}
+
+
+# ── Enrichment readiness semantics (fix: semantic field drift) ─────────────────
+
+class TestDetermineArticleReadiness:
+    """determine_article_readiness is deterministic, no LLM, no side effects."""
+
+    def setup_method(self):
+        from scripts.research.enrich import determine_article_readiness
+        self.check = determine_article_readiness
+
+    def _base(self, **overrides):
+        base = {
+            "REAL_COMPANY_EXAMPLE": "Acme Corp",
+            "SOURCE_FOR_CASE":      "https://example.com/source",
+            "CORE_FACT":            "A verified fact about Acme.",
+            "OUTCOME_IF_KNOWN":     "revenue grew 20%",
+            "CONFIDENCE":           "high",
+        }
+        base.update(overrides)
+        return base
+
+    def test_high_score_and_verified_case_is_ready(self):
+        ready, reason = self.check(self._base())
+        assert ready is True
+
+    def test_high_score_no_company_not_ready(self):
+        ready, reason = self.check(self._base(REAL_COMPANY_EXAMPLE=None))
+        assert ready is False
+        assert "SOURCE_PREMISE_VERIFIED=false" in reason
+
+    def test_high_score_no_source_not_ready(self):
+        ready, reason = self.check(self._base(SOURCE_FOR_CASE=None))
+        assert ready is False
+        assert "SOURCE_PREMISE_VERIFIED=false" in reason
+
+    def test_missing_core_fact_not_ready(self):
+        ready, reason = self.check(self._base(CORE_FACT=""))
+        assert ready is False
+        assert "CORE_FACT" in reason
+
+    def test_low_confidence_not_ready(self):
+        ready, reason = self.check(self._base(CONFIDENCE="low"))
+        assert ready is False
+        assert "CONFIDENCE" in reason
+
+    def test_returns_tuple(self):
+        result = self.check(self._base())
+        assert isinstance(result, tuple)
+        assert isinstance(result[0], bool)
+        assert isinstance(result[1], str)
+
+
+class TestEnrichSignalReadinessFields:
+    """enrich_signal must set SOURCE_PREMISE_VERIFIED and ARTICLE_READY."""
+
+    def test_verified_signal_sets_article_ready_true(self):
+        from scripts.research.enrich import enrich_signal
+        signal = {"SIGNAL_ID": "x1", "HEADLINE": "Test"}
+        with patch("scripts.research.enrich.chat") as mock:
+            mock.return_value = json.dumps({
+                "REAL_COMPANY_EXAMPLE": "BrandCo",
+                "SOURCE_FOR_CASE":      "https://source.com",
+                "CORE_FACT":            "A solid fact.",
+                "OUTCOME_IF_KNOWN":     "succeeded",
+                "CONFIDENCE":           "high",
+            })
+            result = enrich_signal(signal)
+        assert result["SOURCE_PREMISE_VERIFIED"] == "true"
+        assert result["ARTICLE_READY"] == "true"
+        assert result["RECOMMENDED_FOR_ARTICLE"] == "true"
+
+    def test_unverified_signal_sets_article_ready_false(self):
+        from scripts.research.enrich import enrich_signal
+        signal = {"SIGNAL_ID": "x2", "HEADLINE": "Test"}
+        with patch("scripts.research.enrich.chat") as mock:
+            mock.return_value = json.dumps({
+                "REAL_COMPANY_EXAMPLE": None,
+                "SOURCE_FOR_CASE":      None,
+                "CORE_FACT":            "some fact",
+            })
+            result = enrich_signal(signal)
+        assert result["SOURCE_PREMISE_VERIFIED"] == "false"
+        assert result["ARTICLE_READY"] == "false"
+        assert result["RECOMMENDED_FOR_ARTICLE"] == "false"
+
+    def test_null_case_behavior_preserved(self):
+        """_NULL_CASE contract: missing case → company=None, confidence=low, ready=false."""
+        from scripts.research.enrich import enrich_signal
+        signal = {"SIGNAL_ID": "x3", "HEADLINE": "Test"}
+        with patch("scripts.research.enrich.chat") as mock:
+            mock.return_value = json.dumps({"CORE_FACT": "fact", "CONFIDENCE": "low"})
+            result = enrich_signal(signal)
+        assert result["REAL_COMPANY_EXAMPLE"] is None
+        assert result["CONFIDENCE"] == "low"
+        assert result["ARTICLE_READY"] == "false"
+
+    def test_no_new_llm_calls_from_readiness_check(self):
+        """determine_article_readiness must not trigger additional LLM calls."""
+        from scripts.research.enrich import enrich_signal
+        signal = {"SIGNAL_ID": "x4", "HEADLINE": "Test"}
+        with patch("scripts.research.enrich.chat") as mock:
+            mock.return_value = json.dumps({
+                "REAL_COMPANY_EXAMPLE": "Co",
+                "SOURCE_FOR_CASE": "https://s.com",
+                "CORE_FACT": "fact",
+                "CONFIDENCE": "high",
+                "OUTCOME_IF_KNOWN": "done",
+            })
+            enrich_signal(signal)
+        assert mock.call_count == 1  # only the enrichment LLM call
+
+
+class TestScoreRecommendationField:
+    """score.py must set SCORE_RECOMMENDED_FOR_ARTICLE, not final ARTICLE_READY."""
+
+    def test_score_sets_score_recommended_field(self):
+        from scripts.research.score import score_candidates
+        candidate = {
+            "SIGNAL_ID": "s1", "HEADLINE": "Test signal",
+            "SIGNAL_TYPE": "visibility interruption", "raw_summary": "summary",
+        }
+        scored_meta = [{"index": 0, "total_score": 8, "score_reason": "good",
+                        "SIGNAL_STRENGTH": "high", "DISCUSSION_POTENTIAL": "high",
+                        "CHANNEL_FIT_SCORE": 8}]
+        with patch("scripts.research.score.chat") as mock_chat, \
+             patch("scripts.research.score._load_weights") as mock_weights:
+            mock_chat.return_value = json.dumps({"scores": scored_meta})
+            mock_weights.return_value = {
+                "criteria": {"relevance": {"weight": 5, "description": "relevant"}},
+                "thresholds": {"select_minimum": 7, "top_n_to_enrich": 10},
+            }
+            result = score_candidates([candidate])
+        assert len(result) == 1
+        assert "SCORE_RECOMMENDED_FOR_ARTICLE" in result[0]
+        assert result[0]["SCORE_RECOMMENDED_FOR_ARTICLE"] == "true"
+        # ARTICLE_READY must NOT be set by scoring — only by enrich
+        assert "ARTICLE_READY" not in result[0]
+
+    def test_legacy_recommended_field_still_present(self):
+        """RECOMMENDED_FOR_ARTICLE stays in score output for sheet sync compatibility."""
+        from scripts.research.score import score_candidates
+        candidate = {"SIGNAL_ID": "s2", "HEADLINE": "H", "SIGNAL_TYPE": "", "raw_summary": ""}
+        scored_meta = [{"index": 0, "total_score": 3, "score_reason": "weak",
+                        "SIGNAL_STRENGTH": "low", "DISCUSSION_POTENTIAL": "low",
+                        "CHANNEL_FIT_SCORE": 3}]
+        with patch("scripts.research.score.chat") as mock_chat, \
+             patch("scripts.research.score._load_weights") as mock_weights:
+            mock_chat.return_value = json.dumps({"scores": scored_meta})
+            mock_weights.return_value = {
+                "criteria": {},
+                "thresholds": {"select_minimum": 7, "top_n_to_enrich": 10},
+            }
+            result = score_candidates([candidate])
+        assert len(result) == 1
+        assert result[0]["RECOMMENDED_FOR_ARTICLE"] == "false"
+        assert result[0]["SCORE_RECOMMENDED_FOR_ARTICLE"] == "false"
+
+
+class TestSpaceXRegressionFixture:
+    """SpaceX-type signal: high score, no verified case → must not reach Editorial Engine."""
+
+    def _spacex_signal(self):
+        return {
+            "SIGNAL_ID":                "spacex_regression",
+            "HEADLINE":                 "The average SpaceX buyer post-IPO is almost under water after two-day rally",
+            "CORE_FACT":                "",  # unverified — IPO not completed
+            "REAL_COMPANY_EXAMPLE":     None,
+            "SOURCE_FOR_CASE":          None,
+            "OUTCOME_IF_KNOWN":         "unknown",
+            "CONFIDENCE":               "low",
+            "ARTICLE_READINESS_SCORE":  "8",  # score would pass threshold
+            "SCORE_RECOMMENDED_FOR_ARTICLE": "true",
+            "ARTICLE_READY":            "false",  # set by enrich
+            "SOURCE_PREMISE_VERIFIED":  "false",
+            "APPROVED_OVERRIDE":        "",
+        }
+
+    def test_spacex_score_recommendation_is_true(self):
+        sig = self._spacex_signal()
+        assert sig["SCORE_RECOMMENDED_FOR_ARTICLE"] == "true"
+
+    def test_spacex_premise_not_verified(self):
+        sig = self._spacex_signal()
+        assert sig["SOURCE_PREMISE_VERIFIED"] == "false"
+
+    def test_spacex_article_ready_is_false(self):
+        sig = self._spacex_signal()
+        assert sig["ARTICLE_READY"] == "false"
+
+    def test_spacex_not_selected_for_content(self):
+        sig = self._spacex_signal()
+        select_min = 7
+
+        def _gate(s):
+            return (
+                str(s.get("APPROVED_OVERRIDE", "")).lower() == "true"
+                or (
+                    str(s.get("SCORE_RECOMMENDED_FOR_ARTICLE", "false")).lower() == "true"
+                    and str(s.get("ARTICLE_READY", "false")).lower() == "true"
+                    and int(s.get("ARTICLE_READINESS_SCORE", "0") or "0") >= select_min
+                )
+            )
+
+        assert _gate(sig) is False, "SpaceX-type signal must not pass selection gate"
+
+    def test_determine_readiness_rejects_spacex(self):
+        from scripts.research.enrich import determine_article_readiness
+        sig = self._spacex_signal()
+        ready, reason = determine_article_readiness(sig)
+        assert ready is False
+        assert "SOURCE_PREMISE_VERIFIED=false" in reason
