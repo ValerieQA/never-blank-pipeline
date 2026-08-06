@@ -60,6 +60,15 @@ def determine_article_readiness(signal: dict) -> tuple[bool, str]:
         )
     if not has_fact:
         return False, "missing CORE_FACT"
+
+    # Explicit disclaimer in CORE_FACT overrides confidence-based paths.
+    # Prevents research path from accepting a signal the LLM itself flagged as unverified.
+    _UNVERIFIED_MARKERS = ("not verified", "unverified", "unverifiable", "unsupported", "cannot be confirmed")
+    fact_lower = signal.get("CORE_FACT", "").lower()
+    for marker in _UNVERIFIED_MARKERS:
+        if marker in fact_lower:
+            return False, f"CORE_FACT contains explicit disclaimer ({marker!r}) — claim is not verifiable"
+
     return True, "evidence verified" + (" (company case)" if company_case_verified else " (research/data)")
 
 

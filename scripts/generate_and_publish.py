@@ -230,30 +230,33 @@ def main() -> int:
     headline = signal.get("HEADLINE", signal_id)
     print(f"  ✓  Headline: {headline[:70]}")
 
-    # Preflight: reject signals that failed enrichment readiness check unless
-    # explicitly force-overridden. Protects against stale selected_signals.jsonl
-    # entries that were written before the readiness gate existed.
-    article_ready     = str(signal.get("ARTICLE_READY", "")).lower()
-    force_override    = str(
+    # Preflight: fail-closed readiness check.
+    # Only ARTICLE_READY=true passes. Missing field (old records) is treated as
+    # false — old selected_signals.jsonl entries may contain unverified signals.
+    # FORCE_PUBLISH_OVERRIDE=true is the only bypass; it logs a warning + audit.
+    article_ready  = str(signal.get("ARTICLE_READY", "")).lower()
+    force_override = str(
         signal.get("FORCE_PUBLISH_OVERRIDE", "") or signal.get("APPROVED_OVERRIDE", "")
     ).lower() == "true"
-    readiness_unknown = article_ready == ""  # old record pre-dates the field
 
-    if not force_override and article_ready == "false":
-        premise = signal.get("SOURCE_PREMISE_VERIFIED", "unknown")
-        print(
-            f"  ERROR: Signal {signal_id!r} has ARTICLE_READY=false "
-            f"(SOURCE_PREMISE_VERIFIED={premise}). "
-            "This signal did not pass enrichment verification and cannot be published. "
-            "Set FORCE_PUBLISH_OVERRIDE=true in the signal record to override."
-        )
-        return 1
-
-    if readiness_unknown and not force_override:
-        print(
-            f"  WARNING: Signal {signal_id!r} predates the ARTICLE_READY field. "
-            "Proceeding — but verify this signal was manually reviewed."
-        )
+    if article_ready != "true":
+        if force_override:
+            premise = signal.get("SOURCE_PREMISE_VERIFIED", "unknown")
+            print(
+                f"  WARNING: FORCE_PUBLISH_OVERRIDE active for {signal_id!r} "
+                f"(ARTICLE_READY={article_ready!r}, SOURCE_PREMISE_VERIFIED={premise}). "
+                "Bypassing readiness check — ensure this signal was manually reviewed."
+            )
+        else:
+            premise = signal.get("SOURCE_PREMISE_VERIFIED", "unknown")
+            field_note = "field absent (pre-dates readiness gate)" if article_ready == "" else f"ARTICLE_READY={article_ready!r}"
+            print(
+                f"  ERROR: Signal {signal_id!r} blocked by preflight — {field_note} "
+                f"(SOURCE_PREMISE_VERIFIED={premise}). "
+                "This signal did not pass enrichment verification and cannot be published. "
+                "Set FORCE_PUBLISH_OVERRIDE=true in the signal record to override."
+            )
+            return 1
 
     pimgs = _load_package_images(signal_id)
     pkg_design_version = pimgs.get("_design_version") if pimgs else None

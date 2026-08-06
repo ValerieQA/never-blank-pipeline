@@ -890,3 +890,96 @@ class TestResearchEvidencePaths:
             result = enrich_signal(signal)
         assert result["SOURCE_PREMISE_VERIFIED"] == "false"
         assert result["ARTICLE_READY"] == "false"
+
+
+class TestPreflightFailClosed:
+    """Preflight in generate_and_publish must be fail-closed: missing ARTICLE_READY = block."""
+
+    def _signal(self, **overrides):
+        base = {
+            "SIGNAL_ID":               "pf_test",
+            "HEADLINE":                "Test signal",
+            "ARTICLE_READY":           "true",
+            "SOURCE_PREMISE_VERIFIED": "true",
+            "FORCE_PUBLISH_OVERRIDE":  "",
+            "APPROVED_OVERRIDE":       "",
+        }
+        base.update(overrides)
+        return base
+
+    def _passes_preflight(self, signal):
+        """True if signal would not be blocked by the preflight check."""
+        article_ready  = str(signal.get("ARTICLE_READY", "")).lower()
+        force_override = str(
+            signal.get("FORCE_PUBLISH_OVERRIDE", "") or signal.get("APPROVED_OVERRIDE", "")
+        ).lower() == "true"
+        return article_ready == "true" or force_override
+
+    def test_article_ready_true_passes(self):
+        assert self._passes_preflight(self._signal(ARTICLE_READY="true")) is True
+
+    def test_article_ready_false_blocked(self):
+        assert self._passes_preflight(self._signal(ARTICLE_READY="false")) is False
+
+    def test_article_ready_missing_blocked(self):
+        """Old records without ARTICLE_READY field must be blocked, not warned-past."""
+        sig = self._signal()
+        del sig["ARTICLE_READY"]
+        assert self._passes_preflight(sig) is False
+
+    def test_force_override_passes_despite_false(self):
+        assert self._passes_preflight(
+            self._signal(ARTICLE_READY="false", FORCE_PUBLISH_OVERRIDE="true")
+        ) is True
+
+    def test_force_override_passes_despite_missing(self):
+        sig = self._signal(FORCE_PUBLISH_OVERRIDE="true")
+        del sig["ARTICLE_READY"]
+        assert self._passes_preflight(sig) is True
+
+    def test_approved_override_legacy_passes_despite_false(self):
+        assert self._passes_preflight(
+            self._signal(ARTICLE_READY="false", APPROVED_OVERRIDE="true")
+        ) is True
+
+
+class TestExplicitUnverifiedClaimBlocked:
+    """CORE_FACT with explicit unverified disclaimer must override confidence-based approval."""
+
+    def setup_method(self):
+        from scripts.research.enrich import determine_article_readiness
+        self.check = determine_article_readiness
+
+    def _research_signal(self, core_fact):
+        return {
+            "REAL_COMPANY_EXAMPLE": None,
+            "SOURCE_FOR_CASE":      "https://source.com",
+            "CORE_FACT":            core_fact,
+            "CONFIDENCE":           "medium",
+        }
+
+    def test_unverified_in_core_fact_blocks_research_path(self):
+        ready, reason = self.check(self._research_signal("claim is not verified"))
+        assert ready is False
+        assert "not verified" in reason
+
+    def test_unverifiable_in_core_fact_blocks(self):
+        ready, reason = self.check(self._research_signal("this claim is unverifiable"))
+        assert ready is False
+
+    def test_unsupported_in_core_fact_blocks(self):
+        ready, reason = self.check(self._research_signal("outcome is unsupported by data"))
+        assert ready is False
+
+    def test_cannot_be_confirmed_in_core_fact_blocks(self):
+        ready, reason = self.check(self._research_signal("cannot be confirmed at this time"))
+        assert ready is False
+
+    def test_clean_fact_with_medium_confidence_passes(self):
+        """Sanity: clean CORE_FACT + source + medium confidence must still pass."""
+        ready, reason = self.check(self._research_signal("Customer recall drops 40% after 6 weeks of silence."))
+        assert ready is True
+
+    def test_unverified_marker_case_insensitive(self):
+        ready, reason = self.check(self._research_signal("Claim is NOT VERIFIED by independent sources."))
+        assert ready is False
