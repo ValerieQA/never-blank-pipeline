@@ -1113,3 +1113,207 @@ ARTICLE: false`. **Важно: ничего не опубликовано неп
 или кто угодно вне основного репозитория — обязательное условие: свежий
 `main`, иначе результат формально корректен, а по сути проверяет не то
 состояние репозитория.
+
+---
+
+## 2026-08-06 — Часть 19: оба конфликта закрыты — decision_log закоммичен, ветка business-investigation-layer заархивирована без полной проверки истории
+
+**Контекст:** после Части 18 оставались два открытых конфликта: (1)
+`decision_log.md` существовал только как несохранённые локальные правки
+(Части 15–18), не виден никому вне этой сессии; (2) вывод Codex "ветку
+`feature/business-investigation-layer` нельзя мержить, опасно" не
+сошёлся с прямой git-проверкой — `merge-base(main, branch)` совпал с
+самой веткой, то есть вершина ветки формально уже предок `main`, а
+настоящий `git merge` физически не может удалить файлы из `main`. Один
+факт (файл `docs/INVESTIGATION_QUESTION_LIBRARY.md` есть на ветке,
+отсутствует в `main` при формальном "предке") остался необъяснённым —
+вероятно, ветку когда-то уже вливали, а позже часть содержимого удалили
+из `main`, но это не проверено до конца.
+
+**Решения:**
+
+77. **Конфликт 1 закрыт и подтверждён.** `.git/index.lock` удалён,
+    `strategy/decision_log.md` вместе с `strategy/research_utility_
+    signal_archetypes_2026-07-25.md` и `strategy/gpt_report_utility_
+    archetypes_2026-07-28.pdf` закоммичены и запушены одним коммитом,
+    `main` на `52dc144`. Проверено напрямую: `git log`, `git status`
+    (чисто, кроме постороннего `reports/card_audit/`), оба файла физически
+    в репозитории, `decision_log.md` показывает Части 1–18 без разрывов.
+    `decision_log.md` снова является источником истины не только на
+    словах.
+
+78. **Конфликт 2 закрыт решением, не полной проверкой — осознанно.**
+    Выбран вариант "принять практический план Codex как есть": ветку
+    `feature/business-investigation-layer` не мержить и архивировать
+    (переименовать/пометить `[archived]`, не удалять), из неё забрать
+    только `docs/LERA_OPERATING_SYSTEM.md` и `docs/INVESTIGATION_QUESTION_
+    LIBRARY.md` как docs-only референс для контракта Stage 1.5, никакого
+    python/yaml/workflow-кода с ветки не трогать. **Явно зафиксировано:
+    обоснование "почему нельзя мержить" не проверено до конца и, вероятно,
+    ошибочно** (см. Часть 18) — решение принято ради практического
+    результата (не тратить время на полную git-археологию ради ветки,
+    из которой всё равно нужны только два файла), а не потому что
+    формальная проверка подтвердила риск.
+
+79. **Разблокировано: можно приступать к ТЗ Stage 1.5.** База чистая
+    (решение 77), вопрос по ветке закрыт (решение 78). Следующий шаг —
+    техническое задание на `ResearchContext`/`EditorialContext`, на базе
+    `main @ 52dc144` (включает `03c6ca6`), с учётом двух cherry-picked
+    документов как референса, без активации Curiosity Engine в рамках
+    самого Stage 1.5 (решение из Части 18, не изменилось).
+
+---
+
+## 2026-08-06 — Часть 20: Stage 1.5 ТЗ v1 — request changes, не approve
+
+**Контекст:** Claude Code прислал первую версию ТЗ Stage 1.5
+(`ResearchContext`/`EditorialContext` как typed dataclass-контракты вместо
+raw dict между стадиями research-пайплайна). GPT дала архитектурный
+review с вердиктом "направление верное, ТЗ — request changes". Прежде чем
+согласиться, самое серьёзное утверждение GPT проверено напрямую в коде,
+не принято на веру.
+
+**Решения:**
+
+80. **ТЗ Stage 1.5 v1 не одобрено. Реализация не начинается.** Направление
+    (typed lifecycle вместо словаря) — approve. Конкретный контракт — нет,
+    по трём блокирующим причинам.
+
+81. **Подтверждено прямым чтением кода: буквальная реализация сломала бы
+    Editorial Engine.** `src/editorial/decision_lens_lite.py` и
+    `src/editorial/narrative_spine.py` читают сигнал как словарь —
+    `signal.get("HEADLINE", "")`, `signal.get("CORE_TENSION", "")`,
+    `signal.get("BUSINESS_LESSON", "")`, `signal.get("STRATEGY_PRIMARY_
+    MESSAGE")` и далее, десятки таких вызовов, ключи в верхнем регистре.
+    У обычного Python `dataclass` метода `.get()` нет — передача
+    `EditorialContext` вместо dict уронит эти модули на первом вызове.
+    Утверждение исходного ТЗ "`src/editorial/*` — без змін" было
+    фактически неверным без отдельного boundary-адаптера. Это не
+    архитектурная вкусовщина — проверяемый, воспроизводимый факт.
+
+82. **Ещё два блокирующих пробела в контракте (логический анализ, не
+    требовал чтения кода, но признан обоснованным):** (а) состояние
+    `score_only` одновременно включено в `ArticleStatus` и объявлено
+    в самом ТЗ "теоретично неможливим" — недостижимое состояние в типе
+    без объяснения, на какой стадии жизненного цикла оно вообще
+    существует; неясно, живёт ли `ResearchContext` весь research-путь
+    или только после `enrich.py` — ТЗ пытается делать оба одновременно;
+    (б) `ResearchContext.to_editorial()` физически нереализуем как
+    описано — `EditorialContext` требует `core_tension`, `business_
+    lesson`, `never_blank_angle`, `possible_signature_line`, `potential_
+    hook`, `target_audience` и три angle-поля, которых нет среди полей
+    `ResearchContext`; откуда они берутся (typed-поле, strategy config,
+    отдельный adapter, аргумент фабрики) — не определено. Поле `_raw`
+    не принимается как источник этих значений — это обход типизации,
+    а не её часть.
+
+83. **Требования к ТЗ v2, зафиксированы как обязательные, не
+    рекомендательные:** (1) однозначная state-transition таблица с учётом
+    `stage`; (2) чёткая продолжительность жизни `ResearchContext` — весь
+    pipeline или только post-enrichment, не оба сразу; (3) field-by-field
+    маппинг, откуда каждое поле `EditorialContext` берётся; (4)
+    спецификация legacy-совместимого boundary-адаптера
+    (`EditorialContext → legacy dict с uppercase-ключами → существующий
+    Editorial Engine`), переписывание самих editorial-модулей — вне
+    scope Stage 1.5; (5) каноническая сериализация без утечки `_raw`
+    в JSONL, `_raw` не читается downstream в обход типов; (6) runtime-
+    инварианты (`Literal` ничего не валидирует сам по себе;
+    `article_status`/`article_ready`/`force_override` не должны
+    расходиться — либо вычисляются фабрикой, либо валидируются в
+    `__post_init__`); (7) матрица behavior-equivalence тестов (legacy
+    dict → context → dict обратно; старый и новый selection gate
+    совпадают на одной матрице входов; preflight и editorial payload
+    до/после идентичны).
+
+84. **Investigation Evidence Gate не путать с сегодняшней factual
+    readiness.** Поле-placeholder под будущий Curiosity Engine (Часть 18)
+    разрешено оставить в контракте, но явно как неактивный статус, не
+    как уже работающий gate — не должно использоваться как publishing
+    authorization до Stage 2.
+
+**Статус:** ТЗ отправлено обратно Claude Code с этим списком. Реализация
+Stage 1.5 не начата.
+
+---
+
+## 2026-08-07 — Часть 21: Stage 1.5 закрыт — реализация влита в `main` коммитом `c51176b`
+
+**Контекст:** Stage 1.5 (`ResearchContext`/`EditorialContext`) прошёл
+первоначальную реализацию и две итерации исправлений, включая два раунда
+review, перед финальным APPROVE.
+
+**Хронология реализации:**
+
+85. **Коммит `531be13` — первоначальная реализация Stage 1.5.** Созданы
+    `src/lifecycle/signal_lifecycle.py` (`ResearchContext`, `EditorialContext`,
+    `derive_factual_readiness()`, `derive_admission_status()`,
+    `_KNOWN_JSONL_KEYS`) и `tests/test_signal_lifecycle.py` (43 теста). Selection gate
+    в `run_daily_research.py` и preflight в `generate_and_publish.py`
+    переведены на `ResearchContext`. `generate_article()` получает
+    `rc.to_legacy_dict()` вместо raw dict.
+
+86. **Первый review — REQUEST CHANGES по двум блокирующим пунктам.**
+    (а) `EditorialContext` определён, но не подключён в production pipeline:
+    `generate_article()` по-прежнему получал `rc.to_legacy_dict()`, минуя
+    `EditorialContext` полностью. (б) Новый preflight использовал
+    `rc.admission_status`, который требовал `SCORE_RECOMMENDED=true` —
+    а оригинальный preflight проверял только `ARTICLE_READY` или override.
+    Это недокументированное изменение поведения: сигналы с `ARTICLE_READY=true`
+    и `SCORE_RECOMMENDED=false` раньше проходили publish, теперь
+    блокировались.
+
+87. **Коммит `4ad2433` — исправление preflight и фиксация scope
+    `EditorialContext`.** Preflight возвращён к прежней семантике:
+    `not rc.article_ready and not rc.force_override` — score больше не
+    является publish-gate. `EditorialContext` явно задокументирован в
+    docstring модуля как контракт Stage 1.5 с production wiring,
+    сознательно перенесённым в Stage 2: `to_editorial()` требует
+    `admission_status != 'rejected'`, но publish gate пропускает сигналы
+    с `article_ready=True, score_recommended=False`, у которых
+    `admission_status='rejected'` — подключение без изменения семантики
+    gate требует отдельного решения. Добавлены parametrized-тесты:
+    `test_selection_gate_parametrized`, `test_publish_preflight_parametrized`,
+    `test_publish_preflight_score_not_a_gate`,
+    `test_editorial_context_wiring_deferred_to_stage2` (+24 теста, итого 67).
+
+88. **Второй review — REQUEST CHANGES по трём пунктам.** (а) В
+    `test_preflight_equivalence` в блоке диагностики mismatch использовалась
+    несуществующая переменная `new_ar_str` — при реальном расхождении тест
+    падал бы с `NameError` вместо отчёта. (б) Parametrized-тесты заявляли
+    проверку `APPROVED_OVERRIDE`, но фактически передавали только
+    `FORCE_PUBLISH_OVERRIDE` — alias-путь не покрыт. (в) Фраза "те же 16
+    pre-existing failures" не была доказана сравнением baseline и
+    implementation — нужен был явный запуск на `52dc144` через `git worktree`.
+
+89. **Коммит `904fc16` — исправление всех трёх дефектов.** `new_ar_str`
+    заменён на `rc.article_ready`. Оба parametrized-теста получили отдельный
+    параметр `ao_override` с кейсами: `APPROVED_OVERRIDE=true`
+    без `FORCE_PUBLISH_OVERRIDE`; оба отсутствуют; конфликтующие значения
+    (`AO=true+FP=false`, `FP=true+AO=false`, оба `false`). Baseline
+    `52dc144` прогнан через `git worktree`: те же 16 тестов, те же
+    причины, те же source-строки — ни один из файлов-нарушителей
+    (`src/editorial/platform_composer.py`, `src/content/generator.py`,
+    `src/publishing/wix_media.py`) не затронут Stage 1.5. Итого: 77
+    тестов в suite Stage 1.5, полный suite 642 passed / 16 pre-existing
+    failed.
+
+90. **Финальный вердикт: APPROVE на `904fc16`.** Независимый review
+    подтвердил исправление всех трёх дефектов, корректность semantics
+    preflight, честность scope `EditorialContext`, ограниченность diff
+    четырьмя файлами Stage 1.5.
+
+91. **PR №2 merged в `main` коммитом `c51176b`.** Stage 1.5 закрыт.
+    Ветка `feature/stage-1.5-typed-lifecycle` исчерпана.
+
+**Открытый пункт для Stage 2:**
+
+Production wiring `ResearchContext → EditorialContext → Editorial Engine`.
+`to_editorial()` требует `admission_status` ∈ `{"admitted", "force_override"}`,
+но publish gate пропускает сигналы с `article_ready=True, score_recommended=False`
+(`admission_status="rejected"`). Подключение `EditorialContext`
+в production path требует явного решения: либо расширить `to_editorial()`
+на случай `article_ready=True` без `score_recommended`, либо ужесточить
+publish gate (с документированием как intentional behavior change).
+
+**Статус:** Stage 1.5 закрыт. Изменения влиты в `main` merge-коммитом
+`c51176b`. Текущий HEAD `main` на момент фиксации: `74db296`.
