@@ -232,31 +232,38 @@ def main() -> int:
     print(f"  ✓  Headline: {headline[:70]}")
 
     # Preflight: fail-closed readiness check via typed ResearchContext.
-    # admission_status == 'admitted'       → proceed (article_ready + score_recommended)
-    # admission_status == 'force_override' → bypass with warning (human-reviewed)
-    # admission_status == 'rejected'       → block publish, exit 1
+    #
+    # Publish gate checks ARTICLE_READY (factual readiness) only — NOT score.
+    # Score was already applied at selection time (run_daily_research.py).
+    # A signal admitted to selected_signals.jsonl with ARTICLE_READY=true
+    # must be publishable regardless of its SCORE_RECOMMENDED value.
+    #
+    # FORCE_PUBLISH_OVERRIDE bypasses factual readiness with a warning.
+    # This preserves the exact semantics of the pre-Stage-1.5 preflight:
+    #   blocked = (ARTICLE_READY != "true") and not force_override
     rc = ResearchContext.from_dict(signal)
 
-    if rc.admission_status == "force_override":
-        print(
-            f"  WARNING: FORCE_PUBLISH_OVERRIDE active for {signal_id!r} "
-            f"(factual_readiness={rc.factual_readiness!r}, "
-            f"SOURCE_PREMISE_VERIFIED={rc.source_premise_verified}). "
-            "Bypassing readiness check — ensure this signal was manually reviewed."
-        )
-    elif rc.admission_status == "rejected":
-        field_note = (
-            "field absent (pre-dates readiness gate)"
-            if not signal.get("ARTICLE_READY")
-            else f"ARTICLE_READY={rc.article_ready!r}"
-        )
-        print(
-            f"  ERROR: Signal {signal_id!r} blocked by preflight — {field_note} "
-            f"(SOURCE_PREMISE_VERIFIED={rc.source_premise_verified}). "
-            "This signal did not pass enrichment verification and cannot be published. "
-            "Set FORCE_PUBLISH_OVERRIDE=true in the signal record to override."
-        )
-        return 1
+    if not rc.article_ready:
+        if rc.force_override:
+            print(
+                f"  WARNING: FORCE_PUBLISH_OVERRIDE active for {signal_id!r} "
+                f"(factual_readiness={rc.factual_readiness!r}, "
+                f"SOURCE_PREMISE_VERIFIED={rc.source_premise_verified}). "
+                "Bypassing readiness check — ensure this signal was manually reviewed."
+            )
+        else:
+            field_note = (
+                "field absent (pre-dates readiness gate)"
+                if not signal.get("ARTICLE_READY")
+                else f"ARTICLE_READY={rc.article_ready!r}"
+            )
+            print(
+                f"  ERROR: Signal {signal_id!r} blocked by preflight — {field_note} "
+                f"(SOURCE_PREMISE_VERIFIED={rc.source_premise_verified}). "
+                "This signal did not pass enrichment verification and cannot be published. "
+                "Set FORCE_PUBLISH_OVERRIDE=true in the signal record to override."
+            )
+            return 1
 
     pimgs = _load_package_images(signal_id)
     pkg_design_version = pimgs.get("_design_version") if pimgs else None

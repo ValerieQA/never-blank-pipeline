@@ -3,13 +3,23 @@ Stage 1.5 — Typed Signal Lifecycle Contracts.
 
 Two typed objects gate the research→editorial boundary:
 
-  ResearchContext  — created at selection gate (run_daily_research.py)
-                     after enrich + angles; replaces the raw dict for
-                     lifecycle decisions only.
+  ResearchContext  — created at selection gate (run_daily_research.py) and
+                     publish preflight (generate_and_publish.py) after
+                     enrich + angles; replaces raw dict for lifecycle
+                     decisions only.
 
-  EditorialContext — created from ResearchContext + content_package dict
-                     (generate_and_publish.py); wraps the call to
-                     generate_article() via to_legacy_dict().
+  EditorialContext — boundary contract defined in Stage 1.5; production
+                     wiring deferred to Stage 2. In Stage 1.5 the pipeline
+                     still calls generate_article(rc.to_legacy_dict(), …)
+                     directly. Stage 2 will replace this with:
+                       ec = rc.to_editorial(pkg)
+                       generate_article(ec.to_legacy_dict(), …)
+
+                     Why deferred: to_editorial() requires admission_status
+                     != 'rejected', but publish preflight gates only on
+                     article_ready (not score_recommended). Wiring
+                     EditorialContext without changing preflight semantics
+                     requires a separate, intentional scope decision.
 
 JSONL files remain append-only. from_dict() reads old records;
 to_dict() writes new ones. No read-then-write path exists in the pipeline.

@@ -480,14 +480,21 @@ def test_selection_gate_equivalence():
 @pytest.mark.skipif(not SIGNALS_ACTIVE.exists(), reason="signals_active.jsonl not found")
 def test_preflight_equivalence():
     """
-    to_legacy_dict() ARTICLE_READY + FORCE_PUBLISH_OVERRIDE must produce the
-    same branch in generate_and_publish.py preflight (lines 237-257) as the
-    original dict, for all 242 records.
+    Publish preflight equivalence: rc.article_ready + rc.force_override must
+    produce the same blocked/not-blocked decision as the original dict-based
+    preflight for all 242 signals_active.jsonl records.
 
-    Legacy preflight:
+    Original preflight (pre-Stage-1.5):
       article_ready_str = str(signal.get("ARTICLE_READY", "")).lower()
       force_override = str(signal.get("FORCE_PUBLISH_OVERRIDE","") or ...).lower() == "true"
       blocked = (article_ready_str != "true") and not force_override
+
+    New preflight (Stage 1.5):
+      rc = ResearchContext.from_dict(signal)
+      blocked = not rc.article_ready and not rc.force_override
+
+    Score (SCORE_RECOMMENDED) is NOT part of the publish preflight — this test
+    explicitly verifies that the fix from REQUEST CHANGES #2 is correct.
     """
     mismatches = []
 
@@ -504,10 +511,9 @@ def test_preflight_equivalence():
         )
         legacy_blocked = (legacy_ar_str != "true") and not legacy_fo
 
-        # New preflight branch (same logic on new dict)
-        new_ar_str = d["ARTICLE_READY"]
-        new_fo = d["FORCE_PUBLISH_OVERRIDE"] == "true"
-        new_blocked = (new_ar_str != "true") and not new_fo
+        # New preflight branch: uses rc.article_ready + rc.force_override directly
+        # (NOT rc.admission_status — score is not a publish gate)
+        new_blocked = not rc.article_ready and not rc.force_override
 
         if new_blocked != legacy_blocked:
             mismatches.append({
@@ -545,3 +551,150 @@ def test_recommended_for_article_alias_has_zero_mismatches():
                 f"RECOMMENDED={rfa!r}, ARTICLE_READY={ar!r}"
             )
     assert mismatches == [], f"Alias mismatches found:\n" + "\n".join(mismatches)
+
+
+# ---------------------------------------------------------------------------
+# Parametrized: selection gate — all combinations + missing fields
+# ---------------------------------------------------------------------------
+#
+# Selection gate (run_daily_research.py) semantics:
+#   force_override → admit (score irrelevant)
+#   ARTICLE_READY=true AND SCORE_RECOMMENDED=true AND score >= min → admit
+#   else → skip
+#
+# rc.admission_status + score threshold encodes all three conditions.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("article_ready_str,score_rec_str,force_str,score_str,select_min,exp_admitted", [
+    # --- Normal admitted path ---
+    ("true",  "true",  "",      "8", 7, True),   # admitted, score passes
+    ("true",  "true",  "",      "7", 7, True),   # admitted, score == min
+    # --- Score below threshold ---
+    ("true",  "true",  "",      "6", 7, False),  # admitted by gate but score too low
+    # --- Score not recommended ---
+    ("true",  "false", "",      "9", 7, False),  # article_ready but not score_rec → rejected
+    # --- Article not ready ---
+    ("false", "true",  "",      "9", 7, False),  # score_rec but not article_ready → rejected
+    ("false", "false", "",      "9", 7, False),  # neither → rejected
+    # --- Force override bypasses all ---
+    ("false", "false", "true",  "0", 7, True),   # force_override → admitted regardless
+    ("true",  "true",  "true",  "0", 7, True),   # force_override → admitted (score ignored)
+    ("false", "false", "true",  "6", 7, True),   # force_override + low score → still admitted
+    # --- Missing fields (old records) ---
+    ("",      "",      "",      "",  7, False),  # all absent → rejected
+    (None,    None,    None,    None, 7, False), # all None → rejected
+    # --- APPROVED_OVERRIDE as alternate override key ---
+    ("false", "false", "",      "0", 7, False),  # no override key → blocked
+])
+def test_selection_gate_parametrized(
+    article_ready_str, score_rec_str, force_str, score_str, select_min, exp_admitted
+):
+    record = {
+        "SIGNAL_ID": "x",
+        "ARTICLE_READY":                article_ready_str,
+        "SCORE_RECOMMENDED_FOR_ARTICLE": score_rec_str,
+        "FORCE_PUBLISH_OVERRIDE":        force_str,
+        "ARTICLE_READINESS_SCORE":       score_str,
+    }
+    # Remove None values so from_dict sees absent key, not None key
+    record = {k: v for k, v in record.items() if v is not None}
+
+    rc = ResearchContext.from_dict(record)
+    score = rc.article_readiness_score
+    admitted = (
+        rc.admission_status == "force_override"
+        or (rc.admission_status == "admitted" and score >= select_min)
+    )
+    assert admitted == exp_admitted, (
+        f"article_ready={rc.article_ready} score_rec={rc.score_recommended} "
+        f"force={rc.force_override} score={score} → {rc.admission_status}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Parametrized: publish preflight — all combinations + missing fields
+#
+# Publish preflight (generate_and_publish.py) semantics:
+#   blocked = (not article_ready) AND (not force_override)
+#
+# Score is NOT a publish gate. A signal admitted to selected_signals.jsonl
+# with ARTICLE_READY=true must be publishable regardless of SCORE_RECOMMENDED.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("article_ready_str,score_rec_str,force_str,exp_blocked", [
+    # article_ready=true always passes — score irrelevant
+    ("true",  "true",  "",      False),  # admitted signal → not blocked
+    ("true",  "false", "",      False),  # score not rec, but article ready → not blocked
+    ("true",  "",      "",      False),  # score absent → not blocked (article ready)
+    # article_ready=false blocked unless override
+    ("false", "true",  "",      True),   # score ok but not article ready → blocked
+    ("false", "false", "",      True),   # neither → blocked
+    ("",      "",      "",      True),   # all absent → blocked (article_ready defaults false)
+    (None,    None,    None,    True),   # all None → blocked
+    # force_override bypasses article_ready requirement
+    ("false", "false", "true",  False),  # force_override → not blocked (with warning)
+    ("",      "",      "true",  False),  # absent fields + override → not blocked
+    ("true",  "false", "true",  False),  # override + article_ready=true → not blocked
+    # APPROVED_OVERRIDE as alternate key (handled by from_dict via force_override bool)
+])
+def test_publish_preflight_parametrized(
+    article_ready_str, score_rec_str, force_str, exp_blocked
+):
+    record = {
+        "SIGNAL_ID": "x",
+        "ARTICLE_READY":                article_ready_str,
+        "SCORE_RECOMMENDED_FOR_ARTICLE": score_rec_str,
+        "FORCE_PUBLISH_OVERRIDE":        force_str,
+    }
+    record = {k: v for k, v in record.items() if v is not None}
+
+    rc = ResearchContext.from_dict(record)
+    # Preflight logic from generate_and_publish.py (post-fix):
+    blocked = not rc.article_ready and not rc.force_override
+    assert blocked == exp_blocked, (
+        f"article_ready={rc.article_ready} force_override={rc.force_override} "
+        f"score_rec={rc.score_recommended} → blocked={blocked}"
+    )
+
+
+def test_publish_preflight_score_not_a_gate():
+    """
+    Critical: SCORE_RECOMMENDED=false must NOT block publish.
+    Old preflight only checked ARTICLE_READY; Stage 1.5 must preserve this.
+    """
+    rc = ResearchContext.from_dict({
+        "SIGNAL_ID": "x",
+        "ARTICLE_READY": "true",
+        "SCORE_RECOMMENDED_FOR_ARTICLE": "false",
+        "FORCE_PUBLISH_OVERRIDE": "",
+    })
+    assert rc.article_ready is True
+    assert rc.score_recommended is False
+    assert rc.admission_status == "rejected"      # rejected at selection gate
+    blocked = not rc.article_ready and not rc.force_override
+    assert blocked is False, (
+        "Signal with ARTICLE_READY=true must pass publish preflight "
+        "even when SCORE_RECOMMENDED=false"
+    )
+
+
+def test_editorial_context_wiring_deferred_to_stage2():
+    """
+    Documents that EditorialContext is defined but not wired in Stage 1.5.
+    to_editorial() works for admitted/force_override signals only.
+    Signals passing publish preflight (article_ready=true, score_rec=false)
+    would raise ValueError in to_editorial() — this is the reason wiring
+    is deferred to Stage 2.
+    """
+    # Signal that passes publish preflight (article_ready) but not selection gate
+    rc = ResearchContext.from_dict({
+        "SIGNAL_ID": "x",
+        "ARTICLE_READY": "true",
+        "SCORE_RECOMMENDED_FOR_ARTICLE": "false",
+    })
+    # Passes publish preflight
+    assert not (not rc.article_ready and not rc.force_override)
+    # But cannot construct EditorialContext without force_override
+    import pytest as _pytest
+    with _pytest.raises(ValueError, match="admission_status='rejected'"):
+        rc.to_editorial({})
