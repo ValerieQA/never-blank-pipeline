@@ -1309,8 +1309,8 @@ review, перед финальным APPROVE.
 
 Production wiring `ResearchContext → EditorialContext → Editorial Engine`.
 `to_editorial()` требует `admission_status` ∈ `{"admitted", "force_override"}`,
-но publish gate пропускает сигналы с `article_ready=True, score_recommended=
-False` (`admission_status="rejected"`). Подключение `EditorialContext`
+но publish gate пропускает сигналы с `article_ready=True, score_recommended=False`
+(`admission_status="rejected"`). Подключение `EditorialContext`
 в production path требует явного решения: либо расширить `to_editorial()`
 на случай `article_ready=True` без `score_recommended`, либо ужесточить
 publish gate (с документированием как intentional behavior change).
