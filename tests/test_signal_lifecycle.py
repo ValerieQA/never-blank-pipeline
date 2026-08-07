@@ -521,7 +521,7 @@ def test_preflight_equivalence():
                 "legacy_blocked": legacy_blocked,
                 "new_blocked": new_blocked,
                 "legacy_ar": legacy_ar_str,
-                "new_ar": new_ar_str,
+                "new_ar": rc.article_ready,
             })
 
     assert mismatches == [], (
@@ -565,38 +565,45 @@ def test_recommended_for_article_alias_has_zero_mismatches():
 # rc.admission_status + score threshold encodes all three conditions.
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("article_ready_str,score_rec_str,force_str,score_str,select_min,exp_admitted", [
+# fmt: (article_ready_str, score_rec_str, force_publish_str, approved_override_str, score_str, select_min, exp_admitted)
+@pytest.mark.parametrize("ar,score_rec,fp_override,ao_override,score_str,select_min,exp_admitted", [
     # --- Normal admitted path ---
-    ("true",  "true",  "",      "8", 7, True),   # admitted, score passes
-    ("true",  "true",  "",      "7", 7, True),   # admitted, score == min
+    ("true",  "true",  "",      "",      "8", 7, True),   # admitted, score passes
+    ("true",  "true",  "",      "",      "7", 7, True),   # admitted, score == min
     # --- Score below threshold ---
-    ("true",  "true",  "",      "6", 7, False),  # admitted by gate but score too low
+    ("true",  "true",  "",      "",      "6", 7, False),  # admitted by gate but score too low
     # --- Score not recommended ---
-    ("true",  "false", "",      "9", 7, False),  # article_ready but not score_rec → rejected
+    ("true",  "false", "",      "",      "9", 7, False),  # article_ready but not score_rec
     # --- Article not ready ---
-    ("false", "true",  "",      "9", 7, False),  # score_rec but not article_ready → rejected
-    ("false", "false", "",      "9", 7, False),  # neither → rejected
-    # --- Force override bypasses all ---
-    ("false", "false", "true",  "0", 7, True),   # force_override → admitted regardless
-    ("true",  "true",  "true",  "0", 7, True),   # force_override → admitted (score ignored)
-    ("false", "false", "true",  "6", 7, True),   # force_override + low score → still admitted
-    # --- Missing fields (old records) ---
-    ("",      "",      "",      "",  7, False),  # all absent → rejected
-    (None,    None,    None,    None, 7, False), # all None → rejected
-    # --- APPROVED_OVERRIDE as alternate override key ---
-    ("false", "false", "",      "0", 7, False),  # no override key → blocked
+    ("false", "true",  "",      "",      "9", 7, False),  # score_rec but not article_ready
+    ("false", "false", "",      "",      "9", 7, False),  # neither
+    # --- FORCE_PUBLISH_OVERRIDE bypasses all ---
+    ("false", "false", "true",  "",      "0", 7, True),   # FORCE_PUBLISH_OVERRIDE only
+    ("true",  "true",  "true",  "",      "0", 7, True),   # FORCE + admitted (score ignored)
+    ("false", "false", "true",  "",      "6", 7, True),   # FORCE + low score → admitted
+    # --- APPROVED_OVERRIDE as alternate key (no FORCE_PUBLISH_OVERRIDE) ---
+    ("false", "false", "",      "true",  "0", 7, True),   # APPROVED_OVERRIDE only → admitted
+    ("false", "false", "",      "true",  "6", 7, True),   # APPROVED_OVERRIDE + low score
+    # --- Both keys set, conflicting values ---
+    ("false", "false", "false", "true",  "0", 7, True),   # AO=true wins over FP=false
+    ("false", "false", "true",  "false", "0", 7, True),   # FP=true wins over AO=false
+    # --- Missing / absent fields ---
+    ("",      "",      "",      "",      "",  7, False),  # all absent
+    (None,    None,    None,    None,    None, 7, False), # all None
+    # --- No override key at all ---
+    ("false", "false", "",      "",      "0", 7, False),  # no override → blocked
 ])
 def test_selection_gate_parametrized(
-    article_ready_str, score_rec_str, force_str, score_str, select_min, exp_admitted
+    ar, score_rec, fp_override, ao_override, score_str, select_min, exp_admitted
 ):
     record = {
-        "SIGNAL_ID": "x",
-        "ARTICLE_READY":                article_ready_str,
-        "SCORE_RECOMMENDED_FOR_ARTICLE": score_rec_str,
-        "FORCE_PUBLISH_OVERRIDE":        force_str,
+        "SIGNAL_ID":                     "x",
+        "ARTICLE_READY":                 ar,
+        "SCORE_RECOMMENDED_FOR_ARTICLE": score_rec,
+        "FORCE_PUBLISH_OVERRIDE":        fp_override,
+        "APPROVED_OVERRIDE":             ao_override,
         "ARTICLE_READINESS_SCORE":       score_str,
     }
-    # Remove None values so from_dict sees absent key, not None key
     record = {k: v for k, v in record.items() if v is not None}
 
     rc = ResearchContext.from_dict(record)
@@ -607,7 +614,7 @@ def test_selection_gate_parametrized(
     )
     assert admitted == exp_admitted, (
         f"article_ready={rc.article_ready} score_rec={rc.score_recommended} "
-        f"force={rc.force_override} score={score} → {rc.admission_status}"
+        f"force_override={rc.force_override} score={score} → {rc.admission_status}"
     )
 
 
@@ -621,35 +628,44 @@ def test_selection_gate_parametrized(
 # with ARTICLE_READY=true must be publishable regardless of SCORE_RECOMMENDED.
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("article_ready_str,score_rec_str,force_str,exp_blocked", [
+# fmt: (article_ready_str, score_rec_str, force_publish_str, approved_override_str, exp_blocked)
+@pytest.mark.parametrize("ar,score_rec,fp_override,ao_override,exp_blocked", [
     # article_ready=true always passes — score irrelevant
-    ("true",  "true",  "",      False),  # admitted signal → not blocked
-    ("true",  "false", "",      False),  # score not rec, but article ready → not blocked
-    ("true",  "",      "",      False),  # score absent → not blocked (article ready)
+    ("true",  "true",  "",      "",      False),  # admitted signal → not blocked
+    ("true",  "false", "",      "",      False),  # score not rec, article ready → not blocked
+    ("true",  "",      "",      "",      False),  # score absent, article ready → not blocked
     # article_ready=false blocked unless override
-    ("false", "true",  "",      True),   # score ok but not article ready → blocked
-    ("false", "false", "",      True),   # neither → blocked
-    ("",      "",      "",      True),   # all absent → blocked (article_ready defaults false)
-    (None,    None,    None,    True),   # all None → blocked
-    # force_override bypasses article_ready requirement
-    ("false", "false", "true",  False),  # force_override → not blocked (with warning)
-    ("",      "",      "true",  False),  # absent fields + override → not blocked
-    ("true",  "false", "true",  False),  # override + article_ready=true → not blocked
-    # APPROVED_OVERRIDE as alternate key (handled by from_dict via force_override bool)
+    ("false", "true",  "",      "",      True),   # score ok but not article ready → blocked
+    ("false", "false", "",      "",      True),   # neither → blocked
+    ("",      "",      "",      "",      True),   # all absent → blocked
+    (None,    None,    None,    None,    True),   # all None → blocked
+    # FORCE_PUBLISH_OVERRIDE bypasses article_ready
+    ("false", "false", "true",  "",      False),  # FORCE_PUBLISH_OVERRIDE only → not blocked
+    ("",      "",      "true",  "",      False),  # absent fields + FORCE → not blocked
+    ("true",  "false", "true",  "",      False),  # FORCE + article_ready=true → not blocked
+    # APPROVED_OVERRIDE as alternate override key (no FORCE_PUBLISH_OVERRIDE)
+    ("false", "false", "",      "true",  False),  # APPROVED_OVERRIDE only → not blocked
+    ("false", "false", "",      "true",  False),  # same as above
+    # Both absent → still blocked
+    ("false", "false", "",      "",      True),   # neither key set → blocked
+    # Conflicting values: at least one "true" → not blocked
+    ("false", "false", "false", "true",  False),  # AO=true, FP=false → not blocked
+    ("false", "false", "true",  "false", False),  # FP=true, AO=false → not blocked
+    ("false", "false", "false", "false", True),   # both explicitly false → blocked
 ])
 def test_publish_preflight_parametrized(
-    article_ready_str, score_rec_str, force_str, exp_blocked
+    ar, score_rec, fp_override, ao_override, exp_blocked
 ):
     record = {
-        "SIGNAL_ID": "x",
-        "ARTICLE_READY":                article_ready_str,
-        "SCORE_RECOMMENDED_FOR_ARTICLE": score_rec_str,
-        "FORCE_PUBLISH_OVERRIDE":        force_str,
+        "SIGNAL_ID":                     "x",
+        "ARTICLE_READY":                 ar,
+        "SCORE_RECOMMENDED_FOR_ARTICLE": score_rec,
+        "FORCE_PUBLISH_OVERRIDE":        fp_override,
+        "APPROVED_OVERRIDE":             ao_override,
     }
     record = {k: v for k, v in record.items() if v is not None}
 
     rc = ResearchContext.from_dict(record)
-    # Preflight logic from generate_and_publish.py (post-fix):
     blocked = not rc.article_ready and not rc.force_override
     assert blocked == exp_blocked, (
         f"article_ready={rc.article_ready} force_override={rc.force_override} "
