@@ -35,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from dotenv import load_dotenv
 load_dotenv()
 
+from src.lifecycle.signal_lifecycle import ResearchContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
@@ -230,33 +231,32 @@ def main() -> int:
     headline = signal.get("HEADLINE", signal_id)
     print(f"  ✓  Headline: {headline[:70]}")
 
-    # Preflight: fail-closed readiness check.
-    # Only ARTICLE_READY=true passes. Missing field (old records) is treated as
-    # false — old selected_signals.jsonl entries may contain unverified signals.
-    # FORCE_PUBLISH_OVERRIDE=true is the only bypass; it logs a warning + audit.
-    article_ready  = str(signal.get("ARTICLE_READY", "")).lower()
-    force_override = str(
-        signal.get("FORCE_PUBLISH_OVERRIDE", "") or signal.get("APPROVED_OVERRIDE", "")
-    ).lower() == "true"
+    # Preflight: fail-closed readiness check via typed ResearchContext.
+    # admission_status == 'admitted'       → proceed (article_ready + score_recommended)
+    # admission_status == 'force_override' → bypass with warning (human-reviewed)
+    # admission_status == 'rejected'       → block publish, exit 1
+    rc = ResearchContext.from_dict(signal)
 
-    if article_ready != "true":
-        if force_override:
-            premise = signal.get("SOURCE_PREMISE_VERIFIED", "unknown")
-            print(
-                f"  WARNING: FORCE_PUBLISH_OVERRIDE active for {signal_id!r} "
-                f"(ARTICLE_READY={article_ready!r}, SOURCE_PREMISE_VERIFIED={premise}). "
-                "Bypassing readiness check — ensure this signal was manually reviewed."
-            )
-        else:
-            premise = signal.get("SOURCE_PREMISE_VERIFIED", "unknown")
-            field_note = "field absent (pre-dates readiness gate)" if article_ready == "" else f"ARTICLE_READY={article_ready!r}"
-            print(
-                f"  ERROR: Signal {signal_id!r} blocked by preflight — {field_note} "
-                f"(SOURCE_PREMISE_VERIFIED={premise}). "
-                "This signal did not pass enrichment verification and cannot be published. "
-                "Set FORCE_PUBLISH_OVERRIDE=true in the signal record to override."
-            )
-            return 1
+    if rc.admission_status == "force_override":
+        print(
+            f"  WARNING: FORCE_PUBLISH_OVERRIDE active for {signal_id!r} "
+            f"(factual_readiness={rc.factual_readiness!r}, "
+            f"SOURCE_PREMISE_VERIFIED={rc.source_premise_verified}). "
+            "Bypassing readiness check — ensure this signal was manually reviewed."
+        )
+    elif rc.admission_status == "rejected":
+        field_note = (
+            "field absent (pre-dates readiness gate)"
+            if not signal.get("ARTICLE_READY")
+            else f"ARTICLE_READY={rc.article_ready!r}"
+        )
+        print(
+            f"  ERROR: Signal {signal_id!r} blocked by preflight — {field_note} "
+            f"(SOURCE_PREMISE_VERIFIED={rc.source_premise_verified}). "
+            "This signal did not pass enrichment verification and cannot be published. "
+            "Set FORCE_PUBLISH_OVERRIDE=true in the signal record to override."
+        )
+        return 1
 
     pimgs = _load_package_images(signal_id)
     pkg_design_version = pimgs.get("_design_version") if pimgs else None
@@ -346,7 +346,7 @@ def main() -> int:
         print(f"\n[3/6] Generating content (LLM — Editorial Engine V2)…")
         print(f"  strategy context injected: strategy_id={strategy_id}")
         try:
-            article    = generate_article(signal, cta_mode=cta_mode, strategy_context=strategy_context)
+            article    = generate_article(rc.to_legacy_dict(), cta_mode=cta_mode, strategy_context=strategy_context)
             platforms  = article["platforms"]
             structured = article["structured_article"]
         except ArticleGenerationError as exc:

@@ -11,6 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from src.lifecycle.signal_lifecycle import ResearchContext
 from scripts.research.discover import run_discovery
 from scripts.research.score import score_candidates, _load_weights
 from scripts.research.enrich import enrich_candidates
@@ -146,17 +147,17 @@ def run() -> dict:
     # must not set it. Each override is logged as an audit event.
     selected = []
     for s in final_signals:
-        if str(s.get("FORCE_PUBLISH_OVERRIDE", "") or s.get("APPROVED_OVERRIDE", "")).lower() == "true":
+        rc = ResearchContext.from_dict(s)
+        if rc.admission_status == "force_override":
             log.warning(
                 "FORCE_PUBLISH_OVERRIDE: signal %s (%r) bypasses ARTICLE_READY check — "
                 "ensure this was intentionally approved",
-                s.get("SIGNAL_ID"), s.get("HEADLINE", "")[:60],
+                rc.signal_id, rc.headline[:60],
             )
             selected.append(s)
         elif (
-            str(s.get("SCORE_RECOMMENDED_FOR_ARTICLE", "false")).lower() == "true"
-            and str(s.get("ARTICLE_READY", "false")).lower() == "true"
-            and int(s.get("ARTICLE_READINESS_SCORE", "0") or "0") >= select_min
+            rc.admission_status == "admitted"
+            and rc.article_readiness_score >= select_min
         ):
             selected.append(s)
     selected = selected[:top_n_sel]
@@ -167,7 +168,7 @@ def run() -> dict:
         summary["top_signals"] = [s.get("HEADLINE", "")[:80] for s in selected]
         summary["force_overrides"] = [
             s.get("SIGNAL_ID") for s in selected
-            if str(s.get("FORCE_PUBLISH_OVERRIDE", "") or s.get("APPROVED_OVERRIDE", "")).lower() == "true"
+            if ResearchContext.from_dict(s).admission_status == "force_override"
         ]
 
     log.info("=== Stage 10: Content Package Preparation ===")
