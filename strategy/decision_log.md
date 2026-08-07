@@ -1317,3 +1317,59 @@ publish gate (с документированием как intentional behavior 
 
 **Статус:** Stage 1.5 закрыт. Изменения влиты в `main` merge-коммитом
 `c51176b`. Текущий HEAD `main` на момент фиксации: `74db296`.
+
+---
+
+## 2026-08-07 — Часть 22: документация восстановлена, Git-артефакты убраны
+
+**Контекст:** Части 19–20 существовали только в stash (`decision_log wip
+before stage-1.5`) и не были видны в `main`. Часть 21 была написана
+отдельно поверх stash в той же сессии. Все три части потребовали
+отдельного PR, так как ни одна не попала в PR №2.
+
+**Решения:**
+
+92. **Части 19–21 восстановлены PR №3** (`docs/decision-log-19-21`,
+    коммиты `e8b509d` и `53be9ff`). PR содержал ровно один файл:
+    `strategy/decision_log.md`, `+204 / -0`. Перед merge PR прошёл
+    прямую проверку на GitHub: один файл, HEAD `53be9ff`, нет
+    посторонних изменений.
+
+93. **PR №3 влит в `main` merge-коммитом `0b71f12`.** После merge
+    `main` обновлён до `0b71f12`. Части 19–21 находятся в `main`
+    начиная с этого коммита.
+
+94. **Stash проверен перед удалением.** `stash@{0}` (`decision_log wip
+    before stage-1.5`) содержал только `strategy/decision_log.md`
+    (+120 строк, Части 19–20) — полное подмножество того, что уже
+    влито PR №3. Уникального контента не было. Stash удалён командой
+    `git stash drop stash@{0}`.
+
+95. **Документационная ветка удалена локально и на origin.** Локальная
+    `docs/decision-log-19-21` удалена `git branch -d`, удалённая —
+    `git push origin --delete docs/decision-log-19-21`. Обе проверены
+    как отсутствующие через `git branch --list` и `git branch -r --list`.
+
+96. **`stage-1.5-review.bundle` удалён.** Bundle (99 MB) содержал
+    `refs/heads/review/stage-1.5-baseline` → `52dc144` и
+    `refs/heads/review/stage-1.5-implementation` → `531be13`. Оба
+    коммита находятся в `main` через merge `c51176b`. Bundle проверен
+    командой `git bundle verify` перед удалением, удалён `rm`.
+
+97. **`reports/card_audit/` сознательно оставлен untracked.** 26 PNG
+    (3.1 MB) — визуальный аудит quote card шаблонов, к Stage 1.5 и
+    документации не относится. Не добавлен в `.gitignore` и не
+    закоммичен — статус untracked сохраняется до отдельного решения.
+
+**Незакрытые направления (без прогресса в этой части):**
+
+- **P0:** аудит правил 67–71 `strategy/decision_log.md` (решение о
+  Visibility Intelligence stream).
+- **P1:** баг квоты `brand_concept` (Часть 15, решения 68–71).
+- **Stage 2:** production wiring
+  `ResearchContext → EditorialContext → Editorial Engine` (открытый
+  пункт Части 21).
+
+**Статус:** восстановление decision log завершено. `main@0b71f12`
+содержит Части 1–22. Git-хвосты (stash, ветка, bundle) убраны.
+`reports/card_audit/` остаётся untracked.
