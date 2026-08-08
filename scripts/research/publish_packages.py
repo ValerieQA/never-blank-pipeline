@@ -324,21 +324,22 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
                             published_at=_published_at,
                             status=_pub_dict.get("status", "published").lower(),
                         )
-                append_published_entry(PublishedEntry(
-                    content_id=sig_id,
-                    strategy_id=_pub_strategy_id,
-                    pattern_id=_pattern_id,
-                    published_at=_published_at,
-                    platform="blog",
-                    url=wix_url,
-                    platform_content_id=wix_post_id,
-                    publications=_publications,
-                    echo=structured.get("echo_line") or None,
-                    hook=structured.get("hook", ""),
-                    topic=headline,
-                    cta_mode=cta_mode,
-                    strategy_week=_strategy_week,
-                ))
+                if _publications:
+                    append_published_entry(PublishedEntry(
+                        content_id=sig_id,
+                        strategy_id=_pub_strategy_id,
+                        pattern_id=_pattern_id,
+                        published_at=_published_at,
+                        platform="blog",
+                        url=wix_url,
+                        platform_content_id=wix_post_id,
+                        publications=_publications,
+                        echo=structured.get("echo_line") or None,
+                        hook=structured.get("hook", ""),
+                        topic=headline,
+                        cta_mode=cta_mode,
+                        strategy_week=_strategy_week,
+                    ))
             except Exception as _index_exc:
                 log.warning("Published index append failed (non-fatal): %s", _index_exc)
 
