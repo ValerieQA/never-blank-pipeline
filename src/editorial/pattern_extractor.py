@@ -187,6 +187,9 @@ RESPONSE_TAKEN: {signal.get('RESPONSE_TAKEN', '')}
 OUTCOME_IF_KNOWN: {signal.get('OUTCOME_IF_KNOWN', '')}
 BUSINESS_LESSON: {signal.get('BUSINESS_LESSON', '')}
 WHY_THIS_CASE_IS_INTERESTING: {signal.get('WHY_THIS_CASE_IS_INTERESTING', '')}
+NEVER_BLANK_ANGLE (editorial hypothesis; validate it against the facts): {signal.get('NEVER_BLANK_ANGLE', '')}
+POTENTIAL_HOOK (candidate, not a required opening): {signal.get('POTENTIAL_HOOK', '')}
+TARGET_AUDIENCE: {signal.get('TARGET_AUDIENCE', 'founder')}
 
 Extract the owner-centered visibility pattern from this signal."""
 

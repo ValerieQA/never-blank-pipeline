@@ -102,6 +102,24 @@ class TestDecisionLensLite:
                       "customer_memory_consequence", "structural_cause", "never_blank_insight"):
             assert field in result, f"Missing field: {field}"
 
+    def test_prompt_receives_angle_and_package_context(self):
+        captured = {}
+
+        def fake_chat(**kwargs):
+            captured.update(kwargs)
+            return _json_response(self.VALID)
+
+        signal = {
+            **SIGNAL,
+            "NEVER_BLANK_ANGLE": "Content needs memory, not more volume.",
+            "CONTENT_PACKAGE": {"content": {"blog": {"angle": "Memory compounds."}}},
+        }
+        with patch("src.editorial.decision_lens_lite.chat", side_effect=fake_chat):
+            generate_decision_lens(signal)
+
+        assert "Content needs memory, not more volume." in captured["user"]
+        assert "Memory compounds." in captured["user"]
+
 
 # --- narrative_spine ---
 
@@ -868,6 +886,19 @@ class TestPatternExtractor:
         with patch("src.editorial.pattern_extractor.chat", return_value=_json_response(_VALID_PATTERN)):
             result = extract_pattern(SIGNAL)
         assert result["article_protagonist"] == "owner"
+
+    def test_pattern_prompt_receives_never_blank_angle(self):
+        captured = {}
+
+        def fake_chat(**kwargs):
+            captured.update(kwargs)
+            return _json_response(_VALID_PATTERN)
+
+        with patch("src.editorial.pattern_extractor.chat", side_effect=fake_chat):
+            extract_pattern({**SIGNAL, "NEVER_BLANK_ANGLE": "Content needs memory."})
+
+        assert "NEVER_BLANK_ANGLE" in captured["user"]
+        assert "Content needs memory." in captured["user"]
 
     def test_signal_rejection_raises_signal_rejected_error(self):
         """When signal_fit = reject, extract_pattern raises SignalRejectedError."""

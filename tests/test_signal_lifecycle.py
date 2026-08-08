@@ -187,7 +187,7 @@ def test_source_premise_verified_tristate_preserved(spv):
 def test_to_editorial_blocks_rejected():
     rc = _make_rc(article_ready=False, score_recommended=False, force_override=False)
     assert rc.admission_status == "rejected"
-    with pytest.raises(ValueError, match="admission_status='rejected'"):
+    with pytest.raises(ValueError, match="not factually ready and no override"):
         rc.to_editorial({})
 
 
@@ -694,13 +694,10 @@ def test_publish_preflight_score_not_a_gate():
     )
 
 
-def test_editorial_context_wiring_deferred_to_stage2():
+def test_editorial_context_accepts_publishable_signal_without_score_recommendation():
     """
-    Documents that EditorialContext is defined but not wired in Stage 1.5.
-    to_editorial() works for admitted/force_override signals only.
-    Signals passing publish preflight (article_ready=true, score_rec=false)
-    would raise ValueError in to_editorial() — this is the reason wiring
-    is deferred to Stage 2.
+    Stage 2 preserves the established publish gate: recommendation score is a
+    selection concern and cannot become a second veto after factual readiness.
     """
     # Signal that passes publish preflight (article_ready) but not selection gate
     rc = ResearchContext.from_dict({
@@ -710,7 +707,19 @@ def test_editorial_context_wiring_deferred_to_stage2():
     })
     # Passes publish preflight
     assert not (not rc.article_ready and not rc.force_override)
-    # But cannot construct EditorialContext without force_override
-    import pytest as _pytest
-    with _pytest.raises(ValueError, match="admission_status='rejected'"):
-        rc.to_editorial({})
+    ec = rc.to_editorial({"content": {"blog": {"angle": "specific"}}})
+    assert ec.admission_status == "admitted"
+    assert ec.article_ready is True
+
+
+def test_editorial_adapter_preserves_direction_and_package_context():
+    rc = _make_rc()
+    package = {"content": {"blog": {"angle": "package angle"}}}
+    payload = rc.to_editorial(package).to_legacy_dict()
+
+    assert payload["NEVER_BLANK_ANGLE"] == "Never blank angle"
+    assert payload["POTENTIAL_HOOK"] == "Hook text"
+    assert payload["TARGET_AUDIENCE"] == "founder"
+    assert payload["BLOG_ANGLE"] == "Blog angle"
+    assert payload["STORY_ANGLE"] == "Story angle"
+    assert payload["CONTENT_PACKAGE"] == package

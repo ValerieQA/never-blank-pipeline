@@ -85,6 +85,41 @@ def _setup_common(monkeypatch, tmp_path):
     return index_path
 
 
+def test_publish_packages_wires_typed_editorial_context(monkeypatch, tmp_path):
+    """The live research publisher must not drop the selected editorial angle."""
+    _setup_common(monkeypatch, tmp_path)
+    captured = {}
+
+    signal = {
+        **_SIGNAL,
+        "ARTICLE_READY": "true",
+        "SCORE_RECOMMENDED_FOR_ARTICLE": "false",
+        "NEVER_BLANK_ANGLE": "Memory, not volume, is the missing system.",
+        "POTENTIAL_HOOK": "Every new post acts like nothing came before it.",
+    }
+    package = {
+        **_PACKAGE,
+        "content": {"blog": {"angle": "Regularity without memory becomes noise."}},
+    }
+
+    def capture_generate(payload, **kwargs):
+        captured["payload"] = payload
+        return _FAKE_ARTICLE
+
+    class FailedPublisher:
+        def publish(self, draft, mode, **kw):
+            return PublishResult(platform="wix", status=PublishStatus.FAILED)
+
+    monkeypatch.setattr(pp, "generate_article", capture_generate)
+    monkeypatch.setattr(pp, "_PUBLISHERS", [("wix", FailedPublisher())])
+
+    pp.publish_packages([signal], [package])
+
+    assert captured["payload"]["NEVER_BLANK_ANGLE"] == signal["NEVER_BLANK_ANGLE"]
+    assert captured["payload"]["POTENTIAL_HOOK"] == signal["POTENTIAL_HOOK"]
+    assert captured["payload"]["CONTENT_PACKAGE"] == package
+
+
 class TestPublishPackagesFilesystemIsolation:
     """Test A: when publishers succeed, history is written only to the monkeypatched index."""
 

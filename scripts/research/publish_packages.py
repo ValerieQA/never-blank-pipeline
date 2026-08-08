@@ -22,6 +22,7 @@ from src.content.output_guard import (
 from src.strategy.validators import validate_article_for_publish
 from src.strategy.loader import get_cta_mode, get_strategy_context, load_active_strategy
 from src.editorial.pipeline import ArticleGenerationError, generate_article
+from src.lifecycle.signal_lifecycle import ResearchContext
 from src.publishing import formatting
 from src.publishing.base import DraftPackage
 from src.publishing.facebook import FacebookPublisher
@@ -188,8 +189,9 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
     log.info("Strategy context: id=%s cta_mode=%s", _strategy_id, strategy_cta)
 
     for signal in signals:
-        sig_id = signal.get("SIGNAL_ID", "unknown")
-        headline = signal.get("HEADLINE", "")
+        rc = ResearchContext.from_dict(signal)
+        sig_id = rc.signal_id or "unknown"
+        headline = rc.headline
         package = pkg_map.get(sig_id, {})
         pimgs = package.get("images", {}).get("platform_images", {})
         # Signal-level CTA_MODE overrides strategy (allows per-article override via content plan)
@@ -197,7 +199,12 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
 
         # Generate and validate the entire package before the first publisher API call.
         try:
-            article = generate_article(signal, cta_mode=cta_mode, strategy_context=strategy_context)
+            editorial = rc.to_editorial(package)
+            article = generate_article(
+                editorial.to_legacy_dict(),
+                cta_mode=cta_mode,
+                strategy_context=strategy_context,
+            )
             platforms = article["platforms"]
             structured = article["structured_article"]
 

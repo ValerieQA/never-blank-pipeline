@@ -266,6 +266,7 @@ def main() -> int:
             return 1
 
     pimgs = _load_package_images(signal_id)
+    editorial_package: dict = {"images": {"platform_images": pimgs}}
     pkg_design_version = pimgs.get("_design_version") if pimgs else None
     needs_regen = (
         not pimgs.get("blog", {}).get("url")
@@ -279,6 +280,7 @@ def main() -> int:
             from scripts.research.prepare_content import prepare_content_packages
             pkgs = prepare_content_packages([signal])
             if pkgs:
+                editorial_package = pkgs[0]
                 pimgs = pkgs[0].get("images", {}).get("platform_images", {})
                 blog_url = pimgs.get("blog", {}).get("url") or ""
                 print(f"  ✓  Images generated: {blog_url[:60] if blog_url else '(none)'}")
@@ -353,7 +355,12 @@ def main() -> int:
         print(f"\n[3/6] Generating content (LLM — Editorial Engine V2)…")
         print(f"  strategy context injected: strategy_id={strategy_id}")
         try:
-            article    = generate_article(rc.to_legacy_dict(), cta_mode=cta_mode, strategy_context=strategy_context)
+            editorial = rc.to_editorial(editorial_package)
+            article    = generate_article(
+                editorial.to_legacy_dict(),
+                cta_mode=cta_mode,
+                strategy_context=strategy_context,
+            )
             platforms  = article["platforms"]
             structured = article["structured_article"]
         except ArticleGenerationError as exc:

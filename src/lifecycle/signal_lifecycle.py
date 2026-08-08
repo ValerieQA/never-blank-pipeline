@@ -8,18 +8,14 @@ Two typed objects gate the research→editorial boundary:
                      enrich + angles; replaces raw dict for lifecycle
                      decisions only.
 
-  EditorialContext — boundary contract defined in Stage 1.5; production
-                     wiring deferred to Stage 2. In Stage 1.5 the pipeline
-                     still calls generate_article(rc.to_legacy_dict(), …)
-                     directly. Stage 2 will replace this with:
+  EditorialContext — boundary contract defined in Stage 1.5 and wired into
+                     both production generation paths in Stage 2:
                        ec = rc.to_editorial(pkg)
                        generate_article(ec.to_legacy_dict(), …)
 
-                     Why deferred: to_editorial() requires admission_status
-                     != 'rejected', but publish preflight gates only on
-                     article_ready (not score_recommended). Wiring
-                     EditorialContext without changing preflight semantics
-                     requires a separate, intentional scope decision.
+                     The editorial boundary preserves publish semantics:
+                     article_ready or force_override admits the signal; the
+                     recommendation score remains a selection-time concern.
 
 JSONL files remain append-only. from_dict() reads old records;
 to_dict() writes new ones. No read-then-write path exists in the pipeline.
@@ -337,19 +333,26 @@ class ResearchContext:
     def to_editorial(self, pkg: dict) -> "EditorialContext":
         """
         Factory: construct EditorialContext from self + content_package dict.
-        Raises ValueError if admission_status == 'rejected'.
+        Raises ValueError when the signal is neither factually ready nor
+        explicitly force-overridden.
         """
-        if self.admission_status == "rejected":
+        # Publishing has always admitted factually-ready signals regardless of the
+        # earlier recommendation score.  Preserve that contract at the editorial
+        # boundary: score controls selection, not a second publish-time veto.
+        if not self.article_ready and not self.force_override:
             raise ValueError(
-                f"Signal {self.signal_id!r}: admission_status='rejected' "
+                f"Signal {self.signal_id!r}: not factually ready and no override "
                 f"(factual_readiness={self.factual_readiness!r}); "
                 "cannot construct EditorialContext"
             )
+        editorial_admission = (
+            "force_override" if self.force_override else "admitted"
+        )
         return EditorialContext(
             signal_id=self.signal_id,
             headline=self.headline,
             factual_readiness=self.factual_readiness,
-            admission_status=self.admission_status,
+            admission_status=editorial_admission,
             force_override=self.force_override,
             article_ready=self.article_ready,
             source_premise_verified=self.source_premise_verified,
@@ -497,7 +500,7 @@ class EditorialContext:
     'rejected' signals never reach here — to_editorial() raises ValueError.
 
     pkg_raw holds the content_package dict from prepare_content_packages()
-    unchanged (stays dict until Stage 2).
+    unchanged and exposes it to Editorial Engine prompts as supporting context.
     """
 
     # From ResearchContext
@@ -530,7 +533,7 @@ class EditorialContext:
     source_url: str
     industry: str
 
-    # From content_package dict (stays dict until Stage 2)
+    # From content_package dict
     pkg_raw: dict = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
@@ -564,7 +567,20 @@ class EditorialContext:
             "BUSINESS_LESSON":               self.business_lesson,
             "WHY_THIS_CASE_IS_INTERESTING":  self.why_this_case_is_interesting,
             "COUNTER_EXAMPLE":               self.counter_example,
+            # Editorial direction must survive the typed boundary.  Stage 1.5's
+            # narrower adapter dropped these fields and produced generic framing.
+            "NEVER_BLANK_ANGLE":             self.never_blank_angle,
+            "POSSIBLE_SIGNATURE_LINE":       self.possible_signature_line,
+            "POTENTIAL_HOOK":                 self.potential_hook,
+            "TARGET_AUDIENCE":                self.target_audience,
+            "LINKEDIN_ANGLE":                 self.linkedin_angle,
+            "BLOG_ANGLE":                     self.blog_angle,
+            "THREADS_ANGLE":                  self.threads_angle,
+            "STORY_ANGLE":                    self.story_angle,
             "SOURCE_NAME":                   self.source_name,
             "SOURCE_URL":                    self.source_url,
             "INDUSTRY":                      self.industry,
+            # Keep the prepared package as supporting context, not as authority;
+            # prompts still require claims to be grounded in the verified signal.
+            "CONTENT_PACKAGE":                self.pkg_raw,
         }

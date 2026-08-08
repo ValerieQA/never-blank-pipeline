@@ -69,6 +69,10 @@ Rules:
   delivery_vs_presence_conflict, or customer_memory_consequence.
 - never_blank_insight must be non-obvious — not a restatement of what is already
   in the other fields.
+- NEVER_BLANK_ANGLE is an editorial hypothesis. Test and sharpen it against the
+  verified facts; do not ignore it and do not repeat it uncritically.
+- Prefer a concrete mechanism, contradiction, or worked consequence over generic
+  advice about consistency or "creating more content".
 - Return ONLY valid JSON. No text outside the JSON block.
 
 {
@@ -129,6 +133,12 @@ CORE_FACT: {signal.get('CORE_FACT', '')}
 CORE_TENSION: {signal.get('CORE_TENSION', '')}
 BUSINESS_LESSON: {signal.get('BUSINESS_LESSON', '')}
 WHY_THIS_CASE_IS_INTERESTING: {signal.get('WHY_THIS_CASE_IS_INTERESTING', '')}
+NEVER_BLANK_ANGLE: {signal.get('NEVER_BLANK_ANGLE', '')}
+POTENTIAL_HOOK: {signal.get('POTENTIAL_HOOK', '')}
+TARGET_AUDIENCE: {signal.get('TARGET_AUDIENCE', 'founder')}
+BLOG_ANGLE: {signal.get('BLOG_ANGLE', '')}
+STORY_ANGLE: {signal.get('STORY_ANGLE', '')}
+CONTENT_PACKAGE (supporting preview, never a source of new facts): {json.dumps(signal.get('CONTENT_PACKAGE', {}), ensure_ascii=False)}
 
 Pattern Extractor output (owner-centered framing already extracted):
 visibility_pattern: {signal.get('visibility_pattern', '')}
