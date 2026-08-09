@@ -425,6 +425,27 @@ class ResearchContext:
                 return _json.dumps(v, ensure_ascii=False)
             return _str(v)
 
+        def _resolve_article_ready(d: dict) -> bool:
+            """
+            Backward-compatibility boundary for article_ready.
+
+            Resolution order (first match wins, fail-closed):
+              1. ARTICLE_READY present → use it (canonical; takes precedence)
+              2. RECOMMENDED_FOR_ARTICLE present, ARTICLE_READY absent → alias
+              3. Both absent → False (fail-closed)
+
+            Conflict: ARTICLE_READY wins over RECOMMENDED_FOR_ARTICLE.
+            score_recommended is NOT a second veto (per Stage 2 commit 4ad2433).
+            force_override does NOT change article_ready.
+            """
+            raw_ar   = d.get("ARTICLE_READY")
+            raw_rfar = d.get("RECOMMENDED_FOR_ARTICLE")
+            if raw_ar is not None:
+                return _bool(raw_ar)
+            if raw_rfar is not None:
+                return _bool(raw_rfar)
+            return False
+
         force_override = (
             _bool(d.get("FORCE_PUBLISH_OVERRIDE"))
             or _bool(d.get("APPROVED_OVERRIDE"))
@@ -442,7 +463,7 @@ class ResearchContext:
             source_url=_str(d.get("SOURCE_URL")),
             source_date=_str(d.get("SOURCE_DATE")),
             date_found=_str(d.get("DATE_FOUND")),
-            article_ready=_bool(d.get("ARTICLE_READY")),
+            article_ready=_resolve_article_ready(d),
             source_premise_verified=_spv(d.get("SOURCE_PREMISE_VERIFIED")),
             core_fact=_str(d.get("CORE_FACT")),
             confidence=_str(d.get("CONFIDENCE"), "low"),

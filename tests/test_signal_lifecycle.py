@@ -481,47 +481,59 @@ def test_selection_gate_equivalence():
 def test_preflight_equivalence():
     """
     Publish preflight equivalence: rc.article_ready + rc.force_override must
-    produce the same blocked/not-blocked decision as the original dict-based
+    produce the same blocked/not-blocked decision as the normalized dict-based
     preflight for all 242 signals_active.jsonl records.
 
-    Original preflight (pre-Stage-1.5):
-      article_ready_str = str(signal.get("ARTICLE_READY", "")).lower()
-      force_override = str(signal.get("FORCE_PUBLISH_OVERRIDE","") or ...).lower() == "true"
-      blocked = (article_ready_str != "true") and not force_override
+    Normalized preflight (post-normalization-fix):
+      Resolves article_ready from ARTICLE_READY, falling back to
+      RECOMMENDED_FOR_ARTICLE when ARTICLE_READY is absent (backward-compat).
+      If both absent → False (fail-closed).
 
-    New preflight (Stage 1.5):
+    New preflight (Stage 1.5 + normalization fix):
       rc = ResearchContext.from_dict(signal)
       blocked = not rc.article_ready and not rc.force_override
 
     Score (SCORE_RECOMMENDED) is NOT part of the publish preflight — this test
     explicitly verifies that the fix from REQUEST CHANGES #2 is correct.
+
+    NOTE: The normalization fix intentionally changes behavior for signals that
+    have RECOMMENDED_FOR_ARTICLE=true but no ARTICLE_READY field — these are now
+    admitted rather than blocked. The baseline here reflects that new intent.
     """
     mismatches = []
 
     for line in SIGNALS_ACTIVE.read_text().splitlines():
         s = json.loads(line)
         rc = ResearchContext.from_dict(s)
-        d = rc.to_legacy_dict()
 
-        # Legacy preflight branch
-        legacy_ar_str = str(s.get("ARTICLE_READY", "")).lower()
-        legacy_fo = (
+        # Normalized preflight baseline — mirrors _resolve_article_ready() logic
+        raw_ar   = s.get("ARTICLE_READY")
+        raw_rfar = s.get("RECOMMENDED_FOR_ARTICLE")
+        if raw_ar is not None:
+            normalized_ar = str(raw_ar).lower() == "true"
+        elif raw_rfar is not None:
+            normalized_ar = str(raw_rfar).lower() == "true"
+        else:
+            normalized_ar = False
+
+        normalized_fo = (
             str(s.get("FORCE_PUBLISH_OVERRIDE", "") or s.get("APPROVED_OVERRIDE", "")).lower()
             == "true"
         )
-        legacy_blocked = (legacy_ar_str != "true") and not legacy_fo
+        normalized_blocked = not normalized_ar and not normalized_fo
 
         # New preflight branch: uses rc.article_ready + rc.force_override directly
         # (NOT rc.admission_status — score is not a publish gate)
         new_blocked = not rc.article_ready and not rc.force_override
 
-        if new_blocked != legacy_blocked:
+        if new_blocked != normalized_blocked:
             mismatches.append({
-                "signal_id": s.get("SIGNAL_ID"),
-                "legacy_blocked": legacy_blocked,
-                "new_blocked": new_blocked,
-                "legacy_ar": legacy_ar_str,
-                "new_ar": rc.article_ready,
+                "signal_id":        s.get("SIGNAL_ID"),
+                "normalized_blocked": normalized_blocked,
+                "new_blocked":      new_blocked,
+                "raw_ar":           raw_ar,
+                "raw_rfar":         raw_rfar,
+                "rc_article_ready": rc.article_ready,
             })
 
     assert mismatches == [], (
