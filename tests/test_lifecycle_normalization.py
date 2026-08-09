@@ -1,8 +1,14 @@
 """
-Tests for ResearchContext.from_dict() backward-compatibility normalization.
+PROVISIONAL BACKWARD-COMPATIBILITY RULE
 
-Covers the RECOMMENDED_FOR_ARTICLE → article_ready resolution boundary
-introduced to unblock all 242 pre-Stage-1A signals in signals_active.jsonl.
+Tests for ResearchContext.from_dict() RECOMMENDED_FOR_ARTICLE → article_ready
+normalization introduced to unblock pre-Stage-1A signals.
+
+OPEN QUESTION FOR PRODUCT OWNER:
+Does the product owner confirm that legacy RECOMMENDED_FOR_ARTICLE=true
+is semantically equivalent to canonical ARTICLE_READY=true?
+These tests assume equivalence. If they are NOT equivalent, the normalization
+rule and these tests must be revisited before merging.
 """
 import json
 import sys

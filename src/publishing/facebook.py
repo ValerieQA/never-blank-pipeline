@@ -23,6 +23,7 @@ class FacebookPublisher(BasePublisher):
     name = "facebook"
 
     def publish(self, draft: DraftPackage, mode: str) -> PublishResult:
+        self._guard_controlled_run()
         page_id    = os.getenv("NB_META_FB_PAGE_ID", "")
         page_token = os.getenv("NB_META_FB_PAGE_TOKEN", "")
 

@@ -21,6 +21,7 @@ class TelegramPublisher(BasePublisher):
     name = "telegram"
 
     def publish(self, draft: DraftPackage, mode: str, wix_url: str = None) -> PublishResult:
+        self._guard_controlled_run()
         token      = os.getenv("NB_TELEGRAM_BOT_TOKEN", "")
         channel_id = os.getenv("NB_TELEGRAM_CHANNEL_ID", "")
 

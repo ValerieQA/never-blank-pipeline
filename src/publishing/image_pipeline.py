@@ -1380,6 +1380,14 @@ def composite_image(base_bytes: bytes, hook_text: str) -> Image.Image:
 # ── Cloudinary upload ──────────────────────────────────────────────────────────
 
 def upload_to_cloudinary(image_path: Path, slug: str) -> str:
+    # Architectural guard: NB_CONTROLLED_RUN=1 blocks this sink before any network call.
+    # This is the runtime protection layer; test-level mock.patch is an additional safety net.
+    import os as _os
+    if _os.environ.get("NB_CONTROLLED_RUN") == "1":
+        raise EnvironmentError(
+            "upload_to_cloudinary blocked: NB_CONTROLLED_RUN=1 is set. "
+            "External storage writes are forbidden in controlled-run mode."
+        )
     import cloudinary
     import cloudinary.uploader
 

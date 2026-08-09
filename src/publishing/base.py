@@ -5,6 +5,7 @@ Shared infrastructure for all publishers:
   - _fetch() HTTP helper (mirrors test_publishers.py)
 """
 import json
+import os
 import urllib.request
 import urllib.error
 from abc import ABC, abstractmethod
@@ -169,6 +170,24 @@ def _fetch_h(
 
 class BasePublisher(ABC):
     name: str
+
+    def _guard_controlled_run(self) -> None:
+        """
+        Architectural guard: raises EnvironmentError if NB_CONTROLLED_RUN=1.
+        Subclasses MUST call this at the top of publish() before any network call.
+
+        ARCHITECTURAL NOTE: The correct pattern is a template-method where
+        BasePublisher.publish() is non-abstract, calls _guard_controlled_run(),
+        then delegates to _publish_impl(). Refactoring to that pattern is
+        tracked separately. Until then, subclasses must call this guard explicitly.
+        This guard is the runtime protection; test-level mock.patch is an additional
+        safety net for the current transition period.
+        """
+        if os.environ.get("NB_CONTROLLED_RUN") == "1":
+            raise EnvironmentError(
+                f"{getattr(self, 'name', type(self).__name__)}.publish blocked: "
+                "NB_CONTROLLED_RUN=1 is set. Publication is forbidden in controlled-run mode."
+            )
 
     @abstractmethod
     def publish(self, draft: DraftPackage, mode: str) -> PublishResult:

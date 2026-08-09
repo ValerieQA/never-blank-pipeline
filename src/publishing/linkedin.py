@@ -37,6 +37,7 @@ class LinkedInPublisher(BasePublisher):
     name = "linkedin"
 
     def publish(self, draft: DraftPackage, mode: str) -> PublishResult:
+        self._guard_controlled_run()
         import os
 
         api_key    = os.getenv("NB_ZERNIO_API_KEY", "")

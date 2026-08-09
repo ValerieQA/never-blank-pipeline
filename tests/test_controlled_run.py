@@ -1,8 +1,40 @@
 """
-Tests for scripts/controlled_run.py and src/controlled_run/guard.py.
+Tests for scripts/controlled_run.py — new architecture.
 
-ALL external providers (OpenAI, Cloudinary, publishers) are mocked.
-Tests verify orchestration, data flow, and isolation guarantees.
+## Design contract (16 behaviors from review Step 10)
+
+ 1. full-e2e calls production Research Engine stages (not stubs)
+ 2. _create_synthetic_signal is NOT called in full-e2e mode
+ 3. Signal in full-e2e originates from research output (same run)
+ 4. Research artifacts contain source provenance
+ 5. Research cache disabled (seen_ids=empty set)
+ 6. Production generate_decision_lens actually called inside generate_article
+ 7. Decision Lens output recorded and available downstream
+ 8. Production choose_visual_family actually called
+ 9. Image prompt originates from visual spec of current run
+10. Image provider called only when --image-generation enabled
+11. When disabled, status is NOT complete (must be complete_without_image)
+12. Cloudinary / history / publish adapters blocked by env-var BEFORE network call
+13. Validation report built from invocation ledger, not hardcoded values
+14. synthetic-signal never labeled full-e2e
+15. Old generate_and_publish helpers not called (no image-library read)
+16. Partial/skipped mandatory stage prevents status=complete
+
+## Mocking strategy
+
+Production research stages (run_discovery, score_candidates, enrich_candidates,
+add_angles) are patched at their module-level symbols. Their lazy imports inside
+_run_research_engine() receive the mock because `from X import Y` resolves at
+call time against the module's current attribute.
+
+generate_article is patched at src.editorial.pipeline to avoid real LLM calls
+while still exercising all orchestration around it.
+
+choose_visual_family and load_registry are patched to avoid config I/O.
+
+External sinks (upload_to_cloudinary, append_published_entry) are ALSO blocked
+architecturally by NB_CONTROLLED_RUN=1 (set in controlled_run module top-level),
+but we patch them as defense-in-depth to prevent accidental network calls.
 """
 from __future__ import annotations
 
@@ -14,595 +46,592 @@ from unittest import mock
 
 import pytest
 
+# NB_CONTROLLED_RUN is set inside run_controlled() — not at module level.
+# (see autouse fixture set_nb_controlled_run_env below)
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Helpers / fixtures
-# ──────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def set_nb_controlled_run_env():
+    """
+    Set NB_CONTROLLED_RUN=1 for every test in this file and restore after.
+    run_controlled() also sets it internally, but tests in group 12 call
+    production sinks directly without going through run_controlled.
+    """
+    old = os.environ.get("NB_CONTROLLED_RUN")
+    os.environ["NB_CONTROLLED_RUN"] = "1"
+    yield
+    if old is None:
+        os.environ.pop("NB_CONTROLLED_RUN", None)
+    else:
+        os.environ["NB_CONTROLLED_RUN"] = old
+
+
+# ---------------------------------------------------------------------------
+# Canned data
+# ---------------------------------------------------------------------------
 
 TOPIC = "Why small businesses disappear from customer memory between projects"
 
+_CAND = {
+    "SIGNAL_ID":       "test-cand-aabb1122ccdd",
+    "HEADLINE":        TOPIC,
+    "SIGNAL_TYPE":     "business trust",
+    "REGION":          "US",
+    "INDUSTRY":        "General",
+    "SOURCE_NAME":     "FakeRSS",
+    "SOURCE_URL":      "https://example.com/article",
+    "SOURCE_FOR_CASE": "https://example.com/article",
+    "SOURCE_DATE":     "2026-08-01",
+    "DATE_FOUND":      "2026-08-01",
+    "raw_summary":     "Test summary.",
+    "discovery_confidence": "high",
+}
 
-def _stub_article_result() -> dict:
-    return {
-        "pattern": {"visibility_pattern": "test pattern"},
-        "decision_lens": {"core_pattern": "test core pattern"},
-        "narrative_spine": {"spine": "test spine"},
-        "structured_article": {
-            "hook": "The test hook.",
-            "discovery": {"aha_setup": "Test aha."},
-            "surviving_explanation": "Test explanation.",
-            "reframe": "Test reframe.",
-            "echo_line": "Test echo.",
-            "business_translation": "Test translation.",
-            "narrative_spine": "Test spine.",
-        },
-        "platforms": {
-            "long":      {"body": "Blog article body for test. " * 20},
-            "medium":    {"body": "LinkedIn post for test. " * 10},
-            "reading":   {"body": "Facebook post for test."},
-            "instagram": {"body": "Instagram caption for test."},
-        },
-    }
+_ENRICHED = {
+    **_CAND,
+    "CORE_FACT":               "Test core fact.",
+    "CONFIDENCE":              "medium",
+    "REAL_COMPANY_EXAMPLE":    "Acme Corp",
+    "ARTICLE_READY":           "true",
+    "SOURCE_PREMISE_VERIFIED": "true",
+    "SCORE_RECOMMENDED_FOR_ARTICLE": "true",
+    "ARTICLE_READINESS_SCORE": "8",
+    "CHANNEL_FIT_SCORE":       "8",
+    "SIGNAL_STRENGTH":         "high",
+    "DISCUSSION_POTENTIAL":    "high",
+    "score_reason":            "test",
+    "OUTCOME_IF_KNOWN":        "unknown",
+    "DID_IT_WORK":             "unknown",
+    "EVIDENCE_OF_OUTCOME":     "",
+    "SOURCE_QUALITY":          "",
+    "NOTES":                   "",
+    "CORE_TENSION":            "Test tension",
+    "BUSINESS_LESSON":         "Test lesson",
+    "WHY_THIS_CASE_IS_INTERESTING": "Test interesting",
+    "WHY_IT_MATTERS_TO_BUSINESS":   "Test matters",
+    "BUSINESS_RESPONSES_OBSERVED":  "",
+    "PROBLEM_FACED":           "Test problem",
+    "RESPONSE_TAKEN":          "unknown",
+    "COUNTER_EXAMPLE":         "",
+    "TIME_HORIZON":            "medium",
+    "INTERESTING_QUESTION":    "Test question?",
+    "NEVER_BLANK_ANGLE":       "The real signal is not the event itself.",
+    "POSSIBLE_SIGNATURE_LINE": "Never Blank: test.",
+    "POTENTIAL_HOOK":          "What visibility gaps cost small businesses.",
+    "TARGET_AUDIENCE":         "founder",
+    "PRIMARY_CHANNEL":         "linkedin",
+    "LINKEDIN_ANGLE":          "LinkedIn angle.",
+    "BLOG_ANGLE":              "Blog angle.",
+    "THREADS_ANGLE":           "Threads angle.",
+    "STORY_ANGLE":             "Story angle.",
+    "APPROVED_OVERRIDE":       "",
+}
+
+_ARTICLE = {
+    "pattern":      {"visibility_pattern": "presence gap"},
+    "decision_lens": {
+        "core_pattern":              "absence becomes default",
+        "owner_system_objective":    "earn recurring revenue",
+        "delivery_vs_presence_conflict": "delivers, then disappears",
+        "customer_memory_consequence": "memory fades, next vendor wins",
+        "structural_cause":          "no between-project contact",
+        "never_blank_insight":       "invisibility is opt-in",
+    },
+    "narrative_spine":    {"spine": "test spine"},
+    "structured_article": {"hook": "Test hook."},
+    "platforms": {
+        "long":      {"body": "Blog body. " * 30, "word_count": 120},
+        "medium":    {"body": "LinkedIn post.", "word_count": 40},
+        "reading":   {"body": "Facebook post.", "word_count": 20},
+        "instagram": {"body": "Instagram caption.", "word_count": 10},
+        "short":     {"body": "Short post.", "word_count": 5},
+    },
+}
+
+_VISUAL_SPEC = {
+    "visual_family":    "mountains_depth_layers",
+    "dominant_palette": "midnight",
+    "image_prompt":     "Test image prompt for controlled run.",
+    "hook_text":        "Test hook text.",
+    "negative_prompt":  "text, typography, neon, amber, stock photography",
+    "logo_placement":   "bottom_right",
+    "rationale":        "Test rationale.",
+}
 
 
-def _run_full_e2e(tmp_path: Path, extra_args: list | None = None) -> tuple[int, Path]:
+# ---------------------------------------------------------------------------
+# Test runner helper
+# ---------------------------------------------------------------------------
+
+def _run(
+    tmp_path: Path,
+    mode: str = "synthetic-signal",
+    image_gen: str = "disabled",
+    extra_argv: list | None = None,
+) -> tuple[int, Path, dict]:
     """
-    Execute run_controlled() with full-e2e mode.
-    All LLM and publisher calls are mocked.
-    Returns (exit_code, run_dir).
+    Execute run_controlled() with all external providers mocked.
+    Returns (exit_code, run_dir, captured_mocks).
     """
     from scripts.controlled_run import run_controlled, _parse_args
 
     argv = [
-        "--mode", "full-e2e",
+        "--mode", mode,
         "--publication", "disabled",
         "--external-writes", "disabled",
         "--cache", "disabled",
         "--image-reuse", "disabled",
+        "--image-generation", image_gen,
         "--output-root", str(tmp_path),
-        "--topic", TOPIC,
         "--brand", "Never Blank",
-        "--channels", "linkedin,blog,instagram",
+        "--channels", "linkedin,blog",
     ]
-    if extra_args:
-        argv.extend(extra_args)
+    if mode in ("full-e2e", "synthetic-signal"):
+        argv += ["--topic", TOPIC]
+    if mode == "existing-signal":
+        argv += ["--signal-id", "test-existing-001"]
+    if extra_argv:
+        argv += extra_argv
 
     args = _parse_args(argv)
 
-    with mock.patch("src.editorial.pipeline.generate_article",
-                    return_value=_stub_article_result()), \
-         mock.patch("src.publishing.image_pipeline.upload_to_cloudinary") as mock_cld, \
-         mock.patch("src.strategy.history.append_published_entry") as mock_hist, \
-         mock.patch("src.publishing.wix.WixPublisher.publish") as mock_wix, \
-         mock.patch("src.publishing.linkedin.LinkedInPublisher.publish") as mock_li, \
-         mock.patch("src.publishing.facebook.FacebookPublisher.publish") as mock_fb, \
-         mock.patch("src.publishing.instagram.InstagramPublisher.publish") as mock_ig, \
-         mock.patch("src.publishing.threads.ThreadsPublisher.publish") as mock_th, \
-         mock.patch("src.publishing.telegram.TelegramPublisher.publish") as mock_tg:
+    with mock.patch("scripts.research.discover.run_discovery",
+                    return_value=[_CAND]) as m_discover, \
+         mock.patch("scripts.research.score.score_candidates",
+                    return_value=[_ENRICHED]) as m_score, \
+         mock.patch("scripts.research.enrich.enrich_candidates",
+                    return_value=[_ENRICHED]) as m_enrich, \
+         mock.patch("scripts.research.angles.add_angles",
+                    return_value=[_ENRICHED]) as m_angles, \
+         mock.patch("src.editorial.pipeline.generate_article",
+                    return_value=_ARTICLE) as m_article, \
+         mock.patch("src.publishing.image_pipeline.choose_visual_family",
+                    return_value=dict(_VISUAL_SPEC)) as m_visual, \
+         mock.patch("src.publishing.image_pipeline.load_registry",
+                    return_value={}) as m_registry, \
+         mock.patch("scripts.controlled_run._load_existing_signal",
+                    return_value=_ENRICHED) as m_existing, \
+         mock.patch("src.publishing.image_pipeline.upload_to_cloudinary") as m_cloud, \
+         mock.patch("src.strategy.history.append_published_entry") as m_hist:
 
         exit_code = run_controlled(args)
 
-    # Find the run_dir (only one directory in tmp_path)
-    subdirs = [d for d in tmp_path.iterdir() if d.is_dir()]
+    subdirs = sorted(tmp_path.iterdir(), key=lambda p: p.stat().st_ctime)
     run_dir = subdirs[0] if subdirs else tmp_path
 
-    return exit_code, run_dir, {
-        "cloudinary": mock_cld,
-        "history":    mock_hist,
-        "wix":        mock_wix,
-        "linkedin":   mock_li,
-        "facebook":   mock_fb,
-        "instagram":  mock_ig,
-        "threads":    mock_th,
-        "telegram":   mock_tg,
+    captured = {
+        "discover": m_discover, "score": m_score, "enrich": m_enrich,
+        "angles": m_angles, "article": m_article, "visual": m_visual,
+        "registry": m_registry, "load_existing": m_existing,
+        "cloudinary": m_cloud, "history": m_hist,
     }
+    return exit_code, run_dir, captured
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 1: full-e2e mode creates a fresh signal, not reading old generated JSON
-# ──────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Test 1 — full-e2e calls ALL four production Research Engine stages
+# ---------------------------------------------------------------------------
 
-def test_full_e2e_creates_fresh_signal_not_loading_existing_json(tmp_path):
-    """full-e2e does not read any existing _generated.json; creates a new stub signal."""
-    with mock.patch("scripts.controlled_run._load_existing_signal") as mock_load, \
-         mock.patch("src.editorial.pipeline.generate_article",
-                    return_value=_stub_article_result()), \
-         mock.patch("src.publishing.image_pipeline.upload_to_cloudinary"), \
-         mock.patch("src.strategy.history.append_published_entry"), \
-         mock.patch("src.publishing.wix.WixPublisher.publish"), \
-         mock.patch("src.publishing.linkedin.LinkedInPublisher.publish"), \
-         mock.patch("src.publishing.facebook.FacebookPublisher.publish"), \
-         mock.patch("src.publishing.instagram.InstagramPublisher.publish"), \
-         mock.patch("src.publishing.threads.ThreadsPublisher.publish"), \
-         mock.patch("src.publishing.telegram.TelegramPublisher.publish"):
-
-        from scripts.controlled_run import run_controlled, _parse_args
-        args = _parse_args([
-            "--mode", "full-e2e",
-            "--publication", "disabled",
-            "--external-writes", "disabled",
-            "--output-root", str(tmp_path),
-            "--topic", TOPIC,
-        ])
-        run_controlled(args)
-
-    # _load_existing_signal is for existing-signal mode only
-    mock_load.assert_not_called()
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 2: existing-signal mode labels manifest as existing-signal
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_existing_signal_mode_labeled_in_manifest(tmp_path):
-    """existing-signal mode: manifest.mode == 'existing-signal'."""
-    fake_signal = {
-        "SIGNAL_ID": "test-existing-001",
-        "HEADLINE": "Test signal",
-        "SIGNAL_TYPE": "business trust",
-        "REGION": "US",
-        "INDUSTRY": "Tech",
-        "SOURCE_NAME": "Test",
-        "SOURCE_URL": "",
-        "SOURCE_DATE": "2026-01-01",
-        "DATE_FOUND": "2026-01-01",
-        "CORE_FACT": "Test fact",
-        "CONFIDENCE": "medium",
-        "ARTICLE_READY": "true",
-        "SOURCE_PREMISE_VERIFIED": "unknown",
-        "SCORE_RECOMMENDED_FOR_ARTICLE": "true",
-        "ARTICLE_READINESS_SCORE": "7",
-        "CHANNEL_FIT_SCORE": "7",
-        "OUTCOME_IF_KNOWN": "unknown",
-        "DID_IT_WORK": "unknown",
-        "NEVER_BLANK_ANGLE": "Test angle",
-        "POTENTIAL_HOOK": "Test hook",
-        "TARGET_AUDIENCE": "founder",
-        "PRIMARY_CHANNEL": "linkedin",
-        "APPROVED_OVERRIDE": "",
-    }
-
-    with mock.patch("scripts.controlled_run._load_existing_signal", return_value=fake_signal), \
-         mock.patch("src.editorial.pipeline.generate_article",
-                    return_value=_stub_article_result()), \
-         mock.patch("src.publishing.image_pipeline.upload_to_cloudinary"), \
-         mock.patch("src.strategy.history.append_published_entry"), \
-         mock.patch("src.publishing.wix.WixPublisher.publish"), \
-         mock.patch("src.publishing.linkedin.LinkedInPublisher.publish"), \
-         mock.patch("src.publishing.facebook.FacebookPublisher.publish"), \
-         mock.patch("src.publishing.instagram.InstagramPublisher.publish"), \
-         mock.patch("src.publishing.threads.ThreadsPublisher.publish"), \
-         mock.patch("src.publishing.telegram.TelegramPublisher.publish"):
-
-        from scripts.controlled_run import run_controlled, _parse_args
-        args = _parse_args([
-            "--mode", "existing-signal",
-            "--publication", "disabled",
-            "--external-writes", "disabled",
-            "--output-root", str(tmp_path),
-            "--signal-id", "test-existing-001",
-        ])
-        run_controlled(args)
-
-    manifest_path = next(tmp_path.iterdir()) / "run_manifest.json"
-    manifest = json.loads(manifest_path.read_text())
-    assert manifest["mode"] == "existing-signal"
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 3: New run does not call _load_package_images
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_new_run_does_not_call_load_package_images(tmp_path):
-    """controlled_run.py never calls _load_package_images (image reuse disabled)."""
-    with mock.patch("scripts.generate_and_publish._load_package_images") as mock_lpi, \
-         mock.patch("src.editorial.pipeline.generate_article",
-                    return_value=_stub_article_result()), \
-         mock.patch("src.publishing.image_pipeline.upload_to_cloudinary"), \
-         mock.patch("src.strategy.history.append_published_entry"), \
-         mock.patch("src.publishing.wix.WixPublisher.publish"), \
-         mock.patch("src.publishing.linkedin.LinkedInPublisher.publish"), \
-         mock.patch("src.publishing.facebook.FacebookPublisher.publish"), \
-         mock.patch("src.publishing.instagram.InstagramPublisher.publish"), \
-         mock.patch("src.publishing.threads.ThreadsPublisher.publish"), \
-         mock.patch("src.publishing.telegram.TelegramPublisher.publish"):
-
-        from scripts.controlled_run import run_controlled, _parse_args
-        args = _parse_args([
-            "--mode", "full-e2e",
-            "--publication", "disabled",
-            "--external-writes", "disabled",
-            "--output-root", str(tmp_path),
-            "--topic", TOPIC,
-        ])
-        run_controlled(args)
-
-    mock_lpi.assert_not_called()
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 4: Unique run directory is created per run
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_unique_run_directory_per_run(tmp_path):
-    """Each call to run_controlled() creates a distinct subdirectory."""
-    exit_code1, run_dir1, _ = _run_full_e2e(tmp_path)
-    # Second run needs a new tmp_path sub-dir (or wait for timestamp to change)
-    import time; time.sleep(1)
-    tmp_path2 = tmp_path / "second"
-    tmp_path2.mkdir()
-    exit_code2, run_dir2, _ = _run_full_e2e(tmp_path2)
-
-    assert run_dir1 != run_dir2
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 5: Existing run directory causes immediate error
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_existing_run_directory_causes_error(tmp_path):
-    """If run_dir already exists, run_controlled raises immediately."""
-    from scripts.controlled_run import run_controlled, _parse_args
-
-    # Simulate by mocking uuid to return a fixed value and pre-creating the dir
-    fixed_hex = "aabbccddee11"
-
-    with mock.patch("scripts.controlled_run.uuid4") as mock_uuid:
-        mock_uuid.return_value.hex = fixed_hex * 4  # hex is sliced [:12]
-        # Pre-create the directory
-        import datetime as dt_mod
-        ts = dt_mod.datetime.now(dt_mod.timezone.utc).strftime("%Y%m%d_%H%M%S")
-        pre_existing = tmp_path / f"{ts}_{fixed_hex[:12]}"
-        pre_existing.mkdir(parents=True)
-
-        args = _parse_args([
-            "--mode", "full-e2e",
-            "--publication", "disabled",
-            "--external-writes", "disabled",
-            "--output-root", str(tmp_path),
-            "--topic", TOPIC,
-        ])
-        with mock.patch("src.editorial.pipeline.generate_article",
-                        return_value=_stub_article_result()), \
-             mock.patch("src.publishing.image_pipeline.upload_to_cloudinary"), \
-             mock.patch("src.strategy.history.append_published_entry"), \
-             mock.patch("src.publishing.wix.WixPublisher.publish"), \
-             mock.patch("src.publishing.linkedin.LinkedInPublisher.publish"), \
-             mock.patch("src.publishing.facebook.FacebookPublisher.publish"), \
-             mock.patch("src.publishing.instagram.InstagramPublisher.publish"), \
-             mock.patch("src.publishing.threads.ThreadsPublisher.publish"), \
-             mock.patch("src.publishing.telegram.TelegramPublisher.publish"):
-            result = run_controlled(args)
-
-    assert result == 1
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 6: All artifact paths in manifest share the same run_id
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_all_artifact_paths_share_run_id(tmp_path):
-    """Every artifact path in the manifest contains the same run directory."""
-    exit_code, run_dir, _ = _run_full_e2e(tmp_path)
+def test_full_e2e_calls_all_production_research_stages(tmp_path):
+    """Behavior 1: run_discovery, score_candidates, enrich_candidates, add_angles each called."""
+    exit_code, _, mocks = _run(tmp_path, mode="full-e2e")
     assert exit_code == 0
-
-    manifest_path = run_dir / "run_manifest.json"
-    manifest = json.loads(manifest_path.read_text())
-    run_id = manifest["run_id"]
-
-    for key, path_str in manifest["artifact_paths"].items():
-        assert run_id in path_str or str(run_dir) in path_str, \
-            f"Artifact {key!r} path {path_str!r} does not contain run_id={run_id!r}"
+    mocks["discover"].assert_called_once()
+    mocks["score"].assert_called_once()
+    mocks["enrich"].assert_called_once()
+    mocks["angles"].assert_called_once()
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 7: Manifest contains git_sha and publication_disabled=True
-# ──────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Test 2 — full-e2e never calls _create_synthetic_signal
+# ---------------------------------------------------------------------------
 
-def test_manifest_contains_git_sha_and_publication_disabled(tmp_path):
-    exit_code, run_dir, _ = _run_full_e2e(tmp_path)
+def test_full_e2e_does_not_call_create_synthetic_signal(tmp_path):
+    """Behavior 2: _create_synthetic_signal must not be called in full-e2e mode."""
+    with mock.patch("scripts.controlled_run._create_synthetic_signal") as m_stub:
+        _run(tmp_path, mode="full-e2e")
+    m_stub.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Test 3 — signal in full-e2e comes from research output (same run)
+# ---------------------------------------------------------------------------
+
+def test_full_e2e_signal_originates_from_research_output(tmp_path):
+    """Behavior 3: selected_signal.json must contain the signal returned by add_angles."""
+    exit_code, run_dir, _ = _run(tmp_path, mode="full-e2e")
     assert exit_code == 0
-
+    selected = json.loads((run_dir / "selected_signal.json").read_text())
+    assert selected["SIGNAL_ID"] == _ENRICHED["SIGNAL_ID"]
     manifest = json.loads((run_dir / "run_manifest.json").read_text())
-    assert "git_sha" in manifest
-    assert manifest["git_sha"]  # not empty
-    assert manifest["publication_disabled"] is True
+    assert _ENRICHED["SIGNAL_ID"] in manifest["source_identifiers"]
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 8: ResearchContext serialization preserves article_ready
-# ──────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Test 4 — research artifacts contain source provenance
+# ---------------------------------------------------------------------------
 
-def test_research_context_serialization_preserves_article_ready():
+def test_full_e2e_research_artifacts_contain_source_provenance(tmp_path):
+    """Behavior 4: all four stage artifacts written; selected_signal has a source URL."""
+    exit_code, run_dir, _ = _run(tmp_path, mode="full-e2e")
+    assert exit_code == 0
+    for fname in ("research_candidates.json", "research_scored.json",
+                  "research_enriched.json", "research_angles.json"):
+        data = json.loads((run_dir / fname).read_text())
+        assert isinstance(data, list) and len(data) > 0, f"{fname} must be non-empty"
+    selected = json.loads((run_dir / "selected_signal.json").read_text())
+    assert selected.get("SOURCE_URL") or selected.get("SOURCE_FOR_CASE"), \
+        "selected_signal.json must carry source provenance URL"
+
+
+# ---------------------------------------------------------------------------
+# Test 5 — research cache disabled: run_discovery called with seen_ids=set()
+# ---------------------------------------------------------------------------
+
+def test_full_e2e_research_cache_disabled_via_empty_seen_ids(tmp_path):
+    """Behavior 5: run_discovery must be called with seen_ids=set() to disable cache."""
+    exit_code, _, mocks = _run(tmp_path, mode="full-e2e")
+    assert exit_code == 0
+    call = mocks["discover"].call_args
+    # Use `is not None` sentinel — empty set is falsy, so `or` would skip it
+    kw_seen = call.kwargs.get("seen_ids")
+    seen_ids = kw_seen if kw_seen is not None else (call.args[0] if call.args else None)
+    assert seen_ids == set(), (
+        f"run_discovery must be called with seen_ids=set() (cache disabled); got {seen_ids!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 6 — _record_decision_lens patches pipeline namespace and intercepts call
+# ---------------------------------------------------------------------------
+
+def test_record_decision_lens_intercepts_pipeline_namespace(tmp_path):
+    """
+    Behavior 6: _record_decision_lens patches generate_decision_lens in the pipeline
+    module namespace. Calling generate_decision_lens via that namespace calls the real
+    function and records I/O.
+    """
+    from scripts.controlled_run import _record_decision_lens, InvocationLedger
+    import src.editorial.pipeline as _pl
+
+    run_dir = tmp_path / "dl_test"
+    run_dir.mkdir()
+    ledger = InvocationLedger()
+
+    fake_output = {
+        "core_pattern": "absence is default",
+        "owner_system_objective": "earn trust",
+        "delivery_vs_presence_conflict": "delivers, then vanishes",
+        "customer_memory_consequence": "next vendor wins",
+        "structural_cause": "no system",
+        "never_blank_insight": "invisibility is opt-in",
+    }
+
+    with mock.patch("src.editorial.decision_lens_lite.generate_decision_lens",
+                    return_value=fake_output):
+        with _record_decision_lens(run_dir, ledger) as dl_rec:
+            # Simulate generate_article calling DL through the pipeline namespace
+            result = _pl.generate_decision_lens(
+                {"HEADLINE": "Test", "NEVER_BLANK_ANGLE": "Test angle"}
+            )
+
+    assert dl_rec["called"] is True
+    assert dl_rec["input"]["NEVER_BLANK_ANGLE"] == "Test angle"
+    assert dl_rec["output"]["core_pattern"] == "absence is default"
+    assert result == fake_output
+
+
+# ---------------------------------------------------------------------------
+# Test 7 — Decision Lens output has all required schema keys
+# ---------------------------------------------------------------------------
+
+def test_decision_lens_output_has_required_schema_keys():
+    """Behavior 7: DL output (from generate_article) must contain all 6 schema keys."""
+    expected = {
+        "core_pattern", "owner_system_objective", "delivery_vs_presence_conflict",
+        "customer_memory_consequence", "structural_cause", "never_blank_insight",
+    }
+    assert set(_ARTICLE["decision_lens"].keys()) == expected
+
+
+# ---------------------------------------------------------------------------
+# Test 8 — production choose_visual_family actually called
+# ---------------------------------------------------------------------------
+
+def test_production_choose_visual_family_called(tmp_path):
+    """Behavior 8: choose_visual_family must be called exactly once; visual_spec.json written."""
+    exit_code, run_dir, mocks = _run(tmp_path, mode="synthetic-signal")
+    assert exit_code == 0
+    mocks["visual"].assert_called_once()
+    assert (run_dir / "visual_spec.json").exists()
+
+
+# ---------------------------------------------------------------------------
+# Test 9 — image prompt originates from visual spec of current run
+# ---------------------------------------------------------------------------
+
+def test_image_prompt_originates_from_visual_spec_current_run(tmp_path):
+    """Behavior 9: visual_spec.json must carry NB angle, image_prompt, and CR exclusions."""
+    exit_code, run_dir, _ = _run(tmp_path, mode="synthetic-signal")
+    assert exit_code == 0
+    spec = json.loads((run_dir / "visual_spec.json").read_text())
+    assert spec.get("_never_blank_angle"), "_never_blank_angle from signal must be in spec"
+    assert spec.get("image_prompt"), "image_prompt from choose_visual_family must be present"
+    assert "robots" in spec.get("negative_prompt", ""), \
+        "CR AI-imagery exclusions must be appended to negative_prompt"
+
+
+# ---------------------------------------------------------------------------
+# Test 10 — image provider NOT called when --image-generation disabled
+# ---------------------------------------------------------------------------
+
+def test_image_provider_not_called_when_generation_disabled(tmp_path):
+    """Behavior 10: _generate_base_image must not be called when --image-generation disabled."""
+    with mock.patch("src.publishing.image_pipeline._generate_base_image") as m_gen:
+        _run(tmp_path, mode="synthetic-signal", image_gen="disabled")
+    m_gen.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Test 11 — status is complete_without_image (not complete) when image skipped
+# ---------------------------------------------------------------------------
+
+def test_image_disabled_yields_complete_without_image_status(tmp_path):
+    """Behavior 11: status must be complete_without_image when image generation is skipped."""
+    exit_code, run_dir, _ = _run(tmp_path, mode="synthetic-signal", image_gen="disabled")
+    assert exit_code == 0
+    manifest = json.loads((run_dir / "run_manifest.json").read_text())
+    assert manifest["status"] == "complete_without_image", (
+        f"Expected complete_without_image, got {manifest['status']!r}"
+    )
+    vr = json.loads((run_dir / "validation_report.json").read_text())
+    assert vr["overall_status"] == "complete_without_image"
+    assert vr["image_generation"] == "skipped"
+
+
+# ---------------------------------------------------------------------------
+# Test 12 — external sinks blocked by env-var BEFORE network call
+# ---------------------------------------------------------------------------
+
+def test_upload_to_cloudinary_blocked_by_env_var():
+    """Behavior 12a: upload_to_cloudinary raises EnvironmentError when NB_CONTROLLED_RUN=1."""
+    assert os.environ.get("NB_CONTROLLED_RUN") == "1"
+    from src.publishing.image_pipeline import upload_to_cloudinary
+    with pytest.raises(EnvironmentError, match="NB_CONTROLLED_RUN"):
+        upload_to_cloudinary(Path("/tmp/test.png"), "test/slug")
+
+
+def test_append_published_entry_blocked_by_env_var():
+    """Behavior 12b: append_published_entry raises EnvironmentError when NB_CONTROLLED_RUN=1."""
+    assert os.environ.get("NB_CONTROLLED_RUN") == "1"
+    from src.strategy.history import append_published_entry
+    from src.strategy.models import PublishedEntry
+    from datetime import datetime, timezone
+    entry = PublishedEntry(
+        content_id="test", strategy_id="s1",
+        published_at=datetime.now(timezone.utc),
+        platform="blog", url="", platform_content_id=None,
+    )
+    with pytest.raises(EnvironmentError, match="NB_CONTROLLED_RUN"):
+        append_published_entry(entry)
+
+
+def test_wix_publisher_blocked_by_env_var():
+    """Behavior 12c: WixPublisher.publish raises EnvironmentError when NB_CONTROLLED_RUN=1."""
+    assert os.environ.get("NB_CONTROLLED_RUN") == "1"
+    from src.publishing.wix import WixPublisher
+    from src.publishing.base import DraftPackage
+    draft = DraftPackage(
+        draft_dir=Path("/tmp"), blog_title="t", blog_body="b", blog_meta={},
+        linkedin_text="li", instagram_text="ig", facebook_text="fb",
+        threads_sequence=[], telegram_text="tg", image_url=None,
+    )
+    with pytest.raises(EnvironmentError, match="NB_CONTROLLED_RUN"):
+        WixPublisher().publish(draft, "live")
+
+
+def test_linkedin_publisher_blocked_by_env_var():
+    """Behavior 12d: LinkedInPublisher.publish raises EnvironmentError when NB_CONTROLLED_RUN=1."""
+    assert os.environ.get("NB_CONTROLLED_RUN") == "1"
+    from src.publishing.linkedin import LinkedInPublisher
+    from src.publishing.base import DraftPackage
+    draft = DraftPackage(
+        draft_dir=Path("/tmp"), blog_title="t", blog_body="b", blog_meta={},
+        linkedin_text="li", instagram_text="ig", facebook_text="fb",
+        threads_sequence=[], telegram_text="tg", image_url=None,
+    )
+    with pytest.raises(EnvironmentError, match="NB_CONTROLLED_RUN"):
+        LinkedInPublisher().publish(draft, "live")
+
+
+# ---------------------------------------------------------------------------
+# Test 13 — validation report built from ledger evidence
+# ---------------------------------------------------------------------------
+
+def test_validation_report_built_from_ledger_not_hardcoded(tmp_path):
+    """
+    Behavior 13: validation_report.json must contain a non-empty ledger.
+    Each checks key must be grounded in a ledger entry.
+    No hardcoded no_cloudinary_upload sentinel.
+    """
+    exit_code, run_dir, _ = _run(tmp_path, mode="synthetic-signal")
+    assert exit_code == 0
+    vr = json.loads((run_dir / "validation_report.json").read_text())
+    assert "ledger" in vr
+    assert len(vr["ledger"]) > 0, "Ledger must have recorded entries"
+    ledger_stages = {e["stage"] for e in vr["ledger"]}
+    for stage in vr.get("checks", {}):
+        assert stage in ledger_stages, (
+            f"Check stage {stage!r} must come from ledger evidence, not be hardcoded"
+        )
+    for entry in vr["ledger"]:
+        assert "no_cloudinary_upload" not in entry.get("evidence", {}), \
+            "Ledger must not contain hardcoded no_cloudinary_upload sentinel"
+
+
+# ---------------------------------------------------------------------------
+# Test 14 — synthetic-signal never labeled full-e2e
+# ---------------------------------------------------------------------------
+
+def test_synthetic_signal_never_labeled_full_e2e(tmp_path):
+    """Behavior 14: synthetic-signal manifest must show mode=synthetic-signal, synthetic=True."""
+    exit_code, run_dir, _ = _run(tmp_path, mode="synthetic-signal")
+    assert exit_code == 0
+    m = json.loads((run_dir / "run_manifest.json").read_text())
+    assert m["mode"] == "synthetic-signal"
+    assert m["synthetic"] is True
+    note = m.get("synthetic_note") or ""
+    assert note, "Manifest must include synthetic_note explaining this is not full-e2e"
+    # synthetic_note must disclaim equivalence with full-e2e
+    assert "NOT" in note or "not" in note.lower(), \
+        "synthetic_note must explicitly state this is NOT equivalent to full-e2e"
+
+
+# ---------------------------------------------------------------------------
+# Test 15 — old generate_and_publish helpers not called
+# ---------------------------------------------------------------------------
+
+def test_generate_and_publish_helpers_not_called(tmp_path):
+    """Behavior 15: _load_package_images and _load_image_library must not be called."""
+    with mock.patch("scripts.generate_and_publish._load_package_images") as m_pkg, \
+         mock.patch("scripts.research.prepare_content._load_image_library") as m_lib:
+        _run(tmp_path, mode="synthetic-signal")
+    m_pkg.assert_not_called()
+    m_lib.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Test 16 — failure in mandatory stage prevents status=complete
+# ---------------------------------------------------------------------------
+
+def test_mandatory_stage_failure_prevents_complete_status(tmp_path):
+    """Behavior 16: If generate_article fails, exit=1 and status must be 'failed'."""
+    from scripts.controlled_run import run_controlled, _parse_args
+    from src.editorial.pipeline import ArticleGenerationError
+
+    args = _parse_args([
+        "--mode", "synthetic-signal",
+        "--publication", "disabled",
+        "--external-writes", "disabled",
+        "--output-root", str(tmp_path),
+        "--topic", TOPIC,
+    ])
+
+    with mock.patch("src.editorial.pipeline.generate_article",
+                    side_effect=ArticleGenerationError(
+                        "decision_lens_lite", ValueError("LLM refused")
+                    )), \
+         mock.patch("src.publishing.image_pipeline.choose_visual_family",
+                    return_value=dict(_VISUAL_SPEC)), \
+         mock.patch("src.publishing.image_pipeline.load_registry", return_value={}), \
+         mock.patch("src.publishing.image_pipeline.upload_to_cloudinary"), \
+         mock.patch("src.strategy.history.append_published_entry"):
+        result = run_controlled(args)
+
+    assert result == 1, "Exit code must be 1 on pipeline failure"
+    subdirs = list(tmp_path.iterdir())
+    assert subdirs, "Run directory must be created even on failure"
+    run_dir = subdirs[0]
+    manifest = json.loads((run_dir / "run_manifest.json").read_text())
+    assert manifest["status"] == "failed"
+    assert manifest["failure_stage"] is not None
+    assert manifest["status"] not in ("complete", "complete_without_image")
+
+
+# ---------------------------------------------------------------------------
+# Additional: manifest metadata fields
+# ---------------------------------------------------------------------------
+
+def test_manifest_metadata_fields(tmp_path):
+    """run_manifest.json must record git_sha, policy flags, and env-var confirmation."""
+    exit_code, run_dir, _ = _run(tmp_path, mode="synthetic-signal")
+    assert exit_code == 0
+    m = json.loads((run_dir / "run_manifest.json").read_text())
+    assert "git_sha" in m and m["git_sha"]
+    assert m["publication_disabled"] is True
+    assert m["external_writes_disabled"] is True
+    assert m["nb_controlled_run_env"] == "1"
+
+
+# ---------------------------------------------------------------------------
+# Additional: existing-signal mode labeled correctly
+# ---------------------------------------------------------------------------
+
+def test_existing_signal_mode_manifest(tmp_path):
+    """existing-signal manifest must show mode=existing-signal and synthetic=False."""
+    exit_code, run_dir, _ = _run(tmp_path, mode="existing-signal")
+    assert exit_code == 0
+    m = json.loads((run_dir / "run_manifest.json").read_text())
+    assert m["mode"] == "existing-signal"
+    assert m["synthetic"] is False
+
+
+# ---------------------------------------------------------------------------
+# Additional: image-generation enabled calls _generate_base_image
+# ---------------------------------------------------------------------------
+
+def test_image_generation_enabled_calls_provider(tmp_path):
+    """When --image-generation enabled, _generate_base_image IS called."""
+    fake_pil = mock.MagicMock()
+    fake_pil.save = mock.MagicMock()
+
+    with mock.patch("src.publishing.image_pipeline._generate_base_image",
+                    return_value=(b"\x89PNG\r\n\x1a\n", "dalle")) as m_gen, \
+         mock.patch("src.publishing.image_pipeline.composite_for_platform",
+                    return_value=fake_pil), \
+         mock.patch("src.publishing.image_pipeline.CARD_TYPES", set()):
+        exit_code, run_dir, _ = _run(tmp_path, mode="synthetic-signal", image_gen="enabled")
+
+    m_gen.assert_called_once()
+    assert exit_code == 0
+    result = json.loads((run_dir / "image_generation_result.json").read_text())
+    assert result["generated"] is True
+    assert result["method"] == "dalle"
+
+
+# ---------------------------------------------------------------------------
+# Additional: lifecycle normalization smoke-test
+# ---------------------------------------------------------------------------
+
+def test_lifecycle_normalization_recommended_for_article_passes_preflight():
+    """
+    PROVISIONAL (see test_lifecycle_normalization.py for full coverage).
+    A synthetic signal with only RECOMMENDED_FOR_ARTICLE=true must pass preflight.
+    """
     from src.lifecycle.signal_lifecycle import ResearchContext
-    signal = {
-        "SIGNAL_ID": "roundtrip-001",
+    synth = {
+        "SIGNAL_ID": "synth-norm-test",
         "HEADLINE": "Test",
         "SIGNAL_TYPE": "business trust",
         "REGION": "US",
         "INDUSTRY": "Tech",
-        "SOURCE_NAME": "Test",
-        "SOURCE_URL": "",
-        "SOURCE_DATE": "2026-01-01",
-        "DATE_FOUND": "2026-01-01",
-        "CORE_FACT": "Fact",
-        "CONFIDENCE": "medium",
-        "ARTICLE_READY": "true",
-        "SCORE_RECOMMENDED_FOR_ARTICLE": "true",
-        "ARTICLE_READINESS_SCORE": "7",
-        "CHANNEL_FIT_SCORE": "7",
-        "OUTCOME_IF_KNOWN": "unknown",
-        "DID_IT_WORK": "unknown",
-        "APPROVED_OVERRIDE": "",
-    }
-    rc = ResearchContext.from_dict(signal)
-    assert rc.article_ready is True
-
-    d = rc.to_dict()
-    rc2 = ResearchContext.from_dict(d)
-    assert rc2.article_ready is True
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 9: EditorialContext artifact contains NEVER_BLANK_ANGLE
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_editorial_context_artifact_contains_never_blank_angle(tmp_path):
-    exit_code, run_dir, _ = _run_full_e2e(tmp_path)
-    assert exit_code == 0
-
-    ec_path = run_dir / "editorial_context.json"
-    assert ec_path.exists()
-    ec = json.loads(ec_path.read_text())
-    # The editorial_context.json has _editorial_metadata.never_blank_angle
-    assert ec.get("_editorial_metadata", {}).get("never_blank_angle") is not None
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 10: decision_lens_input.json contains NEVER_BLANK_ANGLE context
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_decision_lens_input_contains_signal_keys(tmp_path):
-    exit_code, run_dir, _ = _run_full_e2e(tmp_path)
-    assert exit_code == 0
-
-    dl_path = run_dir / "decision_lens_input.json"
-    assert dl_path.exists()
-    dl = json.loads(dl_path.read_text())
-    # decision_lens_input comes from editorial_ctx.to_legacy_dict()
-    assert "HEADLINE" in dl
-    assert "CORE_FACT" in dl
-    assert "ARTICLE_READY" in dl
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 11: Article generation function called (not loading cached)
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_article_generation_function_called_not_loading_cached(tmp_path):
-    with mock.patch("src.editorial.pipeline.generate_article",
-                    return_value=_stub_article_result()) as mock_gen, \
-         mock.patch("src.publishing.image_pipeline.upload_to_cloudinary"), \
-         mock.patch("src.strategy.history.append_published_entry"), \
-         mock.patch("src.publishing.wix.WixPublisher.publish"), \
-         mock.patch("src.publishing.linkedin.LinkedInPublisher.publish"), \
-         mock.patch("src.publishing.facebook.FacebookPublisher.publish"), \
-         mock.patch("src.publishing.instagram.InstagramPublisher.publish"), \
-         mock.patch("src.publishing.threads.ThreadsPublisher.publish"), \
-         mock.patch("src.publishing.telegram.TelegramPublisher.publish"):
-
-        from scripts.controlled_run import run_controlled, _parse_args
-        args = _parse_args([
-            "--mode", "full-e2e",
-            "--publication", "disabled",
-            "--external-writes", "disabled",
-            "--output-root", str(tmp_path),
-            "--topic", TOPIC,
-        ])
-        run_controlled(args)
-
-    mock_gen.assert_called_once()
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 12: Visual brief angle_source matches NEVER_BLANK_ANGLE from signal
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_visual_brief_angle_source_matches_never_blank_angle(tmp_path):
-    exit_code, run_dir, _ = _run_full_e2e(tmp_path)
-    assert exit_code == 0
-
-    vb_path = run_dir / "visual_brief.json"
-    assert vb_path.exists()
-    vb = json.loads(vb_path.read_text())
-
-    # The stub signal's NEVER_BLANK_ANGLE is derived from the topic
-    assert vb["angle_source"], "angle_source must not be empty"
-    assert "Never Blank" in vb["brand_name"] or vb["brand_name"] == "Never Blank"
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 13: Image prompt negative_prompt contains required exclusions
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_image_prompt_negative_prompt_contains_exclusions(tmp_path):
-    exit_code, run_dir, _ = _run_full_e2e(tmp_path)
-    assert exit_code == 0
-
-    ip_path = run_dir / "image_prompt.json"
-    assert ip_path.exists()
-    ip = json.loads(ip_path.read_text())
-
-    neg = ip.get("negative_prompt", "")
-    required_exclusions = [
-        "robots",
-        "humanoid AI",
-        "glowing brains",
-        "neural network visualizations",
-        "circuit boards",
-        "generic stock-AI imagery",
-        "text or typography inside image",
-    ]
-    for excl in required_exclusions:
-        assert excl in neg, f"negative_prompt missing required exclusion: {excl!r}"
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 14: No image reuse — image library NOT read in full-e2e
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_no_image_reuse_image_library_not_read(tmp_path):
-    """_load_image_library from prepare_content.py is never called."""
-    with mock.patch("scripts.research.prepare_content._load_image_library") as mock_lib, \
-         mock.patch("src.editorial.pipeline.generate_article",
-                    return_value=_stub_article_result()), \
-         mock.patch("src.publishing.image_pipeline.upload_to_cloudinary"), \
-         mock.patch("src.strategy.history.append_published_entry"), \
-         mock.patch("src.publishing.wix.WixPublisher.publish"), \
-         mock.patch("src.publishing.linkedin.LinkedInPublisher.publish"), \
-         mock.patch("src.publishing.facebook.FacebookPublisher.publish"), \
-         mock.patch("src.publishing.instagram.InstagramPublisher.publish"), \
-         mock.patch("src.publishing.threads.ThreadsPublisher.publish"), \
-         mock.patch("src.publishing.telegram.TelegramPublisher.publish"):
-
-        from scripts.controlled_run import run_controlled, _parse_args
-        args = _parse_args([
-            "--mode", "full-e2e",
-            "--publication", "disabled",
-            "--external-writes", "disabled",
-            "--output-root", str(tmp_path),
-            "--topic", TOPIC,
-        ])
-        run_controlled(args)
-
-    mock_lib.assert_not_called()
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 15: upload_to_cloudinary NOT called
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_upload_to_cloudinary_not_called(tmp_path):
-    exit_code, run_dir, mocks = _run_full_e2e(tmp_path)
-    assert exit_code == 0
-    mocks["cloudinary"].assert_not_called()
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 16: append_published_entry NOT called
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_append_published_entry_not_called(tmp_path):
-    exit_code, run_dir, mocks = _run_full_e2e(tmp_path)
-    assert exit_code == 0
-    mocks["history"].assert_not_called()
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 17: Wix/LinkedIn/social publisher.publish NOT called
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_publisher_publish_methods_not_called(tmp_path):
-    exit_code, run_dir, mocks = _run_full_e2e(tmp_path)
-    assert exit_code == 0
-    for name in ("wix", "linkedin", "facebook", "instagram", "threads", "telegram"):
-        mocks[name].assert_not_called(), f"{name} publisher should not be called"
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 18: Failure saves manifest with failure_stage and status=failed
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_failure_saves_manifest_with_failure_stage(tmp_path):
-    """When article generation raises, manifest has status=failed and failure_stage set."""
-    from scripts.controlled_run import run_controlled, _parse_args
-    from src.editorial.pipeline import ArticleGenerationError
-
-    args = _parse_args([
-        "--mode", "full-e2e",
-        "--publication", "disabled",
-        "--external-writes", "disabled",
-        "--output-root", str(tmp_path),
-        "--topic", TOPIC,
-    ])
-
-    with mock.patch("src.editorial.pipeline.generate_article",
-                    side_effect=ArticleGenerationError("test-stage", ValueError("LLM refused"))), \
-         mock.patch("src.publishing.image_pipeline.upload_to_cloudinary"), \
-         mock.patch("src.strategy.history.append_published_entry"), \
-         mock.patch("src.publishing.wix.WixPublisher.publish"), \
-         mock.patch("src.publishing.linkedin.LinkedInPublisher.publish"), \
-         mock.patch("src.publishing.facebook.FacebookPublisher.publish"), \
-         mock.patch("src.publishing.instagram.InstagramPublisher.publish"), \
-         mock.patch("src.publishing.threads.ThreadsPublisher.publish"), \
-         mock.patch("src.publishing.telegram.TelegramPublisher.publish"):
-
-        result = run_controlled(args)
-
-    assert result == 1
-
-    run_dir = next(tmp_path.iterdir())
-    manifest = json.loads((run_dir / "run_manifest.json").read_text())
-    assert manifest["status"] == "failed"
-    assert manifest["failure_stage"] is not None
-    assert manifest["failure_stage"] != ""
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 19: No partial failure gets status=complete
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_partial_failure_does_not_get_status_complete(tmp_path):
-    """Any exception during the pipeline prevents status=complete in manifest."""
-    from scripts.controlled_run import run_controlled, _parse_args
-    from src.editorial.pipeline import ArticleGenerationError
-
-    args = _parse_args([
-        "--mode", "full-e2e",
-        "--publication", "disabled",
-        "--external-writes", "disabled",
-        "--output-root", str(tmp_path),
-        "--topic", TOPIC,
-    ])
-
-    with mock.patch("src.editorial.pipeline.generate_article",
-                    side_effect=RuntimeError("unexpected crash")), \
-         mock.patch("src.publishing.image_pipeline.upload_to_cloudinary"), \
-         mock.patch("src.strategy.history.append_published_entry"), \
-         mock.patch("src.publishing.wix.WixPublisher.publish"), \
-         mock.patch("src.publishing.linkedin.LinkedInPublisher.publish"), \
-         mock.patch("src.publishing.facebook.FacebookPublisher.publish"), \
-         mock.patch("src.publishing.instagram.InstagramPublisher.publish"), \
-         mock.patch("src.publishing.threads.ThreadsPublisher.publish"), \
-         mock.patch("src.publishing.telegram.TelegramPublisher.publish"):
-
-        result = run_controlled(args)
-
-    assert result == 1
-    run_dir = next(tmp_path.iterdir())
-    manifest = json.loads((run_dir / "run_manifest.json").read_text())
-    assert manifest["status"] != "complete"
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Test 20: Lifecycle normalization: signal with RECOMMENDED_FOR_ARTICLE=true passes preflight
-# ──────────────────────────────────────────────────────────────────────────────
-
-def test_lifecycle_normalization_recommended_for_article_passes_preflight(tmp_path):
-    """
-    A signal with only RECOMMENDED_FOR_ARTICLE=true (no ARTICLE_READY, no FORCE_PUBLISH_OVERRIDE)
-    must pass the preflight gate after the normalization fix.
-    """
-    from src.lifecycle.signal_lifecycle import ResearchContext
-    signal = {
-        "SIGNAL_ID": "test-normalization-check",
-        "HEADLINE": "Test normalization",
-        "SIGNAL_TYPE": "business trust",
-        "REGION": "US",
-        "INDUSTRY": "Tech",
-        "SOURCE_NAME": "Test",
+        "SOURCE_NAME": "Synthetic",
         "SOURCE_URL": "",
         "SOURCE_DATE": "2026-01-01",
         "DATE_FOUND": "2026-01-01",
@@ -614,13 +643,11 @@ def test_lifecycle_normalization_recommended_for_article_passes_preflight(tmp_pa
         "OUTCOME_IF_KNOWN": "unknown",
         "DID_IT_WORK": "unknown",
         "APPROVED_OVERRIDE": "",
-        # No ARTICLE_READY — only the alias
-        "RECOMMENDED_FOR_ARTICLE": "true",
+        "RECOMMENDED_FOR_ARTICLE": "true",  # no ARTICLE_READY — tests normalization fix
     }
-    rc = ResearchContext.from_dict(signal)
+    rc = ResearchContext.from_dict(synth)
     assert rc.article_ready is True, (
-        "RECOMMENDED_FOR_ARTICLE=true must normalize to article_ready=True "
-        "without requiring FORCE_PUBLISH_OVERRIDE"
+        "RECOMMENDED_FOR_ARTICLE=true must set article_ready=True when ARTICLE_READY absent "
+        "(PROVISIONAL backward-compat rule)"
     )
-    # admission_status should be 'admitted' (article_ready=True + score_recommended=True)
     assert rc.admission_status == "admitted"

@@ -190,7 +190,14 @@ def append_published_entry(entry: PublishedEntry) -> None:
 
     Callers MUST validate that entry.strategy_id is non-empty before calling.
     Non-fatal: errors are logged and swallowed so publish never fails on index write.
+
+    Architectural guard: NB_CONTROLLED_RUN=1 blocks this sink before any file write.
     """
+    if os.environ.get("NB_CONTROLLED_RUN") == "1":
+        raise EnvironmentError(
+            "append_published_entry blocked: NB_CONTROLLED_RUN=1 is set. "
+            "Publication history writes are forbidden in controlled-run mode."
+        )
     try:
         PUBLISHED_INDEX.parent.mkdir(parents=True, exist_ok=True)
         line = json.dumps(json.loads(entry.model_dump_json()), default=str)

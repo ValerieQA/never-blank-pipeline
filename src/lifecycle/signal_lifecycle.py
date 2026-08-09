@@ -427,7 +427,7 @@ class ResearchContext:
 
         def _resolve_article_ready(d: dict) -> bool:
             """
-            Backward-compatibility boundary for article_ready.
+            PROVISIONAL BACKWARD-COMPATIBILITY RULE
 
             Resolution order (first match wins, fail-closed):
               1. ARTICLE_READY present → use it (canonical; takes precedence)
@@ -437,6 +437,14 @@ class ResearchContext:
             Conflict: ARTICLE_READY wins over RECOMMENDED_FOR_ARTICLE.
             score_recommended is NOT a second veto (per Stage 2 commit 4ad2433).
             force_override does NOT change article_ready.
+
+            OPEN QUESTION FOR PRODUCT OWNER:
+            Does the product owner confirm that legacy RECOMMENDED_FOR_ARTICLE=true
+            is semantically equivalent to canonical ARTICLE_READY=true?
+            This rule treats them as equivalent. If they are NOT equivalent
+            (e.g. RECOMMENDED_FOR_ARTICLE=true may mean "selected for consideration"
+            rather than "factually verified"), this normalization could admit
+            signals that should remain blocked. Awaiting explicit confirmation.
             """
             raw_ar   = d.get("ARTICLE_READY")
             raw_rfar = d.get("RECOMMENDED_FOR_ARTICLE")

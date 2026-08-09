@@ -68,6 +68,7 @@ class ThreadsPublisher(BasePublisher):
     name = "threads"
 
     def publish(self, draft: DraftPackage, mode: str) -> PublishResult:
+        self._guard_controlled_run()
         token = os.getenv("NB_THREADS_ACCESS_TOKEN", "")
         if not token:
             return self._fail("Missing env var: NB_THREADS_ACCESS_TOKEN")
