@@ -27,8 +27,7 @@ _GRAPH = "https://graph.facebook.com/v21.0"
 class InstagramPublisher(BasePublisher):
     name = "instagram"
 
-    def publish(self, draft: DraftPackage, mode: str) -> PublishResult:
-        self._guard_controlled_run()
+    def _publish_impl(self, draft: DraftPackage, mode: str) -> PublishResult:
         ig_user_id = os.getenv("NB_META_IG_USER_ID", "")
         ig_token   = os.getenv("NB_META_FB_PAGE_TOKEN", "")
 

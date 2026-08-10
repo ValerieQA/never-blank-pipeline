@@ -67,8 +67,7 @@ def _publish_container(token: str, user_id: str, container_id: str) -> tuple[str
 class ThreadsPublisher(BasePublisher):
     name = "threads"
 
-    def publish(self, draft: DraftPackage, mode: str) -> PublishResult:
-        self._guard_controlled_run()
+    def _publish_impl(self, draft: DraftPackage, mode: str) -> PublishResult:
         token = os.getenv("NB_THREADS_ACCESS_TOKEN", "")
         if not token:
             return self._fail("Missing env var: NB_THREADS_ACCESS_TOKEN")

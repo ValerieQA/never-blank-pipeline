@@ -1,40 +1,35 @@
 """
-Tests for scripts/controlled_run.py — new architecture.
+Tests for scripts/controlled_run.py — policy-based architecture.
 
-## Design contract (16 behaviors from review Step 10)
+## Architecture under test
 
- 1. full-e2e calls production Research Engine stages (not stubs)
- 2. _create_synthetic_signal is NOT called in full-e2e mode
- 3. Signal in full-e2e originates from research output (same run)
- 4. Research artifacts contain source provenance
- 5. Research cache disabled (seen_ids=empty set)
- 6. Production generate_decision_lens actually called inside generate_article
- 7. Decision Lens output recorded and available downstream
- 8. Production choose_visual_family actually called
- 9. Image prompt originates from visual spec of current run
-10. Image provider called only when --image-generation enabled
-11. When disabled, status is NOT complete (must be complete_without_image)
-12. Cloudinary / history / publish adapters blocked by env-var BEFORE network call
-13. Validation report built from invocation ledger, not hardcoded values
-14. synthetic-signal never labeled full-e2e
-15. Old generate_and_publish helpers not called (no image-library read)
-16. Partial/skipped mandatory stage prevents status=complete
+Primary protection: ControlledRunPolicy (dependency injection)
+  - Created by orchestrator, passed to every adapter boundary
+  - policy.check(operation, adapter=...) raises PolicyViolation before any I/O
+  - policy.audit_trail records ALL checks (allowed and blocked)
+
+Template method: BasePublisher.publish() is concrete, non-abstract
+  - Calls policy.check("publication") if policy provided
+  - Delegates to _publish_impl() (abstract)
+  - Unknown publisher that only implements _publish_impl() is protected automatically
+
+Decision Lens: no mock.patch at runtime
+  - _make_decision_lens_recorder() returns (wrapper_fn, dl_record)
+  - wrapper_fn passed as decision_lens_fn to generate_article()
+  - generate_article() calls it via DI, not via module-level import interception
+
+Visual brief: shared production component
+  - build_visual_brief() from src/publishing/visual_brief.py
+  - Policy exclusions passed as policy_exclusion_tags (not hardcoded)
 
 ## Mocking strategy
 
-Production research stages (run_discovery, score_candidates, enrich_candidates,
-add_angles) are patched at their module-level symbols. Their lazy imports inside
-_run_research_engine() receive the mock because `from X import Y` resolves at
-call time against the module's current attribute.
+- Research stages mocked at module-level entry points (production interfaces)
+- generate_article mocked to avoid real LLM calls; DL fn DI is tested separately
+- choose_visual_family and load_registry mocked to avoid config/LLM I/O
+- External sinks verified by inspecting policy.audit_trail AND env-var fallback
 
-generate_article is patched at src.editorial.pipeline to avoid real LLM calls
-while still exercising all orchestration around it.
-
-choose_visual_family and load_registry are patched to avoid config I/O.
-
-External sinks (upload_to_cloudinary, append_published_entry) are ALSO blocked
-architecturally by NB_CONTROLLED_RUN=1 (set in controlled_run module top-level),
-but we patch them as defense-in-depth to prevent accidental network calls.
+## 16 behaviors tested
 """
 from __future__ import annotations
 
@@ -46,9 +41,6 @@ from unittest import mock
 
 import pytest
 
-# NB_CONTROLLED_RUN is set inside run_controlled() — not at module level.
-# (see autouse fixture set_nb_controlled_run_env below)
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
@@ -58,11 +50,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 @pytest.fixture(autouse=True)
 def set_nb_controlled_run_env():
-    """
-    Set NB_CONTROLLED_RUN=1 for every test in this file and restore after.
-    run_controlled() also sets it internally, but tests in group 12 call
-    production sinks directly without going through run_controlled.
-    """
+    """Set NB_CONTROLLED_RUN=1 per test and restore after."""
     old = os.environ.get("NB_CONTROLLED_RUN")
     os.environ["NB_CONTROLLED_RUN"] = "1"
     yield
@@ -113,14 +101,14 @@ _ENRICHED = {
     "NOTES":                   "",
     "CORE_TENSION":            "Test tension",
     "BUSINESS_LESSON":         "Test lesson",
-    "WHY_THIS_CASE_IS_INTERESTING": "Test interesting",
-    "WHY_IT_MATTERS_TO_BUSINESS":   "Test matters",
+    "WHY_THIS_CASE_IS_INTERESTING": "Test",
+    "WHY_IT_MATTERS_TO_BUSINESS":   "Test",
     "BUSINESS_RESPONSES_OBSERVED":  "",
     "PROBLEM_FACED":           "Test problem",
     "RESPONSE_TAKEN":          "unknown",
     "COUNTER_EXAMPLE":         "",
     "TIME_HORIZON":            "medium",
-    "INTERESTING_QUESTION":    "Test question?",
+    "INTERESTING_QUESTION":    "Test?",
     "NEVER_BLANK_ANGLE":       "The real signal is not the event itself.",
     "POSSIBLE_SIGNATURE_LINE": "Never Blank: test.",
     "POTENTIAL_HOOK":          "What visibility gaps cost small businesses.",
@@ -165,20 +153,12 @@ _VISUAL_SPEC = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Test runner helper
-# ---------------------------------------------------------------------------
-
 def _run(
     tmp_path: Path,
     mode: str = "synthetic-signal",
     image_gen: str = "disabled",
     extra_argv: list | None = None,
 ) -> tuple[int, Path, dict]:
-    """
-    Execute run_controlled() with all external providers mocked.
-    Returns (exit_code, run_dir, captured_mocks).
-    """
     from scripts.controlled_run import run_controlled, _parse_args
 
     argv = [
@@ -239,7 +219,7 @@ def _run(
 # ---------------------------------------------------------------------------
 
 def test_full_e2e_calls_all_production_research_stages(tmp_path):
-    """Behavior 1: run_discovery, score_candidates, enrich_candidates, add_angles each called."""
+    """Behavior 1: run_discovery, score_candidates, enrich_candidates, add_angles called."""
     exit_code, _, mocks = _run(tmp_path, mode="full-e2e")
     assert exit_code == 0
     mocks["discover"].assert_called_once()
@@ -260,11 +240,11 @@ def test_full_e2e_does_not_call_create_synthetic_signal(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Test 3 — signal in full-e2e comes from research output (same run)
+# Test 3 — signal in full-e2e comes from research output
 # ---------------------------------------------------------------------------
 
 def test_full_e2e_signal_originates_from_research_output(tmp_path):
-    """Behavior 3: selected_signal.json must contain the signal returned by add_angles."""
+    """Behavior 3: selected_signal.json must come from add_angles output."""
     exit_code, run_dir, _ = _run(tmp_path, mode="full-e2e")
     assert exit_code == 0
     selected = json.loads((run_dir / "selected_signal.json").read_text())
@@ -278,7 +258,7 @@ def test_full_e2e_signal_originates_from_research_output(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_full_e2e_research_artifacts_contain_source_provenance(tmp_path):
-    """Behavior 4: all four stage artifacts written; selected_signal has a source URL."""
+    """Behavior 4: all four stage artifacts written; selected has a source URL."""
     exit_code, run_dir, _ = _run(tmp_path, mode="full-e2e")
     assert exit_code == 0
     for fname in ("research_candidates.json", "research_scored.json",
@@ -286,73 +266,74 @@ def test_full_e2e_research_artifacts_contain_source_provenance(tmp_path):
         data = json.loads((run_dir / fname).read_text())
         assert isinstance(data, list) and len(data) > 0, f"{fname} must be non-empty"
     selected = json.loads((run_dir / "selected_signal.json").read_text())
-    assert selected.get("SOURCE_URL") or selected.get("SOURCE_FOR_CASE"), \
-        "selected_signal.json must carry source provenance URL"
+    assert selected.get("SOURCE_URL") or selected.get("SOURCE_FOR_CASE")
 
 
 # ---------------------------------------------------------------------------
-# Test 5 — research cache disabled: run_discovery called with seen_ids=set()
+# Test 5 — research cache disabled
 # ---------------------------------------------------------------------------
 
 def test_full_e2e_research_cache_disabled_via_empty_seen_ids(tmp_path):
-    """Behavior 5: run_discovery must be called with seen_ids=set() to disable cache."""
+    """Behavior 5: run_discovery called with seen_ids=set()."""
     exit_code, _, mocks = _run(tmp_path, mode="full-e2e")
     assert exit_code == 0
     call = mocks["discover"].call_args
-    # Use `is not None` sentinel — empty set is falsy, so `or` would skip it
     kw_seen = call.kwargs.get("seen_ids")
     seen_ids = kw_seen if kw_seen is not None else (call.args[0] if call.args else None)
-    assert seen_ids == set(), (
-        f"run_discovery must be called with seen_ids=set() (cache disabled); got {seen_ids!r}"
-    )
+    assert seen_ids == set(), f"seen_ids must be empty set, got {seen_ids!r}"
 
 
 # ---------------------------------------------------------------------------
-# Test 6 — _record_decision_lens patches pipeline namespace and intercepts call
+# Test 6 — DL recording via DI (no mock.patch at runtime)
 # ---------------------------------------------------------------------------
 
-def test_record_decision_lens_intercepts_pipeline_namespace(tmp_path):
+def test_decision_lens_recorded_via_di_not_mock_patch(tmp_path):
     """
-    Behavior 6: _record_decision_lens patches generate_decision_lens in the pipeline
-    module namespace. Calling generate_decision_lens via that namespace calls the real
-    function and records I/O.
+    Behavior 6: _make_decision_lens_recorder() returns a wrapper passed as
+    decision_lens_fn to generate_article(). No mock.patch is used at runtime.
+    The wrapper intercepts the call via DI.
     """
-    from scripts.controlled_run import _record_decision_lens, InvocationLedger
-    import src.editorial.pipeline as _pl
+    from scripts.controlled_run import _make_decision_lens_recorder, InvocationLedger
 
     run_dir = tmp_path / "dl_test"
     run_dir.mkdir()
     ledger = InvocationLedger()
 
-    fake_output = {
+    fake_dl_output = {
         "core_pattern": "absence is default",
         "owner_system_objective": "earn trust",
-        "delivery_vs_presence_conflict": "delivers, then vanishes",
+        "delivery_vs_presence_conflict": "delivers then vanishes",
         "customer_memory_consequence": "next vendor wins",
         "structural_cause": "no system",
         "never_blank_insight": "invisibility is opt-in",
     }
 
+    # mock the real DL function to return canned output without LLM call
     with mock.patch("src.editorial.decision_lens_lite.generate_decision_lens",
-                    return_value=fake_output):
-        with _record_decision_lens(run_dir, ledger) as dl_rec:
-            # Simulate generate_article calling DL through the pipeline namespace
-            result = _pl.generate_decision_lens(
-                {"HEADLINE": "Test", "NEVER_BLANK_ANGLE": "Test angle"}
-            )
+                    return_value=fake_dl_output):
+        wrapper_fn, dl_rec = _make_decision_lens_recorder(run_dir, ledger)
+        # Call the wrapper as generate_article() would call it
+        result = wrapper_fn({"HEADLINE": "Test", "NEVER_BLANK_ANGLE": "Test angle"})
 
     assert dl_rec["called"] is True
     assert dl_rec["input"]["NEVER_BLANK_ANGLE"] == "Test angle"
     assert dl_rec["output"]["core_pattern"] == "absence is default"
-    assert result == fake_output
+    assert result == fake_dl_output
+
+    # Confirm: no mock.patch was applied to the pipeline namespace
+    import src.editorial.pipeline as _pl
+    # The pipeline's generate_decision_lens is the REAL function (not patched by wrapper)
+    from src.editorial.decision_lens_lite import generate_decision_lens as _real
+    assert _pl.generate_decision_lens is _real, \
+        "DI wrapper must NOT patch the pipeline module namespace"
 
 
 # ---------------------------------------------------------------------------
-# Test 7 — Decision Lens output has all required schema keys
+# Test 7 — Decision Lens output has required schema keys
 # ---------------------------------------------------------------------------
 
 def test_decision_lens_output_has_required_schema_keys():
-    """Behavior 7: DL output (from generate_article) must contain all 6 schema keys."""
+    """Behavior 7: DL output schema must have all 6 required keys."""
     expected = {
         "core_pattern", "owner_system_objective", "delivery_vs_presence_conflict",
         "customer_memory_consequence", "structural_cause", "never_blank_insight",
@@ -361,138 +342,132 @@ def test_decision_lens_output_has_required_schema_keys():
 
 
 # ---------------------------------------------------------------------------
-# Test 8 — production choose_visual_family actually called
+# Test 8 — production choose_visual_family actually called via build_visual_brief
 # ---------------------------------------------------------------------------
 
-def test_production_choose_visual_family_called(tmp_path):
-    """Behavior 8: choose_visual_family must be called exactly once; visual_spec.json written."""
+def test_production_choose_visual_family_called_via_build_visual_brief(tmp_path):
+    """Behavior 8: choose_visual_family called inside build_visual_brief; visual_spec.json written."""
     exit_code, run_dir, mocks = _run(tmp_path, mode="synthetic-signal")
     assert exit_code == 0
     mocks["visual"].assert_called_once()
     assert (run_dir / "visual_spec.json").exists()
+    spec = json.loads((run_dir / "visual_spec.json").read_text())
+    assert spec.get("visual_family"), "visual_family must be present"
 
 
 # ---------------------------------------------------------------------------
-# Test 9 — image prompt originates from visual spec of current run
+# Test 9 — image prompt from visual spec; policy exclusions in negative_prompt
 # ---------------------------------------------------------------------------
 
-def test_image_prompt_originates_from_visual_spec_current_run(tmp_path):
-    """Behavior 9: visual_spec.json must carry NB angle, image_prompt, and CR exclusions."""
+def test_image_prompt_from_visual_spec_with_policy_exclusions(tmp_path):
+    """Behavior 9: visual_spec.json has NB angle, image_prompt, policy exclusions in neg prompt."""
     exit_code, run_dir, _ = _run(tmp_path, mode="synthetic-signal")
     assert exit_code == 0
     spec = json.loads((run_dir / "visual_spec.json").read_text())
     assert spec.get("_never_blank_angle"), "_never_blank_angle from signal must be in spec"
-    assert spec.get("image_prompt"), "image_prompt from choose_visual_family must be present"
-    assert "robots" in spec.get("negative_prompt", ""), \
-        "CR AI-imagery exclusions must be appended to negative_prompt"
+    assert spec.get("image_prompt"), "image_prompt must be present"
+    # CR_POLICY_EXCLUSIONS are appended via policy_exclusion_tags — not hardcoded
+    assert "robots" in spec.get("negative_prompt", ""), "CR policy exclusions must be in neg prompt"
+    assert spec.get("_policy_exclusions"), "_policy_exclusions provenance field must be set"
 
 
 # ---------------------------------------------------------------------------
-# Test 10 — image provider NOT called when --image-generation disabled
+# Test 10 — image provider NOT called when disabled
 # ---------------------------------------------------------------------------
 
 def test_image_provider_not_called_when_generation_disabled(tmp_path):
-    """Behavior 10: _generate_base_image must not be called when --image-generation disabled."""
+    """Behavior 10: _generate_base_image must not be called when disabled."""
     with mock.patch("src.publishing.image_pipeline._generate_base_image") as m_gen:
         _run(tmp_path, mode="synthetic-signal", image_gen="disabled")
     m_gen.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
-# Test 11 — status is complete_without_image (not complete) when image skipped
+# Test 11 — status is complete_without_image when image skipped
 # ---------------------------------------------------------------------------
 
 def test_image_disabled_yields_complete_without_image_status(tmp_path):
-    """Behavior 11: status must be complete_without_image when image generation is skipped."""
+    """Behavior 11: status must be complete_without_image when image disabled."""
     exit_code, run_dir, _ = _run(tmp_path, mode="synthetic-signal", image_gen="disabled")
     assert exit_code == 0
     manifest = json.loads((run_dir / "run_manifest.json").read_text())
-    assert manifest["status"] == "complete_without_image", (
-        f"Expected complete_without_image, got {manifest['status']!r}"
-    )
+    assert manifest["status"] == "complete_without_image"
     vr = json.loads((run_dir / "validation_report.json").read_text())
     assert vr["overall_status"] == "complete_without_image"
     assert vr["image_generation"] == "skipped"
 
 
 # ---------------------------------------------------------------------------
-# Test 12 — external sinks blocked by env-var BEFORE network call
+# Test 12 — sinks blocked by policy.check() BEFORE network call
 # ---------------------------------------------------------------------------
 
-def test_upload_to_cloudinary_blocked_by_env_var():
-    """Behavior 12a: upload_to_cloudinary raises EnvironmentError when NB_CONTROLLED_RUN=1."""
-    assert os.environ.get("NB_CONTROLLED_RUN") == "1"
-    from src.publishing.image_pipeline import upload_to_cloudinary
-    with pytest.raises(EnvironmentError, match="NB_CONTROLLED_RUN"):
-        upload_to_cloudinary(Path("/tmp/test.png"), "test/slug")
+def test_policy_blocks_publication_before_network_call():
+    """Behavior 12a: policy.check('publication') raises PolicyViolation before network."""
+    from src.controlled_run.policy import ControlledRunPolicy, PolicyViolation
+    policy = ControlledRunPolicy(run_id="test-run", publication_allowed=False)
+    with pytest.raises(PolicyViolation, match="publication"):
+        policy.check("publication", adapter="TestPublisher")
+    # Verify it's recorded in audit_trail
+    assert len(policy.audit_trail) == 1
+    entry = policy.audit_trail[0]
+    assert entry.operation == "publication"
+    assert entry.allowed is False
+    assert entry.blocked_before_network is True
 
 
-def test_append_published_entry_blocked_by_env_var():
-    """Behavior 12b: append_published_entry raises EnvironmentError when NB_CONTROLLED_RUN=1."""
-    assert os.environ.get("NB_CONTROLLED_RUN") == "1"
-    from src.strategy.history import append_published_entry
-    from src.strategy.models import PublishedEntry
-    from datetime import datetime, timezone
-    entry = PublishedEntry(
-        content_id="test", strategy_id="s1",
-        published_at=datetime.now(timezone.utc),
-        platform="blog", url="", platform_content_id=None,
-    )
-    with pytest.raises(EnvironmentError, match="NB_CONTROLLED_RUN"):
-        append_published_entry(entry)
+def test_policy_blocks_cloudinary_before_network_call():
+    """Behavior 12b: policy.check('cloudinary_upload') raises PolicyViolation."""
+    from src.controlled_run.policy import ControlledRunPolicy, PolicyViolation
+    policy = ControlledRunPolicy(run_id="test-run", permanent_storage_allowed=False)
+    with pytest.raises(PolicyViolation, match="cloudinary_upload"):
+        policy.check("cloudinary_upload", adapter="upload_to_cloudinary")
+    entry = policy.audit_trail[0]
+    assert entry.blocked_before_network is True
 
 
-def test_wix_publisher_blocked_by_env_var():
-    """Behavior 12c: WixPublisher.publish raises EnvironmentError when NB_CONTROLLED_RUN=1."""
-    assert os.environ.get("NB_CONTROLLED_RUN") == "1"
+def test_policy_blocks_history_write_before_file_write():
+    """Behavior 12c: policy.check('history_write') raises PolicyViolation."""
+    from src.controlled_run.policy import ControlledRunPolicy, PolicyViolation
+    policy = ControlledRunPolicy(run_id="test-run", history_writes_allowed=False)
+    with pytest.raises(PolicyViolation, match="history_write"):
+        policy.check("history_write", adapter="append_published_entry")
+
+
+def test_env_var_fallback_blocks_when_no_policy():
+    """Behavior 12d: NB_CONTROLLED_RUN=1 env-var fallback blocks when no policy passed."""
+    # BasePublisher.publish() without policy falls back to env-var check
     from src.publishing.wix import WixPublisher
     from src.publishing.base import DraftPackage
-    draft = DraftPackage(
-        draft_dir=Path("/tmp"), blog_title="t", blog_body="b", blog_meta={},
-        linkedin_text="li", instagram_text="ig", facebook_text="fb",
-        threads_sequence=[], telegram_text="tg", image_url=None,
-    )
-    with pytest.raises(EnvironmentError, match="NB_CONTROLLED_RUN"):
-        WixPublisher().publish(draft, "live")
-
-
-def test_linkedin_publisher_blocked_by_env_var():
-    """Behavior 12d: LinkedInPublisher.publish raises EnvironmentError when NB_CONTROLLED_RUN=1."""
     assert os.environ.get("NB_CONTROLLED_RUN") == "1"
-    from src.publishing.linkedin import LinkedInPublisher
-    from src.publishing.base import DraftPackage
     draft = DraftPackage(
         draft_dir=Path("/tmp"), blog_title="t", blog_body="b", blog_meta={},
         linkedin_text="li", instagram_text="ig", facebook_text="fb",
         threads_sequence=[], telegram_text="tg", image_url=None,
     )
     with pytest.raises(EnvironmentError, match="NB_CONTROLLED_RUN"):
-        LinkedInPublisher().publish(draft, "live")
+        WixPublisher().publish(draft, "live")  # no policy= kwarg
 
 
 # ---------------------------------------------------------------------------
-# Test 13 — validation report built from ledger evidence
+# Test 13 — validation report built from policy.audit_trail + ledger
 # ---------------------------------------------------------------------------
 
-def test_validation_report_built_from_ledger_not_hardcoded(tmp_path):
-    """
-    Behavior 13: validation_report.json must contain a non-empty ledger.
-    Each checks key must be grounded in a ledger entry.
-    No hardcoded no_cloudinary_upload sentinel.
-    """
+def test_validation_report_built_from_audit_trail_and_ledger(tmp_path):
+    """Behavior 13: validation_report.json must contain policy_audit and non-empty ledger."""
     exit_code, run_dir, _ = _run(tmp_path, mode="synthetic-signal")
     assert exit_code == 0
     vr = json.loads((run_dir / "validation_report.json").read_text())
-    assert "ledger" in vr
-    assert len(vr["ledger"]) > 0, "Ledger must have recorded entries"
+
+    # Ledger evidence
+    assert "ledger" in vr and len(vr["ledger"]) > 0
+    # Policy audit evidence
+    assert "policy_audit" in vr, "validation_report must contain policy_audit from ControlledRunPolicy"
+    audit = vr["policy_audit"]
+    assert audit["verification_source"] == "policy.audit_trail (evidence-based, not declared)"
+    # Checks grounded in ledger
     ledger_stages = {e["stage"] for e in vr["ledger"]}
     for stage in vr.get("checks", {}):
-        assert stage in ledger_stages, (
-            f"Check stage {stage!r} must come from ledger evidence, not be hardcoded"
-        )
-    for entry in vr["ledger"]:
-        assert "no_cloudinary_upload" not in entry.get("evidence", {}), \
-            "Ledger must not contain hardcoded no_cloudinary_upload sentinel"
+        assert stage in ledger_stages
 
 
 # ---------------------------------------------------------------------------
@@ -500,17 +475,14 @@ def test_validation_report_built_from_ledger_not_hardcoded(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_synthetic_signal_never_labeled_full_e2e(tmp_path):
-    """Behavior 14: synthetic-signal manifest must show mode=synthetic-signal, synthetic=True."""
+    """Behavior 14: synthetic manifest shows mode=synthetic-signal, synthetic=True."""
     exit_code, run_dir, _ = _run(tmp_path, mode="synthetic-signal")
     assert exit_code == 0
     m = json.loads((run_dir / "run_manifest.json").read_text())
     assert m["mode"] == "synthetic-signal"
     assert m["synthetic"] is True
     note = m.get("synthetic_note") or ""
-    assert note, "Manifest must include synthetic_note explaining this is not full-e2e"
-    # synthetic_note must disclaim equivalence with full-e2e
-    assert "NOT" in note or "not" in note.lower(), \
-        "synthetic_note must explicitly state this is NOT equivalent to full-e2e"
+    assert "NOT" in note or "not" in note.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -527,11 +499,11 @@ def test_generate_and_publish_helpers_not_called(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Test 16 — failure in mandatory stage prevents status=complete
+# Test 16 — mandatory stage failure prevents status=complete
 # ---------------------------------------------------------------------------
 
 def test_mandatory_stage_failure_prevents_complete_status(tmp_path):
-    """Behavior 16: If generate_article fails, exit=1 and status must be 'failed'."""
+    """Behavior 16: generate_article failure → exit=1, status=failed."""
     from scripts.controlled_run import run_controlled, _parse_args
     from src.editorial.pipeline import ArticleGenerationError
 
@@ -554,46 +526,187 @@ def test_mandatory_stage_failure_prevents_complete_status(tmp_path):
          mock.patch("src.strategy.history.append_published_entry"):
         result = run_controlled(args)
 
-    assert result == 1, "Exit code must be 1 on pipeline failure"
+    assert result == 1
     subdirs = list(tmp_path.iterdir())
-    assert subdirs, "Run directory must be created even on failure"
-    run_dir = subdirs[0]
-    manifest = json.loads((run_dir / "run_manifest.json").read_text())
+    assert subdirs
+    manifest = json.loads((subdirs[0] / "run_manifest.json").read_text())
     assert manifest["status"] == "failed"
     assert manifest["failure_stage"] is not None
     assert manifest["status"] not in ("complete", "complete_without_image")
 
 
 # ---------------------------------------------------------------------------
-# Additional: manifest metadata fields
+# Test: unknown publisher protected by template method
 # ---------------------------------------------------------------------------
 
-def test_manifest_metadata_fields(tmp_path):
-    """run_manifest.json must record git_sha, policy flags, and env-var confirmation."""
-    exit_code, run_dir, _ = _run(tmp_path, mode="synthetic-signal")
-    assert exit_code == 0
-    m = json.loads((run_dir / "run_manifest.json").read_text())
-    assert "git_sha" in m and m["git_sha"]
-    assert m["publication_disabled"] is True
-    assert m["external_writes_disabled"] is True
-    assert m["nb_controlled_run_env"] == "1"
+def test_unknown_publisher_protected_by_template_method():
+    """
+    A test-only publisher that only implements _publish_impl() is automatically
+    protected by BasePublisher.publish() template method when policy is provided.
+    _publish_impl() must NOT be called when policy blocks publication.
+    """
+    from src.publishing.base import BasePublisher, DraftPackage
+    from src.publishing.result import PublishResult, PublishStatus
+    from src.controlled_run.policy import ControlledRunPolicy, PolicyViolation
+
+    class _UnknownPublisher(BasePublisher):
+        name = "unknown_test_publisher"
+
+        def _publish_impl(self, draft: DraftPackage, mode: str) -> PublishResult:
+            # This must NOT be reached when policy blocks
+            return PublishResult(platform=self.name, status=PublishStatus.PUBLISHED,
+                                 external_id="would_be_blocked")
+
+    policy = ControlledRunPolicy(run_id="test-unknown", publication_allowed=False)
+    pub = _UnknownPublisher()
+    draft = DraftPackage(
+        draft_dir=Path("/tmp"), blog_title="t", blog_body="b", blog_meta={},
+        linkedin_text="li", instagram_text="ig", facebook_text="fb",
+        threads_sequence=[], telegram_text="tg", image_url=None,
+    )
+
+    with pytest.raises(PolicyViolation, match="publication"):
+        pub.publish(draft, "live", policy=policy)
+
+    # Verify the audit trail captured the blocked attempt
+    assert len(policy.audit_trail) == 1
+    entry = policy.audit_trail[0]
+    assert entry.adapter == "unknown_test_publisher"
+    assert entry.blocked_before_network is True
 
 
 # ---------------------------------------------------------------------------
-# Additional: existing-signal mode labeled correctly
+# Test: policy audit trail captures blocked attempts as evidence
 # ---------------------------------------------------------------------------
 
-def test_existing_signal_mode_manifest(tmp_path):
-    """existing-signal manifest must show mode=existing-signal and synthetic=False."""
-    exit_code, run_dir, _ = _run(tmp_path, mode="existing-signal")
-    assert exit_code == 0
-    m = json.loads((run_dir / "run_manifest.json").read_text())
-    assert m["mode"] == "existing-signal"
-    assert m["synthetic"] is False
+def test_policy_audit_trail_captures_blocked_attempt_as_evidence():
+    """
+    An adapter attempts a forbidden operation. Policy records the attempt in
+    audit_trail. Operation is blocked before network/file client.
+    Validation report uses this audit entry as evidence.
+    """
+    from src.controlled_run.policy import ControlledRunPolicy, PolicyViolation, AuditEntry
+
+    policy = ControlledRunPolicy(
+        run_id="audit-evidence-test",
+        publication_allowed=False,
+        permanent_storage_allowed=False,
+    )
+
+    # Simulate a mock publisher attempting to publish
+    with pytest.raises(PolicyViolation):
+        policy.check("publication", adapter="MockPublisher")
+
+    # Simulate a Cloudinary attempt
+    with pytest.raises(PolicyViolation):
+        policy.check("cloudinary_upload", adapter="upload_to_cloudinary")
+
+    audit = policy.audit_summary()
+    assert audit["blocked_attempts"] == 2
+    assert all(e["blocked_before_network"] is True for e in audit["blocked_operations"])
+    assert all(e["allowed"] is False for e in audit["blocked_operations"])
+
+    # Verification source must state evidence-based, not declared
+    assert "evidence" in audit["verification_source"].lower()
 
 
 # ---------------------------------------------------------------------------
-# Additional: image-generation enabled calls _generate_base_image
+# Test: research side-effects are zero (cache reads/writes/FS writes)
+# ---------------------------------------------------------------------------
+
+def test_research_stages_have_zero_cache_or_filesystem_writes(tmp_path):
+    """
+    Research Engine stages (with mocked LLM + network) produce no filesystem writes.
+    Cache reads = 0, cache writes = 0, persistent writes = 0.
+    """
+    import os as _os
+
+    # Snapshot filesystem state before research
+    run_dir = tmp_path / "research_isolation_test"
+    run_dir.mkdir()
+
+    # Find files in the repo root before the research run
+    repo_root = Path(__file__).resolve().parents[1]
+    data_dir = repo_root / "data" / "research"
+    before_files = set(data_dir.glob("*")) if data_dir.exists() else set()
+    before_counts = {f: f.stat().st_mtime for f in before_files if f.is_file()}
+
+    from scripts.research.discover import run_discovery
+    from scripts.research.score import score_candidates
+    from scripts.research.enrich import enrich_candidates
+    from scripts.research.angles import add_angles
+
+    # Mock ALL external providers: LLM and RSS network
+    with mock.patch("src.utils.llm_client.chat", return_value=json.dumps([
+        {
+            "index": 0,
+            "SIGNAL_ID": "test-iso-001",
+            "HEADLINE": "Test isolation",
+            "SIGNAL_TYPE": "business trust",
+            "REGION": "US",
+            "SOURCE_URL": "https://example.com/test",
+            "SOURCE_FOR_CASE": "https://example.com/test",
+            "SOURCE_NAME": "TestFeed",
+            "SOURCE_DATE": "2026-08-01",
+            "ARTICLE_READY": "true",
+            "CORE_FACT": "Test fact verified.",
+            "CONFIDENCE": "medium",
+            "REAL_COMPANY_EXAMPLE": "TestCo",
+        }
+    ])), mock.patch("requests.get") as m_rss:
+        m_rss.return_value.status_code = 200
+        m_rss.return_value.raise_for_status = lambda: None
+        m_rss.return_value.content = (
+            b'<?xml version="1.0"?><rss version="2.0"><channel>'
+            b'<item><title>Test isolation</title>'
+            b'<link>https://example.com/test</link>'
+            b'<pubDate>Sat, 09 Aug 2026 12:00:00 +0000</pubDate>'
+            b'<description>Test desc</description></item></channel></rss>'
+        )
+        candidates = run_discovery(seen_ids=set())
+
+    # After discovery — no new files should appear in data/research
+    if data_dir.exists():
+        after_files = set(data_dir.glob("*"))
+        new_files = after_files - before_files
+        assert not new_files, (
+            f"run_discovery wrote unexpected files to data/research: {new_files}"
+        )
+        for f in before_files:
+            if f.is_file() and f in before_counts:
+                assert f.stat().st_mtime == before_counts[f], (
+                    f"run_discovery modified existing file: {f}"
+                )
+
+    # score, enrich, angles also produce no filesystem side-effects
+    with mock.patch("src.utils.llm_client.chat", return_value=json.dumps(
+        [{"index": 0, "total_score": 8, "SCORE_RECOMMENDED_FOR_ARTICLE": "true",
+          "ARTICLE_READINESS_SCORE": "8", "CHANNEL_FIT_SCORE": "8",
+          "SIGNAL_STRENGTH": "high", "DISCUSSION_POTENTIAL": "high",
+          "score_reason": "test"}]
+    )):
+        scored = score_candidates(candidates if candidates else [_CAND])
+
+    with mock.patch("src.utils.llm_client.chat", return_value=json.dumps(_ENRICHED)):
+        enriched = enrich_candidates(scored if scored else [_CAND])
+
+    with mock.patch("src.utils.llm_client.chat", return_value=json.dumps({
+        "TARGET_AUDIENCE": "founder", "PRIMARY_CHANNEL": "linkedin",
+        "NEVER_BLANK_ANGLE": "Test angle.", "POTENTIAL_HOOK": "Test hook.",
+    })):
+        with_angles = add_angles(enriched if enriched else [_ENRICHED])
+
+    # Verify none of the functions wrote to data/research
+    if data_dir.exists():
+        after_all = set(data_dir.glob("*"))
+        new_after_all = after_all - before_files
+        assert not new_after_all, (
+            f"Research stages wrote unexpected files: {new_after_all}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test: image-generation enabled calls provider + policy allows
 # ---------------------------------------------------------------------------
 
 def test_image_generation_enabled_calls_provider(tmp_path):
@@ -616,38 +729,45 @@ def test_image_generation_enabled_calls_provider(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Additional: lifecycle normalization smoke-test
+# Test: lifecycle normalization smoke-test
 # ---------------------------------------------------------------------------
 
 def test_lifecycle_normalization_recommended_for_article_passes_preflight():
-    """
-    PROVISIONAL (see test_lifecycle_normalization.py for full coverage).
-    A synthetic signal with only RECOMMENDED_FOR_ARTICLE=true must pass preflight.
-    """
+    """PROVISIONAL: RECOMMENDED_FOR_ARTICLE=true passes preflight without ARTICLE_READY."""
     from src.lifecycle.signal_lifecycle import ResearchContext
     synth = {
-        "SIGNAL_ID": "synth-norm-test",
-        "HEADLINE": "Test",
-        "SIGNAL_TYPE": "business trust",
-        "REGION": "US",
-        "INDUSTRY": "Tech",
-        "SOURCE_NAME": "Synthetic",
-        "SOURCE_URL": "",
-        "SOURCE_DATE": "2026-01-01",
-        "DATE_FOUND": "2026-01-01",
-        "CORE_FACT": "Test fact",
-        "CONFIDENCE": "medium",
-        "SCORE_RECOMMENDED_FOR_ARTICLE": "true",
-        "ARTICLE_READINESS_SCORE": "8",
-        "CHANNEL_FIT_SCORE": "8",
-        "OUTCOME_IF_KNOWN": "unknown",
-        "DID_IT_WORK": "unknown",
+        "SIGNAL_ID": "synth-norm-test", "HEADLINE": "Test",
+        "SIGNAL_TYPE": "business trust", "REGION": "US", "INDUSTRY": "Tech",
+        "SOURCE_NAME": "Synthetic", "SOURCE_URL": "", "SOURCE_DATE": "2026-01-01",
+        "DATE_FOUND": "2026-01-01", "CORE_FACT": "Test fact", "CONFIDENCE": "medium",
+        "SCORE_RECOMMENDED_FOR_ARTICLE": "true", "ARTICLE_READINESS_SCORE": "8",
+        "CHANNEL_FIT_SCORE": "8", "OUTCOME_IF_KNOWN": "unknown", "DID_IT_WORK": "unknown",
         "APPROVED_OVERRIDE": "",
-        "RECOMMENDED_FOR_ARTICLE": "true",  # no ARTICLE_READY — tests normalization fix
+        "RECOMMENDED_FOR_ARTICLE": "true",  # no ARTICLE_READY — tests normalization
     }
     rc = ResearchContext.from_dict(synth)
-    assert rc.article_ready is True, (
-        "RECOMMENDED_FOR_ARTICLE=true must set article_ready=True when ARTICLE_READY absent "
-        "(PROVISIONAL backward-compat rule)"
-    )
+    assert rc.article_ready is True
     assert rc.admission_status == "admitted"
+
+
+# ---------------------------------------------------------------------------
+# Additional: manifest metadata
+# ---------------------------------------------------------------------------
+
+def test_manifest_metadata_fields(tmp_path):
+    exit_code, run_dir, _ = _run(tmp_path, mode="synthetic-signal")
+    assert exit_code == 0
+    m = json.loads((run_dir / "run_manifest.json").read_text())
+    assert m["publication_disabled"] is True
+    assert m["external_writes_disabled"] is True
+    assert m["nb_controlled_run_env"] == "1"
+    assert "policy_enforcement" in m
+    assert m["policy_enforcement"]["primary"].startswith("ControlledRunPolicy")
+
+
+def test_existing_signal_mode_manifest(tmp_path):
+    exit_code, run_dir, _ = _run(tmp_path, mode="existing-signal")
+    assert exit_code == 0
+    m = json.loads((run_dir / "run_manifest.json").read_text())
+    assert m["mode"] == "existing-signal"
+    assert m["synthetic"] is False

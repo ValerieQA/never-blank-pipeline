@@ -17,7 +17,7 @@ Per the specs' own principle: a failed generation should skip publishing that si
 not publish a generic article to fill the gap.
 """
 
-from typing import Callable
+from typing import Callable, Optional
 
 from src.editorial.pattern_extractor import extract_pattern, SignalRejectedError
 from src.editorial.decision_lens_lite import generate_decision_lens
@@ -58,6 +58,7 @@ def generate_article(
     signal: dict,
     cta_mode: str = "none",
     strategy_context: dict | None = None,
+    decision_lens_fn: Optional[Callable] = None,
 ) -> dict:
     """
     Run the full Editorial Engine V2 pipeline for one enriched signal.
@@ -74,7 +75,7 @@ def generate_article(
     Returns:
         {
           "pattern": {...},              # Pattern Extractor output
-          "decision_lens": {...},
+          "decision_lens": {...},        # DL output (also captured by decision_lens_fn)
           "narrative_spine": {...},
           "structured_article": {...},   # Never Blank Voice output
           "platforms": {                 # Platform Composer output
@@ -82,6 +83,13 @@ def generate_article(
             "reading": {...}, "medium": {...}, "instagram": {...}, "short": {...},
           },
         }
+
+    decision_lens_fn:
+        Optional injectable callable with the same signature as generate_decision_lens.
+        When provided, it is called INSTEAD of the default generate_decision_lens.
+        Use this to record DL input/output without patching the module namespace.
+        Example: the controlled runner passes a wrapper that records I/O and calls
+        the real generate_decision_lens internally.
 
     Raises ArticleGenerationError if:
     - Pattern Extractor rejects the signal (stage = "pattern_extractor")
@@ -109,7 +117,8 @@ def generate_article(
         log.debug("Strategy context injected into enriched signal: strategy_id=%s",
                   strategy_context.get("strategy_id", "none"))
 
-    decision_lens = _run_stage("decision_lens_lite", generate_decision_lens, enriched)
+    _dl_fn = decision_lens_fn if decision_lens_fn is not None else generate_decision_lens
+    decision_lens = _run_stage("decision_lens_lite", _dl_fn, enriched)
     spine = _run_stage("narrative_spine", build_narrative_spine, decision_lens, enriched)
     hook = _run_stage("hook_engine", generate_hook, spine, decision_lens, enriched)
     reader_context = _run_stage("reader_context", build_reader_context, enriched)

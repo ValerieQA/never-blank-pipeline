@@ -10,11 +10,13 @@ import urllib.request
 import urllib.error
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import TYPE_CHECKING, Dict, Optional
 from pathlib import Path
-from typing import Optional
 
 from src.publishing.result import PublishResult, PublishStatus
+
+if TYPE_CHECKING:
+    from src.controlled_run.policy import ControlledRunPolicy
 
 
 # ── Draft loading ──────────────────────────────────────────────────────────────
@@ -171,29 +173,69 @@ def _fetch_h(
 class BasePublisher(ABC):
     name: str
 
-    def _guard_controlled_run(self) -> None:
-        """
-        Architectural guard: raises EnvironmentError if NB_CONTROLLED_RUN=1.
-        Subclasses MUST call this at the top of publish() before any network call.
+    # ── Template method (primary policy gate) ─────────────────────────────────
 
-        ARCHITECTURAL NOTE: The correct pattern is a template-method where
-        BasePublisher.publish() is non-abstract, calls _guard_controlled_run(),
-        then delegates to _publish_impl(). Refactoring to that pattern is
-        tracked separately. Until then, subclasses must call this guard explicitly.
-        This guard is the runtime protection; test-level mock.patch is an additional
-        safety net for the current transition period.
+    def publish(
+        self,
+        draft: "DraftPackage",
+        mode: str,
+        *,
+        policy: "ControlledRunPolicy | None" = None,
+    ) -> PublishResult:
         """
-        if os.environ.get("NB_CONTROLLED_RUN") == "1":
+        Template method — concrete, non-abstract.
+
+        Gate order (both must pass before _publish_impl is called):
+          1. ControlledRunPolicy.check("publication") when policy is provided.
+             This is the PRIMARY protection. Raises PolicyViolation before any
+             network/file/external-provider call.
+          2. NB_CONTROLLED_RUN=1 env-var check (defense-in-depth).
+             Raises EnvironmentError if the env-var guard fires and no policy
+             was supplied (legacy caller path).
+
+        Subclasses implement _publish_impl() only. They never need to add their
+        own guard calls. An unknown publisher that only implements _publish_impl()
+        is automatically protected by this template method.
+
+        TelegramPublisher is the only known exception: it overrides publish() to
+        accept a wix_url keyword argument, explicitly calls _check_policy(), and
+        then delegates to _publish_impl(). This exception is documented here.
+
+        mode: 'dry_run' | 'draft_only' | 'live'
+        """
+        if policy is not None:
+            policy.check("publication", adapter=getattr(self, "name", type(self).__name__))
+        elif os.environ.get("NB_CONTROLLED_RUN") == "1":
+            # Defense-in-depth for legacy callers that did not pass policy
             raise EnvironmentError(
                 f"{getattr(self, 'name', type(self).__name__)}.publish blocked: "
                 "NB_CONTROLLED_RUN=1 is set. Publication is forbidden in controlled-run mode."
             )
+        return self._publish_impl(draft, mode)
 
     @abstractmethod
-    def publish(self, draft: DraftPackage, mode: str) -> PublishResult:
+    def _publish_impl(self, draft: "DraftPackage", mode: str) -> PublishResult:
         """
-        mode: 'dry_run' | 'draft_only' | 'live'
+        Subclasses implement publication logic here. Never call guard methods
+        directly — the template method (publish()) handles policy enforcement.
         """
+
+    def _check_policy(
+        self,
+        policy: "ControlledRunPolicy | None",
+        operation: str = "publication",
+    ) -> None:
+        """
+        Helper for publishers that override publish() with extra kwargs
+        (e.g. TelegramPublisher with wix_url). Checks policy + env-var fallback.
+        """
+        if policy is not None:
+            policy.check(operation, adapter=getattr(self, "name", type(self).__name__))
+        elif os.environ.get("NB_CONTROLLED_RUN") == "1":
+            raise EnvironmentError(
+                f"{getattr(self, 'name', type(self).__name__)}.publish blocked: "
+                "NB_CONTROLLED_RUN=1 is set."
+            )
 
     # Convenience factories
     def _skip(self, reason: str) -> PublishResult:

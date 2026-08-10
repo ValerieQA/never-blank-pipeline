@@ -20,8 +20,22 @@ from src.publishing.result import PublishResult, PublishStatus
 class TelegramPublisher(BasePublisher):
     name = "telegram"
 
-    def publish(self, draft: DraftPackage, mode: str, wix_url: str = None) -> PublishResult:
-        self._guard_controlled_run()
+    def publish(  # type: ignore[override]  # wix_url extends base signature
+        self,
+        draft: DraftPackage,
+        mode: str,
+        wix_url: str = None,
+        *,
+        policy=None,
+    ) -> PublishResult:
+        """Override: accepts wix_url kwarg. Calls _check_policy before any I/O."""
+        self._check_policy(policy, operation="publication")
+        return self._publish_with_wix_url(draft, mode, wix_url=wix_url)
+
+    def _publish_impl(self, draft: DraftPackage, mode: str) -> PublishResult:  # type: ignore[override]
+        return self._publish_with_wix_url(draft, mode, wix_url=None)
+
+    def _publish_with_wix_url(self, draft: DraftPackage, mode: str, wix_url: str = None) -> PublishResult:
         token      = os.getenv("NB_TELEGRAM_BOT_TOKEN", "")
         channel_id = os.getenv("NB_TELEGRAM_CHANNEL_ID", "")
 

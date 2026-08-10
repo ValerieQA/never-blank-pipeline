@@ -124,8 +124,7 @@ def _md_to_rich_nodes(markdown: str) -> list[dict]:
 class WixPublisher(BasePublisher):
     name = "wix"
 
-    def publish(self, draft: DraftPackage, mode: str) -> PublishResult:
-        self._guard_controlled_run()
+    def _publish_impl(self, draft: DraftPackage, mode: str) -> PublishResult:
         api_key  = os.getenv("NB_WIX_API_KEY", "")
         site_id  = os.getenv("NB_WIX_SITE_ID", "")
         owner_id = os.getenv("NB_WIX_POST_OWNER_ID", "")
