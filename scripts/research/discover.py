@@ -18,8 +18,9 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
-from src.utils.llm_client import chat, model_discovery
+from src.utils.llm_client import chat as _default_chat, model_discovery
 from src.utils.config_loader import load_prompt
+from src.research.providers import LLMProvider, FeedProvider, DefaultLLMProvider, DefaultFeedProvider
 
 log = get_logger("research.discover")
 
@@ -42,10 +43,18 @@ def make_signal_id(url: str, headline: str) -> str:
     return hashlib.md5(key.encode()).hexdigest()[:16]
 
 
-def _fetch_rss(feed_url: str, lookback_hours: int) -> list[dict]:
+def _fetch_rss(
+    feed_url: str,
+    lookback_hours: int,
+    feed_provider: "FeedProvider | None" = None,
+) -> list[dict]:
     try:
-        resp = requests.get(feed_url, timeout=15, headers={"User-Agent": "NeverBlank/1.0"})
-        resp.raise_for_status()
+        if feed_provider is not None:
+            raw_content = feed_provider.fetch(feed_url)
+        else:
+            resp = requests.get(feed_url, timeout=15, headers={"User-Agent": "NeverBlank/1.0"})
+            resp.raise_for_status()
+            raw_content = resp.content
     except Exception as exc:
         log.warning("RSS fetch failed %s: %s", feed_url, exc)
         return []
@@ -54,7 +63,7 @@ def _fetch_rss(feed_url: str, lookback_hours: int) -> list[dict]:
     items = []
 
     try:
-        root = ET.fromstring(resp.content)
+        root = ET.fromstring(raw_content)
         ns = {"atom": "http://www.w3.org/2005/Atom"}
         entries = root.findall(".//item") or root.findall(".//atom:entry", ns)
         for item in entries:
@@ -90,7 +99,12 @@ def _fetch_rss(feed_url: str, lookback_hours: int) -> list[dict]:
     return items
 
 
-def _llm_select_indices(items: list[dict], categories: list[str], avoid: list[str]) -> list[int]:
+def _llm_select_indices(
+    items: list[dict],
+    categories: list[str],
+    avoid: list[str],
+    llm_provider: "LLMProvider | None" = None,
+) -> list[int]:
     """Ask LLM to return indices of relevant items. Avoids JSON array parsing issues."""
     batch_text = "\n".join(
         f"[{i}] {it['title']} | {it.get('summary', '')[:150]}"
@@ -104,8 +118,10 @@ def _llm_select_indices(items: list[dict], categories: list[str], avoid: list[st
     system = prompt["system"]
     user   = prompt["user"]
 
+    _chat = llm_provider.chat if llm_provider is not None else _default_chat
+
     try:
-        raw = chat(system, user, json_mode=True, model=model_discovery())
+        raw = _chat(system, user, json_mode=True, model=model_discovery())
         parsed = json.loads(raw) if isinstance(raw, str) else raw
         if isinstance(parsed, dict):
             indices = parsed.get("selected", [])
@@ -118,7 +134,11 @@ def _llm_select_indices(items: list[dict], categories: list[str], avoid: list[st
         return []
 
 
-def _llm_enrich_candidates(items: list[dict], categories: list[str]) -> list[dict]:
+def _llm_enrich_candidates(
+    items: list[dict],
+    categories: list[str],
+    llm_provider: "LLMProvider | None" = None,
+) -> list[dict]:
     """Enrich selected items with signal metadata via LLM."""
     if not items:
         return []
@@ -135,8 +155,10 @@ def _llm_enrich_candidates(items: list[dict], categories: list[str]) -> list[dic
     system = prompt["system"]
     user   = prompt["user"]
 
+    _chat = llm_provider.chat if llm_provider is not None else _default_chat
+
     try:
-        raw = chat(system, user, json_mode=True, model=model_discovery())
+        raw = _chat(system, user, json_mode=True, model=model_discovery())
         parsed = json.loads(raw) if isinstance(raw, str) else raw
         if isinstance(parsed, dict):
             for v in parsed.values():
@@ -150,12 +172,17 @@ def _llm_enrich_candidates(items: list[dict], categories: list[str]) -> list[dic
         return []
 
 
-def _llm_filter_candidates(items: list[dict], categories: list[str], avoid: list[str]) -> list[dict]:
+def _llm_filter_candidates(
+    items: list[dict],
+    categories: list[str],
+    avoid: list[str],
+    llm_provider: "LLMProvider | None" = None,
+) -> list[dict]:
     if not items:
         return []
 
     # Step 1: get indices of relevant items (simple, reliable)
-    indices = _llm_select_indices(items, categories, avoid)
+    indices = _llm_select_indices(items, categories, avoid, llm_provider=llm_provider)
     if not indices:
         log.info("LLM selected 0 items from %d candidates", len(items))
         return []
@@ -164,7 +191,7 @@ def _llm_filter_candidates(items: list[dict], categories: list[str], avoid: list
     log.info("LLM selected %d items by index: %s", len(selected_items), indices)
 
     # Step 2: enrich selected items with signal metadata
-    enriched = _llm_enrich_candidates(selected_items, categories)
+    enriched = _llm_enrich_candidates(selected_items, categories, llm_provider=llm_provider)
 
     # Map enriched metadata back onto selected items
     meta_by_idx = {e.get("index", i): e for i, e in enumerate(enriched)}
@@ -186,7 +213,24 @@ def _llm_filter_candidates(items: list[dict], categories: list[str], avoid: list
     return result
 
 
-def run_discovery(seen_ids: set) -> list[dict]:
+def run_discovery(
+    seen_ids: set,
+    llm_provider: "LLMProvider | None" = None,
+    feed_provider: "FeedProvider | None" = None,
+) -> list[dict]:
+    """
+    Stage 1 — Discovery.
+
+    Args:
+        seen_ids:      Set of already-seen signal IDs (prevents duplicates).
+                       Pass set() to disable cross-run deduplication.
+        llm_provider:  Optional LLMProvider for DI. Defaults to DefaultLLMProvider
+                       (calls src.utils.llm_client.chat).
+        feed_provider: Optional FeedProvider for DI. Defaults to DefaultFeedProvider
+                       (calls requests.get). Pass a FakeFeedProvider in tests.
+
+    No filesystem writes. No cache. seen_ids is caller-owned.
+    """
     cfg      = _load_sources()
     lookback = cfg.get("lookback_hours", 72)
     cats     = cfg.get("signal_categories", [])
@@ -195,7 +239,7 @@ def run_discovery(seen_ids: set) -> list[dict]:
 
     all_items: list[dict] = []
     for source in cfg.get("rss_feeds", []):
-        items = _fetch_rss(source["url"], lookback)
+        items = _fetch_rss(source["url"], lookback, feed_provider=feed_provider)
         for it in items:
             it["SOURCE_NAME"] = source["name"]
         all_items.extend(items)
@@ -214,7 +258,8 @@ def run_discovery(seen_ids: set) -> list[dict]:
     if not new_items:
         return []
 
-    filtered = _llm_filter_candidates(new_items[:max_cand], cats, avoid)
+    filtered = _llm_filter_candidates(new_items[:max_cand], cats, avoid,
+                                       llm_provider=llm_provider)
     log.info("LLM selected %d candidates", len(filtered))
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")

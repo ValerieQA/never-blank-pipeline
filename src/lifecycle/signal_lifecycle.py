@@ -427,31 +427,21 @@ class ResearchContext:
 
         def _resolve_article_ready(d: dict) -> bool:
             """
-            PROVISIONAL BACKWARD-COMPATIBILITY RULE
+            Canonical resolution: reads ARTICLE_READY only.
 
-            Resolution order (first match wins, fail-closed):
-              1. ARTICLE_READY present → use it (canonical; takes precedence)
-              2. RECOMMENDED_FOR_ARTICLE present, ARTICLE_READY absent → alias
-              3. Both absent → False (fail-closed)
+            The RECOMMENDED_FOR_ARTICLE alias normalization has been removed
+            (Option A — see LIFECYCLE_ALIAS_PROPOSAL.md). The product owner
+            has not confirmed that RECOMMENDED_FOR_ARTICLE is semantically
+            equivalent to ARTICLE_READY. Until confirmed, treating them as
+            aliases risks admitting signals that have not been factually verified.
 
-            Conflict: ARTICLE_READY wins over RECOMMENDED_FOR_ARTICLE.
-            score_recommended is NOT a second veto (per Stage 2 commit 4ad2433).
-            force_override does NOT change article_ready.
-
-            OPEN QUESTION FOR PRODUCT OWNER:
-            Does the product owner confirm that legacy RECOMMENDED_FOR_ARTICLE=true
-            is semantically equivalent to canonical ARTICLE_READY=true?
-            This rule treats them as equivalent. If they are NOT equivalent
-            (e.g. RECOMMENDED_FOR_ARTICLE=true may mean "selected for consideration"
-            rather than "factually verified"), this normalization could admit
-            signals that should remain blocked. Awaiting explicit confirmation.
+            Resolution (fail-closed):
+              1. ARTICLE_READY present → parse its value (true/false)
+              2. ARTICLE_READY absent  → False (blocked)
             """
-            raw_ar   = d.get("ARTICLE_READY")
-            raw_rfar = d.get("RECOMMENDED_FOR_ARTICLE")
+            raw_ar = d.get("ARTICLE_READY")
             if raw_ar is not None:
                 return _bool(raw_ar)
-            if raw_rfar is not None:
-                return _bool(raw_rfar)
             return False
 
         force_override = (

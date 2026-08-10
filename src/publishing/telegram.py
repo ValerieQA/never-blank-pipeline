@@ -20,20 +20,19 @@ from src.publishing.result import PublishResult, PublishStatus
 class TelegramPublisher(BasePublisher):
     name = "telegram"
 
-    def publish(  # type: ignore[override]  # wix_url extends base signature
-        self,
-        draft: DraftPackage,
-        mode: str,
-        wix_url: str = None,
-        *,
-        policy=None,
-    ) -> PublishResult:
-        """Override: accepts wix_url kwarg. Calls _check_policy before any I/O."""
-        self._check_policy(policy, operation="publication")
-        return self._publish_with_wix_url(draft, mode, wix_url=wix_url)
+    def _publish_impl(self, draft: DraftPackage, mode: str, **kwargs) -> PublishResult:
+        """
+        Template-method delegate. wix_url is forwarded via **kwargs from
+        BasePublisher.publish() so that TelegramPublisher does NOT need to
+        override publish() — the base gate (policy check) runs unconditionally.
 
-    def _publish_impl(self, draft: DraftPackage, mode: str) -> PublishResult:  # type: ignore[override]
-        return self._publish_with_wix_url(draft, mode, wix_url=None)
+        Callers pass wix_url as a keyword arg to publish():
+            publisher.publish(draft, mode, wix_url="https://...")
+        BasePublisher.publish() pops `policy` from kwargs, then calls:
+            self._publish_impl(draft, mode, wix_url="https://...")
+        """
+        wix_url = kwargs.get("wix_url")
+        return self._publish_with_wix_url(draft, mode, wix_url=wix_url)
 
     def _publish_with_wix_url(self, draft: DraftPackage, mode: str, wix_url: str = None) -> PublishResult:
         token      = os.getenv("NB_TELEGRAM_BOT_TOKEN", "")

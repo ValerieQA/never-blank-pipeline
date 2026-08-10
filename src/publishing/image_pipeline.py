@@ -1275,11 +1275,36 @@ def _generate_base_image(
     visual_family: str,
     negative_prompt: str = "",
     log=print,
+    image_provider=None,
 ) -> tuple[bytes, str]:
     """
-    Generate base image: try OpenAI first, fall back to visual-family-aware programmatic.
+    Generate base image: try ImageProvider (injected or default), fall back to programmatic.
     Returns (bytes, method_used).
+
+    Args:
+        prompt:         Image generation prompt.
+        visual_family:  Visual family name (used for programmatic fallback).
+        negative_prompt: Negative prompt (passed to provider).
+        log:            Logger callable.
+        image_provider: Optional ImageProvider for DI. When provided, calls
+                        image_provider.generate(prompt, ...) instead of
+                        _generate_ai_image(). Integration tests pass FakeImageProvider.
+                        Production passes None (uses DefaultImageProvider logic).
+
+    Policy note: the caller (controlled run orchestrator) calls
+        policy.check("image_generation", adapter="_generate_base_image")
+    BEFORE calling this function. This function does not check policy itself.
     """
+    from src.publishing.providers import ImageProvider as _IP
+
+    if image_provider is not None and isinstance(image_provider, _IP):
+        # Injected provider (fake or real) — call directly
+        return image_provider.generate(
+            prompt,
+            visual_family   = visual_family,
+            negative_prompt = negative_prompt,
+        )
+
     if os.getenv("NB_OPENAI_API_KEY", ""):
         try:
             data, method = _generate_ai_image(prompt, negative_prompt, log=log)
@@ -1379,9 +1404,26 @@ def composite_image(base_bytes: bytes, hook_text: str) -> Image.Image:
 
 # ── Cloudinary upload ──────────────────────────────────────────────────────────
 
-def upload_to_cloudinary(image_path: Path, slug: str) -> str:
-    # Architectural guard: NB_CONTROLLED_RUN=1 blocks this sink before any network call.
-    # This is the runtime protection layer; test-level mock.patch is an additional safety net.
+def upload_to_cloudinary(
+    image_path: Path,
+    slug: str,
+    *,
+    policy=None,
+) -> str:
+    """
+    Upload image to Cloudinary.
+
+    Policy check: if `policy` is provided, calls
+      policy.check("cloudinary_upload", adapter="upload_to_cloudinary")
+    BEFORE any Cloudinary client call. This produces an AuditEntry with
+    blocked_before_network=True when the operation is not allowed.
+
+    Fallback: NB_CONTROLLED_RUN=1 env-var blocks the call for legacy callers
+    that do not pass a policy.
+    """
+    if policy is not None:
+        policy.check("cloudinary_upload", adapter="upload_to_cloudinary")
+
     import os as _os
     if _os.environ.get("NB_CONTROLLED_RUN") == "1":
         raise EnvironmentError(

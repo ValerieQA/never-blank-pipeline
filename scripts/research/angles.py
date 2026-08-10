@@ -11,13 +11,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
 from src.utils.llm_client import chat, model_enrich
 from src.utils.config_loader import load_prompt
+from src.research.providers import LLMProvider, DefaultLLMProvider
 
 log = get_logger("research.angles")
 
 VALID_AUDIENCES = {"founder", "owner", "consultant", "service_business", "small_team", "agency", "creator"}
 VALID_CHANNELS  = {"linkedin", "blog", "threads", "story", "instagram"}
 
-def generate_angles(signal: dict) -> dict:
+def generate_angles(signal: dict, llm_provider: "LLMProvider | None" = None) -> dict:
     prompt = load_prompt("research/angles", {
         "headline":                   signal.get("HEADLINE", ""),
         "core_fact":                  signal.get("CORE_FACT", ""),
@@ -28,8 +29,10 @@ def generate_angles(signal: dict) -> dict:
         "signal_type":                signal.get("SIGNAL_TYPE", ""),
     })
 
+    _chat = llm_provider.chat if llm_provider is not None else chat
+
     try:
-        raw = chat(prompt["system"], prompt["user"], json_mode=True, model=model_enrich())
+        raw = _chat(prompt["system"], prompt["user"], json_mode=True, model=model_enrich())
         angles = json.loads(raw) if isinstance(raw, str) else raw
         if not isinstance(angles, dict):
             angles = {}
@@ -47,5 +50,8 @@ def generate_angles(signal: dict) -> dict:
     return merged
 
 
-def add_angles(signals: list[dict]) -> list[dict]:
-    return [generate_angles(s) for s in signals]
+def add_angles(
+    signals: list[dict],
+    llm_provider: "LLMProvider | None" = None,
+) -> list[dict]:
+    return [generate_angles(s, llm_provider=llm_provider) for s in signals]

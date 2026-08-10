@@ -22,7 +22,7 @@ _GRAPH = "https://graph.facebook.com/v21.0"
 class FacebookPublisher(BasePublisher):
     name = "facebook"
 
-    def _publish_impl(self, draft: DraftPackage, mode: str) -> PublishResult:
+    def _publish_impl(self, draft: DraftPackage, mode: str, **kwargs) -> PublishResult:
         page_id    = os.getenv("NB_META_FB_PAGE_ID", "")
         page_token = os.getenv("NB_META_FB_PAGE_TOKEN", "")
 

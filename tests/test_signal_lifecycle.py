@@ -481,24 +481,25 @@ def test_selection_gate_equivalence():
 def test_preflight_equivalence():
     """
     Publish preflight equivalence: rc.article_ready + rc.force_override must
-    produce the same blocked/not-blocked decision as the normalized dict-based
-    preflight for all 242 signals_active.jsonl records.
+    produce the same blocked/not-blocked decision as the canonical dict-based
+    preflight for all signals_active.jsonl records.
 
-    Normalized preflight (post-normalization-fix):
-      Resolves article_ready from ARTICLE_READY, falling back to
-      RECOMMENDED_FOR_ARTICLE when ARTICLE_READY is absent (backward-compat).
-      If both absent → False (fail-closed).
+    Lifecycle Option A (active since Phase 3):
+      _resolve_article_ready() reads ONLY ARTICLE_READY.
+      RECOMMENDED_FOR_ARTICLE is no longer a fallback alias.
+      Signals with RECOMMENDED_FOR_ARTICLE=true but no ARTICLE_READY field
+      are BLOCKED (fail-closed). See LIFECYCLE_ALIAS_PROPOSAL.md.
 
-    New preflight (Stage 1.5 + normalization fix):
+    Canonical preflight baseline (Option A):
+      ARTICLE_READY present → use it.
+      ARTICLE_READY absent  → False (fail-closed; no alias fallback).
+
+    New preflight branch:
       rc = ResearchContext.from_dict(signal)
       blocked = not rc.article_ready and not rc.force_override
 
-    Score (SCORE_RECOMMENDED) is NOT part of the publish preflight — this test
-    explicitly verifies that the fix from REQUEST CHANGES #2 is correct.
-
-    NOTE: The normalization fix intentionally changes behavior for signals that
-    have RECOMMENDED_FOR_ARTICLE=true but no ARTICLE_READY field — these are now
-    admitted rather than blocked. The baseline here reflects that new intent.
+    Both sides must agree. Signals with only RECOMMENDED_FOR_ARTICLE (no
+    ARTICLE_READY) are correctly blocked by both branches under Option A.
     """
     mismatches = []
 
@@ -506,15 +507,12 @@ def test_preflight_equivalence():
         s = json.loads(line)
         rc = ResearchContext.from_dict(s)
 
-        # Normalized preflight baseline — mirrors _resolve_article_ready() logic
+        # Option A canonical baseline — ARTICLE_READY only, no alias fallback
         raw_ar   = s.get("ARTICLE_READY")
-        raw_rfar = s.get("RECOMMENDED_FOR_ARTICLE")
         if raw_ar is not None:
             normalized_ar = str(raw_ar).lower() == "true"
-        elif raw_rfar is not None:
-            normalized_ar = str(raw_rfar).lower() == "true"
         else:
-            normalized_ar = False
+            normalized_ar = False  # fail-closed; RECOMMENDED_FOR_ARTICLE not consulted
 
         normalized_fo = (
             str(s.get("FORCE_PUBLISH_OVERRIDE", "") or s.get("APPROVED_OVERRIDE", "")).lower()
@@ -537,7 +535,8 @@ def test_preflight_equivalence():
             })
 
     assert mismatches == [], (
-        f"{len(mismatches)} preflight mismatches:\n"
+        f"{len(mismatches)} preflight mismatches (Option A: ARTICLE_READY only — "
+        "RECOMMENDED_FOR_ARTICLE alias is inactive; see LIFECYCLE_ALIAS_PROPOSAL.md):\n"
         + "\n".join(str(m) for m in mismatches[:5])
     )
 

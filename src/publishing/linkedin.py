@@ -36,7 +36,7 @@ _ZERNIO_POSTS_URL = "https://zernio.com/api/v1/posts"
 class LinkedInPublisher(BasePublisher):
     name = "linkedin"
 
-    def _publish_impl(self, draft: DraftPackage, mode: str) -> PublishResult:
+    def _publish_impl(self, draft: DraftPackage, mode: str, **kwargs) -> PublishResult:
         import os
 
         api_key    = os.getenv("NB_ZERNIO_API_KEY", "")

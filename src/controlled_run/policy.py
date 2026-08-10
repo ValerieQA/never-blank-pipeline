@@ -29,6 +29,25 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 
+class PolicyRequiredError(Exception):
+    """
+    Raised when a controlled-run boundary is reached without a ControlledRunPolicy.
+
+    In the controlled-run execution path, every publisher and adapter that
+    performs external I/O MUST receive an explicit ControlledRunPolicy.
+    If the boundary is reached without one (and NB_CONTROLLED_RUN=1 is set),
+    this error fires instead of AttributeError or a silent pass-through.
+    """
+
+    def __init__(self, adapter: str):
+        self.adapter = adapter
+        super().__init__(
+            f"PolicyRequiredError: {adapter!r} reached a controlled-run boundary "
+            "but no ControlledRunPolicy was provided. "
+            "Pass policy=<ControlledRunPolicy> to the publisher or set it via set_policy()."
+        )
+
+
 class PolicyViolation(Exception):
     """Raised by ControlledRunPolicy.check() when an operation is not allowed."""
 

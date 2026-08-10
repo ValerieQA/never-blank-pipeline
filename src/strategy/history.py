@@ -183,7 +183,7 @@ def load_decision_log() -> list[dict]:
 
 # ── 4B.3 Published Content Index ───────────────────────────────────────────────
 
-def append_published_entry(entry: PublishedEntry) -> None:
+def append_published_entry(entry: PublishedEntry, *, policy=None) -> None:
     """
     Append one PublishedEntry to the published content index.
     Creates the file if it does not exist.
@@ -191,8 +191,16 @@ def append_published_entry(entry: PublishedEntry) -> None:
     Callers MUST validate that entry.strategy_id is non-empty before calling.
     Non-fatal: errors are logged and swallowed so publish never fails on index write.
 
-    Architectural guard: NB_CONTROLLED_RUN=1 blocks this sink before any file write.
+    Policy check: if `policy` is provided, calls
+        policy.check("history_write", adapter="append_published_entry")
+    BEFORE any filesystem write. This produces an AuditEntry with
+    blocked_before_network=True when the operation is not allowed.
+
+    Fallback: NB_CONTROLLED_RUN=1 env-var blocks for legacy callers.
     """
+    if policy is not None:
+        policy.check("history_write", adapter="append_published_entry")
+
     if os.environ.get("NB_CONTROLLED_RUN") == "1":
         raise EnvironmentError(
             "append_published_entry blocked: NB_CONTROLLED_RUN=1 is set. "

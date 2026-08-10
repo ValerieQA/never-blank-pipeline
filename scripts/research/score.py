@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
 from src.utils.llm_client import chat, model_scoring
 from src.utils.config_loader import load_prompt
+from src.research.providers import LLMProvider, DefaultLLMProvider
 
 log = get_logger("research.score")
 
@@ -24,7 +25,11 @@ def _load_weights() -> dict:
         return yaml.safe_load(f)
 
 
-def _llm_score_batch(candidates: list[dict], criteria: dict) -> list[dict]:
+def _llm_score_batch(
+    candidates: list[dict],
+    criteria: dict,
+    llm_provider: "LLMProvider | None" = None,
+) -> list[dict]:
     if not candidates:
         return []
 
@@ -45,8 +50,10 @@ def _llm_score_batch(candidates: list[dict], criteria: dict) -> list[dict]:
     system = prompt["system"]
     user   = prompt["user"]
 
+    _chat = llm_provider.chat if llm_provider is not None else chat
+
     try:
-        raw = chat(system, user, json_mode=True, model=model_scoring())
+        raw = _chat(system, user, json_mode=True, model=model_scoring())
         parsed = json.loads(raw) if isinstance(raw, str) else raw
         if isinstance(parsed, dict):
             for v in parsed.values():
@@ -62,13 +69,16 @@ def _llm_score_batch(candidates: list[dict], criteria: dict) -> list[dict]:
         return []
 
 
-def score_candidates(candidates: list[dict]) -> list[dict]:
+def score_candidates(
+    candidates: list[dict],
+    llm_provider: "LLMProvider | None" = None,
+) -> list[dict]:
     cfg        = _load_weights()
     criteria   = cfg.get("criteria", {})
     thresholds = cfg.get("thresholds", {})
     top_n      = thresholds.get("top_n_to_enrich", 10)
 
-    scored_meta = _llm_score_batch(candidates, criteria)
+    scored_meta = _llm_score_batch(candidates, criteria, llm_provider=llm_provider)
 
     result = []
     for entry in scored_meta:

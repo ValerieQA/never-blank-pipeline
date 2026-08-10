@@ -16,7 +16,7 @@ from pathlib import Path
 from src.publishing.result import PublishResult, PublishStatus
 
 if TYPE_CHECKING:
-    from src.controlled_run.policy import ControlledRunPolicy
+    from src.controlled_run.policy import ControlledRunPolicy, PolicyRequiredError
 
 
 # ── Draft loading ──────────────────────────────────────────────────────────────
@@ -173,51 +173,68 @@ def _fetch_h(
 class BasePublisher(ABC):
     name: str
 
+    def __init__(self):
+        # Instance-level policy (set at construction or via set_policy).
+        # The template method uses this if no policy= kwarg is passed.
+        self._policy: "ControlledRunPolicy | None" = None
+
+    def set_policy(self, policy: "ControlledRunPolicy") -> None:
+        """Inject a ControlledRunPolicy for this publisher instance."""
+        self._policy = policy
+
     # ── Template method (primary policy gate) ─────────────────────────────────
 
     def publish(
         self,
         draft: "DraftPackage",
         mode: str,
-        *,
-        policy: "ControlledRunPolicy | None" = None,
+        **kwargs,
     ) -> PublishResult:
         """
-        Template method — concrete, non-abstract.
+        Template method — concrete, non-overrideable gate.
 
-        Gate order (both must pass before _publish_impl is called):
-          1. ControlledRunPolicy.check("publication") when policy is provided.
-             This is the PRIMARY protection. Raises PolicyViolation before any
-             network/file/external-provider call.
-          2. NB_CONTROLLED_RUN=1 env-var check (defense-in-depth).
-             Raises EnvironmentError if the env-var guard fires and no policy
-             was supplied (legacy caller path).
+        Gate order:
+          1. Resolve effective policy: kwarg `policy=` takes precedence
+             over instance `self._policy`.
+          2. If policy is provided: call policy.check("publication") before
+             any I/O. This is the PRIMARY protection (ControlledRunPolicy DI).
+             Raises PolicyViolation (subclass of Exception) on block.
+          3. If no policy AND NB_CONTROLLED_RUN=1 is set: raise PolicyRequiredError.
+             This prevents legacy callers from silently bypassing protection
+             in a controlled-run context.
+          4. Delegates to _publish_impl(draft, mode, **kwargs).
 
-        Subclasses implement _publish_impl() only. They never need to add their
-        own guard calls. An unknown publisher that only implements _publish_impl()
-        is automatically protected by this template method.
+        Subclasses implement _publish_impl() ONLY. They MUST NOT add their own
+        policy calls — the gate runs unconditionally here.
 
-        TelegramPublisher is the only known exception: it overrides publish() to
-        accept a wix_url keyword argument, explicitly calls _check_policy(), and
-        then delegates to _publish_impl(). This exception is documented here.
+        An unknown publisher that only implements _publish_impl() is
+        automatically protected: ANY publication attempt in a controlled-run
+        context (with policy or with env-var set) is blocked before _publish_impl.
+
+        **kwargs: forwarded verbatim to _publish_impl. Telegram uses wix_url= here.
 
         mode: 'dry_run' | 'draft_only' | 'live'
         """
+        from src.controlled_run.policy import PolicyRequiredError
+
+        policy = kwargs.pop("policy", None) or self._policy
+        adapter_name = getattr(self, "name", type(self).__name__)
+
         if policy is not None:
-            policy.check("publication", adapter=getattr(self, "name", type(self).__name__))
+            policy.check("publication", adapter=adapter_name)
         elif os.environ.get("NB_CONTROLLED_RUN") == "1":
-            # Defense-in-depth for legacy callers that did not pass policy
-            raise EnvironmentError(
-                f"{getattr(self, 'name', type(self).__name__)}.publish blocked: "
-                "NB_CONTROLLED_RUN=1 is set. Publication is forbidden in controlled-run mode."
-            )
-        return self._publish_impl(draft, mode)
+            raise PolicyRequiredError(adapter_name)
+
+        return self._publish_impl(draft, mode, **kwargs)
 
     @abstractmethod
-    def _publish_impl(self, draft: "DraftPackage", mode: str) -> PublishResult:
+    def _publish_impl(self, draft: "DraftPackage", mode: str, **kwargs) -> PublishResult:
         """
-        Subclasses implement publication logic here. Never call guard methods
-        directly — the template method (publish()) handles policy enforcement.
+        Subclasses implement publication logic here.
+
+        **kwargs: extra keyword arguments forwarded from publish().
+          - TelegramPublisher uses kwargs.get("wix_url").
+          - All other publishers should ignore **kwargs.
         """
 
     def _check_policy(
@@ -226,16 +243,18 @@ class BasePublisher(ABC):
         operation: str = "publication",
     ) -> None:
         """
-        Helper for publishers that override publish() with extra kwargs
-        (e.g. TelegramPublisher with wix_url). Checks policy + env-var fallback.
+        Legacy helper — kept for backward compatibility with any publisher
+        that was written before the template method was finalized.
+        New code should rely on publish() for policy checks.
         """
-        if policy is not None:
-            policy.check(operation, adapter=getattr(self, "name", type(self).__name__))
+        from src.controlled_run.policy import PolicyRequiredError
+
+        effective = policy or self._policy
+        adapter_name = getattr(self, "name", type(self).__name__)
+        if effective is not None:
+            effective.check(operation, adapter=adapter_name)
         elif os.environ.get("NB_CONTROLLED_RUN") == "1":
-            raise EnvironmentError(
-                f"{getattr(self, 'name', type(self).__name__)}.publish blocked: "
-                "NB_CONTROLLED_RUN=1 is set."
-            )
+            raise PolicyRequiredError(adapter_name)
 
     # Convenience factories
     def _skip(self, reason: str) -> PublishResult:

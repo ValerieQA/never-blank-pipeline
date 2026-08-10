@@ -62,6 +62,11 @@ class VisualBrief:
     brand_name:          str
     policy_exclusions:   str   # exclusions added by policy (empty in production)
 
+    # Channel-aware specs: per-channel dimensions and safe zones.
+    # Populated from PLATFORM_SIZES in image_pipeline.py.
+    # The primary channel's spec influences the image prompt (aspect ratio).
+    channel_specs: dict = field(default_factory=dict)
+
     # Extra fields from choose_visual_family (card rhythm etc.)
     extra: dict = field(default_factory=dict)
 
@@ -81,6 +86,7 @@ class VisualBrief:
             "_article_summary": self.article_summary,
             "_brand_name":      self.brand_name,
             "_policy_exclusions": self.policy_exclusions,
+            "channel_specs":    self.channel_specs,
         }
         d.update(self.extra)
         return d
@@ -105,6 +111,7 @@ def build_visual_brief(
     registry: dict,
     log=print,
     policy_exclusion_tags: str = "",
+    channels: list | None = None,
 ) -> VisualBrief:
     """
     Build a VisualBrief from a signal and article result using production
@@ -125,11 +132,17 @@ def build_visual_brief(
                               Production passes "" (nothing extra).
                               Controlled run passes CR_POLICY_EXCLUSIONS.
                               Never hardcoded in this function.
+        channels:             List of target channels (e.g. ["linkedin", "blog"]).
+                              Used to build channel_specs with per-channel
+                              dimensions and safe zones. The PRIMARY channel
+                              (first in list or PRIMARY_CHANNEL from signal)
+                              influences the image prompt aspect ratio.
 
     Returns:
-        VisualBrief with all fields required for image generation.
+        VisualBrief with all fields required for image generation, including
+        channel_specs: {channel: {width, height, aspect_ratio, safe_zone_pct}}
     """
-    from src.publishing.image_pipeline import choose_visual_family
+    from src.publishing.image_pipeline import choose_visual_family, PLATFORM_SIZES
 
     title       = signal.get("HEADLINE", "")
     observation = signal.get("NEVER_BLANK_ANGLE") or signal.get("CORE_FACT") or title
@@ -138,6 +151,41 @@ def build_visual_brief(
     platforms   = article_result.get("platforms", {})
     blog_data   = platforms.get("long", {})
     blog_body   = blog_data.get("body", "") if isinstance(blog_data, dict) else ""
+
+    # Determine primary channel for image sizing
+    effective_channels = channels or [signal.get("PRIMARY_CHANNEL", "linkedin"), "blog"]
+    primary_channel    = effective_channels[0] if effective_channels else "linkedin"
+
+    # Build channel_specs from PLATFORM_SIZES
+    channel_specs: dict = {}
+    for ch in effective_channels:
+        size = PLATFORM_SIZES.get(ch)
+        if size:
+            w, h = size
+            ratio = round(w / h, 4)
+            channel_specs[ch] = {
+                "width":         w,
+                "height":        h,
+                "aspect_ratio":  ratio,
+                "aspect_label":  f"{w}×{h}",
+                # Safe zone: content-safe inset as percentage of dimensions
+                # Instagram 4:5 has tighter safe zones than LinkedIn 1.91:1.
+                "safe_zone_pct": 0.10 if ch == "instagram" else 0.08,
+            }
+
+    # Primary channel's aspect ratio annotated in the image prompt
+    primary_spec  = channel_specs.get(primary_channel, {})
+    aspect_label  = primary_spec.get("aspect_label", "1080×1080")
+    aspect_ratio  = primary_spec.get("aspect_ratio", 1.0)
+
+    # Aspect-ratio hint appended to prompt so the image model knows the crop
+    # (DALL-E 3: square, landscape 1792×1024, portrait 1024×1792)
+    if aspect_ratio > 1.5:
+        dalle_size = "landscape (1792×1024)"
+    elif aspect_ratio < 0.8:
+        dalle_size = "portrait (1024×1792)"
+    else:
+        dalle_size = "square (1024×1024)"
 
     spec = choose_visual_family(
         title        = title,
@@ -158,6 +206,11 @@ def build_visual_brief(
     else:
         combined_neg = brand_neg
 
+    # Annotate image_prompt with primary-channel aspect ratio context
+    base_prompt   = spec.get("image_prompt", "")
+    channel_hint  = f" [Primary channel: {primary_channel}, target {aspect_label}, {dalle_size}]"
+    image_prompt  = f"{base_prompt}{channel_hint}" if base_prompt else base_prompt
+
     # Carry through any extra fields from choose_visual_family (card texture etc.)
     known_keys = {"visual_family", "dominant_palette", "image_prompt", "hook_text",
                   "negative_prompt", "logo_placement", "rationale"}
@@ -166,7 +219,7 @@ def build_visual_brief(
     return VisualBrief(
         visual_family    = spec.get("visual_family", ""),
         dominant_palette = spec.get("dominant_palette", ""),
-        image_prompt     = spec.get("image_prompt", ""),
+        image_prompt     = image_prompt,
         hook_text        = spec.get("hook_text", ""),
         negative_prompt  = combined_neg,
         logo_placement   = spec.get("logo_placement", "bottom_right"),
@@ -177,5 +230,6 @@ def build_visual_brief(
         article_summary  = blog_body[:200],
         brand_name       = brand_name,
         policy_exclusions = policy_exclusion_tags,
+        channel_specs    = channel_specs,
         extra            = extra,
     )

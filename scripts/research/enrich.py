@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
 from src.utils.llm_client import chat, model_enrich
 from src.utils.config_loader import load_prompt
+from src.research.providers import LLMProvider, DefaultLLMProvider
 
 log = get_logger("research.enrich")
 
@@ -72,7 +73,7 @@ def determine_article_readiness(signal: dict) -> tuple[bool, str]:
     return True, "evidence verified" + (" (company case)" if company_case_verified else " (research/data)")
 
 
-def enrich_signal(signal: dict) -> dict:
+def enrich_signal(signal: dict, llm_provider: "LLMProvider | None" = None) -> dict:
     prompt = load_prompt("research/enrich", {
         "headline":    signal.get("HEADLINE", ""),
         "source_name": signal.get("SOURCE_NAME", ""),
@@ -84,8 +85,10 @@ def enrich_signal(signal: dict) -> dict:
         "industry":    signal.get("INDUSTRY", ""),
     })
 
+    _chat = llm_provider.chat if llm_provider is not None else chat
+
     try:
-        raw = chat(prompt["system"], prompt["user"], json_mode=True, model=model_enrich())
+        raw = _chat(prompt["system"], prompt["user"], json_mode=True, model=model_enrich())
         enriched = json.loads(raw) if isinstance(raw, str) else raw
         if not isinstance(enriched, dict):
             enriched = {}
@@ -125,9 +128,12 @@ def enrich_signal(signal: dict) -> dict:
     return merged
 
 
-def enrich_candidates(candidates: list[dict]) -> list[dict]:
+def enrich_candidates(
+    candidates: list[dict],
+    llm_provider: "LLMProvider | None" = None,
+) -> list[dict]:
     result = []
     for c in candidates:
         log.info("Enriching: %s", c.get("HEADLINE", "")[:60])
-        result.append(enrich_signal(c))
+        result.append(enrich_signal(c, llm_provider=llm_provider))
     return result
