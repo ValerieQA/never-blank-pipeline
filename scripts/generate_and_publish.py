@@ -178,12 +178,14 @@ def _save_generated(
     wix_url: str,
     strategy_id: str,
     strategy_started_at: str,
+    strategy_version: str,
 ) -> None:
     path.write_text(json.dumps({
         "signal_id":           signal_id,
         "headline":            headline,
         "generated_at":        datetime.now(timezone.utc).isoformat(),
         "strategy_id":         strategy_id,
+        "strategy_version":    strategy_version,
         "strategy_started_at": strategy_started_at,
         "wix_url":             wix_url,
         "blog_article":        blog_body,
@@ -255,6 +257,7 @@ def main() -> int:
     cta_mode            = get_cta_mode(active_strategy)
     strategy_id         = strategy_context.get("strategy_id", "")
     strategy_started_at = str(active_strategy.started_at) if active_strategy.started_at else ""
+    strategy_version    = active_strategy.strategy_version
 
     print(f"  ✓  strategy_id:   {strategy_id}")
     print(f"  ✓  started_at:    {strategy_started_at}")
@@ -372,6 +375,16 @@ def main() -> int:
         if pkg_strategy_id != strategy_id:
             print(f"  ERROR: strategy_id mismatch: package={pkg_strategy_id!r} active={strategy_id!r}")
             return 1
+        pkg_strategy_version = pkg.get("strategy_version", "")
+        if not pkg_strategy_version or not pkg_strategy_version.strip():
+            print("  ERROR: Package has no strategy_version — cannot verify provenance")
+            return 1
+        if pkg_strategy_version != strategy_version:
+            print(
+                f"  ERROR: strategy_version mismatch: "
+                f"package={pkg_strategy_version!r} active={strategy_version!r}"
+            )
+            return 1
         raw_gen_at = pkg.get("generated_at", "")
         try:
             from datetime import date
@@ -398,12 +411,29 @@ def main() -> int:
         telegram_text  = pkg.get("telegram_text", "")
         echo_line      = pkg.get("echo_line", "")
 
-        print(f"  ✓  headline:  {headline[:70]}")
-        print(f"  ✓  blog:      {len(blog_body)} chars")
-        print(f"  ✓  linkedin:  {len(linkedin_text)} chars")
-        print(f"  ✓  strategy_id matches, generated_at={raw_gen_at[:10]}")
+        print(f"  ✓  headline:         {headline[:70]}")
+        print(f"  ✓  blog:             {len(blog_body)} chars")
+        print(f"  ✓  linkedin:         {len(linkedin_text)} chars")
+        print(f"  ✓  strategy_id:      {pkg_strategy_id}")
+        print(f"  ✓  strategy_version: {pkg_strategy_version}")
+        print(f"  ✓  generated_at:     {raw_gen_at[:10]}")
         print(f"\n  LinkedIn preview (first 400 chars):")
         print(f"  {linkedin_text[:400].replace(chr(10), chr(10)+'  ')}")
+
+        # ── Validate loaded package content ───────────────────────────────────
+        print(f"\n[4/6] Validating loaded package content…")
+        pkg_errors: list[str] = []
+        for platform, text in [("blog", blog_body), ("linkedin", linkedin_text)]:
+            try:
+                validate_article_for_publish(text, platform=platform)
+                print(f"  ✓  {platform} validation passed")
+            except Exception as exc:
+                print(f"  ✗  {platform} validation FAILED: {exc}")
+                pkg_errors.append(f"{platform}: {exc}")
+
+        if pkg_errors:
+            print(f"\n  ERROR: {len(pkg_errors)} validation error(s) in loaded package — not publishing")
+            return 1
 
     else:
         # ── 3b. Generate content via LLM ─────────────────────────────────────
@@ -473,14 +503,17 @@ def main() -> int:
             generated_path, signal_id, headline,
             blog_body, linkedin_text, facebook_text, instagram_text,
             threads_seq, telegram_text, "",
-            strategy_id, strategy_started_at,
+            strategy_id, strategy_started_at, strategy_version,
         )
         print(f"\n  ✓  Saved {generated_path}")
-        print(f"       strategy_id={strategy_id}  generated_at=now")
+        print(f"       strategy_id={strategy_id}  strategy_version={strategy_version}  generated_at=now")
 
     if args.dry_run:
         print(f"\n{SEP}")
-        print("  DRY RUN — generation + validation complete, not publishing.")
+        if args.from_package:
+            print("  DRY RUN — existing package loaded and validated; not published.")
+        else:
+            print("  DRY RUN — generated content validated; not published.")
         print(f"  run_id: {run_ctx.run_id}  [COMPLETE]")
         print(SEP)
         return 0
@@ -567,12 +600,12 @@ def main() -> int:
             print(f"           error={res['error_message']}")
     print(f"  —  [skipped-not-r1] {', '.join(_NON_R1_PUBLISHERS)}")
 
-    # Update generated JSON with final wix_url
+    # Update generated JSON with final wix_url — preserve strategy_version provenance
     _save_generated(
         generated_path, signal_id, headline,
         blog_body, linkedin_text, facebook_text, instagram_text,
         threads_seq, telegram_text, wix_url,
-        strategy_id, strategy_started_at,
+        strategy_id, strategy_started_at, strategy_version,
     )
 
     # ── Write to History ──────────────────────────────────────────────────────

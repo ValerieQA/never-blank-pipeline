@@ -121,6 +121,33 @@ _FAKE_ARTICLE = {
 }
 
 
+def _valid_package(*, strategy_version: str = "1", **overrides) -> dict:
+    """Return a minimal valid _generated.json package dict."""
+    pkg = {
+        "signal_id":         _SIGNAL_ID,
+        "strategy_id":       "2026-07-presence-debt-campaign-1",
+        "strategy_version":  strategy_version,
+        "generated_at":      "2026-08-11T10:00:00+00:00",
+        "headline":          "AI adoption accelerates in SMBs",
+        "blog_article":      "Blog body text sufficient for validation.",
+        "linkedin_post":     "LinkedIn post text.",
+        "facebook_post":     "Facebook post text.",
+        "instagram_caption": "Instagram caption.",
+        "threads_sequence":  ["Post 1.", "Post 2.", "Post 3."],
+        "telegram_text":     "Telegram text.",
+        "echo_line":         "They waited.",
+    }
+    pkg.update(overrides)
+    return pkg
+
+
+def _write_package(tmp_path: Path, pkg: dict | None = None) -> Path:
+    """Write package to tmp_path/<signal_id>_generated.json, return path."""
+    f = tmp_path / f"{_SIGNAL_ID}_generated.json"
+    f.write_text(json.dumps(pkg or _valid_package()), encoding="utf-8")
+    return f
+
+
 def _make_ok_publish_result(platform: str):
     r = mock.MagicMock()
     r.ok.return_value = True
@@ -391,21 +418,7 @@ class TestNonR1PublisherIsolation:
 class TestFromPackage:
 
     def test_from_package_creates_content_assignment(self, tmp_path):
-        # Create a valid generated package so --from-package can load it
-        gen_file = tmp_path / f"{_SIGNAL_ID}_generated.json"
-        gen_file.write_text(json.dumps({
-            "signal_id":        _SIGNAL_ID,
-            "strategy_id":      "2026-07-presence-debt-campaign-1",
-            "generated_at":     "2026-08-11T10:00:00+00:00",
-            "headline":         "AI adoption accelerates in SMBs",
-            "blog_article":     "Blog body.",
-            "linkedin_post":    "LinkedIn post.",
-            "facebook_post":    "Facebook post.",
-            "instagram_caption":"Instagram caption.",
-            "threads_sequence": ["Post 1.", "Post 2.", "Post 3."],
-            "telegram_text":    "Telegram text.",
-            "echo_line":        "They waited.",
-        }))
+        _write_package(tmp_path)
 
         argv, patches = _base_patches(dry_run=True, from_package=True)
         patches["PACKAGES_DIR"] = tmp_path
@@ -563,3 +576,191 @@ class TestDiscoveryOnlyPath:
         })
         out = capsys.readouterr().out
         assert "not a Release 1 canonical run" in out or "discovery" in out.lower()
+
+
+# ===========================================================================
+# BLOCKER 1 — strategy_version provenance in generated packages
+# ===========================================================================
+
+class TestStrategyVersionProvenance:
+
+    def _run_fresh_gen_with_real_save(self, tmp_path: Path) -> Path:
+        """Run fresh-gen dry-run letting _save_generated write to tmp_path. Return written path."""
+        import scripts.generate_and_publish as gap_module
+        from scripts.generate_and_publish import _save_generated as real_save
+
+        argv, patches = _base_patches(dry_run=True)
+        del patches["_save_generated"]  # let the real one run
+        patches["PACKAGES_DIR"] = tmp_path
+
+        with mock.patch("sys.argv", argv), mock.patch.multiple(gap_module, **patches):
+            main()
+
+        return tmp_path / f"{_SIGNAL_ID}_generated.json"
+
+    def test_fresh_gen_persists_exact_strategy_version(self, tmp_path):
+        written = self._run_fresh_gen_with_real_save(tmp_path)
+        assert written.exists(), "Generated JSON was not written"
+        pkg = json.loads(written.read_text())
+        assert pkg["strategy_version"] == "1"
+
+    def test_fresh_gen_strategy_version_matches_active_strategy(self, tmp_path):
+        written = self._run_fresh_gen_with_real_save(tmp_path)
+        pkg = json.loads(written.read_text())
+        assert pkg["strategy_version"] == _STRATEGY_STUB.strategy_version
+
+    def test_from_package_matching_version_accepted(self, tmp_path):
+        _write_package(tmp_path, _valid_package(strategy_version="1"))
+        argv, patches = _base_patches(dry_run=True, from_package=True)
+        patches["PACKAGES_DIR"] = tmp_path
+
+        import scripts.generate_and_publish as gap_module
+        with mock.patch("sys.argv", argv), mock.patch.multiple(gap_module, **patches):
+            exit_code = main()
+
+        assert exit_code == 0
+
+    def test_from_package_mismatched_version_fails_before_publisher(self, tmp_path, capsys):
+        _write_package(tmp_path, _valid_package(strategy_version="2"))  # active is "1"
+        argv, patches = _base_patches(dry_run=False, from_package=True)
+        patches["PACKAGES_DIR"] = tmp_path
+        wix_cls = mock.MagicMock()
+        li_cls = mock.MagicMock()
+
+        import scripts.generate_and_publish as gap_module
+        with mock.patch("sys.argv", argv), \
+             mock.patch.multiple(gap_module, **patches), \
+             mock.patch.object(gap_module, "WixPublisher", wix_cls), \
+             mock.patch.object(gap_module, "LinkedInPublisher", li_cls):
+            exit_code = main()
+
+        assert exit_code == 1
+        out = capsys.readouterr().out
+        assert "strategy_version" in out and "mismatch" in out
+        wix_cls.assert_not_called()
+        li_cls.assert_not_called()
+
+    def test_from_package_missing_version_fails_closed(self, tmp_path, capsys):
+        pkg = _valid_package()
+        del pkg["strategy_version"]
+        _write_package(tmp_path, pkg)
+        argv, patches = _base_patches(dry_run=True, from_package=True)
+        patches["PACKAGES_DIR"] = tmp_path
+
+        import scripts.generate_and_publish as gap_module
+        with mock.patch("sys.argv", argv), mock.patch.multiple(gap_module, **patches):
+            exit_code = main()
+
+        assert exit_code == 1
+        out = capsys.readouterr().out
+        assert "strategy_version" in out
+
+    def test_from_package_blank_version_fails_closed(self, tmp_path, capsys):
+        _write_package(tmp_path, _valid_package(strategy_version=""))
+        argv, patches = _base_patches(dry_run=True, from_package=True)
+        patches["PACKAGES_DIR"] = tmp_path
+
+        import scripts.generate_and_publish as gap_module
+        with mock.patch("sys.argv", argv), mock.patch.multiple(gap_module, **patches):
+            exit_code = main()
+
+        assert exit_code == 1
+        out = capsys.readouterr().out
+        assert "strategy_version" in out
+
+    def test_resave_after_publish_preserves_strategy_version(self, tmp_path):
+        """After controlled-live publish, re-save must keep strategy_version == "1"."""
+        from scripts.generate_and_publish import _save_generated as real_save
+
+        argv, patches = _base_patches(dry_run=False)
+        del patches["_save_generated"]
+        patches["PACKAGES_DIR"] = tmp_path
+        wix = mock.MagicMock()
+        wix.publish.return_value = _make_ok_publish_result("wix")
+        li = mock.MagicMock()
+        li.publish.return_value = _make_ok_publish_result("linkedin")
+
+        import scripts.generate_and_publish as gap_module
+        with mock.patch("sys.argv", argv), \
+             mock.patch.multiple(gap_module, **patches), \
+             mock.patch.object(gap_module, "WixPublisher", return_value=wix), \
+             mock.patch.object(gap_module, "LinkedInPublisher", return_value=li):
+            main()
+
+        written = tmp_path / f"{_SIGNAL_ID}_generated.json"
+        assert written.exists(), "Re-saved JSON not found"
+        pkg = json.loads(written.read_text())
+        assert pkg["strategy_version"] == "1"
+        assert pkg["strategy_id"] == "2026-07-presence-debt-campaign-1"
+
+
+# ===========================================================================
+# BLOCKER 2 — validation in --from-package path
+# ===========================================================================
+
+class TestFromPackageValidation:
+
+    def test_validation_runs_for_blog_content(self, tmp_path):
+        _write_package(tmp_path)
+        argv, patches = _base_patches(dry_run=True, from_package=True)
+        patches["PACKAGES_DIR"] = tmp_path
+        validate_mock = mock.MagicMock(return_value=None)
+        patches["validate_article_for_publish"] = validate_mock
+
+        import scripts.generate_and_publish as gap_module
+        with mock.patch("sys.argv", argv), mock.patch.multiple(gap_module, **patches):
+            exit_code = main()
+
+        assert exit_code == 0
+        blog_calls = [c for c in validate_mock.call_args_list if c.kwargs.get("platform") == "blog"]
+        assert len(blog_calls) == 1
+
+    def test_validation_runs_for_linkedin_content(self, tmp_path):
+        _write_package(tmp_path)
+        argv, patches = _base_patches(dry_run=True, from_package=True)
+        patches["PACKAGES_DIR"] = tmp_path
+        validate_mock = mock.MagicMock(return_value=None)
+        patches["validate_article_for_publish"] = validate_mock
+
+        import scripts.generate_and_publish as gap_module
+        with mock.patch("sys.argv", argv), mock.patch.multiple(gap_module, **patches):
+            exit_code = main()
+
+        assert exit_code == 0
+        li_calls = [c for c in validate_mock.call_args_list if c.kwargs.get("platform") == "linkedin"]
+        assert len(li_calls) == 1
+
+    def test_failing_validation_prevents_publisher_instantiation(self, tmp_path):
+        _write_package(tmp_path)
+        argv, patches = _base_patches(dry_run=False, from_package=True)
+        patches["PACKAGES_DIR"] = tmp_path
+        patches["validate_article_for_publish"] = mock.MagicMock(
+            side_effect=ValueError("content too short")
+        )
+        wix_cls = mock.MagicMock()
+        li_cls = mock.MagicMock()
+
+        import scripts.generate_and_publish as gap_module
+        with mock.patch("sys.argv", argv), \
+             mock.patch.multiple(gap_module, **patches), \
+             mock.patch.object(gap_module, "WixPublisher", wix_cls), \
+             mock.patch.object(gap_module, "LinkedInPublisher", li_cls):
+            exit_code = main()
+
+        assert exit_code == 1
+        wix_cls.assert_not_called()
+        li_cls.assert_not_called()
+
+    def test_dry_run_from_package_message_is_truthful(self, tmp_path, capsys):
+        _write_package(tmp_path)
+        argv, patches = _base_patches(dry_run=True, from_package=True)
+        patches["PACKAGES_DIR"] = tmp_path
+
+        import scripts.generate_and_publish as gap_module
+        with mock.patch("sys.argv", argv), mock.patch.multiple(gap_module, **patches):
+            exit_code = main()
+
+        assert exit_code == 0
+        out = capsys.readouterr().out
+        assert "existing package loaded and validated" in out
+        assert "generation" not in out.lower() or "not published" in out
