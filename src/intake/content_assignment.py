@@ -9,59 +9,66 @@ knowledge leaking into the core pipeline.
 
 Field reference
 ---------------
-assignment_id       Required. Stable, unique identifier for this assignment.
-                    Normalised from signal_id when constructed from JSONL.
-origin              Required. Where the assignment came from: "jsonl",
-                    "api", "ui", etc.  Must be a non-empty string.
-topic               Optional str.  The editorial topic or question being
-                    addressed.  At least one of topic / source_material
-                    must be present and non-whitespace.
-source_material     Optional str.  Primary source text, URL, or reference
-                    material the article will draw on.  Separate field from
-                    topic — do not collapse.
-submitted_at        Required.  Timezone-aware datetime (UTC preferred).
-                    Naive datetimes are rejected.
-user_instruction    Optional free-text instruction from the requestor.
-target_audience     Optional segment label (e.g. "agencies, consultants").
+assignment_id       Required str.  Stable unique identifier for this
+                    assignment.  Normalised from SIGNAL_ID when built from
+                    JSONL.  Must be non-empty and non-whitespace.
+origin              Required str.  Where the assignment came from: "jsonl",
+                    "api", "ui", etc.  Must be non-empty and non-whitespace.
+topic               Optional str or None.  The editorial topic or question
+                    being addressed.  At least one of topic / source_material
+                    must be a non-whitespace string.
+source_material     Optional str or None.  Primary source text, URL, or
+                    reference material the article will draw on.  Separate
+                    field from topic — do not collapse.
+submitted_at        Required timezone-aware datetime.  Naive datetimes are
+                    rejected.
+user_instruction    Optional str or None.  Free-text instruction from the
+                    requestor.
+target_audience     Optional str or None.  Segment label, e.g.
+                    "agencies, consultants".
 publishing_constraints
-                    Optional dict of channel-level flags, e.g.
-                    {"linkedin": {"dry_run": true}}.  Must be a plain dict
-                    with string keys and JSON-compatible values.
-references          List of attached reference dicts, e.g.
-                    [{"url": "https://…", "label": "primary source"}].
-                    Each item must be a dict with string keys.
-strategy_ref        Required.  Identifier of the active Business Strategy
-                    Configuration, e.g. "never-blank-v1".
-strategy_version    Required.  Semver-style version string, e.g. "1.0.0".
-correlation         Optional CorrelationMetadata.  Narrow Release-1 contract
-                    for correlating a run back to its origin.  See
-                    CorrelationMetadata for field definitions.
+                    dict[str, JsonValue].  Channel-level flags, e.g.
+                    {"linkedin": {"dry_run": true}}.  All keys must be
+                    strings.  All values must be JSON-compatible (no
+                    datetimes, sets, or custom objects).
+references          list[dict[str, JsonValue]].  Attached reference records.
+                    Each element must be a dict with string keys and
+                    JSON-compatible values.
+strategy_ref        Required str.  Identifier of the active Business
+                    Strategy Configuration, e.g. "never-blank-v1".
+strategy_version    Required str.  Version string, e.g. "1.0.0".
+correlation         Optional CorrelationMetadata.  Narrow Release-1 contract.
+                    See CorrelationMetadata for field definitions.
 
 Correlation metadata contract
 ------------------------------
-Two explicit optional identifiers cover all Release-1 traceability needs:
+Two explicit optional non-empty string identifiers cover all Release-1
+traceability needs:
 
   external_request_id   The ID assigned by the caller (API gateway, queue
                          message, webhook).  Enables cross-system lookups
                          without embedding transport-specific objects.
   conversation_id       Stable session token for multi-turn interactions
-                         (e.g. a Slack thread or a chat session).  Optional
-                         even in interactive flows.
+                         (e.g. a Slack thread or a chat session).
 
 Design choice: an unrestricted dict was rejected because it would allow
 arbitrary transport payloads (Telegram Update objects, WhatsApp message
-wrappers, raw HTTP headers) to leak into the core contract.  Explicit
+wrappers, raw HTTP headers) to leak into the core contract.  Two explicit
 optional strings are sufficient for Release 1 and keep the boundary clean.
+
+Empty-string and whitespace-only values are rejected — a blank ID is not a
+valid correlation handle.
 
 Serialization
 -------------
-- to_dict() → JSON-compatible dict.  submitted_at serialised as ISO-8601
-  with explicit UTC offset (e.g. "2026-08-11T10:00:00+00:00").
+- model_dump() / .to_dict() → JSON-compatible dict.  submitted_at
+  serialised as ISO-8601 with explicit UTC offset (e.g.
+  "2026-08-11T10:00:00+00:00").
 - from_dict() → ContentAssignment.  Validates on construction; raises
   ValueError with an actionable English message on any invalid field.
+  Unknown top-level keys are rejected.
 - Round-trip: from_dict(ca.to_dict()) is equal to the original instance.
-- No secrets appear in serialised output — topic/source_material are
-  user content, not credentials.
+- No secrets appear in serialised output.
 
 JSONL adapter
 -------------
@@ -69,262 +76,241 @@ from_jsonl_signal(signal, *, strategy_ref, strategy_version, origin="jsonl")
 maps the existing JSONL signal dict (keyed by uppercase SIGNAL_ID,
 HEADLINE, CORE_FACT, etc.) to ContentAssignment.  The signal's CORE_FACT
 becomes source_material; HEADLINE becomes topic.  Research logic is not
-touched.
+touched.  The input dict is never mutated.
 """
 
 from __future__ import annotations
 
-import re
+import json as _json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
+from pydantic import ValidationError as _PydanticValidationError
+
+
+# ---------------------------------------------------------------------------
+# JSON-compatibility helper
+# ---------------------------------------------------------------------------
+
+def _assert_json_compatible(value: Any, path: str) -> None:
+    """
+    Recursively verify that *value* can be serialized by json.dumps().
+
+    Raises ValueError with an actionable message that includes the field
+    path and the offending type on the first non-serializable node found.
+    """
+    try:
+        _json.dumps(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"{path} contains a non-JSON-serializable value: {exc}. "
+            f"Only str, int, float, bool, None, list, and dict are allowed."
+        ) from exc
 
 
 # ---------------------------------------------------------------------------
 # CorrelationMetadata
 # ---------------------------------------------------------------------------
 
-class CorrelationMetadata:
+class CorrelationMetadata(BaseModel):
     """
     Narrow correlation contract for Release 1.
+
+    Both fields are optional, but when supplied they must be non-empty,
+    non-whitespace strings.  Unknown fields are rejected.
 
     Attributes
     ----------
     external_request_id
         Identifier assigned by the external caller (API gateway, queue,
-        webhook).  Enables cross-system lookups.  Optional.
+        webhook).  Enables cross-system lookups without transport objects.
     conversation_id
-        Session token for multi-turn interactions.  Optional.
+        Session token for multi-turn interactions.
     """
 
-    __slots__ = ("external_request_id", "conversation_id")
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
-    def __init__(
-        self,
-        *,
-        external_request_id: Optional[str] = None,
-        conversation_id: Optional[str] = None,
-    ) -> None:
-        if external_request_id is not None and not isinstance(external_request_id, str):
+    external_request_id: Optional[str] = None
+    conversation_id: Optional[str] = None
+
+    @field_validator("external_request_id", "conversation_id", mode="before")
+    @classmethod
+    def _reject_blank(cls, v: Any, info: Any) -> Any:
+        if v is None:
+            return v
+        if not isinstance(v, str):
             raise ValueError(
-                "correlation.external_request_id must be a string or None; "
-                f"got {type(external_request_id).__name__}"
+                f"correlation.{info.field_name} must be a string or None; "
+                f"got {type(v).__name__}"
             )
-        if conversation_id is not None and not isinstance(conversation_id, str):
+        if not v.strip():
             raise ValueError(
-                "correlation.conversation_id must be a string or None; "
-                f"got {type(conversation_id).__name__}"
+                f"correlation.{info.field_name} must not be empty or "
+                f"whitespace-only when provided"
             )
-        self.external_request_id = external_request_id
-        self.conversation_id = conversation_id
+        return v
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "external_request_id": self.external_request_id,
-            "conversation_id": self.conversation_id,
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "CorrelationMetadata":
-        if not isinstance(data, dict):
-            raise ValueError(
-                f"correlation must be a dict; got {type(data).__name__}"
-            )
-        allowed = {"external_request_id", "conversation_id"}
-        unknown = set(data.keys()) - allowed
-        if unknown:
-            raise ValueError(
-                f"correlation contains unknown fields: {sorted(unknown)}. "
-                f"Allowed fields: {sorted(allowed)}"
-            )
-        return cls(
-            external_request_id=data.get("external_request_id"),
-            conversation_id=data.get("conversation_id"),
-        )
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, CorrelationMetadata):
-            return NotImplemented
-        return (
-            self.external_request_id == other.external_request_id
-            and self.conversation_id == other.conversation_id
-        )
-
-    def __repr__(self) -> str:
-        return (
-            f"CorrelationMetadata("
-            f"external_request_id={self.external_request_id!r}, "
-            f"conversation_id={self.conversation_id!r})"
-        )
-
-
-# ---------------------------------------------------------------------------
-# Validation helpers
-# ---------------------------------------------------------------------------
-
-_SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+")
-
-
-def _require_nonempty_str(value: Any, field: str) -> str:
-    if not isinstance(value, str):
-        raise ValueError(
-            f"{field} must be a non-empty string; got {type(value).__name__}"
-        )
-    if not value.strip():
-        raise ValueError(f"{field} must not be empty or whitespace-only")
-    return value
-
-
-def _require_tz_aware(dt: datetime, field: str) -> datetime:
-    if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
-        raise ValueError(
-            f"{field} must be timezone-aware; "
-            f"got a naive datetime. "
-            f"Wrap with e.g. datetime(..., tzinfo=timezone.utc)"
-        )
-    return dt
-
-
-def _validate_dict_with_str_keys(value: Any, field: str) -> Dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(
-            f"{field} must be a dict; got {type(value).__name__}"
-        )
-    for k in value:
-        if not isinstance(k, str):
-            raise ValueError(
-                f"{field} keys must be strings; found key of type {type(k).__name__}"
-            )
-    return value
-
-
-def _validate_references(value: Any) -> List[Dict[str, Any]]:
-    if not isinstance(value, list):
-        raise ValueError(
-            f"references must be a list; got {type(value).__name__}"
-        )
-    for i, item in enumerate(value):
-        if not isinstance(item, dict):
-            raise ValueError(
-                f"references[{i}] must be a dict; got {type(item).__name__}"
-            )
-        for k in item:
-            if not isinstance(k, str):
-                raise ValueError(
-                    f"references[{i}] keys must be strings; "
-                    f"found key of type {type(k).__name__}"
-                )
-    return value
+        return self.model_dump()
 
 
 # ---------------------------------------------------------------------------
 # ContentAssignment
 # ---------------------------------------------------------------------------
 
-class ContentAssignment:
+_KNOWN_FIELDS = frozenset({
+    "assignment_id",
+    "origin",
+    "topic",
+    "source_material",
+    "submitted_at",
+    "user_instruction",
+    "target_audience",
+    "publishing_constraints",
+    "references",
+    "strategy_ref",
+    "strategy_version",
+    "correlation",
+})
+
+
+class ContentAssignment(BaseModel):
     """
     Provider-neutral typed intake record for one content production run.
 
-    Construct via ContentAssignment(...) or from_dict().
+    Construct via ContentAssignment(**kwargs) or from_dict().
     Adapt from JSONL signals via from_jsonl_signal().
     """
 
-    __slots__ = (
-        "assignment_id",
-        "origin",
-        "topic",
-        "source_material",
-        "submitted_at",
-        "user_instruction",
-        "target_audience",
-        "publishing_constraints",
-        "references",
-        "strategy_ref",
-        "strategy_version",
-        "correlation",
-    )
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
-    def __init__(
-        self,
-        *,
-        assignment_id: str,
-        origin: str,
-        topic: Optional[str] = None,
-        source_material: Optional[str] = None,
-        submitted_at: datetime,
-        user_instruction: Optional[str] = None,
-        target_audience: Optional[str] = None,
-        publishing_constraints: Optional[Dict[str, Any]] = None,
-        references: Optional[List[Dict[str, Any]]] = None,
-        strategy_ref: str,
-        strategy_version: str,
-        correlation: Optional[CorrelationMetadata] = None,
-    ) -> None:
-        self.assignment_id = _require_nonempty_str(assignment_id, "assignment_id")
-        self.origin = _require_nonempty_str(origin, "origin")
+    # --- Required identifiers -----------------------------------------------
+    assignment_id: str = Field(..., min_length=1)
+    origin: str = Field(..., min_length=1)
 
-        # topic / source_material: at least one required and non-whitespace
-        topic_ok = isinstance(topic, str) and topic.strip()
-        source_ok = isinstance(source_material, str) and source_material.strip()
+    # --- Content fields (at least one required) ------------------------------
+    topic: Optional[str] = None
+    source_material: Optional[str] = None
+
+    # --- Submission timestamp ------------------------------------------------
+    submitted_at: datetime
+
+    # --- Optional context ----------------------------------------------------
+    user_instruction: Optional[str] = None
+    target_audience: Optional[str] = None
+
+    # --- Constraints and references -----------------------------------------
+    publishing_constraints: Dict[str, Any] = Field(default_factory=dict)
+    references: List[Dict[str, Any]] = Field(default_factory=list)
+
+    # --- Strategy provenance -------------------------------------------------
+    strategy_ref: str = Field(..., min_length=1)
+    strategy_version: str = Field(..., min_length=1)
+
+    # --- Correlation ---------------------------------------------------------
+    correlation: Optional[CorrelationMetadata] = None
+
+    # ------------------------------------------------------------------
+    # Field-level validators
+    # ------------------------------------------------------------------
+
+    @field_validator("assignment_id", "origin", "strategy_ref", "strategy_version", mode="after")
+    @classmethod
+    def _no_whitespace_only(cls, v: str, info: Any) -> str:
+        if not v.strip():
+            raise ValueError(
+                f"{info.field_name} must not be empty or whitespace-only"
+            )
+        return v
+
+    @field_validator("topic", "source_material", mode="before")
+    @classmethod
+    def _topic_source_must_be_str_or_none(cls, v: Any, info: Any) -> Any:
+        if v is not None and not isinstance(v, str):
+            raise ValueError(
+                f"{info.field_name} must be a string or None; "
+                f"got {type(v).__name__}"
+            )
+        return v
+
+    @field_validator("user_instruction", "target_audience", mode="before")
+    @classmethod
+    def _optional_str_type(cls, v: Any, info: Any) -> Any:
+        if v is not None and not isinstance(v, str):
+            raise ValueError(
+                f"{info.field_name} must be a string or None; "
+                f"got {type(v).__name__}"
+            )
+        return v
+
+    @field_validator("submitted_at", mode="after")
+    @classmethod
+    def _must_be_tz_aware(cls, v: datetime) -> datetime:
+        if v.tzinfo is None or v.tzinfo.utcoffset(v) is None:
+            raise ValueError(
+                "submitted_at must be timezone-aware. "
+                "Got a naive datetime. "
+                "Wrap with e.g. datetime(..., tzinfo=timezone.utc)"
+            )
+        return v
+
+    @field_validator("publishing_constraints", mode="after")
+    @classmethod
+    def _constraints_json_compatible(cls, v: Dict[str, Any]) -> Dict[str, Any]:
+        _assert_json_compatible(v, "publishing_constraints")
+        return v
+
+    @field_validator("references", mode="after")
+    @classmethod
+    def _references_json_compatible(cls, v: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        _assert_json_compatible(v, "references")
+        return v
+
+    @field_validator("correlation", mode="before")
+    @classmethod
+    def _correlation_must_be_model(cls, v: Any) -> Any:
+        if v is not None and not isinstance(v, CorrelationMetadata):
+            raise ValueError(
+                "correlation must be a CorrelationMetadata instance or None; "
+                f"got {type(v).__name__}. "
+                "Use CorrelationMetadata(...) to construct it — raw dicts and "
+                "transport payload objects are not accepted."
+            )
+        return v
+
+    # ------------------------------------------------------------------
+    # Cross-field validator
+    # ------------------------------------------------------------------
+
+    @model_validator(mode="after")
+    def _at_least_one_content_field(self) -> "ContentAssignment":
+        topic_ok = isinstance(self.topic, str) and self.topic.strip()
+        source_ok = isinstance(self.source_material, str) and self.source_material.strip()
         if not topic_ok and not source_ok:
             raise ValueError(
                 "At least one of 'topic' or 'source_material' must be present "
                 "and non-empty. Both are missing or whitespace-only."
             )
-        self.topic = topic
-        self.source_material = source_material
-
-        if not isinstance(submitted_at, datetime):
-            raise ValueError(
-                f"submitted_at must be a datetime; got {type(submitted_at).__name__}"
-            )
-        self.submitted_at = _require_tz_aware(submitted_at, "submitted_at")
-
-        self.user_instruction = user_instruction
-        self.target_audience = target_audience
-
-        self.publishing_constraints = _validate_dict_with_str_keys(
-            publishing_constraints if publishing_constraints is not None else {},
-            "publishing_constraints",
-        )
-        self.references = _validate_references(
-            references if references is not None else []
-        )
-
-        self.strategy_ref = _require_nonempty_str(strategy_ref, "strategy_ref")
-
-        if not isinstance(strategy_version, str) or not strategy_version.strip():
-            raise ValueError(
-                "strategy_version must be a non-empty string (e.g. '1.0.0')"
-            )
-        self.strategy_version = strategy_version
-
-        if correlation is not None and not isinstance(correlation, CorrelationMetadata):
-            raise ValueError(
-                "correlation must be a CorrelationMetadata instance or None; "
-                f"got {type(correlation).__name__}"
-            )
-        self.correlation = correlation
+        return self
 
     # ------------------------------------------------------------------
     # Serialization
     # ------------------------------------------------------------------
 
     def to_dict(self) -> Dict[str, Any]:
-        """Return a JSON-compatible dict.  submitted_at uses ISO-8601 with UTC offset."""
-        return {
-            "assignment_id": self.assignment_id,
-            "origin": self.origin,
-            "topic": self.topic,
-            "source_material": self.source_material,
-            "submitted_at": self.submitted_at.isoformat(),
-            "user_instruction": self.user_instruction,
-            "target_audience": self.target_audience,
-            "publishing_constraints": self.publishing_constraints,
-            "references": self.references,
-            "strategy_ref": self.strategy_ref,
-            "strategy_version": self.strategy_version,
-            "correlation": self.correlation.to_dict() if self.correlation else None,
-        }
+        """Return a JSON-compatible dict. submitted_at uses ISO-8601 with UTC offset."""
+        raw = self.model_dump()
+        raw["submitted_at"] = self.submitted_at.isoformat()
+        if self.correlation is not None:
+            raw["correlation"] = self.correlation.to_dict()
+        return raw
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ContentAssignment":
@@ -332,65 +318,59 @@ class ContentAssignment:
         Deserialize from a dict (e.g. parsed JSON).
 
         Raises ValueError with an actionable English message on any
-        missing or invalid field.
+        missing, invalid, or unknown field.
         """
         if not isinstance(data, dict):
             raise ValueError(
-                f"ContentAssignment.from_dict expects a dict; got {type(data).__name__}"
+                f"ContentAssignment.from_dict expects a dict; "
+                f"got {type(data).__name__}"
             )
 
-        # submitted_at: parse ISO-8601 string
+        unknown = set(data.keys()) - _KNOWN_FIELDS
+        if unknown:
+            raise ValueError(
+                f"ContentAssignment.from_dict received unknown field(s): "
+                f"{sorted(unknown)}. "
+                f"Allowed fields: {sorted(_KNOWN_FIELDS)}"
+            )
+
+        data = dict(data)
+
+        # submitted_at: parse ISO-8601 string → datetime
         raw_ts = data.get("submitted_at")
-        if not isinstance(raw_ts, str):
+        if isinstance(raw_ts, str):
+            try:
+                data["submitted_at"] = datetime.fromisoformat(raw_ts)
+            except ValueError as exc:
+                raise ValueError(
+                    f"submitted_at is not a valid ISO-8601 datetime: {raw_ts!r}. "
+                    f"Example: '2026-08-11T10:00:00+00:00'"
+                ) from exc
+        elif not isinstance(raw_ts, datetime):
             raise ValueError(
                 "submitted_at must be an ISO-8601 datetime string with timezone; "
                 f"got {type(raw_ts).__name__}"
             )
+
+        # correlation: dict → CorrelationMetadata
+        if "correlation" in data and isinstance(data["correlation"], dict):
+            try:
+                data["correlation"] = CorrelationMetadata(**data["correlation"])
+            except _PydanticValidationError as exc:
+                raise ValueError(
+                    f"correlation is invalid: {exc}"
+                ) from exc
+
         try:
-            submitted_at = datetime.fromisoformat(raw_ts)
-        except ValueError as exc:
+            return cls(**data)
+        except _PydanticValidationError as exc:
+            # Surface the first Pydantic error as a plain ValueError so callers
+            # get an actionable English message without importing Pydantic.
+            first = exc.errors()[0]
+            loc = " -> ".join(str(x) for x in first["loc"]) if first["loc"] else "value"
             raise ValueError(
-                f"submitted_at is not a valid ISO-8601 datetime: {raw_ts!r}. "
-                f"Example: '2026-08-11T10:00:00+00:00'"
+                f"ContentAssignment field '{loc}': {first['msg']}"
             ) from exc
-
-        correlation_raw = data.get("correlation")
-        correlation: Optional[CorrelationMetadata] = None
-        if correlation_raw is not None:
-            correlation = CorrelationMetadata.from_dict(correlation_raw)
-
-        return cls(
-            assignment_id=data.get("assignment_id", ""),
-            origin=data.get("origin", ""),
-            topic=data.get("topic"),
-            source_material=data.get("source_material"),
-            submitted_at=submitted_at,
-            user_instruction=data.get("user_instruction"),
-            target_audience=data.get("target_audience"),
-            publishing_constraints=data.get("publishing_constraints"),
-            references=data.get("references"),
-            strategy_ref=data.get("strategy_ref", ""),
-            strategy_version=data.get("strategy_version", ""),
-            correlation=correlation,
-        )
-
-    # ------------------------------------------------------------------
-    # Equality / repr
-    # ------------------------------------------------------------------
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, ContentAssignment):
-            return NotImplemented
-        return self.to_dict() == other.to_dict()
-
-    def __repr__(self) -> str:
-        return (
-            f"ContentAssignment("
-            f"assignment_id={self.assignment_id!r}, "
-            f"origin={self.origin!r}, "
-            f"topic={self.topic!r}, "
-            f"strategy_ref={self.strategy_ref!r})"
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -415,16 +395,15 @@ def from_jsonl_signal(
 
     Mapping
     -------
-    SIGNAL_ID     → assignment_id
-    HEADLINE      → topic
-    CORE_FACT     → source_material
-    TARGET_AUDIENCE → target_audience (if not supplied as kwarg)
+    SIGNAL_ID       → assignment_id
+    HEADLINE        → topic
+    CORE_FACT       → source_material
+    TARGET_AUDIENCE → target_audience (overridable by kwarg)
 
     All other JSONL fields pass through to the downstream pipeline
-    unchanged — this adapter operates only at the intake boundary.
+    unchanged.  The input dict is never mutated.
 
-    submitted_at defaults to the current time in UTC when not provided.
-    The caller should supply it from a real intake timestamp when available.
+    submitted_at defaults to the current UTC time when not provided.
     """
     if not isinstance(signal, dict):
         raise ValueError(
@@ -455,8 +434,8 @@ def from_jsonl_signal(
         submitted_at=submitted_at,
         user_instruction=user_instruction,
         target_audience=target_audience,
-        publishing_constraints=publishing_constraints,
-        references=references,
+        publishing_constraints=publishing_constraints or {},
+        references=references or [],
         strategy_ref=strategy_ref,
         strategy_version=strategy_version,
         correlation=correlation,
