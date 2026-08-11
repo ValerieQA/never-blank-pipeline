@@ -179,11 +179,12 @@ def _save_generated(
     strategy_id: str,
     strategy_started_at: str,
     strategy_version: str,
+    generated_at: str | None = None,
 ) -> None:
     path.write_text(json.dumps({
         "signal_id":           signal_id,
         "headline":            headline,
-        "generated_at":        datetime.now(timezone.utc).isoformat(),
+        "generated_at":        generated_at or datetime.now(timezone.utc).isoformat(),
         "strategy_id":         strategy_id,
         "strategy_version":    strategy_version,
         "strategy_started_at": strategy_started_at,
@@ -403,6 +404,9 @@ def main() -> int:
             print(f"  ERROR: Package generated BEFORE active strategy started ({gen_dt} < {strategy_start})")
             return 1
 
+        # Preserve original generation timestamp — re-save after publish must not overwrite it.
+        _generated_at = raw_gen_at
+
         headline       = pkg.get("headline", headline)
         blog_body      = pkg.get("blog_article", "")
         linkedin_text  = pkg.get("linkedin_post", "")
@@ -595,14 +599,16 @@ def main() -> int:
             generate_hashtags(signal, "instagram"),
         )
 
+        _generated_at = datetime.now(timezone.utc).isoformat()
         _save_generated(
             generated_path, signal_id, headline,
             blog_body, linkedin_text, facebook_text, instagram_text,
             threads_seq, telegram_text, "",
             strategy_id, strategy_started_at, strategy_version,
+            generated_at=_generated_at,
         )
         print(f"\n  ✓  Saved {generated_path}")
-        print(f"       strategy_id={strategy_id}  strategy_version={strategy_version}  generated_at=now")
+        print(f"       strategy_id={strategy_id}  strategy_version={strategy_version}  generated_at={_generated_at[:19]}")
 
     if args.dry_run:
         print(f"\n{SEP}")
@@ -695,12 +701,13 @@ def main() -> int:
             print(f"           error={res['error_message']}")
     print(f"  —  [skipped-not-r1] {', '.join(_NON_R1_PUBLISHERS)}")
 
-    # Update generated JSON with final wix_url — preserve strategy_version provenance
+    # Update generated JSON with final wix_url — preserve generated_at and strategy provenance.
     _save_generated(
         generated_path, signal_id, headline,
         blog_body, linkedin_text, facebook_text, instagram_text,
         threads_seq, telegram_text, wix_url,
         strategy_id, strategy_started_at, strategy_version,
+        generated_at=_generated_at,
     )
 
     # ── Write to History ──────────────────────────────────────────────────────

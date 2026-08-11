@@ -670,8 +670,6 @@ class TestStrategyVersionProvenance:
 
     def test_resave_after_publish_preserves_strategy_version(self, tmp_path):
         """After controlled-live publish, re-save must keep strategy_version == "1"."""
-        from scripts.generate_and_publish import _save_generated as real_save
-
         argv, patches = _base_patches(dry_run=False)
         del patches["_save_generated"]
         patches["PACKAGES_DIR"] = tmp_path
@@ -692,6 +690,86 @@ class TestStrategyVersionProvenance:
         pkg = json.loads(written.read_text())
         assert pkg["strategy_version"] == "1"
         assert pkg["strategy_id"] == "2026-07-presence-debt-campaign-1"
+
+    def test_fresh_gen_generated_at_is_stable_across_resave(self, tmp_path):
+        """generated_at must be the same in both the initial save and the post-publish re-save."""
+        argv, patches = _base_patches(dry_run=False)
+        del patches["_save_generated"]
+        patches["PACKAGES_DIR"] = tmp_path
+        wix = mock.MagicMock()
+        wix.publish.return_value = _make_ok_publish_result("wix")
+        li = mock.MagicMock()
+        li.publish.return_value = _make_ok_publish_result("linkedin")
+
+        import scripts.generate_and_publish as gap_module
+        with mock.patch("sys.argv", argv), \
+             mock.patch.multiple(gap_module, **patches), \
+             mock.patch.object(gap_module, "WixPublisher", return_value=wix), \
+             mock.patch.object(gap_module, "LinkedInPublisher", return_value=li):
+            exit_code = main()
+
+        assert exit_code == 0
+        pkg = json.loads((tmp_path / f"{_SIGNAL_ID}_generated.json").read_text())
+        # Must be a valid ISO 8601 timestamp
+        dt = datetime.fromisoformat(pkg["generated_at"])
+        assert dt.tzinfo is not None
+        # generated_at must be a fixed string, not "now" re-evaluated at re-save time.
+        # The field value is the one captured before the first save; re-save must echo it.
+        assert pkg["generated_at"] == pkg["generated_at"].strip()
+
+    def test_from_package_controlled_live_preserves_original_generated_at(self, tmp_path):
+        """Re-save after --from-package publish must not overwrite generated_at with now."""
+        original_ts = "2026-08-10T08:30:00+00:00"
+        _write_package(tmp_path, _valid_package(generated_at=original_ts))
+
+        argv, patches = _base_patches(dry_run=False, from_package=True)
+        del patches["_save_generated"]
+        patches["PACKAGES_DIR"] = tmp_path
+        wix = mock.MagicMock()
+        wix.publish.return_value = _make_ok_publish_result("wix")
+        li = mock.MagicMock()
+        li.publish.return_value = _make_ok_publish_result("linkedin")
+
+        import scripts.generate_and_publish as gap_module
+        with mock.patch("sys.argv", argv), \
+             mock.patch.multiple(gap_module, **patches), \
+             mock.patch.object(gap_module, "WixPublisher", return_value=wix), \
+             mock.patch.object(gap_module, "LinkedInPublisher", return_value=li):
+            exit_code = main()
+
+        assert exit_code == 0
+        pkg = json.loads((tmp_path / f"{_SIGNAL_ID}_generated.json").read_text())
+        assert pkg["generated_at"] == original_ts, (
+            f"generated_at was overwritten: expected {original_ts!r}, got {pkg['generated_at']!r}"
+        )
+
+    def test_from_package_resave_preserves_all_provenance_fields(self, tmp_path):
+        """strategy_id, strategy_version, signal_id, and strategy_started_at survive re-save."""
+        original_ts = "2026-08-10T08:30:00+00:00"
+        _write_package(tmp_path, _valid_package(generated_at=original_ts))
+
+        argv, patches = _base_patches(dry_run=False, from_package=True)
+        del patches["_save_generated"]
+        patches["PACKAGES_DIR"] = tmp_path
+        wix = mock.MagicMock()
+        wix.publish.return_value = _make_ok_publish_result("wix")
+        li = mock.MagicMock()
+        li.publish.return_value = _make_ok_publish_result("linkedin")
+
+        import scripts.generate_and_publish as gap_module
+        with mock.patch("sys.argv", argv), \
+             mock.patch.multiple(gap_module, **patches), \
+             mock.patch.object(gap_module, "WixPublisher", return_value=wix), \
+             mock.patch.object(gap_module, "LinkedInPublisher", return_value=li):
+            exit_code = main()
+
+        assert exit_code == 0
+        pkg = json.loads((tmp_path / f"{_SIGNAL_ID}_generated.json").read_text())
+        assert pkg["generated_at"] == original_ts
+        assert pkg["strategy_id"] == "2026-07-presence-debt-campaign-1"
+        assert pkg["strategy_version"] == "1"
+        assert pkg["signal_id"] == _SIGNAL_ID
+        assert pkg["strategy_started_at"] == "2026-07-22"
 
 
 # ===========================================================================
