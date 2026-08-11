@@ -300,6 +300,7 @@ def test_policy_violation_message_includes_operation_adapter_run_id():
     assert "publication" in str(err)
     assert "WixPublisher" in str(err)
     assert "msg-test-run" in str(err)
+    assert "BEFORE any network" not in str(err)
 
 
 def test_policy_required_error_message_includes_adapter():
