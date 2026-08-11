@@ -339,32 +339,40 @@ def main() -> int:
             print(f"  ERROR: Package could not be read or parsed: {exc}")
             return 1
 
-        # Provenance / staleness check (fail-closed)
-        pkg_strategy_id = pkg.get("strategy_id", "")
-        if not pkg_strategy_id:
-            print("  ERROR: Package has no strategy_id — cannot verify staleness")
+        # Shape check — must be a JSON object, not an array, scalar, or null.
+        if not isinstance(pkg, dict):
+            print(f"  ERROR: Package is not a JSON object (got {type(pkg).__name__})")
             return 1
+
+        # Field-type checks — strategy_id, strategy_version, and generated_at
+        # must be non-blank strings before any further processing.
+        for _field in ("strategy_id", "strategy_version", "generated_at"):
+            _val = pkg.get(_field)
+            if not isinstance(_val, str) or not _val.strip():
+                print(
+                    f"  ERROR: Package field {_field!r} must be a non-blank string "
+                    f"(got {type(_val).__name__ if _val is not None else 'missing'})"
+                )
+                return 1
+
+        # Provenance / staleness check (fail-closed)
+        pkg_strategy_id = pkg["strategy_id"]
         if pkg_strategy_id != strategy_id:
             print(f"  ERROR: strategy_id mismatch: package={pkg_strategy_id!r} active={strategy_id!r}")
             return 1
-        pkg_strategy_version = pkg.get("strategy_version", "")
-        if not pkg_strategy_version or not pkg_strategy_version.strip():
-            print("  ERROR: Package has no strategy_version — cannot verify provenance")
-            return 1
+        pkg_strategy_version = pkg["strategy_version"]
         if pkg_strategy_version != strategy_version:
             print(
                 f"  ERROR: strategy_version mismatch: "
                 f"package={pkg_strategy_version!r} active={strategy_version!r}"
             )
             return 1
-        raw_gen_at = pkg.get("generated_at", "")
+        raw_gen_at = pkg["generated_at"]
         try:
             from datetime import date
-            gen_dt = datetime.fromisoformat(raw_gen_at).date() if raw_gen_at else None
+            gen_dt = datetime.fromisoformat(raw_gen_at).date()
         except ValueError:
-            gen_dt = None
-        if gen_dt is None:
-            print(f"  ERROR: generated_at {raw_gen_at!r} could not be parsed")
+            print(f"  ERROR: generated_at {raw_gen_at!r} could not be parsed as ISO 8601")
             return 1
         strategy_start = active_strategy.started_at if active_strategy and active_strategy.started_at else None
         if strategy_start and isinstance(strategy_start, str):

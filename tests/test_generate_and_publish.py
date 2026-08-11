@@ -872,6 +872,47 @@ class TestFromPackageSequencing:
         wix_cls.assert_not_called()
         li_cls.assert_not_called()
 
+    def test_json_array_does_not_call_load_package_images(self, tmp_path):
+        (tmp_path / f"{_SIGNAL_ID}_generated.json").write_text("[]", encoding="utf-8")
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_json_null_does_not_call_load_package_images(self, tmp_path):
+        (tmp_path / f"{_SIGNAL_ID}_generated.json").write_text("null", encoding="utf-8")
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_non_string_strategy_id_does_not_call_load_package_images(self, tmp_path):
+        pkg = _valid_package()
+        pkg["strategy_id"] = 123
+        _write_package(tmp_path, pkg)
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_non_string_strategy_version_does_not_call_load_package_images(self, tmp_path):
+        pkg = _valid_package()
+        pkg["strategy_version"] = 1
+        _write_package(tmp_path, pkg)
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_non_string_generated_at_does_not_call_load_package_images(self, tmp_path):
+        pkg = _valid_package()
+        pkg["generated_at"] = 20260811
+        _write_package(tmp_path, pkg)
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
     def test_fresh_gen_path_still_calls_load_package_images(self, tmp_path):
         """Regression guard: fresh-gen path must still call _load_package_images."""
         argv, patches, sentinel = self._patches_with_image_sentinels(dry_run=True, from_package=False)
