@@ -29,6 +29,7 @@ from src.strategy.models import (
 def _strategy_json(strategy_id: str = "2026-08-test") -> dict:
     return {
         "strategy_id": strategy_id,
+        "strategy_version": "1",
         "status": "active",
         "started_at": "2026-08-04",
         "review_date": "2026-08-31",

@@ -41,6 +41,7 @@ def _make_strategy(**overrides):
     from src.strategy.models import Strategy
     defaults = dict(
         strategy_id="2026-08-test",
+        strategy_version="1",
         status=StrategyStatus.ACTIVE,
         started_at=date(2026, 8, 4),
         review_date=date(2026, 8, 31),

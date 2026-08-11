@@ -1,22 +1,31 @@
 """
-Never Blank — Full Generation + Publish cycle.
+Never Blank — Canonical Release 1 entry point.
 
-Runs the complete path for one signal:
-  load signal → generate_article (LLM) → validate → save _generated.json → publish → History → analytics
+This script is the single authorized controlled execution path for Release 1.
 
-Unlike smoke_test_publish_analytics.py, this script ALWAYS regenerates content
-using the currently active strategy. It will refuse to run if no active strategy
-is loaded.
+Canonical call flow
+-------------------
+  CLI --signal-id
+  → load active strategy (required)
+  → load JSONL signal
+  → from_jsonl_signal(...)        → ContentAssignment
+  → RunContext.from_assignment()  → one RunContext per execution
+  → _build_legacy_research_context()  [compatibility boundary, remove by Task #27]
+  → existing generation / package path
+  → validation
+  → dry-run stop  OR  controlled Wix + LinkedIn publishing only
 
-The generated package is saved with strategy provenance fields:
-  strategy_id, strategy_started_at, generated_at
+Release 1 publishing scope: Wix and LinkedIn.
+Facebook, Instagram, Threads, and Telegram are excluded from this path
+and reported as [skipped-not-r1].
 
 Usage (local):
     NB_OPENAI_API_KEY=... python scripts/generate_and_publish.py --signal-id <id> [--dry-run]
 
 Args:
-    --signal-id  : SIGNAL_ID from data/research/selected_signals.jsonl or signals_active.jsonl
-    --dry-run    : Generate and validate content, save _generated.json, but do NOT publish
+    --signal-id    : SIGNAL_ID from data/research/selected_signals.jsonl or signals_active.jsonl
+    --dry-run      : Generate and validate content, save _generated.json, but do NOT publish
+    --from-package : Skip LLM generation — publish the existing _generated.json as-is
 """
 
 from __future__ import annotations
@@ -35,7 +44,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from dotenv import load_dotenv
 load_dotenv()
 
+from src.intake import ContentAssignment, from_jsonl_signal
 from src.lifecycle.signal_lifecycle import ResearchContext
+from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
@@ -167,12 +178,15 @@ def _save_generated(
     wix_url: str,
     strategy_id: str,
     strategy_started_at: str,
+    strategy_version: str,
+    generated_at: str | None = None,
 ) -> None:
     path.write_text(json.dumps({
         "signal_id":           signal_id,
         "headline":            headline,
-        "generated_at":        datetime.now(timezone.utc).isoformat(),
+        "generated_at":        generated_at or datetime.now(timezone.utc).isoformat(),
         "strategy_id":         strategy_id,
+        "strategy_version":    strategy_version,
         "strategy_started_at": strategy_started_at,
         "wix_url":             wix_url,
         "blog_article":        blog_body,
@@ -182,6 +196,35 @@ def _save_generated(
         "threads_sequence":    threads,
         "telegram_text":       telegram,
     }, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+# Release 1 publishing scope — only these two publishers are invoked.
+_R1_PUBLISHERS = ("wix", "linkedin")
+_NON_R1_PUBLISHERS = ("facebook", "instagram", "threads", "telegram")
+
+
+def _build_legacy_research_context(
+    assignment: ContentAssignment,
+    raw_signal: dict,
+) -> ResearchContext:
+    """
+    Compatibility boundary — converts a ContentAssignment + raw JSONL signal dict
+    into the legacy ResearchContext expected by downstream pipeline stages.
+
+    The assignment_id must match the raw signal's SIGNAL_ID.  Mismatched identifiers
+    are rejected to prevent stale or unrelated signal data from being injected.
+
+    TODO Task #27: remove this boundary once downstream stages accept
+    ContentAssignment directly.
+    """
+    raw_signal_id = raw_signal.get("SIGNAL_ID", "")
+    if assignment.assignment_id != raw_signal_id:
+        raise ValueError(
+            f"assignment.assignment_id {assignment.assignment_id!r} does not match "
+            f"raw_signal SIGNAL_ID {raw_signal_id!r}. "
+            "Mismatched identifiers are not allowed at the compatibility boundary."
+        )
+    return ResearchContext.from_dict(raw_signal)
 
 
 def main() -> int:
@@ -215,6 +258,7 @@ def main() -> int:
     cta_mode            = get_cta_mode(active_strategy)
     strategy_id         = strategy_context.get("strategy_id", "")
     strategy_started_at = str(active_strategy.started_at) if active_strategy.started_at else ""
+    strategy_version    = active_strategy.strategy_version
 
     print(f"  ✓  strategy_id:   {strategy_id}")
     print(f"  ✓  started_at:    {strategy_started_at}")
@@ -231,6 +275,23 @@ def main() -> int:
     headline = signal.get("HEADLINE", signal_id)
     print(f"  ✓  Headline: {headline[:70]}")
 
+    # ── Normalized intake + run identity ──────────────────────────────────────
+    execution_mode = ExecutionMode.DRY_RUN if args.dry_run else ExecutionMode.CONTROLLED_LIVE
+    assignment = from_jsonl_signal(
+        signal,
+        strategy_ref=active_strategy.strategy_id,
+        strategy_version=active_strategy.strategy_version,
+        submitted_at=datetime.now(timezone.utc),
+    )
+    run_ctx = RunContext.from_assignment(assignment, execution_mode)
+    print(f"  ✓  run_id:        {run_ctx.run_id}")
+    print(f"  ✓  assignment_id: {run_ctx.assignment_id}")
+    print(f"  ✓  execution_mode:{run_ctx.execution_mode.value}")
+
+    # ── Compatibility boundary: ContentAssignment → legacy ResearchContext ────
+    # TODO Task #27: remove once downstream stages accept ContentAssignment directly.
+    rc = _build_legacy_research_context(assignment, signal)
+
     # Preflight: fail-closed readiness check via typed ResearchContext.
     #
     # Publish gate checks ARTICLE_READY (factual readiness) only — NOT score.
@@ -241,8 +302,6 @@ def main() -> int:
     # FORCE_PUBLISH_OVERRIDE bypasses factual readiness with a warning.
     # This preserves the exact semantics of the pre-Stage-1.5 preflight:
     #   blocked = (ARTICLE_READY != "true") and not force_override
-    rc = ResearchContext.from_dict(signal)
-
     if not rc.article_ready:
         if rc.force_override:
             print(
@@ -265,66 +324,77 @@ def main() -> int:
             )
             return 1
 
-    pimgs = _load_package_images(signal_id)
-    editorial_package: dict = {"images": {"platform_images": pimgs}}
-    pkg_design_version = pimgs.get("_design_version") if pimgs else None
-    needs_regen = (
-        not pimgs.get("blog", {}).get("url")
-        or pkg_design_version != CURRENT_DESIGN_VERSION
-    )
-
-    if needs_regen:
-        reason = "no pre-generated image" if not pimgs else f"stale design v{pkg_design_version} (current: v{CURRENT_DESIGN_VERSION})"
-        print(f"  — {reason} — generating images for all platforms…")
-        try:
-            from scripts.research.prepare_content import prepare_content_packages
-            pkgs = prepare_content_packages([signal])
-            if pkgs:
-                editorial_package = pkgs[0]
-                pimgs = pkgs[0].get("images", {}).get("platform_images", {})
-                blog_url = pimgs.get("blog", {}).get("url") or ""
-                print(f"  ✓  Images generated: {blog_url[:60] if blog_url else '(none)'}")
-            else:
-                print(f"  ⚠  Image generation returned no packages — visual platforms will skip")
-        except Exception as exc:
-            print(f"  ⚠  Image generation failed ({exc}) — visual platforms will skip")
-
-    blog_image_url: Optional[str] = pimgs.get("blog", {}).get("url") or None
-    platform_image_urls = {
-        p: (pimgs.get(p, {}).get("url") or None)
-        for p in ("blog", "linkedin", "facebook", "instagram", "threads", "stories")
-        if pimgs.get(p, {}).get("url")
-    }
-    print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
-    print(f"  ✓  Platform images: {list(platform_image_urls.keys())}")
-
     generated_path = PACKAGES_DIR / f"{signal_id}_generated.json"
     echo_line = ""
 
     if args.from_package:
-        # ── 3a. Load existing package (skip LLM) ─────────────────────────────
+        # ── 3a. Load, verify, and validate existing package ──────────────────
+        # All checks complete before any image-generation side effect.
         print(f"\n[3/6] Loading existing package (--from-package, no LLM)…")
         if not generated_path.exists():
             print(f"  ERROR: {generated_path} not found — run without --from-package to generate")
             return 1
-        pkg = json.loads(generated_path.read_text(encoding="utf-8"))
-
-        # Staleness check (fail-closed)
-        pkg_strategy_id = pkg.get("strategy_id", "")
-        if not pkg_strategy_id:
-            print("  ERROR: Package has no strategy_id — cannot verify staleness")
+        try:
+            pkg = json.loads(generated_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as exc:
+            print(f"  ERROR: Package could not be read or parsed: {exc}")
             return 1
+
+        # Shape check — must be a JSON object, not an array, scalar, or null.
+        if not isinstance(pkg, dict):
+            print(f"  ERROR: Package is not a JSON object (got {type(pkg).__name__})")
+            return 1
+
+        # Field-type checks — strategy_id, strategy_version, and generated_at
+        # must be non-blank strings before any further processing.
+        for _field in ("strategy_id", "strategy_version", "generated_at"):
+            _val = pkg.get(_field)
+            if not isinstance(_val, str) or not _val.strip():
+                print(
+                    f"  ERROR: Package field {_field!r} must be a non-blank string "
+                    f"(got {type(_val).__name__ if _val is not None else 'missing'})"
+                )
+                return 1
+
+        # signal_id identity check — must match CLI arg and ContentAssignment.
+        _pkg_signal_id = pkg.get("signal_id")
+        if not isinstance(_pkg_signal_id, str) or not _pkg_signal_id.strip():
+            print(
+                f"  ERROR: Package field 'signal_id' must be a non-blank string "
+                f"(got {type(_pkg_signal_id).__name__ if _pkg_signal_id is not None else 'missing'})"
+            )
+            return 1
+        if _pkg_signal_id != signal_id:
+            print(
+                f"  ERROR: signal_id mismatch: package={_pkg_signal_id!r} "
+                f"requested={signal_id!r}"
+            )
+            return 1
+        if _pkg_signal_id != assignment.assignment_id:
+            print(
+                f"  ERROR: signal_id mismatch: package={_pkg_signal_id!r} "
+                f"assignment_id={assignment.assignment_id!r}"
+            )
+            return 1
+
+        # Provenance / staleness check (fail-closed)
+        pkg_strategy_id = pkg["strategy_id"]
         if pkg_strategy_id != strategy_id:
             print(f"  ERROR: strategy_id mismatch: package={pkg_strategy_id!r} active={strategy_id!r}")
             return 1
-        raw_gen_at = pkg.get("generated_at", "")
+        pkg_strategy_version = pkg["strategy_version"]
+        if pkg_strategy_version != strategy_version:
+            print(
+                f"  ERROR: strategy_version mismatch: "
+                f"package={pkg_strategy_version!r} active={strategy_version!r}"
+            )
+            return 1
+        raw_gen_at = pkg["generated_at"]
         try:
             from datetime import date
-            gen_dt = datetime.fromisoformat(raw_gen_at).date() if raw_gen_at else None
+            gen_dt = datetime.fromisoformat(raw_gen_at).date()
         except ValueError:
-            gen_dt = None
-        if gen_dt is None:
-            print(f"  ERROR: generated_at {raw_gen_at!r} could not be parsed")
+            print(f"  ERROR: generated_at {raw_gen_at!r} could not be parsed as ISO 8601")
             return 1
         strategy_start = active_strategy.started_at if active_strategy and active_strategy.started_at else None
         if strategy_start and isinstance(strategy_start, str):
@@ -333,6 +403,9 @@ def main() -> int:
         if strategy_start and gen_dt < strategy_start:
             print(f"  ERROR: Package generated BEFORE active strategy started ({gen_dt} < {strategy_start})")
             return 1
+
+        # Preserve original generation timestamp — re-save after publish must not overwrite it.
+        _generated_at = raw_gen_at
 
         headline       = pkg.get("headline", headline)
         blog_body      = pkg.get("blog_article", "")
@@ -343,14 +416,126 @@ def main() -> int:
         telegram_text  = pkg.get("telegram_text", "")
         echo_line      = pkg.get("echo_line", "")
 
-        print(f"  ✓  headline:  {headline[:70]}")
-        print(f"  ✓  blog:      {len(blog_body)} chars")
-        print(f"  ✓  linkedin:  {len(linkedin_text)} chars")
-        print(f"  ✓  strategy_id matches, generated_at={raw_gen_at[:10]}")
+        # Content field type validation — before any slicing, len(), or replace() calls.
+        _content_errors: list[str] = []
+        for _fname, _fval in [
+            ("headline",     headline),
+            ("blog_article", blog_body),
+            ("linkedin_post", linkedin_text),
+        ]:
+            if not isinstance(_fval, str) or not _fval.strip():
+                _content_errors.append(
+                    f"{_fname!r} must be a non-blank string "
+                    f"(got {type(_fval).__name__ if not isinstance(_fval, str) else 'blank'})"
+                )
+        for _fname, _fval in [
+            ("facebook_post",    facebook_text),
+            ("instagram_caption", instagram_text),
+            ("telegram_text",    telegram_text),
+            ("echo_line",        echo_line),
+        ]:
+            if not isinstance(_fval, str):
+                _content_errors.append(
+                    f"{_fname!r} must be a string (got {type(_fval).__name__})"
+                )
+        if not isinstance(threads_seq, list) or not all(isinstance(t, str) for t in threads_seq):
+            _content_errors.append("'threads_sequence' must be a list of strings")
+        if _content_errors:
+            for _err in _content_errors:
+                print(f"  ERROR: {_err}")
+            return 1
+
+        print(f"  ✓  headline:         {headline[:70]}")
+        print(f"  ✓  blog:             {len(blog_body)} chars")
+        print(f"  ✓  linkedin:         {len(linkedin_text)} chars")
+        print(f"  ✓  strategy_id:      {pkg_strategy_id}")
+        print(f"  ✓  strategy_version: {pkg_strategy_version}")
+        print(f"  ✓  generated_at:     {raw_gen_at[:10]}")
         print(f"\n  LinkedIn preview (first 400 chars):")
         print(f"  {linkedin_text[:400].replace(chr(10), chr(10)+'  ')}")
 
+        # ── Validate content (before any image side effect) ───────────────────
+        print(f"\n[4/6] Validating loaded package content…")
+        pkg_errors: list[str] = []
+        for platform, text in [("blog", blog_body), ("linkedin", linkedin_text)]:
+            try:
+                validate_article_for_publish(text, platform=platform)
+                print(f"  ✓  {platform} validation passed")
+            except Exception as exc:
+                print(f"  ✗  {platform} validation FAILED: {exc}")
+                pkg_errors.append(f"{platform}: {exc}")
+
+        if pkg_errors:
+            print(f"\n  ERROR: {len(pkg_errors)} validation error(s) in loaded package — not publishing")
+            return 1
+
+        # ── Image preparation (only after package fully validated) ────────────
+        pimgs = _load_package_images(signal_id)
+        editorial_package: dict = {"images": {"platform_images": pimgs}}
+        pkg_design_version = pimgs.get("_design_version") if pimgs else None
+        needs_regen = (
+            not pimgs.get("blog", {}).get("url")
+            or pkg_design_version != CURRENT_DESIGN_VERSION
+        )
+        if needs_regen:
+            reason = "no pre-generated image" if not pimgs else f"stale design v{pkg_design_version}"
+            print(f"  — {reason} — generating images for all platforms…")
+            try:
+                from scripts.research.prepare_content import prepare_content_packages
+                pkgs = prepare_content_packages([signal])
+                if pkgs:
+                    editorial_package = pkgs[0]
+                    pimgs = pkgs[0].get("images", {}).get("platform_images", {})
+                    blog_url = pimgs.get("blog", {}).get("url") or ""
+                    print(f"  ✓  Images generated: {blog_url[:60] if blog_url else '(none)'}")
+                else:
+                    print(f"  ⚠  Image generation returned no packages — visual platforms will skip")
+            except Exception as exc:
+                print(f"  ⚠  Image generation failed ({exc}) — visual platforms will skip")
+
+        blog_image_url: Optional[str] = pimgs.get("blog", {}).get("url") or None
+        platform_image_urls = {
+            p: (pimgs.get(p, {}).get("url") or None)
+            for p in ("blog", "linkedin", "facebook", "instagram", "threads", "stories")
+            if pimgs.get(p, {}).get("url")
+        }
+        print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
+        print(f"  ✓  Platform images: {list(platform_image_urls.keys())}")
+
     else:
+        # ── Image preparation (fresh-gen path) ───────────────────────────────
+        pimgs = _load_package_images(signal_id)
+        editorial_package: dict = {"images": {"platform_images": pimgs}}
+        pkg_design_version = pimgs.get("_design_version") if pimgs else None
+        needs_regen = (
+            not pimgs.get("blog", {}).get("url")
+            or pkg_design_version != CURRENT_DESIGN_VERSION
+        )
+        if needs_regen:
+            reason = "no pre-generated image" if not pimgs else f"stale design v{pkg_design_version} (current: v{CURRENT_DESIGN_VERSION})"
+            print(f"  — {reason} — generating images for all platforms…")
+            try:
+                from scripts.research.prepare_content import prepare_content_packages
+                pkgs = prepare_content_packages([signal])
+                if pkgs:
+                    editorial_package = pkgs[0]
+                    pimgs = pkgs[0].get("images", {}).get("platform_images", {})
+                    blog_url = pimgs.get("blog", {}).get("url") or ""
+                    print(f"  ✓  Images generated: {blog_url[:60] if blog_url else '(none)'}")
+                else:
+                    print(f"  ⚠  Image generation returned no packages — visual platforms will skip")
+            except Exception as exc:
+                print(f"  ⚠  Image generation failed ({exc}) — visual platforms will skip")
+
+        blog_image_url: Optional[str] = pimgs.get("blog", {}).get("url") or None
+        platform_image_urls = {
+            p: (pimgs.get(p, {}).get("url") or None)
+            for p in ("blog", "linkedin", "facebook", "instagram", "threads", "stories")
+            if pimgs.get(p, {}).get("url")
+        }
+        print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
+        print(f"  ✓  Platform images: {list(platform_image_urls.keys())}")
+
         # ── 3b. Generate content via LLM ─────────────────────────────────────
         print(f"\n[3/6] Generating content (LLM — Editorial Engine V2)…")
         print(f"  strategy context injected: strategy_id={strategy_id}")
@@ -414,18 +599,24 @@ def main() -> int:
             generate_hashtags(signal, "instagram"),
         )
 
+        _generated_at = datetime.now(timezone.utc).isoformat()
         _save_generated(
             generated_path, signal_id, headline,
             blog_body, linkedin_text, facebook_text, instagram_text,
             threads_seq, telegram_text, "",
-            strategy_id, strategy_started_at,
+            strategy_id, strategy_started_at, strategy_version,
+            generated_at=_generated_at,
         )
         print(f"\n  ✓  Saved {generated_path}")
-        print(f"       strategy_id={strategy_id}  generated_at=now")
+        print(f"       strategy_id={strategy_id}  strategy_version={strategy_version}  generated_at={_generated_at[:19]}")
 
     if args.dry_run:
         print(f"\n{SEP}")
-        print("  DRY RUN — generation + validation complete, not publishing.")
+        if args.from_package:
+            print("  DRY RUN — existing package loaded and validated; not published.")
+        else:
+            print("  DRY RUN — generated content validated; not published.")
+        print(f"  run_id: {run_ctx.run_id}  [COMPLETE]")
         print(SEP)
         return 0
 
@@ -482,16 +673,12 @@ def main() -> int:
     wix_post_id: Optional[str] = None
     wix_url = ""
 
-    for name, publisher in [
-        ("wix",       WixPublisher()),
-        ("linkedin",  LinkedInPublisher()),
-        ("facebook",  FacebookPublisher()),
-        ("instagram", InstagramPublisher()),
-        ("threads",   ThreadsPublisher()),
-        ("telegram",  TelegramPublisher()),
-    ]:
+    # _R1_PUBLISHERS is the single source of truth for which platforms are published.
+    # The class mapping below must cover every entry; a KeyError here means drift.
+    _r1_cls = {"wix": WixPublisher, "linkedin": LinkedInPublisher}
+    for name in _R1_PUBLISHERS:
         try:
-            result = publisher.publish(draft, "live")
+            result = _r1_cls[name]().publish(draft, "live")
             results[name] = result.to_dict()
             if name == "wix" and result.ok():
                 wix_post_id = result.external_id
@@ -512,13 +699,15 @@ def main() -> int:
         print(f"           url={(res.get('url') or '—')[:80]}")
         if res.get("error_message"):
             print(f"           error={res['error_message']}")
+    print(f"  —  [skipped-not-r1] {', '.join(_NON_R1_PUBLISHERS)}")
 
-    # Update generated JSON with final wix_url
+    # Update generated JSON with final wix_url — preserve generated_at and strategy provenance.
     _save_generated(
         generated_path, signal_id, headline,
         blog_body, linkedin_text, facebook_text, instagram_text,
         threads_seq, telegram_text, wix_url,
-        strategy_id, strategy_started_at,
+        strategy_id, strategy_started_at, strategy_version,
+        generated_at=_generated_at,
     )
 
     # ── Write to History ──────────────────────────────────────────────────────
@@ -564,12 +753,14 @@ def main() -> int:
     print(f"\n{SEP}")
     failed = [p for p, r in results.items() if r.get("status") not in _OK_STATUSES]
     if failed:
-        print(f"  PARTIAL — failed channels: {failed}")
+        print(f"  PARTIAL — failed R1 channels: {failed}")
+        print(f"  run_id: {run_ctx.run_id}  [FAILED]")
         print(SEP)
         return 1
-    print("  DONE — all channels published.")
+    print("  DONE — Release 1 channels published (Wix + LinkedIn).")
     print(f"  Wix:     {wix_url or wix_post_id or '—'}")
     print(f"  strategy_id: {strategy_id}")
+    print(f"  run_id:      {run_ctx.run_id}  [COMPLETE]")
     print(SEP)
     return 0
 

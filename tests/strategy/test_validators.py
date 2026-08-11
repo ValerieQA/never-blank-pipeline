@@ -42,6 +42,7 @@ from src.strategy.validators import (
 def _make_strategy(**overrides) -> Strategy:
     defaults = dict(
         strategy_id="2026-08-test-strategy",
+        strategy_version="1",
         status=StrategyStatus.ACTIVE,
         started_at=date(2026, 8, 1),
         review_date=date(2026, 8, 31),
