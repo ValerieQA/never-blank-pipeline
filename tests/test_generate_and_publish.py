@@ -922,3 +922,72 @@ class TestFromPackageSequencing:
             exit_code = main()
         assert exit_code == 0
         sentinel.assert_called_once()
+
+    # --- BLOCKER 1: signal_id identity ---
+
+    def test_missing_signal_id_does_not_call_load_package_images(self, tmp_path):
+        pkg = _valid_package()
+        del pkg["signal_id"]
+        _write_package(tmp_path, pkg)
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_blank_signal_id_does_not_call_load_package_images(self, tmp_path):
+        _write_package(tmp_path, _valid_package(signal_id=""))
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_non_string_signal_id_does_not_call_load_package_images(self, tmp_path):
+        _write_package(tmp_path, _valid_package(signal_id=999))
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_mismatched_signal_id_does_not_call_load_package_images(self, tmp_path):
+        _write_package(tmp_path, _valid_package(signal_id="wrong-signal-id"))
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    # --- BLOCKER 2: R1 content field types ---
+
+    def test_non_string_headline_does_not_call_load_package_images(self, tmp_path):
+        _write_package(tmp_path, _valid_package(headline=123))
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_non_string_blog_article_does_not_call_load_package_images(self, tmp_path):
+        _write_package(tmp_path, _valid_package(blog_article=123))
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_non_string_linkedin_post_does_not_call_load_package_images(self, tmp_path):
+        _write_package(tmp_path, _valid_package(linkedin_post=123))
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_non_string_facebook_post_does_not_call_load_package_images(self, tmp_path):
+        _write_package(tmp_path, _valid_package(facebook_post=False))
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_non_list_threads_sequence_does_not_call_load_package_images(self, tmp_path):
+        _write_package(tmp_path, _valid_package(threads_sequence="not a list"))
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()

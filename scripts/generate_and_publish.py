@@ -355,6 +355,27 @@ def main() -> int:
                 )
                 return 1
 
+        # signal_id identity check — must match CLI arg and ContentAssignment.
+        _pkg_signal_id = pkg.get("signal_id")
+        if not isinstance(_pkg_signal_id, str) or not _pkg_signal_id.strip():
+            print(
+                f"  ERROR: Package field 'signal_id' must be a non-blank string "
+                f"(got {type(_pkg_signal_id).__name__ if _pkg_signal_id is not None else 'missing'})"
+            )
+            return 1
+        if _pkg_signal_id != signal_id:
+            print(
+                f"  ERROR: signal_id mismatch: package={_pkg_signal_id!r} "
+                f"requested={signal_id!r}"
+            )
+            return 1
+        if _pkg_signal_id != assignment.assignment_id:
+            print(
+                f"  ERROR: signal_id mismatch: package={_pkg_signal_id!r} "
+                f"assignment_id={assignment.assignment_id!r}"
+            )
+            return 1
+
         # Provenance / staleness check (fail-closed)
         pkg_strategy_id = pkg["strategy_id"]
         if pkg_strategy_id != strategy_id:
@@ -390,6 +411,35 @@ def main() -> int:
         threads_seq    = pkg.get("threads_sequence", [])
         telegram_text  = pkg.get("telegram_text", "")
         echo_line      = pkg.get("echo_line", "")
+
+        # Content field type validation — before any slicing, len(), or replace() calls.
+        _content_errors: list[str] = []
+        for _fname, _fval in [
+            ("headline",     headline),
+            ("blog_article", blog_body),
+            ("linkedin_post", linkedin_text),
+        ]:
+            if not isinstance(_fval, str) or not _fval.strip():
+                _content_errors.append(
+                    f"{_fname!r} must be a non-blank string "
+                    f"(got {type(_fval).__name__ if not isinstance(_fval, str) else 'blank'})"
+                )
+        for _fname, _fval in [
+            ("facebook_post",    facebook_text),
+            ("instagram_caption", instagram_text),
+            ("telegram_text",    telegram_text),
+            ("echo_line",        echo_line),
+        ]:
+            if not isinstance(_fval, str):
+                _content_errors.append(
+                    f"{_fname!r} must be a string (got {type(_fval).__name__})"
+                )
+        if not isinstance(threads_seq, list) or not all(isinstance(t, str) for t in threads_seq):
+            _content_errors.append("'threads_sequence' must be a list of strings")
+        if _content_errors:
+            for _err in _content_errors:
+                print(f"  ERROR: {_err}")
+            return 1
 
         print(f"  ✓  headline:         {headline[:70]}")
         print(f"  ✓  blog:             {len(blog_body)} chars")
