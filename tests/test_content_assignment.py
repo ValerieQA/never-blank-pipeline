@@ -260,6 +260,28 @@ def test_from_jsonl_signal_does_not_mutate_input():
     assert SAMPLE_JSONL == original
 
 
+def test_from_jsonl_signal_invalid_publishing_constraints_not_silently_repaired():
+    """A list passed as publishing_constraints must fail validation, not be coerced to {}."""
+    with pytest.raises(ValueError):
+        from_jsonl_signal(
+            SAMPLE_JSONL,
+            strategy_ref="r",
+            strategy_version="1.0.0",
+            publishing_constraints=[],  # type: ignore[arg-type]
+        )
+
+
+def test_from_jsonl_signal_invalid_references_not_silently_repaired():
+    """A dict passed as references must fail validation, not be coerced to []."""
+    with pytest.raises(ValueError):
+        from_jsonl_signal(
+            SAMPLE_JSONL,
+            strategy_ref="r",
+            strategy_version="1.0.0",
+            references={},  # type: ignore[arg-type]
+        )
+
+
 # ===========================================================================
 # 12. Correlation metadata validation
 # ===========================================================================

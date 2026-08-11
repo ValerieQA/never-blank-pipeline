@@ -393,17 +393,23 @@ def from_jsonl_signal(
     """
     Adapt an existing JSONL signal dict into a ContentAssignment.
 
-    Mapping
-    -------
+    Mapped fields
+    -------------
     SIGNAL_ID       → assignment_id
     HEADLINE        → topic
     CORE_FACT       → source_material
-    TARGET_AUDIENCE → target_audience (overridable by kwarg)
+    TARGET_AUDIENCE → target_audience (overridable by the kwarg of the same name)
 
-    All other JSONL fields pass through to the downstream pipeline
-    unchanged.  The input dict is never mutated.
+    Unmapped fields
+    ---------------
+    All other JSONL keys (REGION, INDUSTRY, SOURCE_URL, scores, angles,
+    etc.) are not represented in ContentAssignment.  They remain in the
+    original signal dict and are consumed by downstream pipeline stages
+    (ResearchContext, editorial pipeline) directly from that dict, which
+    this adapter never modifies.
 
-    submitted_at defaults to the current UTC time when not provided.
+    submitted_at defaults to the current UTC time when not provided by
+    the caller.
     """
     if not isinstance(signal, dict):
         raise ValueError(
@@ -434,8 +440,8 @@ def from_jsonl_signal(
         submitted_at=submitted_at,
         user_instruction=user_instruction,
         target_audience=target_audience,
-        publishing_constraints=publishing_constraints or {},
-        references=references or [],
+        publishing_constraints=publishing_constraints if publishing_constraints is not None else {},
+        references=references if references is not None else [],
         strategy_ref=strategy_ref,
         strategy_version=strategy_version,
         correlation=correlation,
