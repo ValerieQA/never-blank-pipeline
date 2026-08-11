@@ -1,5 +1,15 @@
 """
-Daily research pipeline orchestrator.
+Never Blank — Daily research and preparation pipeline.
+
+DISCOVERY/PREPARATION ONLY — NOT a Release 1 canonical run.
+
+This script discovers, scores, enriches, and selects signals and prepares
+content packages.  It does not create a ContentAssignment or RunContext and
+cannot report canonical Release 1 completion.
+
+The canonical controlled Release 1 entry point is:
+    scripts/generate_and_publish.py
+
 Run: python scripts/research/run_daily_research.py
 """
 
@@ -88,12 +98,16 @@ def _publishing_failures(reports: list[dict]) -> list[str]:
 
 
 def run() -> dict:
+    # DISCOVERY/PREPARATION ONLY — not a Release 1 canonical run.
+    # Does not create ContentAssignment or RunContext.
+    # Canonical Release 1 entry point: scripts/generate_and_publish.py
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     summary = {
         "date": today, "candidates_found": 0, "duplicates_skipped": 0,
         "new_signals_added": 0, "selected_for_content": 0,
         "sheet_sync": "not_run", "archived": 0, "top_signals": [],
         "publish_reports": [],
+        "_classification": "discovery-preparation-only",
     }
 
     cfg = _load_weights()
@@ -205,7 +219,9 @@ def run() -> dict:
 
 
 def _print_summary(s: dict) -> None:
-    print(f"\nNever Blank Signal Research — {s['date']}")
+    print(f"\nNever Blank — Signal Research & Preparation [{s.get('_classification', 'discovery-preparation-only')}]")
+    print(f"Date: {s['date']}")
+    print(f"NOTE: This is not a Release 1 canonical run. Use generate_and_publish.py for controlled publication.")
     print(f"Candidates found:      {s['candidates_found']}")
     print(f"New signals added:     {s['new_signals_added']}")
     print(f"Selected for content:  {s['selected_for_content']}")

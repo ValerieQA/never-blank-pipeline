@@ -39,6 +39,7 @@ from src.strategy.content_planner import _build_cta_distribution, _content_role_
 def _make_strategy(**overrides) -> Strategy:
     defaults = dict(
         strategy_id="2026-08-test",
+        strategy_version="1",
         status=StrategyStatus.ACTIVE,
         started_at=date(2026, 8, 1),
         review_date=date(2026, 8, 31),

@@ -1,22 +1,31 @@
 """
-Never Blank — Full Generation + Publish cycle.
+Never Blank — Canonical Release 1 entry point.
 
-Runs the complete path for one signal:
-  load signal → generate_article (LLM) → validate → save _generated.json → publish → History → analytics
+This script is the single authorized controlled execution path for Release 1.
 
-Unlike smoke_test_publish_analytics.py, this script ALWAYS regenerates content
-using the currently active strategy. It will refuse to run if no active strategy
-is loaded.
+Canonical call flow
+-------------------
+  CLI --signal-id
+  → load active strategy (required)
+  → load JSONL signal
+  → from_jsonl_signal(...)        → ContentAssignment
+  → RunContext.from_assignment()  → one RunContext per execution
+  → _build_legacy_research_context()  [compatibility boundary, remove by Task #27]
+  → existing generation / package path
+  → validation
+  → dry-run stop  OR  controlled Wix + LinkedIn publishing only
 
-The generated package is saved with strategy provenance fields:
-  strategy_id, strategy_started_at, generated_at
+Release 1 publishing scope: Wix and LinkedIn.
+Facebook, Instagram, Threads, and Telegram are excluded from this path
+and reported as [skipped-not-r1].
 
 Usage (local):
     NB_OPENAI_API_KEY=... python scripts/generate_and_publish.py --signal-id <id> [--dry-run]
 
 Args:
-    --signal-id  : SIGNAL_ID from data/research/selected_signals.jsonl or signals_active.jsonl
-    --dry-run    : Generate and validate content, save _generated.json, but do NOT publish
+    --signal-id    : SIGNAL_ID from data/research/selected_signals.jsonl or signals_active.jsonl
+    --dry-run      : Generate and validate content, save _generated.json, but do NOT publish
+    --from-package : Skip LLM generation — publish the existing _generated.json as-is
 """
 
 from __future__ import annotations
@@ -35,7 +44,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from dotenv import load_dotenv
 load_dotenv()
 
+from src.intake import ContentAssignment, from_jsonl_signal
 from src.lifecycle.signal_lifecycle import ResearchContext
+from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
@@ -184,6 +195,35 @@ def _save_generated(
     }, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+# Release 1 publishing scope — only these two publishers are invoked.
+_R1_PUBLISHERS = ("wix", "linkedin")
+_NON_R1_PUBLISHERS = ("facebook", "instagram", "threads", "telegram")
+
+
+def _build_legacy_research_context(
+    assignment: ContentAssignment,
+    raw_signal: dict,
+) -> ResearchContext:
+    """
+    Compatibility boundary — converts a ContentAssignment + raw JSONL signal dict
+    into the legacy ResearchContext expected by downstream pipeline stages.
+
+    The assignment_id must match the raw signal's SIGNAL_ID.  Mismatched identifiers
+    are rejected to prevent stale or unrelated signal data from being injected.
+
+    TODO Task #27: remove this boundary once downstream stages accept
+    ContentAssignment directly.
+    """
+    raw_signal_id = raw_signal.get("SIGNAL_ID", "")
+    if assignment.assignment_id != raw_signal_id:
+        raise ValueError(
+            f"assignment.assignment_id {assignment.assignment_id!r} does not match "
+            f"raw_signal SIGNAL_ID {raw_signal_id!r}. "
+            "Mismatched identifiers are not allowed at the compatibility boundary."
+        )
+    return ResearchContext.from_dict(raw_signal)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate + publish one signal end-to-end")
     parser.add_argument("--signal-id", required=True)
@@ -231,6 +271,23 @@ def main() -> int:
     headline = signal.get("HEADLINE", signal_id)
     print(f"  ✓  Headline: {headline[:70]}")
 
+    # ── Normalized intake + run identity ──────────────────────────────────────
+    execution_mode = ExecutionMode.DRY_RUN if args.dry_run else ExecutionMode.CONTROLLED_LIVE
+    assignment = from_jsonl_signal(
+        signal,
+        strategy_ref=active_strategy.strategy_id,
+        strategy_version=active_strategy.strategy_version,
+        submitted_at=datetime.now(timezone.utc),
+    )
+    run_ctx = RunContext.from_assignment(assignment, execution_mode)
+    print(f"  ✓  run_id:        {run_ctx.run_id}")
+    print(f"  ✓  assignment_id: {run_ctx.assignment_id}")
+    print(f"  ✓  execution_mode:{run_ctx.execution_mode.value}")
+
+    # ── Compatibility boundary: ContentAssignment → legacy ResearchContext ────
+    # TODO Task #27: remove once downstream stages accept ContentAssignment directly.
+    rc = _build_legacy_research_context(assignment, signal)
+
     # Preflight: fail-closed readiness check via typed ResearchContext.
     #
     # Publish gate checks ARTICLE_READY (factual readiness) only — NOT score.
@@ -241,8 +298,6 @@ def main() -> int:
     # FORCE_PUBLISH_OVERRIDE bypasses factual readiness with a warning.
     # This preserves the exact semantics of the pre-Stage-1.5 preflight:
     #   blocked = (ARTICLE_READY != "true") and not force_override
-    rc = ResearchContext.from_dict(signal)
-
     if not rc.article_ready:
         if rc.force_override:
             print(
@@ -426,6 +481,7 @@ def main() -> int:
     if args.dry_run:
         print(f"\n{SEP}")
         print("  DRY RUN — generation + validation complete, not publishing.")
+        print(f"  run_id: {run_ctx.run_id}  [COMPLETE]")
         print(SEP)
         return 0
 
@@ -482,13 +538,10 @@ def main() -> int:
     wix_post_id: Optional[str] = None
     wix_url = ""
 
+    # Release 1 scope: Wix and LinkedIn only.
     for name, publisher in [
-        ("wix",       WixPublisher()),
-        ("linkedin",  LinkedInPublisher()),
-        ("facebook",  FacebookPublisher()),
-        ("instagram", InstagramPublisher()),
-        ("threads",   ThreadsPublisher()),
-        ("telegram",  TelegramPublisher()),
+        ("wix",      WixPublisher()),
+        ("linkedin", LinkedInPublisher()),
     ]:
         try:
             result = publisher.publish(draft, "live")
@@ -512,6 +565,7 @@ def main() -> int:
         print(f"           url={(res.get('url') or '—')[:80]}")
         if res.get("error_message"):
             print(f"           error={res['error_message']}")
+    print(f"  —  [skipped-not-r1] {', '.join(_NON_R1_PUBLISHERS)}")
 
     # Update generated JSON with final wix_url
     _save_generated(
@@ -564,12 +618,14 @@ def main() -> int:
     print(f"\n{SEP}")
     failed = [p for p, r in results.items() if r.get("status") not in _OK_STATUSES]
     if failed:
-        print(f"  PARTIAL — failed channels: {failed}")
+        print(f"  PARTIAL — failed R1 channels: {failed}")
+        print(f"  run_id: {run_ctx.run_id}  [FAILED]")
         print(SEP)
         return 1
-    print("  DONE — all channels published.")
+    print("  DONE — Release 1 channels published (Wix + LinkedIn).")
     print(f"  Wix:     {wix_url or wix_post_id or '—'}")
     print(f"  strategy_id: {strategy_id}")
+    print(f"  run_id:      {run_ctx.run_id}  [COMPLETE]")
     print(SEP)
     return 0
 

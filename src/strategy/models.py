@@ -154,6 +154,7 @@ class ContinuationCriteria(BaseModel):
 
 class Strategy(BaseModel):
     strategy_id:              str            # e.g. "2026-08-presence-debt"
+    strategy_version:         str            # revision of this strategy's content, e.g. "1"
     status:                   StrategyStatus = StrategyStatus.ACTIVE
     started_at:               date
     review_date:              date
@@ -177,6 +178,15 @@ class Strategy(BaseModel):
     research_references:      list[str]      = Field(default_factory=list)
     confidence:               Confidence
     presence_debt_focus:      bool           = False  # Campaign 1 flagship concept
+
+    @field_validator("strategy_id", "strategy_version", mode="after")
+    @classmethod
+    def _strategy_identity_nonempty(cls, v: str, info: Any) -> str:
+        if not v.strip():
+            raise ValueError(
+                f"{info.field_name} must not be empty or whitespace-only"
+            )
+        return v
 
     @field_validator("market_context", "selected_problem", "sales_hypothesis",
                      "commercial_goal", "compound_presence_role")
