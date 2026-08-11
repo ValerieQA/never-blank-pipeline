@@ -323,51 +323,23 @@ def main() -> int:
             )
             return 1
 
-    pimgs = _load_package_images(signal_id)
-    editorial_package: dict = {"images": {"platform_images": pimgs}}
-    pkg_design_version = pimgs.get("_design_version") if pimgs else None
-    needs_regen = (
-        not pimgs.get("blog", {}).get("url")
-        or pkg_design_version != CURRENT_DESIGN_VERSION
-    )
-
-    if needs_regen:
-        reason = "no pre-generated image" if not pimgs else f"stale design v{pkg_design_version} (current: v{CURRENT_DESIGN_VERSION})"
-        print(f"  — {reason} — generating images for all platforms…")
-        try:
-            from scripts.research.prepare_content import prepare_content_packages
-            pkgs = prepare_content_packages([signal])
-            if pkgs:
-                editorial_package = pkgs[0]
-                pimgs = pkgs[0].get("images", {}).get("platform_images", {})
-                blog_url = pimgs.get("blog", {}).get("url") or ""
-                print(f"  ✓  Images generated: {blog_url[:60] if blog_url else '(none)'}")
-            else:
-                print(f"  ⚠  Image generation returned no packages — visual platforms will skip")
-        except Exception as exc:
-            print(f"  ⚠  Image generation failed ({exc}) — visual platforms will skip")
-
-    blog_image_url: Optional[str] = pimgs.get("blog", {}).get("url") or None
-    platform_image_urls = {
-        p: (pimgs.get(p, {}).get("url") or None)
-        for p in ("blog", "linkedin", "facebook", "instagram", "threads", "stories")
-        if pimgs.get(p, {}).get("url")
-    }
-    print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
-    print(f"  ✓  Platform images: {list(platform_image_urls.keys())}")
-
     generated_path = PACKAGES_DIR / f"{signal_id}_generated.json"
     echo_line = ""
 
     if args.from_package:
-        # ── 3a. Load existing package (skip LLM) ─────────────────────────────
+        # ── 3a. Load, verify, and validate existing package ──────────────────
+        # All checks complete before any image-generation side effect.
         print(f"\n[3/6] Loading existing package (--from-package, no LLM)…")
         if not generated_path.exists():
             print(f"  ERROR: {generated_path} not found — run without --from-package to generate")
             return 1
-        pkg = json.loads(generated_path.read_text(encoding="utf-8"))
+        try:
+            pkg = json.loads(generated_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as exc:
+            print(f"  ERROR: Package could not be read or parsed: {exc}")
+            return 1
 
-        # Staleness check (fail-closed)
+        # Provenance / staleness check (fail-closed)
         pkg_strategy_id = pkg.get("strategy_id", "")
         if not pkg_strategy_id:
             print("  ERROR: Package has no strategy_id — cannot verify staleness")
@@ -420,7 +392,7 @@ def main() -> int:
         print(f"\n  LinkedIn preview (first 400 chars):")
         print(f"  {linkedin_text[:400].replace(chr(10), chr(10)+'  ')}")
 
-        # ── Validate loaded package content ───────────────────────────────────
+        # ── Validate content (before any image side effect) ───────────────────
         print(f"\n[4/6] Validating loaded package content…")
         pkg_errors: list[str] = []
         for platform, text in [("blog", blog_body), ("linkedin", linkedin_text)]:
@@ -435,7 +407,73 @@ def main() -> int:
             print(f"\n  ERROR: {len(pkg_errors)} validation error(s) in loaded package — not publishing")
             return 1
 
+        # ── Image preparation (only after package fully validated) ────────────
+        pimgs = _load_package_images(signal_id)
+        editorial_package: dict = {"images": {"platform_images": pimgs}}
+        pkg_design_version = pimgs.get("_design_version") if pimgs else None
+        needs_regen = (
+            not pimgs.get("blog", {}).get("url")
+            or pkg_design_version != CURRENT_DESIGN_VERSION
+        )
+        if needs_regen:
+            reason = "no pre-generated image" if not pimgs else f"stale design v{pkg_design_version}"
+            print(f"  — {reason} — generating images for all platforms…")
+            try:
+                from scripts.research.prepare_content import prepare_content_packages
+                pkgs = prepare_content_packages([signal])
+                if pkgs:
+                    editorial_package = pkgs[0]
+                    pimgs = pkgs[0].get("images", {}).get("platform_images", {})
+                    blog_url = pimgs.get("blog", {}).get("url") or ""
+                    print(f"  ✓  Images generated: {blog_url[:60] if blog_url else '(none)'}")
+                else:
+                    print(f"  ⚠  Image generation returned no packages — visual platforms will skip")
+            except Exception as exc:
+                print(f"  ⚠  Image generation failed ({exc}) — visual platforms will skip")
+
+        blog_image_url: Optional[str] = pimgs.get("blog", {}).get("url") or None
+        platform_image_urls = {
+            p: (pimgs.get(p, {}).get("url") or None)
+            for p in ("blog", "linkedin", "facebook", "instagram", "threads", "stories")
+            if pimgs.get(p, {}).get("url")
+        }
+        print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
+        print(f"  ✓  Platform images: {list(platform_image_urls.keys())}")
+
     else:
+        # ── Image preparation (fresh-gen path) ───────────────────────────────
+        pimgs = _load_package_images(signal_id)
+        editorial_package: dict = {"images": {"platform_images": pimgs}}
+        pkg_design_version = pimgs.get("_design_version") if pimgs else None
+        needs_regen = (
+            not pimgs.get("blog", {}).get("url")
+            or pkg_design_version != CURRENT_DESIGN_VERSION
+        )
+        if needs_regen:
+            reason = "no pre-generated image" if not pimgs else f"stale design v{pkg_design_version} (current: v{CURRENT_DESIGN_VERSION})"
+            print(f"  — {reason} — generating images for all platforms…")
+            try:
+                from scripts.research.prepare_content import prepare_content_packages
+                pkgs = prepare_content_packages([signal])
+                if pkgs:
+                    editorial_package = pkgs[0]
+                    pimgs = pkgs[0].get("images", {}).get("platform_images", {})
+                    blog_url = pimgs.get("blog", {}).get("url") or ""
+                    print(f"  ✓  Images generated: {blog_url[:60] if blog_url else '(none)'}")
+                else:
+                    print(f"  ⚠  Image generation returned no packages — visual platforms will skip")
+            except Exception as exc:
+                print(f"  ⚠  Image generation failed ({exc}) — visual platforms will skip")
+
+        blog_image_url: Optional[str] = pimgs.get("blog", {}).get("url") or None
+        platform_image_urls = {
+            p: (pimgs.get(p, {}).get("url") or None)
+            for p in ("blog", "linkedin", "facebook", "instagram", "threads", "stories")
+            if pimgs.get(p, {}).get("url")
+        }
+        print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
+        print(f"  ✓  Platform images: {list(platform_image_urls.keys())}")
+
         # ── 3b. Generate content via LLM ─────────────────────────────────────
         print(f"\n[3/6] Generating content (LLM — Editorial Engine V2)…")
         print(f"  strategy context injected: strategy_id={strategy_id}")
@@ -571,13 +609,12 @@ def main() -> int:
     wix_post_id: Optional[str] = None
     wix_url = ""
 
-    # Release 1 scope: Wix and LinkedIn only.
-    for name, publisher in [
-        ("wix",      WixPublisher()),
-        ("linkedin", LinkedInPublisher()),
-    ]:
+    # _R1_PUBLISHERS is the single source of truth for which platforms are published.
+    # The class mapping below must cover every entry; a KeyError here means drift.
+    _r1_cls = {"wix": WixPublisher, "linkedin": LinkedInPublisher}
+    for name in _R1_PUBLISHERS:
         try:
-            result = publisher.publish(draft, "live")
+            result = _r1_cls[name]().publish(draft, "live")
             results[name] = result.to_dict()
             if name == "wix" and result.ok():
                 wix_post_id = result.external_id

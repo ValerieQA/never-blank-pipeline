@@ -144,7 +144,7 @@ def _valid_package(*, strategy_version: str = "1", **overrides) -> dict:
 def _write_package(tmp_path: Path, pkg: dict | None = None) -> Path:
     """Write package to tmp_path/<signal_id>_generated.json, return path."""
     f = tmp_path / f"{_SIGNAL_ID}_generated.json"
-    f.write_text(json.dumps(pkg or _valid_package()), encoding="utf-8")
+    f.write_text(json.dumps(_valid_package() if pkg is None else pkg), encoding="utf-8")
     return f
 
 
@@ -764,3 +764,120 @@ class TestFromPackageValidation:
         out = capsys.readouterr().out
         assert "existing package loaded and validated" in out
         assert "generation" not in out.lower() or "not published" in out
+
+
+# ===========================================================================
+# Sequencing — --from-package failures happen before image side effects
+# ===========================================================================
+
+class TestFromPackageSequencing:
+    """
+    Package existence, JSON parsing, provenance/staleness, and content validation
+    must all fail BEFORE _load_package_images() or prepare_content_packages() run.
+    No source-text assertions — behaviour is verified by mock call counts.
+    """
+
+    def _patches_with_image_sentinels(self, *, dry_run: bool = True, from_package: bool = True):
+        """Base patches with _load_package_images as a sentinel mock."""
+        argv, patches = _base_patches(dry_run=dry_run, from_package=from_package)
+        load_images_sentinel = mock.MagicMock(return_value={})
+        patches["_load_package_images"] = load_images_sentinel
+        return argv, patches, load_images_sentinel
+
+    def _run(self, argv, patches, tmp_path, extra_ctx=()):
+        import scripts.generate_and_publish as gap_module
+        patches["PACKAGES_DIR"] = tmp_path
+        ctx_managers = [
+            mock.patch("sys.argv", argv),
+            mock.patch.multiple(gap_module, **patches),
+        ] + list(extra_ctx)
+        with ctx_managers[0]:
+            with ctx_managers[1]:
+                for cm in ctx_managers[2:]:
+                    cm.__enter__()
+                exit_code = main()
+                for cm in reversed(ctx_managers[2:]):
+                    cm.__exit__(None, None, None)
+        return exit_code
+
+    def _run_simple(self, argv, patches, tmp_path):
+        import scripts.generate_and_publish as gap_module
+        patches["PACKAGES_DIR"] = tmp_path
+        with mock.patch("sys.argv", argv), mock.patch.multiple(gap_module, **patches):
+            return main()
+
+    def test_missing_package_does_not_call_load_package_images(self, tmp_path):
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        # tmp_path is empty — no generated file
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_malformed_json_does_not_call_load_package_images(self, tmp_path):
+        (tmp_path / f"{_SIGNAL_ID}_generated.json").write_text("{not valid json", encoding="utf-8")
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_malformed_json_returns_1_not_traceback(self, tmp_path):
+        (tmp_path / f"{_SIGNAL_ID}_generated.json").write_text("[}", encoding="utf-8")
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        # Should not raise — controlled failure only
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+
+    def test_missing_strategy_version_does_not_call_load_package_images(self, tmp_path):
+        pkg = _valid_package()
+        del pkg["strategy_version"]
+        _write_package(tmp_path, pkg)
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_mismatched_strategy_version_does_not_call_load_package_images(self, tmp_path):
+        _write_package(tmp_path, _valid_package(strategy_version="99"))
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_stale_generated_at_does_not_call_load_package_images(self, tmp_path):
+        # strategy started 2026-07-22; a package from 2026-07-01 is stale
+        _write_package(tmp_path, _valid_package(generated_at="2026-07-01T00:00:00+00:00"))
+        argv, patches, sentinel = self._patches_with_image_sentinels()
+        exit_code = self._run_simple(argv, patches, tmp_path)
+        assert exit_code == 1
+        sentinel.assert_not_called()
+
+    def test_failed_validation_does_not_instantiate_publishers(self, tmp_path):
+        _write_package(tmp_path)
+        argv, patches, sentinel = self._patches_with_image_sentinels(dry_run=False)
+        patches["validate_article_for_publish"] = mock.MagicMock(
+            side_effect=ValueError("too short")
+        )
+        wix_cls = mock.MagicMock()
+        li_cls = mock.MagicMock()
+
+        import scripts.generate_and_publish as gap_module
+        patches["PACKAGES_DIR"] = tmp_path
+        with mock.patch("sys.argv", argv), \
+             mock.patch.multiple(gap_module, **patches), \
+             mock.patch.object(gap_module, "WixPublisher", wix_cls), \
+             mock.patch.object(gap_module, "LinkedInPublisher", li_cls):
+            exit_code = main()
+
+        assert exit_code == 1
+        wix_cls.assert_not_called()
+        li_cls.assert_not_called()
+
+    def test_fresh_gen_path_still_calls_load_package_images(self, tmp_path):
+        """Regression guard: fresh-gen path must still call _load_package_images."""
+        argv, patches, sentinel = self._patches_with_image_sentinels(dry_run=True, from_package=False)
+        patches["PACKAGES_DIR"] = tmp_path
+        import scripts.generate_and_publish as gap_module
+        with mock.patch("sys.argv", argv), mock.patch.multiple(gap_module, **patches):
+            exit_code = main()
+        assert exit_code == 0
+        sentinel.assert_called_once()
