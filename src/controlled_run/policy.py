@@ -97,8 +97,7 @@ class PolicyViolation(Exception):
         self.run_id = run_id
         super().__init__(
             f"PolicyViolation: operation={operation!r} is not allowed in controlled-run "
-            f"(adapter={adapter!r}, run_id={run_id!r}). "
-            "This guard fires BEFORE any network/file/external-provider call."
+            f"(adapter={adapter!r}, run_id={run_id!r})."
         )
 
 
