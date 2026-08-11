@@ -6,10 +6,17 @@ PolicyRequiredError, PolicyViolation). No dependency on BasePublisher,
 research providers, artifact storage, or the orchestrator — those are
 later, separately reviewed stories (see strategy/decision_log.md,
 Часть 24, решения 103-104).
+
+Revised after PR #6 review (changes requested): cloudinary_upload is no
+longer aliased to permanent_storage, the audit trail is exposed as a
+read-only tuple with frozen entries, and blocked_before_network was
+removed in favor of blocked_by_policy (a claim the object can actually
+back up).
 """
 
 from __future__ import annotations
 
+import dataclasses
 import sys
 from pathlib import Path
 
@@ -49,12 +56,13 @@ def test_default_policy_blocks_all_capabilities():
         with pytest.raises(PolicyViolation):
             policy.check(op, adapter=f"test_{op}")
     assert len(policy.audit_trail) == len(ALL_OPERATIONS)
-    assert all(e.blocked_before_network for e in policy.audit_trail)
+    assert all(e.blocked_by_policy for e in policy.audit_trail)
     assert all(not e.allowed for e in policy.audit_trail)
 
 
 # ---------------------------------------------------------------------------
-# Explicit allow flips one capability without opening the others
+# Explicit allow flips one capability without opening the others.
+# All 10 operations are independent — none aliases another.
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("operation,attr", [
@@ -67,6 +75,7 @@ def test_default_policy_blocks_all_capabilities():
     ("cache_write", "cache_writes_allowed"),
     ("image_reuse", "image_reuse_allowed"),
     ("image_generation", "image_generation_allowed"),
+    ("cloudinary_upload", "cloudinary_upload_allowed"),
 ])
 def test_allowing_one_capability_does_not_open_others(operation, attr):
     policy = ControlledRunPolicy(run_id="one-open", **{attr: True})
@@ -75,28 +84,43 @@ def test_allowing_one_capability_does_not_open_others(operation, attr):
     policy.check(operation, adapter="test_allowed")
     last = policy.audit_trail[-1]
     assert last.allowed is True
-    assert last.blocked_before_network is False
+    assert last.blocked_by_policy is False
 
-    # Every other operation is still blocked.
+    # Every other operation is still blocked — no aliasing, no leakage.
     for op in ALL_OPERATIONS:
         if op == operation:
             continue
-        if op == "cloudinary_upload" and attr == "permanent_storage_allowed":
-            continue  # cloudinary_upload aliases permanent_storage — see below
         with pytest.raises(PolicyViolation):
             policy.check(op, adapter=f"test_{op}")
 
 
 # ---------------------------------------------------------------------------
-# cloudinary_upload aliases permanent_storage (separate op, same gate)
+# cloudinary_upload and permanent_storage are independent in both directions
+# (PR #6 review: they must not be aliased — least privilege).
 # ---------------------------------------------------------------------------
 
-def test_cloudinary_upload_aliases_permanent_storage_flag():
-    policy = ControlledRunPolicy(run_id="alias-test", permanent_storage_allowed=True)
+def test_permanent_storage_allowed_does_not_imply_cloudinary_upload():
+    policy = ControlledRunPolicy(run_id="ps-not-cu", permanent_storage_allowed=True)
+    policy.check("permanent_storage", adapter="storage_adapter")
+    with pytest.raises(PolicyViolation):
+        policy.check("cloudinary_upload", adapter="cloudinary_adapter")
+
+
+def test_cloudinary_upload_allowed_does_not_imply_permanent_storage():
+    policy = ControlledRunPolicy(run_id="cu-not-ps", cloudinary_upload_allowed=True)
+    policy.check("cloudinary_upload", adapter="cloudinary_adapter")
+    with pytest.raises(PolicyViolation):
+        policy.check("permanent_storage", adapter="storage_adapter")
+
+
+def test_cloudinary_upload_and_permanent_storage_both_allowed_independently():
+    policy = ControlledRunPolicy(
+        run_id="both-open",
+        permanent_storage_allowed=True,
+        cloudinary_upload_allowed=True,
+    )
     policy.check("permanent_storage", adapter="storage_adapter")
     policy.check("cloudinary_upload", adapter="cloudinary_adapter")
-    ops = [e.operation for e in policy.audit_trail]
-    assert ops == ["permanent_storage", "cloudinary_upload"]
     assert all(e.allowed for e in policy.audit_trail)
 
 
@@ -106,7 +130,7 @@ def test_cloudinary_upload_aliases_permanent_storage_flag():
 
 def test_permanent_storage_and_image_generation_are_separate_capabilities():
     """
-    permanent_storage gates writing bytes to durable storage (e.g. Cloudinary).
+    permanent_storage gates writing bytes to durable storage.
     image_generation gates producing the bytes in the first place.
     Allowing one must not implicitly allow the other.
     """
@@ -119,13 +143,13 @@ def test_permanent_storage_and_image_generation_are_separate_capabilities():
     policy.check("image_generation", adapter="test_generator")
     last = policy.audit_trail[-1]
     assert last.allowed is True
-    assert last.blocked_before_network is False
+    assert last.blocked_by_policy is False
 
     with pytest.raises(PolicyViolation):
         policy.check("permanent_storage", adapter="test_storage")
     last = policy.audit_trail[-1]
     assert last.allowed is False
-    assert last.blocked_before_network is True
+    assert last.blocked_by_policy is True
 
     ops = [e.operation for e in policy.audit_trail]
     assert "image_generation" in ops
@@ -143,26 +167,81 @@ def test_unknown_operation_is_fail_closed_not_keyerror():
         policy.check("some_future_capability_not_yet_mapped", adapter="test")
     last = policy.audit_trail[-1]
     assert last.allowed is False
-    assert last.blocked_before_network is True
+    assert last.blocked_by_policy is True
 
 
 # ---------------------------------------------------------------------------
-# Immutability: fields frozen, audit_trail still mutable
+# Immutability: policy fields frozen, AuditEntry frozen, audit_trail
+# read-only and cannot be used to fabricate, clear, or rewrite entries.
 # ---------------------------------------------------------------------------
 
 def test_policy_fields_are_frozen():
     policy = ControlledRunPolicy(run_id="frozen-test")
-    with pytest.raises(Exception):  # dataclasses.FrozenInstanceError
+    with pytest.raises(dataclasses.FrozenInstanceError):
         policy.publication_allowed = True  # type: ignore[misc]
 
 
-def test_audit_trail_is_mutable_despite_frozen_dataclass():
+def test_audit_entry_is_frozen():
+    """A caller cannot rewrite `allowed` (or any field) on a past entry."""
+    policy = ControlledRunPolicy(run_id="entry-frozen", publication_allowed=True)
+    policy.check("publication", adapter="a")
+    entry = policy.audit_trail[0]
+    assert isinstance(entry, AuditEntry)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        entry.allowed = False  # type: ignore[misc]
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        entry.blocked_by_policy = True  # type: ignore[misc]
+
+
+def test_audit_trail_is_a_tuple_with_no_mutating_methods():
+    policy = ControlledRunPolicy(run_id="tuple-check")
+    with pytest.raises(PolicyViolation):
+        policy.check("publication", adapter="a")
+    trail = policy.audit_trail
+    assert isinstance(trail, tuple)
+    assert not hasattr(trail, "append")
+    assert not hasattr(trail, "clear")
+    assert not hasattr(trail, "__setitem__")
+
+
+def test_audit_trail_snapshot_is_independent_of_caller_mutation():
+    """
+    Mutating a copy derived from policy.audit_trail (e.g. list(...)) must
+    never affect the policy's own record — the property returns a fresh
+    snapshot, not a reference to live internal state.
+    """
+    policy = ControlledRunPolicy(run_id="snapshot-isolated")
+    with pytest.raises(PolicyViolation):
+        policy.check("publication", adapter="a")
+
+    mutable_copy = list(policy.audit_trail)
+    fake_entry = AuditEntry(
+        operation="publication",
+        allowed=True,  # fabricated — this check never actually passed
+        adapter="attacker",
+        timestamp="1970-01-01T00:00:00+00:00",
+        run_id=policy.run_id,
+        blocked_by_policy=False,
+    )
+    mutable_copy.append(fake_entry)
+    mutable_copy.clear()
+
+    # Neither mutation reaches the policy's own record.
+    assert len(policy.audit_trail) == 1
+    assert policy.audit_trail[0].operation == "publication"
+    assert policy.audit_trail[0].allowed is False
+
+
+def test_audit_trail_records_checks_and_is_not_externally_settable():
+    """check() is the only way to add to the trail; there is no public setter."""
     policy = ControlledRunPolicy(run_id="mutable-log")
-    assert policy.audit_trail == []
+    assert policy.audit_trail == ()
     with pytest.raises(PolicyViolation):
         policy.check("publication", adapter="test")
     assert len(policy.audit_trail) == 1
     assert isinstance(policy.audit_trail[0], AuditEntry)
+    with pytest.raises(AttributeError):
+        policy.audit_trail = ()  # type: ignore[misc]  # no setter — it's a property
 
 
 # ---------------------------------------------------------------------------
@@ -194,7 +273,7 @@ def test_audit_summary_is_evidence_based():
     assert summary["allowed_attempts"] == 1
     assert summary["blocked_attempts"] == 1
     assert "evidence" in summary["verification_source"].lower()
-    assert all(e["blocked_before_network"] for e in summary["blocked_operations"])
+    assert all(e["blocked_by_policy"] for e in summary["blocked_operations"])
     assert len(summary["all_entries"]) == 2
 
 
