@@ -180,8 +180,10 @@ def _save_generated(
     strategy_started_at: str,
     strategy_version: str,
     generated_at: str | None = None,
+    run_id: str = "",
 ) -> None:
     path.write_text(json.dumps({
+        "run_id":              run_id,
         "signal_id":           signal_id,
         "headline":            headline,
         "generated_at":        generated_at or datetime.now(timezone.utc).isoformat(),
@@ -203,18 +205,34 @@ _R1_PUBLISHERS = ("wix", "linkedin")
 _NON_R1_PUBLISHERS = ("facebook", "instagram", "threads", "telegram")
 
 
+def _require_run_id(run_id: str, stage: str) -> None:
+    """
+    Fail-closed guard: raise RuntimeError when run_id is missing or blank.
+
+    Called at intake, before image preparation, and before publisher construction
+    to ensure run identity is always valid before any side effect is triggered.
+    """
+    if not run_id or not run_id.strip():
+        raise RuntimeError(
+            f"run_id is missing or blank at stage {stage!r}. "
+            "RunContext must be created before any stage is entered."
+        )
+
+
 def _build_legacy_research_context(
     assignment: ContentAssignment,
     raw_signal: dict,
+    run_ctx: "RunContext",
 ) -> ResearchContext:
     """
     Compatibility boundary — converts a ContentAssignment + raw JSONL signal dict
     into the legacy ResearchContext expected by downstream pipeline stages.
+    Injects run_id from RunContext so ResearchContext carries run identity.
 
     The assignment_id must match the raw signal's SIGNAL_ID.  Mismatched identifiers
     are rejected to prevent stale or unrelated signal data from being injected.
 
-    TODO Task #27: remove this boundary once downstream stages accept
+    TODO Task #28: remove this boundary once downstream stages accept
     ContentAssignment directly.
     """
     raw_signal_id = raw_signal.get("SIGNAL_ID", "")
@@ -224,7 +242,9 @@ def _build_legacy_research_context(
             f"raw_signal SIGNAL_ID {raw_signal_id!r}. "
             "Mismatched identifiers are not allowed at the compatibility boundary."
         )
-    return ResearchContext.from_dict(raw_signal)
+    rc = ResearchContext.from_dict(raw_signal)
+    rc.run_id = run_ctx.run_id
+    return rc
 
 
 def main() -> int:
@@ -284,13 +304,16 @@ def main() -> int:
         submitted_at=datetime.now(timezone.utc),
     )
     run_ctx = RunContext.from_assignment(assignment, execution_mode)
+    _require_run_id(run_ctx.run_id, "intake")
     print(f"  ✓  run_id:        {run_ctx.run_id}")
     print(f"  ✓  assignment_id: {run_ctx.assignment_id}")
     print(f"  ✓  execution_mode:{run_ctx.execution_mode.value}")
 
     # ── Compatibility boundary: ContentAssignment → legacy ResearchContext ────
-    # TODO Task #27: remove once downstream stages accept ContentAssignment directly.
-    rc = _build_legacy_research_context(assignment, signal)
+    # Injects run_id so ResearchContext carries run identity into the editorial
+    # boundary.  TODO Task #28: remove once downstream stages accept
+    # ContentAssignment directly.
+    rc = _build_legacy_research_context(assignment, signal, run_ctx)
 
     # Preflight: fail-closed readiness check via typed ResearchContext.
     #
@@ -455,11 +478,12 @@ def main() -> int:
         print(f"  {linkedin_text[:400].replace(chr(10), chr(10)+'  ')}")
 
         # ── Validate content (before any image side effect) ───────────────────
+        _require_run_id(run_ctx.run_id, "validation")
         print(f"\n[4/6] Validating loaded package content…")
         pkg_errors: list[str] = []
         for platform, text in [("blog", blog_body), ("linkedin", linkedin_text)]:
             try:
-                validate_article_for_publish(text, platform=platform)
+                validate_article_for_publish(text, platform=platform, run_id=run_ctx.run_id)
                 print(f"  ✓  {platform} validation passed")
             except Exception as exc:
                 print(f"  ✗  {platform} validation FAILED: {exc}")
@@ -470,6 +494,7 @@ def main() -> int:
             return 1
 
         # ── Image preparation (only after package fully validated) ────────────
+        _require_run_id(run_ctx.run_id, "image-preparation")
         pimgs = _load_package_images(signal_id)
         editorial_package: dict = {"images": {"platform_images": pimgs}}
         pkg_design_version = pimgs.get("_design_version") if pimgs else None
@@ -567,11 +592,12 @@ def main() -> int:
         print(f"  {linkedin_text[:400].replace(chr(10), chr(10)+'  ')}")
 
         # ── 4. Validate ───────────────────────────────────────────────────────
+        _require_run_id(run_ctx.run_id, "validation")
         print(f"\n[4/6] Validating generated content…")
         errors: list[str] = []
         for platform, text in [("blog", blog_body), ("linkedin", linkedin_text)]:
             try:
-                validate_article_for_publish(text, platform=platform)
+                validate_article_for_publish(text, platform=platform, run_id=run_ctx.run_id)
                 print(f"  ✓  {platform} validation passed")
             except Exception as exc:
                 print(f"  ✗  {platform} validation FAILED: {exc}")
@@ -606,9 +632,10 @@ def main() -> int:
             threads_seq, telegram_text, "",
             strategy_id, strategy_started_at, strategy_version,
             generated_at=_generated_at,
+            run_id=run_ctx.run_id,
         )
         print(f"\n  ✓  Saved {generated_path}")
-        print(f"       strategy_id={strategy_id}  strategy_version={strategy_version}  generated_at={_generated_at[:19]}")
+        print(f"       run_id={run_ctx.run_id}  strategy_id={strategy_id}  strategy_version={strategy_version}  generated_at={_generated_at[:19]}")
 
     if args.dry_run:
         print(f"\n{SEP}")
@@ -645,6 +672,7 @@ def main() -> int:
         except Exception as exc:
             print(f"  WARNING: Wix delete failed ({exc}) — continuing anyway")
 
+    _require_run_id(run_ctx.run_id, "publication")
     wix_slug = _slugify(headline)
     draft = DraftPackage(
         draft_dir=PACKAGES_DIR,
@@ -666,6 +694,7 @@ def main() -> int:
         wix_slug=wix_slug,
         wix_category_id=os.getenv("NB_WIX_BLOG_CATEGORY_ID", ""),
         wix_tags=[x.strip() for x in os.getenv("NB_WIX_BLOG_TAG_IDS", "").split(",") if x.strip()],
+        run_id=run_ctx.run_id,
         metadata={"signal_id": signal_id},
     )
 
@@ -679,6 +708,7 @@ def main() -> int:
     for name in _R1_PUBLISHERS:
         try:
             result = _r1_cls[name]().publish(draft, "live")
+            result.run_id = run_ctx.run_id
             results[name] = result.to_dict()
             if name == "wix" and result.ok():
                 wix_post_id = result.external_id
@@ -688,6 +718,7 @@ def main() -> int:
             results[name] = {
                 "platform": name, "status": "FAILED",
                 "error_message": str(exc), "external_id": None, "url": None,
+                "run_id": run_ctx.run_id,
             }
 
     print()
@@ -701,13 +732,14 @@ def main() -> int:
             print(f"           error={res['error_message']}")
     print(f"  —  [skipped-not-r1] {', '.join(_NON_R1_PUBLISHERS)}")
 
-    # Update generated JSON with final wix_url — preserve generated_at and strategy provenance.
+    # Update generated JSON with final wix_url — preserve generated_at, strategy provenance, and run_id.
     _save_generated(
         generated_path, signal_id, headline,
         blog_body, linkedin_text, facebook_text, instagram_text,
         threads_seq, telegram_text, wix_url,
         strategy_id, strategy_started_at, strategy_version,
         generated_at=_generated_at,
+        run_id=run_ctx.run_id,
     )
 
     # ── Write to History ──────────────────────────────────────────────────────

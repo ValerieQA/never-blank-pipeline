@@ -169,6 +169,11 @@ class ResearchContext:
     raw_summary: str
     discovery_confidence: str
 
+    # Run identity — set by the canonical entry point via _build_legacy_research_context.
+    # Default "" preserves backward compat for from_dict() on pre-Task-#27 JSONL records
+    # and for the discovery-only path (run_daily_research.py) which has no RunContext.
+    run_id: str = field(default="")
+
     # Unknown legacy keys: preserved for JSONL output, never used for decisions
     _passthrough: dict = field(default_factory=dict, repr=False, compare=False)
 
@@ -349,6 +354,7 @@ class ResearchContext:
             "force_override" if self.force_override else "admitted"
         )
         return EditorialContext(
+            run_id=self.run_id,
             signal_id=self.signal_id,
             headline=self.headline,
             factual_readiness=self.factual_readiness,
@@ -482,6 +488,7 @@ class ResearchContext:
             discovery_confidence=_str(d.get("discovery_confidence")),
             force_override=force_override,
             approved_override_raw=_str(d.get("APPROVED_OVERRIDE")),
+            run_id=_str(d.get("run_id")),
             _passthrough=passthrough,
         )
 
@@ -535,6 +542,10 @@ class EditorialContext:
 
     # From content_package dict
     pkg_raw: dict = field(default_factory=dict, repr=False)
+
+    # Run identity — propagated from RunContext via ResearchContext.
+    # Default "" preserves backward compat with tests and non-canonical paths.
+    run_id: str = field(default="")
 
     def __post_init__(self) -> None:
         if self.admission_status not in ("admitted", "force_override"):

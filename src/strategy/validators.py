@@ -376,14 +376,21 @@ def validate_article_for_publish(
     platform: str = "blog",
     use_llm_compound_check: bool = False,
     llm_fn: Optional[callable] = None,
+    run_id: str = "",
 ) -> None:
     """
     Full pre-publish validation for a single article/post.
     Calls output_guard checks + compound_presence semantic check.
 
+    run_id: propagated from RunContext. When non-empty it is logged at the
+    validation gate. Callers outside the canonical path may omit it.
+
     Raises ValueError on first hard failure.
     """
     from src.content.output_guard import validate_platform_output
+
+    if run_id:
+        log.info("Validation gate: platform=%s run_id=%s", platform, run_id)
 
     validate_platform_output(platform, text)
 

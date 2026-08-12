@@ -504,6 +504,16 @@ class TestFromPackage:
 
 class TestCompatibilityBoundary:
 
+    def _make_run_ctx(self, ca=None) -> RunContext:
+        if ca is None:
+            ca = from_jsonl_signal(
+                _RAW_SIGNAL,
+                strategy_ref="2026-07-presence-debt-campaign-1",
+                strategy_version="1",
+                submitted_at=datetime(2026, 8, 11, tzinfo=timezone.utc),
+            )
+        return RunContext.from_assignment(ca, ExecutionMode.DRY_RUN)
+
     def test_matching_ids_succeed(self):
         ca = from_jsonl_signal(
             _RAW_SIGNAL,
@@ -511,9 +521,22 @@ class TestCompatibilityBoundary:
             strategy_version="1",
             submitted_at=datetime(2026, 8, 11, tzinfo=timezone.utc),
         )
-        rc = _build_legacy_research_context(ca, _RAW_SIGNAL)
+        run_ctx = self._make_run_ctx(ca)
+        rc = _build_legacy_research_context(ca, _RAW_SIGNAL, run_ctx)
         assert isinstance(rc, ResearchContext)
         assert rc.signal_id == _SIGNAL_ID
+
+    def test_matching_ids_propagate_run_id(self):
+        """Compatibility boundary must inject run_id onto the returned ResearchContext."""
+        ca = from_jsonl_signal(
+            _RAW_SIGNAL,
+            strategy_ref="2026-07-presence-debt-campaign-1",
+            strategy_version="1",
+            submitted_at=datetime(2026, 8, 11, tzinfo=timezone.utc),
+        )
+        run_ctx = self._make_run_ctx(ca)
+        rc = _build_legacy_research_context(ca, _RAW_SIGNAL, run_ctx)
+        assert rc.run_id == run_ctx.run_id
 
     def test_mismatched_ids_fail_closed(self):
         ca = from_jsonl_signal(
@@ -522,9 +545,10 @@ class TestCompatibilityBoundary:
             strategy_version="1",
             submitted_at=datetime(2026, 8, 11, tzinfo=timezone.utc),
         )
+        run_ctx = self._make_run_ctx(ca)
         different_signal = {**_RAW_SIGNAL, "SIGNAL_ID": "sig-different-999"}
         with pytest.raises(ValueError, match="does not match"):
-            _build_legacy_research_context(ca, different_signal)
+            _build_legacy_research_context(ca, different_signal, run_ctx)
 
     def test_main_does_not_bypass_compatibility_boundary(self):
         """
