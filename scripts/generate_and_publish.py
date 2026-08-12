@@ -533,10 +533,9 @@ def main() -> int:
         #
         # In both cases the resolved _generation_run_id must be a non-blank
         # string and is validated before any image or publisher side effect.
-        _pkg_gen_run_id_raw = pkg.get("generation_run_id")  # None if absent
-
-        if _pkg_gen_run_id_raw is not None:
-            # Field present — must be a valid non-blank string.
+        if "generation_run_id" in pkg:
+            # Field present — must be a valid non-blank string (null counts as invalid).
+            _pkg_gen_run_id_raw = pkg["generation_run_id"]
             if not isinstance(_pkg_gen_run_id_raw, str) or not _pkg_gen_run_id_raw.strip():
                 _got = (
                     type(_pkg_gen_run_id_raw).__name__

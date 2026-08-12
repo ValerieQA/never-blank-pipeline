@@ -858,6 +858,25 @@ class TestFromPackageRunIdentity:
         assert result == 1
         img_spy.assert_not_called()
 
+    def test_present_null_generation_run_id_fails_before_image_prep(self, tmp_path):
+        """JSON null is a present non-string value and must fail closed."""
+        pkg = _valid_package(run_id=_PUB_RUN_ID1)
+        pkg["generation_run_id"] = None
+        img_spy = mock.MagicMock(return_value={})
+        wix_spy = mock.MagicMock()
+        li_spy  = mock.MagicMock()
+        save_spy = mock.MagicMock()
+        with mock.patch.object(_gap_module, "_load_package_images", img_spy), \
+             mock.patch.object(_gap_module, "WixPublisher", wix_spy), \
+             mock.patch.object(_gap_module, "LinkedInPublisher", li_spy), \
+             mock.patch.object(_gap_module, "_save_generated", save_spy):
+            result = self._run_with_pkg(pkg, tmp_path)
+        assert result == 1
+        img_spy.assert_not_called()
+        wix_spy.assert_not_called()
+        li_spy.assert_not_called()
+        save_spy.assert_not_called()
+
     def test_present_non_string_generation_run_id_fails_before_image_prep(self, tmp_path):
         pkg = _valid_package(run_id=_PUB_RUN_ID1)
         pkg["generation_run_id"] = 99999
