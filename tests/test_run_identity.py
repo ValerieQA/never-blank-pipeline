@@ -704,11 +704,24 @@ class TestPublishResultRunId:
 # TestFromPackageRunIdentity  (BLOCKER 1)
 # ===========================================================================
 
+_GEN_RUN_ID  = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"  # stable generation identity
+_PUB_RUN_ID1 = "11111111-2222-4333-8444-555555555555"  # first publication run
+_PUB_RUN_ID2 = "22222222-3333-4444-9555-666666666666"  # second publication run
+_PUB_RUN_ID3 = "33333333-4444-4555-a666-777777777777"  # third publication run
+
+
 class TestFromPackageRunIdentity:
     """
-    --from-package is a new publication run.  The package's run_id is the
-    generation_run_id and must be present, non-blank, and a string.
-    A package without run_id predates Task #27 and is rejected before image prep.
+    --from-package lifecycle (Option B):
+
+    - generation_run_id is the identity of the run that generated the content.
+    - It is stable: it never changes regardless of how many times --from-package
+      is invoked on the same package.
+    - Each --from-package execution creates a new publication_run_id.
+    - A package with a missing or blank run_id (when generation_run_id is absent)
+      predates Task #27 and is rejected before image prep.
+    - A package with a present but invalid generation_run_id is corrupt and is
+      also rejected before image prep.
     """
 
     def _run_with_pkg(self, pkg: dict, tmp_path: Path) -> int:
@@ -823,6 +836,177 @@ class TestFromPackageRunIdentity:
         pub_run_id = save_calls[0].get("run_id", "")
         parsed = uuid.UUID(pub_run_id, version=4)
         assert str(parsed) == pub_run_id
+
+    # ── generation_run_id validation when field is present ──────────────────
+
+    def test_present_blank_generation_run_id_fails_before_image_prep(self, tmp_path):
+        """A package with generation_run_id="" is corrupt — fail closed."""
+        pkg = _valid_package(run_id=_PUB_RUN_ID1)
+        pkg["generation_run_id"] = ""
+        img_spy = mock.MagicMock(return_value={})
+        with mock.patch.object(_gap_module, "_load_package_images", img_spy):
+            result = self._run_with_pkg(pkg, tmp_path)
+        assert result == 1
+        img_spy.assert_not_called()
+
+    def test_present_whitespace_generation_run_id_fails_before_image_prep(self, tmp_path):
+        pkg = _valid_package(run_id=_PUB_RUN_ID1)
+        pkg["generation_run_id"] = "   "
+        img_spy = mock.MagicMock(return_value={})
+        with mock.patch.object(_gap_module, "_load_package_images", img_spy):
+            result = self._run_with_pkg(pkg, tmp_path)
+        assert result == 1
+        img_spy.assert_not_called()
+
+    def test_present_non_string_generation_run_id_fails_before_image_prep(self, tmp_path):
+        pkg = _valid_package(run_id=_PUB_RUN_ID1)
+        pkg["generation_run_id"] = 99999
+        img_spy = mock.MagicMock(return_value={})
+        with mock.patch.object(_gap_module, "_load_package_images", img_spy):
+            result = self._run_with_pkg(pkg, tmp_path)
+        assert result == 1
+        img_spy.assert_not_called()
+
+    def test_valid_generation_run_id_field_proceeds(self, tmp_path):
+        """A package that already has generation_run_id set proceeds normally."""
+        pkg = _valid_package(run_id=_PUB_RUN_ID1)
+        pkg["generation_run_id"] = _GEN_RUN_ID
+        result = self._run_with_pkg(pkg, tmp_path)
+        assert result == 0
+
+    # ── generation_run_id stability across repeated publications ──────────────
+    # These tests exercise serialized package JSON across successive executions.
+
+    def _run_live(self, pkg_path: Path, tmp_path: Path, pub_run_id: str) -> dict:
+        """
+        Run one controlled-live --from-package execution.
+        Patches uuid.uuid4 to return pub_run_id so the publication run_id is
+        deterministic.  Lets _save_generated write real JSON to tmp_path.
+        Returns the package JSON written by that execution.
+        """
+        fixed_uuid = uuid.UUID(pub_run_id)
+        argv, patches = _base_patches(dry_run=False, from_package=True)
+        patches["PACKAGES_DIR"] = tmp_path
+        del patches["_save_generated"]   # use real writer
+
+        wix_r = PublishResult(platform="wix",      status=PublishStatus.PUBLISHED)
+        li_r  = PublishResult(platform="linkedin", status=PublishStatus.PUBLISHED)
+        wix_m = mock.MagicMock(); wix_m.publish.return_value = wix_r
+        li_m  = mock.MagicMock(); li_m.publish.return_value  = li_r
+
+        with mock.patch("uuid.uuid4", return_value=fixed_uuid), \
+             mock.patch("sys.argv", argv), \
+             mock.patch.multiple(_gap_module, **patches), \
+             mock.patch.object(_gap_module, "WixPublisher", return_value=wix_m), \
+             mock.patch.object(_gap_module, "LinkedInPublisher", return_value=li_m):
+            exit_code = main()
+
+        assert exit_code == 0
+        return json.loads(pkg_path.read_text(encoding="utf-8"))
+
+    def test_first_publication_promotes_run_id_to_generation_run_id(self, tmp_path):
+        """
+        First --from-package publish: generation_run_id absent in fresh package.
+        After re-save, generation_run_id == original pkg.run_id (_GEN_RUN_ID).
+        """
+        pkg_path = tmp_path / f"{_SIGNAL_ID}_generated.json"
+        initial_pkg = _valid_package(run_id=_GEN_RUN_ID)  # no generation_run_id
+        pkg_path.write_text(json.dumps(initial_pkg), encoding="utf-8")
+
+        saved = self._run_live(pkg_path, tmp_path, _PUB_RUN_ID1)
+
+        assert saved["generation_run_id"] == _GEN_RUN_ID
+        assert saved["run_id"] == _PUB_RUN_ID1
+
+    def test_second_publication_preserves_original_generation_run_id(self, tmp_path):
+        """
+        Second --from-package publish: generation_run_id already set in package.
+        After re-save, generation_run_id is unchanged (_GEN_RUN_ID), not promoted.
+        """
+        pkg_path = tmp_path / f"{_SIGNAL_ID}_generated.json"
+
+        # State after first publication
+        pkg_after_pub1 = _valid_package(run_id=_PUB_RUN_ID1)
+        pkg_after_pub1["generation_run_id"] = _GEN_RUN_ID
+        pkg_path.write_text(json.dumps(pkg_after_pub1), encoding="utf-8")
+
+        saved = self._run_live(pkg_path, tmp_path, _PUB_RUN_ID2)
+
+        assert saved["generation_run_id"] == _GEN_RUN_ID, (
+            f"generation_run_id must not change on 2nd publish; "
+            f"got {saved['generation_run_id']!r}"
+        )
+        assert saved["run_id"] == _PUB_RUN_ID2
+
+    def test_third_publication_preserves_original_generation_run_id(self, tmp_path):
+        """
+        Third --from-package publish: generation_run_id remains unchanged from
+        the very first publication.
+        """
+        pkg_path = tmp_path / f"{_SIGNAL_ID}_generated.json"
+
+        # State after second publication
+        pkg_after_pub2 = _valid_package(run_id=_PUB_RUN_ID2)
+        pkg_after_pub2["generation_run_id"] = _GEN_RUN_ID
+        pkg_path.write_text(json.dumps(pkg_after_pub2), encoding="utf-8")
+
+        saved = self._run_live(pkg_path, tmp_path, _PUB_RUN_ID3)
+
+        assert saved["generation_run_id"] == _GEN_RUN_ID, (
+            f"generation_run_id must not change on 3rd publish; "
+            f"got {saved['generation_run_id']!r}"
+        )
+        assert saved["run_id"] == _PUB_RUN_ID3
+
+    def test_three_successive_publications_exercise_serialized_json(self, tmp_path):
+        """
+        Complete serialized three-round test.
+        Runs three successive --from-package executions, each reading the package
+        written by the previous one.  Asserts:
+        - generation_run_id is identical in all three saved packages (_GEN_RUN_ID);
+        - run_id is unique in each saved package (new UUID per publication);
+        - no publication run_id is ever promoted to generation_run_id.
+        """
+        pkg_path = tmp_path / f"{_SIGNAL_ID}_generated.json"
+
+        # Seed: fresh package with only run_id (no generation_run_id)
+        pkg_path.write_text(
+            json.dumps(_valid_package(run_id=_GEN_RUN_ID)), encoding="utf-8"
+        )
+
+        for round_n, pub_id in enumerate(
+            [_PUB_RUN_ID1, _PUB_RUN_ID2, _PUB_RUN_ID3], start=1
+        ):
+            saved = self._run_live(pkg_path, tmp_path, pub_id)
+
+            assert saved["generation_run_id"] == _GEN_RUN_ID, (
+                f"Round {round_n}: generation_run_id changed to {saved['generation_run_id']!r}"
+            )
+            assert saved["run_id"] == pub_id, (
+                f"Round {round_n}: publication run_id {saved['run_id']!r} != {pub_id!r}"
+            )
+
+        # Confirm: no publication run_id was ever written as generation_run_id
+        final = json.loads(pkg_path.read_text(encoding="utf-8"))
+        assert final["generation_run_id"] == _GEN_RUN_ID
+        assert final["run_id"] == _PUB_RUN_ID3
+        assert _PUB_RUN_ID1 not in (final["generation_run_id"],)
+        assert _PUB_RUN_ID2 not in (final["generation_run_id"],)
+
+    def test_every_publication_receives_distinct_run_id(self, tmp_path):
+        """Each successive publication creates a new unique run_id."""
+        pkg_path = tmp_path / f"{_SIGNAL_ID}_generated.json"
+        pkg_path.write_text(
+            json.dumps(_valid_package(run_id=_GEN_RUN_ID)), encoding="utf-8"
+        )
+
+        seen_run_ids = {_GEN_RUN_ID}
+        for pub_id in [_PUB_RUN_ID1, _PUB_RUN_ID2, _PUB_RUN_ID3]:
+            saved = self._run_live(pkg_path, tmp_path, pub_id)
+            assert saved["run_id"] not in seen_run_ids, (
+                f"run_id {saved['run_id']!r} was reused across publications"
+            )
+            seen_run_ids.add(saved["run_id"])
 
 
 # ===========================================================================

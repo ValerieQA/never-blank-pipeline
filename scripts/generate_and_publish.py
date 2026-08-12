@@ -34,9 +34,21 @@ Canonical call flow
   --from-package creates a new RunContext (publication_run_id).
   The re-saved package carries both:
     "run_id":            publication_run_id   (the current publication run)
-    "generation_run_id": original run_id      (preserved from the package)
-  Neither field is silently overwritten.  A package with a missing or blank
-  `run_id` predates Task #27 and is rejected before image preparation.
+    "generation_run_id": original run_id      (stable across ALL republishes)
+
+  generation_run_id stability contract:
+  - First publication: generation_run_id is absent in the fresh package;
+    pkg["run_id"] (the generation run) becomes the stable generation identity.
+  - Second and subsequent publications: generation_run_id already exists and
+    is preserved exactly as written; pkg["run_id"] (previous publication) is
+    never promoted over it.
+  - generation_run_id never changes regardless of how many times --from-package
+    is invoked on the same package.
+
+  A package with a missing or blank `run_id` (when generation_run_id is absent)
+  predates Task #27 and is rejected before image preparation.
+  A package with a present but invalid `generation_run_id` is corrupt and is
+  also rejected before image preparation.
 
 Release 1 publishing scope: Wix and LinkedIn.
 Facebook, Instagram, Threads, and Telegram are excluded from this path
@@ -504,23 +516,56 @@ def main() -> int:
             print(f"  ERROR: Package generated BEFORE active strategy started ({gen_dt} < {strategy_start})")
             return 1
 
-        # Run identity of the original generation (BLOCKER 1 fix).
-        # --from-package is a new publication run; the package's run_id is the
-        # generation_run_id and must be preserved, never overwritten.
-        # A package with a missing/blank run_id predates Task #27 — reject it.
-        _generation_run_id = pkg.get("run_id", "")
-        if not isinstance(_generation_run_id, str) or not _generation_run_id.strip():
-            _got = (
-                type(_generation_run_id).__name__
-                if not isinstance(_generation_run_id, str)
-                else "blank"
-            )
-            print(
-                f"  ERROR: Package 'run_id' must be a non-blank string (got {_got}). "
-                "Package was generated without run identity (predates Task #27). "
-                "Regenerate with --signal-id to obtain a fully-identified package."
-            )
-            return 1
+        # Resolve stable generation_run_id (Option B, repeated-publish safe).
+        #
+        # A package may be in one of two states:
+        #
+        #  (a) Freshly generated / not yet published via --from-package:
+        #      Only `run_id` is present (the generation run).
+        #      generation_run_id field is absent.
+        #      → use pkg["run_id"] as the generation identity.
+        #
+        #  (b) Already published one or more times via --from-package:
+        #      `run_id` = last publication run.
+        #      `generation_run_id` = original generation run (stable).
+        #      → use pkg["generation_run_id"] — never promote the
+        #        stale publication run_id over the original identity.
+        #
+        # In both cases the resolved _generation_run_id must be a non-blank
+        # string and is validated before any image or publisher side effect.
+        _pkg_gen_run_id_raw = pkg.get("generation_run_id")  # None if absent
+
+        if _pkg_gen_run_id_raw is not None:
+            # Field present — must be a valid non-blank string.
+            if not isinstance(_pkg_gen_run_id_raw, str) or not _pkg_gen_run_id_raw.strip():
+                _got = (
+                    type(_pkg_gen_run_id_raw).__name__
+                    if not isinstance(_pkg_gen_run_id_raw, str)
+                    else "blank"
+                )
+                print(
+                    f"  ERROR: Package 'generation_run_id' is present but invalid "
+                    f"(got {_got}). Package provenance is corrupt. "
+                    "Regenerate with --signal-id to obtain a clean package."
+                )
+                return 1
+            _generation_run_id = _pkg_gen_run_id_raw
+        else:
+            # Field absent — fresh package; run_id IS the generation identity.
+            _from_pkg_run_id = pkg.get("run_id", "")
+            if not isinstance(_from_pkg_run_id, str) or not _from_pkg_run_id.strip():
+                _got = (
+                    type(_from_pkg_run_id).__name__
+                    if not isinstance(_from_pkg_run_id, str)
+                    else "blank"
+                )
+                print(
+                    f"  ERROR: Package 'run_id' must be a non-blank string (got {_got}). "
+                    "Package was generated without run identity (predates Task #27). "
+                    "Regenerate with --signal-id to obtain a fully-identified package."
+                )
+                return 1
+            _generation_run_id = _from_pkg_run_id
 
         # Preserve original generation timestamp — re-save after publish must not overwrite it.
         _generated_at = raw_gen_at
