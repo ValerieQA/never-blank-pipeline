@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from dataclasses import dataclass
 from typing import Optional, Protocol, Sequence, runtime_checkable
 
 from src.strategy.models import (
@@ -30,6 +31,15 @@ from src.strategy.models import (
 from src.utils.logger import get_logger
 
 log = get_logger("strategy.validators")
+
+
+@dataclass
+class ValidationResult:
+    """Typed outcome of one platform's pre-publish validation gate."""
+    platform:      str
+    run_id:        str
+    passed:        bool
+    error_message: str = ""
 
 
 # ── Strategy validation ────────────────────────────────────────────────────────

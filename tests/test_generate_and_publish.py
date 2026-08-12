@@ -124,6 +124,8 @@ _FAKE_ARTICLE = {
 def _valid_package(*, strategy_version: str = "1", **overrides) -> dict:
     """Return a minimal valid _generated.json package dict."""
     pkg = {
+        # run_id is required by Task #27 — packages without it are rejected.
+        "run_id":            "00000000-0000-4000-8000-000000000001",
         "signal_id":         _SIGNAL_ID,
         "strategy_id":       "2026-07-presence-debt-campaign-1",
         "strategy_version":  strategy_version,
@@ -151,12 +153,13 @@ def _write_package(tmp_path: Path, pkg: dict | None = None) -> Path:
 def _make_ok_publish_result(platform: str):
     r = mock.MagicMock()
     r.ok.return_value = True
+    r.run_id = ""   # empty so _normalize_publish_result injects the canonical run_id
     r.external_id = f"{platform}-post-id"
     r.url = f"https://example.com/{platform}"
     r.to_dict.return_value = {
         "platform": platform, "status": "PUBLISHED",
         "external_id": f"{platform}-post-id", "url": f"https://example.com/{platform}",
-        "error_message": None,
+        "error_message": None, "run_id": "",
     }
     return r
 
@@ -197,17 +200,31 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         ),
         "formatting": _make_formatting_mock(),
         "CURRENT_DESIGN_VERSION": "test-v1",
+        # Propagates run_ctx.run_id into rc and ec mocks so that
+        # _assert_run_id_match passes at both the research-context and
+        # editorial-context boundaries.
         "_build_legacy_research_context": mock.MagicMock(
-            return_value=mock.MagicMock(
-                to_editorial=mock.MagicMock(
-                    return_value=mock.MagicMock(
-                        to_legacy_dict=mock.MagicMock(return_value={})
-                    )
-                )
-            )
+            side_effect=lambda assignment, raw_signal, run_ctx: _make_rc_mock(run_ctx.run_id)
         ),
+        "_emit_run_report": mock.MagicMock(),
     }
     return argv, kwargs
+
+
+def _make_rc_mock(run_id: str):
+    """Return a ResearchContext-like mock with run_id and article_ready set."""
+    ec_mock = mock.MagicMock()
+    ec_mock.run_id = run_id
+    ec_mock.to_legacy_dict.return_value = {}
+
+    rc_mock = mock.MagicMock()
+    rc_mock.run_id = run_id
+    rc_mock.article_ready = True
+    rc_mock.force_override = False
+    rc_mock.factual_readiness = "ready"
+    rc_mock.source_premise_verified = "true"
+    rc_mock.to_editorial.return_value = ec_mock
+    return rc_mock
 
 
 import scripts.generate_and_publish as _gap_module
