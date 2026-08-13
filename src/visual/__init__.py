@@ -12,6 +12,10 @@ adapter, asserts identity, logs it, then calls the image pipeline directly.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.strategy.execution_context import ConfigurationIdentity, VisualStrategyView
 
 
 @dataclass
@@ -30,6 +34,7 @@ class VisualArtifactRequest:
     run_id:         str
     signal_id:      str
     design_version: str
+    strategy_view: "VisualStrategyView | None" = None
     blocked:        bool = True
     blocked_reason: str  = (
         "Visual System story not yet implemented — image pipeline called directly"
@@ -42,3 +47,21 @@ class VisualArtifactRequest:
                 f"VisualArtifactRequest run_id mismatch: "
                 f"request={self.run_id!r} expected={expected_run_id!r}"
             )
+
+    def assert_configuration_identity(
+        self, expected: "ConfigurationIdentity"
+    ) -> None:
+        """Require the controlled path's declared visual strategy view."""
+
+        from src.strategy.execution_context import (
+            StrategyExecutionError,
+            require_configuration_identity,
+        )
+
+        if self.strategy_view is None:
+            raise StrategyExecutionError(
+                "visual strategy view is missing at visual-artifact boundary"
+            )
+        require_configuration_identity(
+            expected, self.strategy_view.identity, "visual-artifact"
+        )

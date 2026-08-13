@@ -122,6 +122,19 @@ from src.artifacts import (
 )
 from src.reporting import R1RunReport
 from src.strategy.history import append_published_entry
+from src.strategy.business_config import (
+    BusinessStrategyConfigurationError,
+    load_business_strategy_configuration,
+)
+from src.strategy.execution_context import (
+    StrategyExecutionContext,
+    StrategyExecutionError,
+    assert_campaign_reference,
+    identity_from_mapping,
+    require_configuration_identity,
+)
+# get_strategy_context remains imported for legacy test/caller patch surfaces;
+# the canonical path no longer calls it.
 from src.strategy.loader import get_cta_mode, get_strategy_context, load_active_strategy
 from src.strategy.models import PlatformPublication, PublishedEntry
 from src.strategy.validators import ValidationResult, validate_article_for_publish
@@ -404,20 +417,44 @@ def main() -> int:
     print(f"  Mode:   {mode}")
     print(SEP)
 
-    # ── 1. Load active strategy (required) ────────────────────────────────────
-    print("\n[1/6] Loading active strategy…")
+    # ── 1. Load strict business configuration before any judgment ────────────
+    print("\n[1/6] Loading business configuration and active campaign…")
+    try:
+        business_configuration = load_business_strategy_configuration()
+        strategy_execution = StrategyExecutionContext.from_configuration(
+            business_configuration
+        )
+        strategy_execution.assert_consistent()
+    except (BusinessStrategyConfigurationError, StrategyExecutionError) as exc:
+        print(f"  ERROR: {exc}")
+        return 1
+
     active_strategy = load_active_strategy()
     if active_strategy is None:
         print("  ERROR: No active strategy found at strategy/current/strategy.json")
         print("  Cannot generate content without an active strategy.")
         return 1
 
-    strategy_context    = get_strategy_context(active_strategy)
     cta_mode            = get_cta_mode(active_strategy)
-    strategy_id         = strategy_context.get("strategy_id", "")
+    strategy_id         = active_strategy.strategy_id
     strategy_started_at = str(active_strategy.started_at) if active_strategy.started_at else ""
     strategy_version    = active_strategy.strategy_version
 
+    try:
+        assert_campaign_reference(
+            business_configuration, campaign_version=strategy_version
+        )
+        strategy_execution.decision_lens_editorial.cta(cta_mode)
+    except StrategyExecutionError as exc:
+        print(f"  ERROR: {exc}")
+        return 1
+
+    print(
+        "  ✓  business configuration: "
+        f"{strategy_execution.identity.configuration_id}@"
+        f"{strategy_execution.identity.configuration_version} "
+        f"(schema {strategy_execution.identity.schema_version})"
+    )
     print(f"  ✓  strategy_id:   {strategy_id}")
     print(f"  ✓  started_at:    {strategy_started_at}")
     print(f"  ✓  cta_mode:      {cta_mode}")
@@ -456,6 +493,10 @@ def main() -> int:
     # boundary.  TODO Task #29: remove once downstream stages accept
     # ContentAssignment directly.
     rc = _build_legacy_research_context(assignment, signal, run_ctx)
+    rc.strategy_view = strategy_execution.research
+    require_configuration_identity(
+        strategy_execution.identity, rc.strategy_view.identity, "research-context"
+    )
     _assert_run_id_match(run_ctx.run_id, rc.run_id, "research-context")
 
     # Preflight: fail-closed readiness check via typed ResearchContext.
@@ -575,6 +616,18 @@ def main() -> int:
                 f"package={pkg_strategy_version!r} active={strategy_version!r}"
             )
             return 1
+        try:
+            package_configuration_identity = identity_from_mapping(
+                pkg.get("configuration_identity"), boundary="generated-package"
+            )
+            require_configuration_identity(
+                strategy_execution.identity,
+                package_configuration_identity,
+                "generated-package",
+            )
+        except StrategyExecutionError as exc:
+            print(f"  ERROR: {exc}")
+            return 1
         raw_gen_at = pkg["generated_at"]
         try:
             from datetime import date
@@ -677,8 +730,10 @@ def main() -> int:
             run_id=run_ctx.run_id,
             signal_id=signal_id,
             design_version=CURRENT_DESIGN_VERSION,
+            strategy_view=strategy_execution.visual,
         )
         _vis_req.assert_identity(run_ctx.run_id)
+        _vis_req.assert_configuration_identity(strategy_execution.identity)
         log.info(
             "visual-boundary: run_id=%s blocked=%s reason=%r",
             _vis_req.run_id, _vis_req.blocked, _vis_req.blocked_reason,
@@ -723,8 +778,10 @@ def main() -> int:
             run_id=run_ctx.run_id,
             signal_id=signal_id,
             design_version=CURRENT_DESIGN_VERSION,
+            strategy_view=strategy_execution.visual,
         )
         _vis_req.assert_identity(run_ctx.run_id)
+        _vis_req.assert_configuration_identity(strategy_execution.identity)
         log.info(
             "visual-boundary: run_id=%s blocked=%s reason=%r",
             _vis_req.run_id, _vis_req.blocked, _vis_req.blocked_reason,
@@ -772,7 +829,9 @@ def main() -> int:
             article    = generate_article(
                 editorial.to_legacy_dict(),
                 cta_mode=cta_mode,
-                strategy_context=strategy_context,
+                strategy_context=strategy_execution.decision_lens_editorial,
+                wix_strategy=strategy_execution.wix,
+                linkedin_strategy=strategy_execution.linkedin,
             )
             platforms  = article["platforms"]
             structured = article["structured_article"]
@@ -843,6 +902,7 @@ def main() -> int:
             "strategy_id":         strategy_id,
             "strategy_version":    strategy_version,
             "strategy_started_at": strategy_started_at,
+            "configuration_identity": strategy_execution.identity.model_dump(),
             "blog_article":        blog_body,
             "linkedin_post":       linkedin_text,
             "facebook_post":       facebook_text,
@@ -924,7 +984,10 @@ def main() -> int:
         wix_category_id=os.getenv("NB_WIX_BLOG_CATEGORY_ID", ""),
         wix_tags=[x.strip() for x in os.getenv("NB_WIX_BLOG_TAG_IDS", "").split(",") if x.strip()],
         run_id=run_ctx.run_id,
-        metadata={"signal_id": signal_id},
+        metadata={
+            "signal_id": signal_id,
+            "configuration_identity": strategy_execution.identity.model_dump(),
+        },
     )
     _assert_run_id_match(run_ctx.run_id, draft.run_id, "draft-package")
 
@@ -935,7 +998,19 @@ def main() -> int:
     _r1_cls = {"wix": WixPublisher, "linkedin": LinkedInPublisher}
     for name in _R1_PUBLISHERS:
         try:
-            result = _r1_cls[name]().publish(draft, "live")
+            channel_view = (
+                strategy_execution.wix
+                if name == "wix"
+                else strategy_execution.linkedin
+            )
+            require_configuration_identity(
+                strategy_execution.identity,
+                channel_view.identity,
+                f"{name}-publication",
+            )
+            result = _r1_cls[name]().publish(
+                draft, "live", strategy_view=channel_view
+            )
             result = _normalize_publish_result(result, run_ctx.run_id, name)
             results[name] = result.to_dict()
             if name == "wix" and result.ok():
@@ -973,6 +1048,7 @@ def main() -> int:
         "source_run_id":      _source_run_id,
         "generation_run_id":  _generation_run_id,
         "execution_mode":     run_ctx.execution_mode.value,
+        "configuration_identity": strategy_execution.identity.model_dump(),
         "published_at":       published_at.isoformat(),
         "results":            results,
         "completed":          not bool(failed),

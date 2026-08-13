@@ -129,6 +129,11 @@ def _valid_package(*, strategy_version: str = "1", **overrides) -> dict:
         "signal_id":         _SIGNAL_ID,
         "strategy_id":       "2026-07-presence-debt-campaign-1",
         "strategy_version":  strategy_version,
+        "configuration_identity": {
+            "schema_version": "1",
+            "configuration_id": "never-blank",
+            "configuration_version": "1",
+        },
         "generated_at":      "2026-08-11T10:00:00+00:00",
         "headline":          "AI adoption accelerates in SMBs",
         "blog_article":      "Blog body text sufficient for validation.",

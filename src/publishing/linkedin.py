@@ -26,9 +26,13 @@ live       — POST https://zernio.com/api/v1/posts → published immediately
 Docs: https://docs.zernio.com/platforms/linkedin
 """
 import json
+from typing import TYPE_CHECKING
 
 from src.publishing.base import BasePublisher, DraftPackage, _fetch
 from src.publishing.result import PublishResult, PublishStatus
+
+if TYPE_CHECKING:
+    from src.strategy.execution_context import LinkedInStrategyView
 
 _ZERNIO_POSTS_URL = "https://zernio.com/api/v1/posts"
 
@@ -36,7 +40,17 @@ _ZERNIO_POSTS_URL = "https://zernio.com/api/v1/posts"
 class LinkedInPublisher(BasePublisher):
     name = "linkedin"
 
-    def publish(self, draft: DraftPackage, mode: str) -> PublishResult:
+    def publish(
+        self,
+        draft: DraftPackage,
+        mode: str,
+        *,
+        strategy_view: "LinkedInStrategyView | None" = None,
+    ) -> PublishResult:
+        if strategy_view is not None:
+            draft.require_configuration_identity(
+                strategy_view.identity, "linkedin-publisher"
+            )
         import os
 
         api_key    = os.getenv("NB_ZERNIO_API_KEY", "")
