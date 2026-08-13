@@ -37,6 +37,9 @@ class DraftPackage:
     wix_slug:       str = ""
     wix_category_id: str = ""
     wix_tags:       list = field(default_factory=list)
+    # Run identity — propagated from RunContext at the canonical entry point.
+    # Default "" for backward compat with non-canonical callers and existing tests.
+    run_id:         str = ""
     metadata:       dict = field(default_factory=dict)
 
     def image_for(self, platform: str) -> Optional[str]:

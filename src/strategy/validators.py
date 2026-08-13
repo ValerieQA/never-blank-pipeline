@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from dataclasses import dataclass
 from typing import Optional, Protocol, Sequence, runtime_checkable
 
 from src.strategy.models import (
@@ -30,6 +31,15 @@ from src.strategy.models import (
 from src.utils.logger import get_logger
 
 log = get_logger("strategy.validators")
+
+
+@dataclass
+class ValidationResult:
+    """Typed outcome of one platform's pre-publish validation gate."""
+    platform:      str
+    run_id:        str
+    passed:        bool
+    error_message: str = ""
 
 
 # ── Strategy validation ────────────────────────────────────────────────────────
@@ -376,14 +386,21 @@ def validate_article_for_publish(
     platform: str = "blog",
     use_llm_compound_check: bool = False,
     llm_fn: Optional[callable] = None,
+    run_id: str = "",
 ) -> None:
     """
     Full pre-publish validation for a single article/post.
     Calls output_guard checks + compound_presence semantic check.
 
+    run_id: propagated from RunContext. When non-empty it is logged at the
+    validation gate. Callers outside the canonical path may omit it.
+
     Raises ValueError on first hard failure.
     """
     from src.content.output_guard import validate_platform_output
+
+    if run_id:
+        log.info("Validation gate: platform=%s run_id=%s", platform, run_id)
 
     validate_platform_output(platform, text)
 

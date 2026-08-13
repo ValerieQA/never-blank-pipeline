@@ -18,6 +18,9 @@ class PublishResult:
     external_id:        Optional[str] = None
     error_message:      Optional[str] = None
     raw_response_path:  Optional[str] = None
+    # Run identity — injected by the canonical entry point after publish.
+    # Default "" for backward compat with publisher unit tests.
+    run_id:             str = ""
 
     def ok(self) -> bool:
         return self.status in (PublishStatus.PUBLISHED, PublishStatus.DRAFT_CREATED)
@@ -30,4 +33,5 @@ class PublishResult:
             "external_id":       self.external_id,
             "error_message":     self.error_message,
             "raw_response_path": self.raw_response_path,
+            "run_id":            self.run_id,
         }
