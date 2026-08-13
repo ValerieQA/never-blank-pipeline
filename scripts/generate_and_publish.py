@@ -28,27 +28,36 @@ Canonical call flow
   → R1RunReport                   → final run-report boundary
   → _emit_run_report()            → logs report (persistent storage: Issue #16)
 
+Artifact layout (Task #28)
+--------------------------
+  reports/content_packages/<signal_id>/runs/<run_id>/generated.json
+  reports/content_packages/<signal_id>/runs/<run_id>/publication_results.json
+
+  generated.json       — written exactly once, immediately after content generation.
+                         Immutable. Never overwritten by publication or re-publication.
+  publication_results.json — written once after Wix/LinkedIn attempt.
+                         Carries run_id, source_run_id, generation_run_id, results.
+  Both are written atomically with create-once semantics and fail closed on collision.
+
 --from-package lifecycle (Option B — publication is a new run)
 --------------------------------------------------------------
-  The package JSON stores the original generation's run_id as `run_id`.
-  --from-package creates a new RunContext (publication_run_id).
-  The re-saved package carries both:
-    "run_id":            publication_run_id   (the current publication run)
-    "generation_run_id": original run_id      (stable across ALL republishes)
+  --from-package --source-run-id <generation_run_id>
 
-  generation_run_id stability contract:
-  - First publication: generation_run_id is absent in the fresh package;
-    pkg["run_id"] (the generation run) becomes the stable generation identity.
-  - Second and subsequent publications: generation_run_id already exists and
-    is preserved exactly as written; pkg["run_id"] (previous publication) is
-    never promoted over it.
-  - generation_run_id never changes regardless of how many times --from-package
-    is invoked on the same package.
+  Reads <signal_id>/runs/<source_run_id>/generated.json exactly.
+  Creates a new RunContext (pub run_id). Writes publication_results.json
+  under the new pub run directory. The source generated.json is never modified.
 
-  A package with a missing or blank `run_id` (when generation_run_id is absent)
-  predates Task #27 and is rejected before image preparation.
-  A package with a present but invalid `generation_run_id` is corrupt and is
-  also rejected before image preparation.
+  For fresh-gen runs: source_run_id == run_id == generation_run_id.
+  For from-package:   source_run_id == original generation run_id (stable).
+
+--legacy-package mode
+---------------------
+  --legacy-package reads the flat legacy artifact:
+      reports/content_packages/{signal_id}_generated.json
+  Requires explicit CLI flag; never falls back automatically.
+  Never writes back to the legacy path.
+  Writes publication_results.json to the current run's run-scoped directory.
+  Legacy provenance is recorded explicitly in publication_results.json.
 
 Release 1 publishing scope: Wix and LinkedIn.
 Facebook, Instagram, Threads, and Telegram are excluded from this path
@@ -58,9 +67,11 @@ Usage (local):
     NB_OPENAI_API_KEY=... python scripts/generate_and_publish.py --signal-id <id> [--dry-run]
 
 Args:
-    --signal-id    : SIGNAL_ID from data/research/selected_signals.jsonl or signals_active.jsonl
-    --dry-run      : Generate and validate content, save _generated.json, but do NOT publish
-    --from-package : Skip LLM generation — publish the existing _generated.json as-is
+    --signal-id      : SIGNAL_ID from data/research/selected_signals.jsonl or signals_active.jsonl
+    --dry-run        : Generate and validate content, save generated.json, but do NOT publish
+    --from-package   : Skip LLM generation — publish run-scoped generated.json (requires --source-run-id)
+    --source-run-id  : run_id of the source generated.json to load (required with --from-package)
+    --legacy-package : Read legacy flat artifact {signal_id}_generated.json (explicit adapter)
 """
 
 from __future__ import annotations
@@ -97,6 +108,13 @@ from src.publishing.result import PublishResult, PublishStatus
 from src.publishing.telegram import TelegramPublisher
 from src.publishing.threads import ThreadsPublisher
 from src.publishing.wix import WixPublisher
+from src.artifacts import (
+    ArtifactCollisionError,
+    load_run_generated,
+    resolve_run_dir,
+    write_generated_json,
+    write_publication_results_json,
+)
 from src.reporting import R1RunReport
 from src.strategy.history import append_published_entry
 from src.strategy.loader import get_cta_mode, get_strategy_context, load_active_strategy
@@ -328,7 +346,7 @@ def _build_legacy_research_context(
     The assignment_id must match the raw signal's SIGNAL_ID.  Mismatched identifiers
     are rejected to prevent stale or unrelated signal data from being injected.
 
-    TODO Task #28: remove this boundary once downstream stages accept
+    TODO Task #29: remove this boundary once downstream stages accept
     ContentAssignment directly.
     """
     raw_signal_id = raw_signal.get("SIGNAL_ID", "")
@@ -346,16 +364,34 @@ def _build_legacy_research_context(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate + publish one signal end-to-end")
     parser.add_argument("--signal-id", required=True)
-    parser.add_argument("--dry-run",   action="store_true",
-                        help="Generate and validate, save _generated.json, but do not publish")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Generate and validate content, save generated.json, but do not publish")
     parser.add_argument("--from-package", action="store_true",
-                        help="Skip LLM generation — publish the existing _generated.json as-is (must pass staleness check)")
+                        help="Skip LLM generation — publish run-scoped generated.json (requires --source-run-id)")
+    parser.add_argument("--source-run-id",
+                        help="run_id of the source generated.json to load (required with --from-package)")
+    parser.add_argument("--legacy-package", action="store_true",
+                        help="Read legacy flat artifact {signal_id}_generated.json (explicit adapter; never auto-fallback)")
     parser.add_argument("--delete-wix-post-id",
                         help="Delete this Wix post ID before publishing (use when replacing an existing post)")
     args = parser.parse_args()
     signal_id = args.signal_id
 
-    mode = "dry-run (no publish)" if args.dry_run else ("from-package" if args.from_package else "live (LLM generate)")
+    # Validate mutually exclusive modes and required co-arguments.
+    if args.from_package and args.legacy_package:
+        print("  ERROR: --from-package and --legacy-package are mutually exclusive")
+        return 1
+    if args.from_package and not args.source_run_id:
+        print("  ERROR: --from-package requires --source-run-id <run_id>")
+        return 1
+    if args.source_run_id and not args.from_package:
+        print("  ERROR: --source-run-id is only valid with --from-package")
+        return 1
+
+    mode = ("dry-run (no publish)" if args.dry_run
+            else "from-package" if args.from_package
+            else "legacy-package" if args.legacy_package
+            else "live (LLM generate)")
     print(f"\n{SEP}")
     print("  Never Blank — Generate + Publish")
     print(f"  Signal: {signal_id}")
@@ -407,7 +443,7 @@ def main() -> int:
 
     # ── Compatibility boundary: ContentAssignment → legacy ResearchContext ────
     # Injects run_id so ResearchContext carries run identity into the editorial
-    # boundary.  TODO Task #28: remove once downstream stages accept
+    # boundary.  TODO Task #29: remove once downstream stages accept
     # ContentAssignment directly.
     rc = _build_legacy_research_context(assignment, signal, run_ctx)
     _assert_run_id_match(run_ctx.run_id, rc.run_id, "research-context")
@@ -435,22 +471,50 @@ def main() -> int:
             )
             return 1
 
-    generated_path = PACKAGES_DIR / f"{signal_id}_generated.json"
+    # Run-scoped artifact directory for this execution.
+    run_dir = resolve_run_dir(PACKAGES_DIR, signal_id, run_ctx.run_id)
     echo_line = ""
-    _generation_run_id: str = ""  # set in from-package path only
+    _generation_run_id: str = run_ctx.run_id   # fresh-gen default; overridden below
+    _source_run_id: str     = run_ctx.run_id   # fresh-gen default; overridden below
 
-    if args.from_package:
+    if args.from_package or args.legacy_package:
         # ── 3a. Load, verify, and validate existing package ──────────────────
         # All checks complete before any image-generation side effect.
-        print(f"\n[3/6] Loading existing package (--from-package, no LLM)…")
-        if not generated_path.exists():
-            print(f"  ERROR: {generated_path} not found — run without --from-package to generate")
-            return 1
-        try:
-            pkg = json.loads(generated_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError) as exc:
-            print(f"  ERROR: Package could not be read or parsed: {exc}")
-            return 1
+        if args.from_package:
+            print(f"\n[3/6] Loading run-scoped package (--from-package)…")
+            _source_run_id = args.source_run_id
+            try:
+                pkg = load_run_generated(PACKAGES_DIR, signal_id, _source_run_id)
+            except FileNotFoundError as exc:
+                print(f"  ERROR: {exc}")
+                return 1
+            except ValueError as exc:
+                print(f"  ERROR: Package could not be parsed: {exc}")
+                return 1
+
+            # Source-identity verification — loaded artifact must match requested address.
+            _pkg_run_id = pkg.get("run_id", "")
+            if _pkg_run_id != _source_run_id:
+                print(
+                    f"  ERROR: source identity mismatch: "
+                    f"artifact run_id={_pkg_run_id!r} requested source_run_id={_source_run_id!r}"
+                )
+                return 1
+        else:
+            # --legacy-package: explicit adapter for flat legacy artifact.
+            print(f"\n[3/6] Loading legacy package (--legacy-package)…")
+            _legacy_path = PACKAGES_DIR / f"{signal_id}_generated.json"
+            if not _legacy_path.exists():
+                print(f"  ERROR: Legacy artifact {_legacy_path} not found — "
+                      "run without --legacy-package to generate a run-scoped artifact")
+                return 1
+            try:
+                pkg = json.loads(_legacy_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError) as exc:
+                print(f"  ERROR: Legacy artifact could not be read or parsed: {exc}")
+                return 1
+            _source_run_id = pkg.get("run_id") or "legacy-unknown"
+            print(f"  ⚠  Legacy source (not a run-scoped artifact). source_run_id={_source_run_id!r}")
 
         # Shape check — must be a JSON object, not an array, scalar, or null.
         if not isinstance(pkg, dict):
@@ -516,57 +580,12 @@ def main() -> int:
             print(f"  ERROR: Package generated BEFORE active strategy started ({gen_dt} < {strategy_start})")
             return 1
 
-        # Resolve stable generation_run_id (Option B, repeated-publish safe).
-        #
-        # A package may be in one of two states:
-        #
-        #  (a) Freshly generated / not yet published via --from-package:
-        #      Only `run_id` is present (the generation run).
-        #      generation_run_id field is absent.
-        #      → use pkg["run_id"] as the generation identity.
-        #
-        #  (b) Already published one or more times via --from-package:
-        #      `run_id` = last publication run.
-        #      `generation_run_id` = original generation run (stable).
-        #      → use pkg["generation_run_id"] — never promote the
-        #        stale publication run_id over the original identity.
-        #
-        # In both cases the resolved _generation_run_id must be a non-blank
-        # string and is validated before any image or publisher side effect.
-        if "generation_run_id" in pkg:
-            # Field present — must be a valid non-blank string (null counts as invalid).
-            _pkg_gen_run_id_raw = pkg["generation_run_id"]
-            if not isinstance(_pkg_gen_run_id_raw, str) or not _pkg_gen_run_id_raw.strip():
-                _got = (
-                    type(_pkg_gen_run_id_raw).__name__
-                    if not isinstance(_pkg_gen_run_id_raw, str)
-                    else "blank"
-                )
-                print(
-                    f"  ERROR: Package 'generation_run_id' is present but invalid "
-                    f"(got {_got}). Package provenance is corrupt. "
-                    "Regenerate with --signal-id to obtain a clean package."
-                )
-                return 1
-            _generation_run_id = _pkg_gen_run_id_raw
-        else:
-            # Field absent — fresh package; run_id IS the generation identity.
-            _from_pkg_run_id = pkg.get("run_id", "")
-            if not isinstance(_from_pkg_run_id, str) or not _from_pkg_run_id.strip():
-                _got = (
-                    type(_from_pkg_run_id).__name__
-                    if not isinstance(_from_pkg_run_id, str)
-                    else "blank"
-                )
-                print(
-                    f"  ERROR: Package 'run_id' must be a non-blank string (got {_got}). "
-                    "Package was generated without run identity (predates Task #27). "
-                    "Regenerate with --signal-id to obtain a fully-identified package."
-                )
-                return 1
-            _generation_run_id = _from_pkg_run_id
+        # generation_run_id: for run-scoped packages the source_run_id IS the
+        # generation identity (generated.json belongs to the generation run).
+        # For legacy packages, use source_run_id as best-effort provenance.
+        _generation_run_id = _source_run_id
 
-        # Preserve original generation timestamp — re-save after publish must not overwrite it.
+        # Preserve original generation timestamp.
         _generated_at = raw_gen_at
 
         headline       = pkg.get("headline", headline)
@@ -806,15 +825,27 @@ def main() -> int:
         )
 
         _generated_at = datetime.now(timezone.utc).isoformat()
-        _save_generated(
-            generated_path, signal_id, headline,
-            blog_body, linkedin_text, facebook_text, instagram_text,
-            threads_seq, telegram_text, "",
-            strategy_id, strategy_started_at, strategy_version,
-            generated_at=_generated_at,
-            run_id=run_ctx.run_id,
-        )
-        print(f"\n  ✓  Saved {generated_path}")
+        _generated_data = {
+            "run_id":              run_ctx.run_id,
+            "signal_id":           signal_id,
+            "headline":            headline,
+            "generated_at":        _generated_at,
+            "strategy_id":         strategy_id,
+            "strategy_version":    strategy_version,
+            "strategy_started_at": strategy_started_at,
+            "blog_article":        blog_body,
+            "linkedin_post":       linkedin_text,
+            "facebook_post":       facebook_text,
+            "instagram_caption":   instagram_text,
+            "threads_sequence":    threads_seq,
+            "telegram_text":       telegram_text,
+        }
+        try:
+            write_generated_json(run_dir, _generated_data)
+        except ArtifactCollisionError as exc:
+            print(f"  ERROR: {exc}")
+            return 1
+        print(f"\n  ✓  Saved {run_dir / 'generated.json'}")
         print(f"       run_id={run_ctx.run_id}  strategy_id={strategy_id}  strategy_version={strategy_version}  generated_at={_generated_at[:19]}")
 
     if args.dry_run:
@@ -919,20 +950,45 @@ def main() -> int:
             print(f"           error={res['error_message']}")
     print(f"  —  [skipped-not-r1] {', '.join(_NON_R1_PUBLISHERS)}")
 
-    # Update generated JSON — preserve generated_at, strategy provenance, and
-    # both run identities.  For --from-package, generation_run_id ≠ run_id.
-    _save_generated(
-        generated_path, signal_id, headline,
-        blog_body, linkedin_text, facebook_text, instagram_text,
-        threads_seq, telegram_text, wix_url,
-        strategy_id, strategy_started_at, strategy_version,
-        generated_at=_generated_at,
-        run_id=run_ctx.run_id,
-        generation_run_id=_generation_run_id,
-    )
+    # ── Write publication_results.json (immutable, once per run) ─────────────
+    published_at = datetime.now(timezone.utc)
+    failed = [p for p, r in results.items() if r.get("status") not in _OK_STATUSES]
+    _run_errors = [
+        results[p].get("error_message") or f"{p} failed"
+        for p in failed
+    ]
+    _pub_results_data = {
+        "run_id":             run_ctx.run_id,
+        "signal_id":          signal_id,
+        "source_run_id":      _source_run_id,
+        "generation_run_id":  _generation_run_id,
+        "execution_mode":     run_ctx.execution_mode.value,
+        "published_at":       published_at.isoformat(),
+        "results":            results,
+        "completed":          not bool(failed),
+        "errors":             _run_errors,
+        "wix_url":            wix_url,
+        "wix_post_id":        wix_post_id,
+    }
+    try:
+        write_publication_results_json(run_dir, _pub_results_data)
+    except (ArtifactCollisionError, OSError, TypeError, ValueError) as exc:
+        # Publishing already happened, but the run is not complete unless its
+        # immutable result artifact is committed.  Do not write history, run
+        # analytics, or emit a success report for an unrecorded publication.
+        print(f"\n  ERROR: publication results could not be committed: {exc}")
+        report = R1RunReport(
+            run_id=run_ctx.run_id,
+            signal_id=signal_id,
+            execution_mode=run_ctx.execution_mode.value,
+            results={name: r for name, r in results.items()},
+            errors=[*_run_errors, f"artifact commit failed: {exc}"],
+            completed=False,
+        )
+        _emit_run_report(report)
+        return 1
 
     # ── Write to History ──────────────────────────────────────────────────────
-    published_at    = datetime.now(timezone.utc)
     publications: dict[str, PlatformPublication] = {}
     for pub_name, pub_dict in results.items():
         if pub_dict.get("status") in _OK_STATUSES:
@@ -944,6 +1000,7 @@ def main() -> int:
                 status=pub_dict.get("status", "published").lower(),
             )
 
+    _is_from_pkg_or_legacy = args.from_package or args.legacy_package
     entry = PublishedEntry(
         content_id=signal_id,
         strategy_id=strategy_id,
@@ -955,7 +1012,7 @@ def main() -> int:
         topic=headline,
         cta_mode=cta_mode,
         echo=echo_line or None,
-        hook=structured.get("hook", "") if not args.from_package else "",
+        hook=structured.get("hook", "") if not _is_from_pkg_or_legacy else "",
     )
     try:
         append_published_entry(entry)
@@ -971,11 +1028,6 @@ def main() -> int:
     print(analytics_result.format_summary())
 
     # ── Final run report ──────────────────────────────────────────────────────
-    failed = [p for p, r in results.items() if r.get("status") not in _OK_STATUSES]
-    _run_errors = [
-        results[p].get("error_message") or f"{p} failed"
-        for p in failed
-    ]
     report = R1RunReport(
         run_id=run_ctx.run_id,
         signal_id=signal_id,
