@@ -8,7 +8,7 @@ Canonical call flow
   CLI --signal-id
   → load active strategy (required)
   → load JSONL signal
-  → from_jsonl_signal(...)        → ContentAssignment
+  → DEFAULT_INTAKE_ADAPTER.adapt() → ContentAssignment
   → RunContext.from_assignment()  → one RunContext per execution (run_id immutable)
   → _require_run_id()             → fail-closed guard at intake
   → _build_legacy_research_context()  → ResearchContext with run_id injected
