@@ -91,6 +91,16 @@ class EvidenceReadiness(str, Enum):
     BLOCKED = "blocked"
 
 
+class ResolutionStatus(str, Enum):
+    UNRESOLVED = "unresolved"
+    RESOLVED = "resolved"
+
+
+class UncertaintyMateriality(str, Enum):
+    MATERIAL = "material"
+    NON_MATERIAL = "non_material"
+
+
 class PublicationTime(_ContractModel):
     """Explicitly distinguish known, unknown, and not-collected publication time."""
 
@@ -201,6 +211,8 @@ class ModelInterpretation(_ContractModel):
 class UncertaintyAssessment(_ContractModel):
     uncertainty_id: str = Field(min_length=1)
     level: UncertaintyLevel
+    materiality: UncertaintyMateriality
+    resolution: ResolutionStatus
     description: str = Field(min_length=1)
     evidence_ids: tuple[str, ...] = ()
     source_ids: tuple[str, ...] = ()
@@ -219,6 +231,7 @@ class UncertaintyAssessment(_ContractModel):
 
 class Contradiction(_ContractModel):
     contradiction_id: str = Field(min_length=1)
+    resolution: ResolutionStatus
     description: str = Field(min_length=1)
     evidence_ids: tuple[str, ...] = ()
     source_ids: tuple[str, ...] = ()
@@ -288,11 +301,23 @@ class NormalizedResearchArtifact(_ContractModel):
 
     @model_validator(mode="after")
     def _referential_integrity(self) -> Self:
-        source_ids = _unique_ids("source", (item.source_id for item in self.sources))
-        evidence_ids = _unique_ids("evidence", (item.evidence_id for item in self.evidence))
-        _unique_ids("interpretation", (item.interpretation_id for item in self.interpretations))
-        _unique_ids("uncertainty", (item.uncertainty_id for item in self.uncertainties))
-        _unique_ids("contradiction", (item.contradiction_id for item in self.contradictions))
+        ids_by_kind = {
+            "source": tuple(item.source_id for item in self.sources),
+            "evidence": tuple(item.evidence_id for item in self.evidence),
+            "interpretation": tuple(
+                item.interpretation_id for item in self.interpretations
+            ),
+            "uncertainty": tuple(item.uncertainty_id for item in self.uncertainties),
+            "contradiction": tuple(
+                item.contradiction_id for item in self.contradictions
+            ),
+        }
+        unique_by_kind = {
+            kind: _unique_ids(kind, values) for kind, values in ids_by_kind.items()
+        }
+        _require_global_id_namespace(ids_by_kind)
+        source_ids = unique_by_kind["source"]
+        evidence_ids = unique_by_kind["evidence"]
 
         for item in self.evidence:
             _require_subset(f"evidence {item.evidence_id!r} sources", item.source_ids, source_ids)
@@ -313,6 +338,46 @@ class NormalizedResearchArtifact(_ContractModel):
         for item in self.contradictions:
             _require_subset(f"contradiction {item.contradiction_id!r} evidence", item.evidence_ids, evidence_ids)
             _require_subset(f"contradiction {item.contradiction_id!r} sources", item.source_ids, source_ids)
+
+        if self.readiness is EvidenceReadiness.READY:
+            if not self.evidence:
+                raise ResearchContractError("READY requires at least one evidence record")
+            blocking_dispositions = {
+                EvidenceDisposition.NOT_ASSESSED,
+                EvidenceDisposition.CONFLICTING,
+                EvidenceDisposition.REJECTED,
+            }
+            blocked_evidence = tuple(
+                item.evidence_id
+                for item in self.evidence
+                if item.disposition in blocking_dispositions
+            )
+            if blocked_evidence:
+                raise ResearchContractError(
+                    "READY is incompatible with blocking evidence dispositions: "
+                    f"{blocked_evidence!r}"
+                )
+            unresolved_contradictions = tuple(
+                item.contradiction_id
+                for item in self.contradictions
+                if item.resolution is ResolutionStatus.UNRESOLVED
+            )
+            if unresolved_contradictions:
+                raise ResearchContractError(
+                    "READY is incompatible with unresolved contradictions: "
+                    f"{unresolved_contradictions!r}"
+                )
+            unresolved_material_uncertainties = tuple(
+                item.uncertainty_id
+                for item in self.uncertainties
+                if item.materiality is UncertaintyMateriality.MATERIAL
+                and item.resolution is ResolutionStatus.UNRESOLVED
+            )
+            if unresolved_material_uncertainties:
+                raise ResearchContractError(
+                    "READY is incompatible with unresolved material uncertainties: "
+                    f"{unresolved_material_uncertainties!r}"
+                )
         return self
 
     def canonical_json(self) -> str:
@@ -341,3 +406,15 @@ def _require_subset(label: str, references: Any, known: set[str]) -> None:
     missing = set(references) - known
     if missing:
         raise ResearchContractError(f"{label} reference missing IDs: {sorted(missing)!r}")
+
+
+def _require_global_id_namespace(ids_by_kind: dict[str, tuple[str, ...]]) -> None:
+    owners: dict[str, str] = {}
+    for kind, values in ids_by_kind.items():
+        for value in values:
+            previous = owners.get(value)
+            if previous is not None:
+                raise ResearchContractError(
+                    f"canonical entity ID {value!r} is reused by {previous} and {kind}"
+                )
+            owners[value] = kind

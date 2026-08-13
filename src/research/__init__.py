@@ -10,11 +10,13 @@ from .evidence import (
     NormalizedSource,
     PublicationTime,
     PublicationTimeStatus,
+    ResolutionStatus,
     SourceLocator,
     SourceLocatorKind,
     SupportReference,
     UncertaintyAssessment,
     UncertaintyLevel,
+    UncertaintyMateriality,
 )
 
 __all__ = [
@@ -27,9 +29,11 @@ __all__ = [
     "NormalizedSource",
     "PublicationTime",
     "PublicationTimeStatus",
+    "ResolutionStatus",
     "SourceLocator",
     "SourceLocatorKind",
     "SupportReference",
     "UncertaintyAssessment",
     "UncertaintyLevel",
+    "UncertaintyMateriality",
 ]

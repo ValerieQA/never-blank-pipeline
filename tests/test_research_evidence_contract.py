@@ -18,11 +18,13 @@ from src.research.evidence import (
     NormalizedSource,
     PublicationTime,
     PublicationTimeStatus,
+    ResolutionStatus,
     SourceLocator,
     SourceLocatorKind,
     SupportReference,
     UncertaintyAssessment,
     UncertaintyLevel,
+    UncertaintyMateriality,
 )
 from src.strategy.execution_context import ConfigurationIdentity
 
@@ -98,12 +100,15 @@ def _payload() -> dict:
         "uncertainties": [{
             "uncertainty_id": "uncertainty-a",
             "level": "medium",
+            "materiality": "material",
+            "resolution": "unresolved",
             "description": "The second source has no known publication time.",
             "evidence_ids": ["evidence-b"],
             "source_ids": ["source-b"],
         }],
         "contradictions": [{
             "contradiction_id": "contradiction-a",
+            "resolution": "unresolved",
             "description": "The observations conflict.",
             "evidence_ids": ["evidence-a", "evidence-b"],
             "source_ids": [],
@@ -114,6 +119,17 @@ def _payload() -> dict:
 
 def _artifact() -> NormalizedResearchArtifact:
     return NormalizedResearchArtifact.model_validate(_payload())
+
+
+def _ready_payload() -> dict:
+    payload = _payload()
+    payload["evidence"] = [payload["evidence"][0]]
+    payload["evidence"][0]["disposition"] = "accepted"
+    payload["interpretations"][0]["evidence_ids"] = ["evidence-a"]
+    payload["uncertainties"] = []
+    payload["contradictions"] = []
+    payload["readiness"] = "ready"
+    return payload
 
 
 def test_valid_complete_artifact_preserves_complete_identity():
@@ -164,6 +180,9 @@ def test_extra_fields_are_rejected_at_every_boundary(target: str):
         (("sources", 0, "publication_time", "status"), "maybe"),
         (("evidence", 0, "disposition"), "useful"),
         (("uncertainties", 0, "level"), "guess"),
+        (("uncertainties", 0, "materiality"), "possibly_material"),
+        (("uncertainties", 0, "resolution"), "partly_resolved"),
+        (("contradictions", 0, "resolution"), "ignored"),
         (("readiness",), "publish"),
     ],
 )
@@ -227,6 +246,54 @@ def test_duplicate_ids_are_rejected(collection: str, id_field: str):
     payload = _payload()
     payload[collection].append(dict(payload[collection][0]))
     with pytest.raises(ValidationError, match="duplicate"):
+        NormalizedResearchArtifact.model_validate(payload)
+
+
+ENTITY_IDS = {
+    "sources": "source_id",
+    "evidence": "evidence_id",
+    "interpretations": "interpretation_id",
+    "uncertainties": "uncertainty_id",
+    "contradictions": "contradiction_id",
+}
+
+
+@pytest.mark.parametrize(
+    ("first_kind", "second_kind"),
+    [
+        ("sources", "evidence"),
+        ("sources", "interpretations"),
+        ("sources", "uncertainties"),
+        ("sources", "contradictions"),
+        ("evidence", "interpretations"),
+        ("evidence", "uncertainties"),
+        ("evidence", "contradictions"),
+        ("interpretations", "uncertainties"),
+        ("interpretations", "contradictions"),
+        ("uncertainties", "contradictions"),
+    ],
+)
+def test_cross_kind_id_collisions_are_rejected(first_kind: str, second_kind: str):
+    payload = _payload()
+    shared_id = payload[first_kind][0][ENTITY_IDS[first_kind]]
+    payload[second_kind][0][ENTITY_IDS[second_kind]] = shared_id
+    with pytest.raises(ValidationError, match="reused"):
+        NormalizedResearchArtifact.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("referenced_kind", "referenced_id"),
+    [("evidence_ids", "evidence-a"), ("source_ids", "source-a")],
+)
+def test_contradiction_id_cannot_equal_a_referenced_entity(
+    referenced_kind: str, referenced_id: str
+):
+    payload = _payload()
+    contradiction = payload["contradictions"][0]
+    contradiction["contradiction_id"] = referenced_id
+    if referenced_kind == "source_ids":
+        contradiction["source_ids"] = ["source-a"]
+    with pytest.raises(ValidationError, match="reused"):
         NormalizedResearchArtifact.model_validate(payload)
 
 
@@ -303,6 +370,109 @@ def test_deterministic_lossless_serialization_round_trip():
     assert json.loads(first) == artifact.model_dump(mode="json")
 
 
+def test_ready_requires_evidence():
+    payload = _ready_payload()
+    payload["evidence"] = []
+    payload["interpretations"] = []
+    with pytest.raises(ValidationError, match="READY requires"):
+        NormalizedResearchArtifact.model_validate(payload)
+
+
+@pytest.mark.parametrize("disposition", ["not_assessed", "conflicting", "rejected"])
+def test_ready_rejects_blocking_evidence_dispositions(disposition: str):
+    payload = _ready_payload()
+    payload["evidence"][0]["disposition"] = disposition
+    with pytest.raises(ValidationError, match="blocking evidence dispositions"):
+        NormalizedResearchArtifact.model_validate(payload)
+
+
+def test_ready_rejects_unresolved_contradiction():
+    payload = _ready_payload()
+    payload["contradictions"] = [{
+        "contradiction_id": "contradiction-ready-blocker",
+        "resolution": "unresolved",
+        "description": "The source and extracted evidence remain inconsistent.",
+        "evidence_ids": ["evidence-a"],
+        "source_ids": ["source-b"],
+    }]
+    with pytest.raises(ValidationError, match="unresolved contradictions"):
+        NormalizedResearchArtifact.model_validate(payload)
+
+
+def test_ready_rejects_unresolved_material_uncertainty():
+    payload = _ready_payload()
+    payload["uncertainties"] = [{
+        "uncertainty_id": "uncertainty-ready-blocker",
+        "level": "high",
+        "materiality": "material",
+        "resolution": "unresolved",
+        "description": "A material limitation remains unresolved.",
+        "evidence_ids": ["evidence-a"],
+        "source_ids": [],
+    }]
+    with pytest.raises(ValidationError, match="unresolved material uncertainties"):
+        NormalizedResearchArtifact.model_validate(payload)
+
+
+def test_partial_unassessed_research_is_accepted_only_as_non_ready():
+    payload = _ready_payload()
+    payload["evidence"][0]["disposition"] = "not_assessed"
+    payload["readiness"] = "insufficient"
+    artifact = NormalizedResearchArtifact.model_validate(payload)
+    assert artifact.readiness is EvidenceReadiness.INSUFFICIENT
+    assert artifact.evidence[0].disposition is EvidenceDisposition.NOT_ASSESSED
+
+
+def test_conflicting_research_and_unresolved_contradiction_require_non_ready():
+    artifact = _artifact()
+    assert artifact.readiness is EvidenceReadiness.NEEDS_REVIEW
+    assert artifact.evidence[1].disposition is EvidenceDisposition.CONFLICTING
+    assert artifact.contradictions[0].resolution is ResolutionStatus.UNRESOLVED
+
+
+@pytest.mark.parametrize(
+    ("materiality", "resolution"),
+    [("material", "resolved"), ("non_material", "unresolved")],
+)
+def test_resolved_or_explicitly_non_material_uncertainty_is_ready_compatible(
+    materiality: str, resolution: str
+):
+    payload = _ready_payload()
+    payload["uncertainties"] = [{
+        "uncertainty_id": "uncertainty-ready-compatible",
+        "level": "low",
+        "materiality": materiality,
+        "resolution": resolution,
+        "description": "This limitation is explicitly classified.",
+        "evidence_ids": ["evidence-a"],
+        "source_ids": [],
+    }]
+    artifact = NormalizedResearchArtifact.model_validate(payload)
+    assert artifact.readiness is EvidenceReadiness.READY
+
+
+def test_resolved_contradiction_is_ready_compatible():
+    payload = _ready_payload()
+    payload["contradictions"] = [{
+        "contradiction_id": "contradiction-resolved",
+        "resolution": "resolved",
+        "description": "The conflict was resolved by bounding the claim.",
+        "evidence_ids": ["evidence-a"],
+        "source_ids": ["source-b"],
+    }]
+    artifact = NormalizedResearchArtifact.model_validate(payload)
+    assert artifact.readiness is EvidenceReadiness.READY
+
+
+def test_valid_ready_artifact_has_acceptable_evidence_and_no_blockers():
+    artifact = NormalizedResearchArtifact.model_validate(_ready_payload())
+    assert artifact.readiness is EvidenceReadiness.READY
+    assert artifact.evidence
+    assert {item.disposition for item in artifact.evidence} == {
+        EvidenceDisposition.ACCEPTED
+    }
+
+
 def test_individual_models_are_strict_and_typed():
     source = NormalizedSource(
         source_id="s",
@@ -321,11 +491,14 @@ def test_individual_models_are_strict_and_typed():
     uncertainty = UncertaintyAssessment(
         uncertainty_id="u",
         level=UncertaintyLevel.UNKNOWN,
+        materiality=UncertaintyMateriality.MATERIAL,
+        resolution=ResolutionStatus.UNRESOLVED,
         description="Not assessed",
         source_ids=("s",),
     )
     contradiction = Contradiction(
         contradiction_id="c",
+        resolution=ResolutionStatus.UNRESOLVED,
         description="Two records differ",
         source_ids=("s", "other"),
     )
