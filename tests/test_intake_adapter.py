@@ -41,6 +41,7 @@ def _adapt(adapter: IntakeAdapter) -> ContentAssignment:
     )
 
 
+@pytest.mark.story9
 def test_fake_adapter_satisfies_contract_without_provider_payload_leakage():
     adapter = FakeIntakeAdapter()
     assert isinstance(adapter, IntakeAdapter)
@@ -52,6 +53,7 @@ def test_fake_adapter_satisfies_contract_without_provider_payload_leakage():
     assert "provider_specific" not in assignment.to_dict()
 
 
+@pytest.mark.story9
 def test_jsonl_release_1_adapter_returns_normalized_assignment():
     assignment = JsonlIntakeAdapter().adapt(
         {"SIGNAL_ID": "sig-29", "HEADLINE": "Adapter boundary"},
@@ -65,6 +67,7 @@ def test_jsonl_release_1_adapter_returns_normalized_assignment():
     assert assignment.submitted_at == NOW
 
 
+@pytest.mark.story9
 def test_jsonl_adapter_wraps_invalid_payload_as_controlled_failure():
     with pytest.raises(IntakeAdapterError, match="JSONL intake rejected"):
         JsonlIntakeAdapter().adapt(
@@ -76,6 +79,7 @@ def test_jsonl_adapter_wraps_invalid_payload_as_controlled_failure():
 
 
 @pytest.mark.parametrize("transport", ["telegram", "whatsapp", "client-portal"])
+@pytest.mark.story9
 def test_unsupported_non_production_stub_cannot_return_success(transport):
     with pytest.raises(IntakeAdapterError, match="not implemented for Release 1"):
         _adapt(UnsupportedTransportAdapter(transport))

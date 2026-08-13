@@ -80,6 +80,7 @@ def test_run_ids_are_valid_uuid4():
 # from_assignment — uniqueness per invocation
 # ===========================================================================
 
+@pytest.mark.story9
 def test_same_assignment_yields_different_run_ids():
     rc1 = _make_rc()
     rc2 = _make_rc()
@@ -89,6 +90,7 @@ def test_same_assignment_yields_different_run_ids():
     )
 
 
+@pytest.mark.story9
 def test_100_from_assignment_calls_are_unique():
     ids = [RunContext.from_assignment(_ASSIGNMENT, ExecutionMode.DRY_RUN).run_id
            for _ in range(100)]
