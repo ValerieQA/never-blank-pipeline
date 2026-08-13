@@ -1,0 +1,141 @@
+{
+  "schema_version": "1",
+  "configuration_id": "fictional-field-notes",
+  "configuration_version": "7.3",
+  "status": "active",
+  "business": {
+    "name": "Fictional Field Notes Studio",
+    "business_model": "Fictional B2B research subscription",
+    "description": "A test-only fictional studio that turns verified operations evidence into practical field notes for regional manufacturers."
+  },
+  "products_services": [
+    {
+      "product_id": "operations-field-notes",
+      "name": "Operations Field Notes",
+      "description": "A fictional subscription to evidence-led operational briefs."
+    }
+  ],
+  "default_audience_id": "plant-operations-leaders",
+  "audiences": [
+    {
+      "audience_id": "plant-operations-leaders",
+      "name": "Regional manufacturing operations leaders",
+      "selection_terms": ["operators", "plant leaders", "manufacturing operations"],
+      "problems": [
+        "Improvement decisions stall because local evidence is scattered across shifts."
+      ],
+      "default_problem": "Improvement decisions stall because local evidence is scattered across shifts.",
+      "decision_factors": [
+        "Recommendations must distinguish observed process evidence from interpretation."
+      ],
+      "objections": [
+        "Generic management content does not reflect plant constraints."
+      ]
+    }
+  ],
+  "positioning": {
+    "statement": "Fictional Field Notes Studio makes verified plant-floor learning usable without pretending one facility proves a universal rule.",
+    "expertise": [
+      "Translating bounded operations evidence into decision-ready field notes."
+    ],
+    "value_propositions": [
+      "Give operations leaders a concise evidence trail before recommending a process change."
+    ],
+    "proof_points": [
+      "Every fictional brief carries an observation ledger and an explicit uncertainty section."
+    ]
+  },
+  "commercial": {
+    "priorities": [
+      "Invite qualified operations teams to compare one documented workflow."
+    ]
+  },
+  "content": {
+    "objectives": [
+      "Let the reader distinguish a local observation from a transferable mechanism."
+    ],
+    "territories": [
+      "Shift handoffs, evidence quality, and bounded process improvement."
+    ]
+  },
+  "brand_editorial": {
+    "voice": [
+      "Methodical and concrete: prefer an observation ledger to a dramatic claim."
+    ],
+    "editorial_principles": [
+      "State the operating constraint before proposing a response."
+    ],
+    "preferred_claims": [
+      "A documented local mechanism can support a bounded operational experiment."
+    ],
+    "prohibited_claims": [
+      "This method eliminates production downtime."
+    ],
+    "legal_factual_reputational_restrictions": [
+      "Do not identify a facility, worker, supplier, or safety incident."
+    ]
+  },
+  "calls_to_action": [
+    {
+      "cta_id": "none",
+      "intent": "End with the bounded operational implication.",
+      "rules": [
+        "Produce no invitation or subscription language."
+      ]
+    },
+    {
+      "cta_id": "reflection",
+      "intent": "Invite the reader to compare the documented mechanism with one workflow.",
+      "rules": [
+        "Ask for one workflow comparison, not a sales call.",
+        "Do not imply that the fictional evidence predicts the reader's outcome."
+      ]
+    }
+  ],
+  "channels": {
+    "wix": {
+      "article_rules": [
+        "Present observation, uncertainty, mechanism, and bounded experiment as separate sections."
+      ],
+      "metadata_rules": [
+        "Use the operational mechanism, not a promised result, in the title."
+      ],
+      "link_rules": [
+        "Link only to public technical or regulatory evidence used in the brief."
+      ],
+      "cta_rules": [
+        "Place the workflow-comparison invitation before the uncertainty close."
+      ],
+      "visual_rules": [
+        "Use an abstract process diagram; never show an identifiable facility."
+      ]
+    },
+    "linkedin": {
+      "opening_rules": [
+        "Open with one observed handoff constraint, not a productivity slogan."
+      ],
+      "length_rules": [
+        "Use one mechanism and one bounded implication only."
+      ],
+      "formatting_rules": [
+        "Use short labeled paragraphs for observation, mechanism, and uncertainty."
+      ],
+      "link_rules": [
+        "Use the verified field-note URL only when it adds the evidence trail."
+      ],
+      "cta_rules": [
+        "Invite one workflow comparison without requesting a meeting."
+      ],
+      "visual_rules": [
+        "Use a non-identifying process sketch sized for the LinkedIn feed."
+      ]
+    }
+  },
+  "prompt_rule_references": [
+    {
+      "reference_id": "active-campaign-strategy",
+      "path": "strategy/current/strategy.json",
+      "version": "1"
+    }
+  ]
+}
