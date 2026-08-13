@@ -4,13 +4,16 @@ The complete :class:`BusinessStrategyConfiguration` is loaded once.  This
 module then exposes immutable, consumer-specific views so orchestration does
 not pass a mutable catch-all dictionary or provider credentials downstream.
 
-Configuration hashing and run-scoped snapshots deliberately belong to Task
-#42 and are not implemented here.
+Configuration identity includes the deterministic content hash introduced by
+Task #42.  The hash is derived from the validated model, never the source file.
 """
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+import hashlib
+import json
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.strategy.business_config import (
     AudienceSegment,
@@ -40,6 +43,7 @@ class ConfigurationIdentity(_ImmutableView):
     schema_version: str
     configuration_id: str
     configuration_version: str
+    configuration_hash: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
 
     @classmethod
     def from_configuration(
@@ -49,7 +53,40 @@ class ConfigurationIdentity(_ImmutableView):
             schema_version=configuration.schema_version,
             configuration_id=configuration.configuration_id,
             configuration_version=configuration.configuration_version,
+            configuration_hash=configuration_hash(configuration),
         )
+
+
+CANONICAL_CONFIGURATION_SERIALIZATION = "business-strategy-json-v1"
+CONFIGURATION_HASH_ALGORITHM = "sha256"
+
+
+def canonical_configuration_bytes(
+    configuration: BusinessStrategyConfiguration,
+) -> bytes:
+    """Serialize validated configuration meaning for stable content hashing.
+
+    ``business-strategy-json-v1`` is UTF-8 JSON of ``model_dump(mode='json')``
+    with keys sorted, no insignificant whitespace, JSON booleans/null, and
+    non-ASCII characters preserved.  Source formatting and paths are absent.
+    """
+
+    if not isinstance(configuration, BusinessStrategyConfiguration):
+        raise TypeError("configuration must be a validated BusinessStrategyConfiguration")
+    return json.dumps(
+        configuration.model_dump(mode="json"),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+
+
+def configuration_hash(configuration: BusinessStrategyConfiguration) -> str:
+    """Return the versioned deterministic identity hash of validated meaning."""
+
+    digest = hashlib.sha256(canonical_configuration_bytes(configuration)).hexdigest()
+    return f"{CONFIGURATION_HASH_ALGORITHM}:{digest}"
 
 
 class ResearchStrategyView(_ImmutableView):

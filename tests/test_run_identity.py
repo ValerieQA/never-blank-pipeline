@@ -33,6 +33,8 @@ from unittest import mock
 
 import pytest
 
+from tests.test_generate_and_publish import _test_configuration_identity
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.generate_and_publish import (
@@ -210,11 +212,7 @@ def _valid_package(run_id: str = _KNOWN_RUN_ID) -> dict:
         "generated_at":        "2026-08-01T10:00:00+00:00",
         "strategy_id":         "2026-07-presence-debt-campaign-1",
         "strategy_version":    "1",
-        "configuration_identity": {
-            "schema_version": "1",
-            "configuration_id": "never-blank",
-            "configuration_version": "1",
-        },
+        "configuration_identity": _test_configuration_identity(),
         "strategy_started_at": "2026-07-22",
         "wix_url":             "",
         "blog_article":        "Blog body. presence consistent compound trust",

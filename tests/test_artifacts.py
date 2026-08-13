@@ -16,6 +16,7 @@ from src.artifacts import (
     load_run_generated,
     resolve_run_dir,
     write_generated_json,
+    write_business_strategy_snapshot,
     write_publication_results_json,
 )
 from src.publishing.result import PublishResult, PublishStatus
@@ -137,6 +138,12 @@ def _seed_canonical_source(tmp_path: Path, source_run_id: str = RUN_A) -> Path:
     data = _valid_package(run_id=source_run_id)
     path = resolve_run_dir(tmp_path, CANONICAL_SIGNAL_ID, source_run_id) / "generated.json"
     atomic_write_json(path, data)
+    write_business_strategy_snapshot(
+        path.parent,
+        json.loads(
+            Path("strategy/current/business_strategy.json").read_text(encoding="utf-8")
+        ),
+    )
     return path
 
 

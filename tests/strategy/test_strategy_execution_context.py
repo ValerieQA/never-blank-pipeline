@@ -75,6 +75,7 @@ def test_mismatched_view_identity_fails_closed():
         schema_version=execution.identity.schema_version,
         configuration_id=execution.identity.configuration_id,
         configuration_version="stale",
+        configuration_hash=execution.identity.configuration_hash,
     )
 
     with pytest.raises(StrategyExecutionError, match="identity mismatch"):
