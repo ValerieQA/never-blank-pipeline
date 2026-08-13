@@ -9,5 +9,19 @@ from src.intake.content_assignment import (
     CorrelationMetadata,
     from_jsonl_signal,
 )
+from src.intake.adapter import (
+    IntakeAdapter,
+    IntakeAdapterError,
+    JsonlIntakeAdapter,
+    UnsupportedTransportAdapter,
+)
 
-__all__ = ["ContentAssignment", "CorrelationMetadata", "from_jsonl_signal"]
+__all__ = [
+    "ContentAssignment",
+    "CorrelationMetadata",
+    "IntakeAdapter",
+    "IntakeAdapterError",
+    "JsonlIntakeAdapter",
+    "UnsupportedTransportAdapter",
+    "from_jsonl_signal",
+]

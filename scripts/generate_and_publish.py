@@ -90,7 +90,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from dotenv import load_dotenv
 load_dotenv()
 
-from src.intake import ContentAssignment, from_jsonl_signal
+from src.intake import (
+    ContentAssignment,
+    IntakeAdapter,
+    IntakeAdapterError,
+    JsonlIntakeAdapter,
+)
 from src.lifecycle.signal_lifecycle import ResearchContext
 from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
@@ -134,6 +139,7 @@ SIGNALS_FILES  = [
 HISTORY_FILE   = Path("strategy/published_content_index.jsonl")
 SEP            = "─" * 64
 _OK_STATUSES   = {"PUBLISHED", "DRAFT_CREATED", "published_url_unavailable"}
+DEFAULT_INTAKE_ADAPTER: IntakeAdapter = JsonlIntakeAdapter()
 
 
 def _load_signal(signal_id: str) -> dict:
@@ -429,12 +435,16 @@ def main() -> int:
 
     # ── Normalized intake + run identity ──────────────────────────────────────
     execution_mode = ExecutionMode.DRY_RUN if args.dry_run else ExecutionMode.CONTROLLED_LIVE
-    assignment = from_jsonl_signal(
-        signal,
-        strategy_ref=active_strategy.strategy_id,
-        strategy_version=active_strategy.strategy_version,
-        submitted_at=datetime.now(timezone.utc),
-    )
+    try:
+        assignment = DEFAULT_INTAKE_ADAPTER.adapt(
+            signal,
+            strategy_ref=active_strategy.strategy_id,
+            strategy_version=active_strategy.strategy_version,
+            submitted_at=datetime.now(timezone.utc),
+        )
+    except IntakeAdapterError as exc:
+        print(f"  ERROR: {exc}")
+        return 1
     run_ctx = RunContext.from_assignment(assignment, execution_mode)
     _require_run_id(run_ctx.run_id, "intake")
     print(f"  ✓  run_id:        {run_ctx.run_id}")

@@ -248,9 +248,12 @@ class TestFreshGenerationDryRun:
             ca_created.append(ca)
             return ca
 
+        adapter = mock.MagicMock()
+        adapter.adapt.side_effect = capturing
+
         with mock.patch("sys.argv", argv), \
              mock.patch.multiple(_gap_module, **patches), \
-             mock.patch.object(_gap_module, "from_jsonl_signal", side_effect=capturing):
+             mock.patch.object(_gap_module, "DEFAULT_INTAKE_ADAPTER", adapter):
             exit_code = main()
 
         assert exit_code == 0
@@ -449,9 +452,12 @@ class TestFromPackage:
             ca_created.append(ca)
             return ca
 
+        adapter = mock.MagicMock()
+        adapter.adapt.side_effect = capturing
+
         with mock.patch("sys.argv", argv), \
              mock.patch.multiple(_gap_module, **patches), \
-             mock.patch.object(_gap_module, "from_jsonl_signal", side_effect=capturing):
+             mock.patch.object(_gap_module, "DEFAULT_INTAKE_ADAPTER", adapter):
             exit_code = main()
 
         assert exit_code == 0
