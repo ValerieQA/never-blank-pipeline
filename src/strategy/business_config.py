@@ -50,7 +50,9 @@ class ProductService(_ContractModel):
 class AudienceSegment(_ContractModel):
     audience_id: NonBlankStr
     name: NonBlankStr
+    selection_terms: tuple[NonBlankStr, ...] = ()
     problems: NonEmptyTextTuple
+    default_problem: NonBlankStr
     decision_factors: NonEmptyTextTuple
     objections: tuple[NonBlankStr, ...] = ()
 
@@ -122,6 +124,7 @@ class BusinessStrategyConfiguration(_ContractModel):
     status: Literal["active", "inactive", "retired"]
     business: BusinessIdentity
     products_services: tuple[ProductService, ...]
+    default_audience_id: NonBlankStr
     audiences: tuple[AudienceSegment, ...]
     positioning: Positioning
     commercial: CommercialStrategy
@@ -147,6 +150,14 @@ class BusinessStrategyConfiguration(_ContractModel):
         self._require_unique("audience_id", self.audiences)
         self._require_unique("cta_id", self.calls_to_action)
         self._require_unique("reference_id", self.prompt_rule_references)
+        audience_ids = {item.audience_id for item in self.audiences}
+        if self.default_audience_id not in audience_ids:
+            raise ValueError("default_audience_id must reference a configured audience")
+        for audience in self.audiences:
+            if audience.default_problem not in audience.problems:
+                raise ValueError(
+                    f"default_problem for {audience.audience_id!r} must be one of its problems"
+                )
         return self
 
     @staticmethod

@@ -16,6 +16,11 @@ consume this module's output shape unchanged.
 
 import json
 
+from src.strategy.execution_context import (
+    AudienceSelection,
+    DecisionLensEditorialStrategyView,
+)
+
 from src.utils.llm_client import chat, model_enrich
 from src.utils.logger import get_logger
 
@@ -109,7 +114,11 @@ def _validate(data: dict) -> dict:
     }
 
 
-def generate_decision_lens(signal: dict) -> dict:
+def generate_decision_lens(
+    signal: dict,
+    strategy_view: DecisionLensEditorialStrategyView | None = None,
+    audience: AudienceSelection | None = None,
+) -> dict:
     """
     Produce a Decision Lens output dict focused on the owner's presence system.
 
@@ -119,13 +128,23 @@ def generate_decision_lens(signal: dict) -> dict:
     Raises ValueError if the LLM output does not satisfy the schema.
     """
     strategy_section = ""
-    if signal.get("STRATEGY_PRIMARY_MESSAGE"):
+    if strategy_view is not None:
+        if audience is None:
+            raise ValueError("Decision Lens requires an explicit audience selection")
+        editorial = strategy_view.brand_editorial
         strategy_section = f"""
-Active campaign context — use this to align analysis framing:
-strategy_primary_message: {signal.get("STRATEGY_PRIMARY_MESSAGE", "")}
-strategy_selected_problem: {signal.get("STRATEGY_SELECTED_PROBLEM", "")}
-strategy_desired_reader_realization: {signal.get("STRATEGY_DESIRED_REALIZATION", "")}
-strategy_compound_presence_role: {signal.get("STRATEGY_COMPOUND_ROLE", "")}
+Configured business strategy (treat every list as a boundary, not source material):
+business_positioning: {strategy_view.positioning.statement}
+selected_audience_id: {audience.audience_id}
+selected_audience_name: {audience.audience_name}
+selected_audience_problem: {audience.selected_problem}
+proof_points_available_as_evidence_boundaries_only: {json.dumps(strategy_view.positioning.proof_points, ensure_ascii=False)}
+IMPORTANT: proof points bound what may be supported; they are not permission to invent outcomes, customers, metrics, or facts.
+preferred_claims: {json.dumps(editorial.preferred_claims, ensure_ascii=False)}
+prohibited_claims: {json.dumps(editorial.prohibited_claims, ensure_ascii=False)}
+factual_legal_reputational_restrictions: {json.dumps(editorial.legal_factual_reputational_restrictions, ensure_ascii=False)}
+content_objectives: {json.dumps(strategy_view.content.objectives, ensure_ascii=False)}
+content_territories: {json.dumps(strategy_view.content.territories, ensure_ascii=False)}
 """
 
     user = f"""HEADLINE: {signal.get('HEADLINE', '')}

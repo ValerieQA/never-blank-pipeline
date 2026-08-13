@@ -231,14 +231,17 @@ def _valid_package(run_id: str = _KNOWN_RUN_ID) -> dict:
 
 class TestRequireRunId:
 
+    @pytest.mark.story9
     def test_empty_string_raises(self):
         with pytest.raises(RuntimeError, match="run_id is missing or blank"):
             _require_run_id("", "test-stage")
 
+    @pytest.mark.story9
     def test_whitespace_only_raises(self):
         with pytest.raises(RuntimeError, match="run_id is missing or blank"):
             _require_run_id("   ", "test-stage")
 
+    @pytest.mark.story9
     def test_valid_uuid4_passes(self):
         _require_run_id(_KNOWN_RUN_ID, "test-stage")
 
@@ -253,9 +256,11 @@ class TestRequireRunId:
 
 class TestAssertRunIdMatch:
 
+    @pytest.mark.story9
     def test_matching_ids_pass(self):
         _assert_run_id_match(_KNOWN_RUN_ID, _KNOWN_RUN_ID, "boundary")
 
+    @pytest.mark.story9
     def test_mismatched_ids_raise(self):
         with pytest.raises(RuntimeError, match="identity mismatch"):
             _assert_run_id_match(_KNOWN_RUN_ID, "other-id", "research-context")
@@ -1038,6 +1043,7 @@ class TestFromPackageRunIdentity:
 
 class TestMismatchRejected:
 
+    @pytest.mark.story9
     def test_research_context_run_id_mismatch_raises(self):
         """If compatibility boundary returns wrong run_id, _assert_run_id_match raises."""
         ca = _make_assignment()
@@ -1056,6 +1062,7 @@ class TestMismatchRejected:
                 with pytest.raises(RuntimeError, match="research-context"):
                     main()
 
+    @pytest.mark.story9
     def test_draft_package_run_id_mismatch_raises(self):
         """If DraftPackage is constructed with wrong run_id, _assert_run_id_match raises."""
         argv, patches = _base_patches(dry_run=False)
@@ -1072,6 +1079,7 @@ class TestMismatchRejected:
             with pytest.raises(RuntimeError, match="draft-package"):
                 main()
 
+    @pytest.mark.story9
     def test_publish_result_mismatch_fails_publisher_not_silently_accepted(self, tmp_path):
         """
         _normalize_publish_result raises on mismatch; the publisher loop catches
@@ -1108,6 +1116,7 @@ class TestMismatchRejected:
 
 class TestFailClosedBeforeImages:
 
+    @pytest.mark.story9
     def test_require_run_id_evaluated_before_load_package_images(self):
         argv, patches = _base_patches(dry_run=True)
         sentinel_images = mock.MagicMock(return_value={})
@@ -1129,6 +1138,7 @@ class TestFailClosedBeforeImages:
 
 class TestFailClosedBeforePublisher:
 
+    @pytest.mark.story9
     def test_require_run_id_at_publication_blocks_publisher_construction(self):
         argv, patches = _base_patches(dry_run=False)
         wix_cls = mock.MagicMock()
@@ -1237,6 +1247,7 @@ class TestCompletePathRunIdentityContract:
     - Every boundary carries _KNOWN_RUN_ID
     """
 
+    @pytest.mark.story9
     def test_known_run_id_at_every_named_boundary(self, tmp_path):
         fixed_uuid = uuid.UUID(_KNOWN_RUN_ID)
 

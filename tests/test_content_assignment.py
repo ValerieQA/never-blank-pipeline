@@ -52,6 +52,7 @@ def _make(**overrides) -> ContentAssignment:
 # 1. Valid topic-only assignment
 # ===========================================================================
 
+@pytest.mark.story9
 def test_valid_topic_only():
     ca = _make(topic="AI adoption trends", source_material=None)
     assert ca.topic == "AI adoption trends"
@@ -62,6 +63,7 @@ def test_valid_topic_only():
 # 2. Valid source_material-only assignment
 # ===========================================================================
 
+@pytest.mark.story9
 def test_valid_source_material_only():
     ca = _make(topic=None, source_material="Gartner report: 60% SMBs adopt AI by 2027.")
     assert ca.source_material.startswith("Gartner")
@@ -72,6 +74,7 @@ def test_valid_source_material_only():
 # 3. Valid assignment containing both
 # ===========================================================================
 
+@pytest.mark.story9
 def test_valid_both_fields():
     ca = _make(topic="AI in SMBs", source_material="Gartner 2027 forecast.")
     assert ca.topic == "AI in SMBs"
@@ -82,6 +85,7 @@ def test_valid_both_fields():
 # 4. Rejection when both are missing
 # ===========================================================================
 
+@pytest.mark.story9
 def test_rejection_both_missing():
     with pytest.raises(ValueError, match="At least one of 'topic' or 'source_material'"):
         ContentAssignment(**{**BASE})
@@ -91,6 +95,7 @@ def test_rejection_both_missing():
 # 5. Rejection when both contain only whitespace
 # ===========================================================================
 
+@pytest.mark.story9
 def test_rejection_both_whitespace():
     with pytest.raises(ValueError, match="At least one of 'topic' or 'source_material'"):
         ContentAssignment(**{**BASE, "topic": "   ", "source_material": "\t\n"})
@@ -105,6 +110,7 @@ def test_rejection_topic_none_source_whitespace():
 # 6. Rejection of a timezone-naive timestamp
 # ===========================================================================
 
+@pytest.mark.story9
 def test_rejection_naive_timestamp():
     naive = datetime(2026, 8, 11, 10, 0, 0)
     with pytest.raises(ValueError, match="timezone-aware"):
@@ -157,6 +163,7 @@ def test_strategy_ref_and_version_preserved():
 # 9. Serialization / deserialization round trip
 # ===========================================================================
 
+@pytest.mark.story9
 def test_round_trip_full():
     ca = ContentAssignment(
         topic="AI in SMBs",
@@ -191,6 +198,7 @@ def test_to_dict_is_json_serializable():
     assert "default topic" in serialized
 
 
+@pytest.mark.story9
 def test_round_trip_minimal():
     ca = _make()
     ca2 = ContentAssignment.from_dict(ca.to_dict())
@@ -223,6 +231,7 @@ def test_invalid_not_a_dict():
 # 11. Existing JSONL signal adaptation
 # ===========================================================================
 
+@pytest.mark.story9
 def test_from_jsonl_signal_basic():
     ca = from_jsonl_signal(
         SAMPLE_JSONL,
@@ -237,6 +246,7 @@ def test_from_jsonl_signal_basic():
     assert ca.submitted_at.tzinfo is not None
 
 
+@pytest.mark.story9
 def test_from_jsonl_signal_missing_signal_id():
     bad = {k: v for k, v in SAMPLE_JSONL.items() if k != "SIGNAL_ID"}
     with pytest.raises(ValueError, match="SIGNAL_ID"):
@@ -254,6 +264,7 @@ def test_from_jsonl_signal_custom_submitted_at():
     assert ca.submitted_at == ts
 
 
+@pytest.mark.story9
 def test_from_jsonl_signal_does_not_mutate_input():
     original = dict(SAMPLE_JSONL)
     from_jsonl_signal(SAMPLE_JSONL, strategy_ref="r", strategy_version="1.0.0")

@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
 from src.utils.llm_client import chat, model_social
 from src.utils.config_loader import load_prompt
+from src.strategy.execution_context import AudienceSelection, ResearchStrategyView
 
 log = get_logger("research.prepare_content")
 
@@ -35,7 +36,30 @@ PACKAGES_DIR  = Path("reports/content_packages")
 IMAGE_LIBRARY = Path("data/research/image_library.json")
 PLATFORMS     = ["blog", "linkedin", "facebook", "instagram", "threads", "stories"]
 
-def _generate_content_package(signal: dict) -> dict:
+def _generate_content_package(
+    signal: dict,
+    strategy_view: ResearchStrategyView | None = None,
+    audience: AudienceSelection | None = None,
+) -> dict:
+    strategy_values = {
+        "business_positioning": "",
+        "content_territories": "[]",
+        "preferred_claims": "[]",
+        "restrictions": "[]",
+        "selected_audience_id": signal.get("TARGET_AUDIENCE", "founder"),
+        "selected_audience_problem": "",
+    }
+    if strategy_view is not None:
+        if audience is None:
+            raise ValueError("research framing requires explicit audience selection")
+        strategy_values = {
+            "business_positioning": strategy_view.positioning.statement,
+            "content_territories": json.dumps(strategy_view.content.territories, ensure_ascii=False),
+            "preferred_claims": json.dumps(strategy_view.preferred_claims, ensure_ascii=False),
+            "restrictions": json.dumps(strategy_view.restrictions, ensure_ascii=False),
+            "selected_audience_id": audience.audience_id,
+            "selected_audience_problem": audience.selected_problem,
+        }
     prompt = load_prompt("research/content_package", {
         "headline":              signal.get("HEADLINE", ""),
         "core_tension":         signal.get("CORE_TENSION", ""),
@@ -45,7 +69,8 @@ def _generate_content_package(signal: dict) -> dict:
         "never_blank_angle":    signal.get("NEVER_BLANK_ANGLE", ""),
         "possible_signature_line": signal.get("POSSIBLE_SIGNATURE_LINE", ""),
         "potential_hook":       signal.get("POTENTIAL_HOOK", ""),
-        "target_audience":      signal.get("TARGET_AUDIENCE", "founder"),
+        "target_audience":      strategy_values["selected_audience_id"],
+        **strategy_values,
     })
 
     try:
@@ -304,7 +329,11 @@ def _build_image_plan(signal: dict, library: dict) -> tuple[dict, dict | None]:
     return result, library_entry
 
 
-def prepare_content_packages(signals: list[dict]) -> list[dict]:
+def prepare_content_packages(
+    signals: list[dict],
+    strategy_view: ResearchStrategyView | None = None,
+    audience: AudienceSelection | None = None,
+) -> list[dict]:
     """
     Main entry point. For each signal: generate content + image (one per signal).
     Returns list of content package dicts.
@@ -321,7 +350,7 @@ def prepare_content_packages(signals: list[dict]) -> list[dict]:
         headline = signal.get("HEADLINE", "")
         log.info("Preparing content package: %s", headline[:60])
 
-        content    = _generate_content_package(signal)
+        content    = _generate_content_package(signal, strategy_view, audience)
         image_plan, library_entry = _build_image_plan(signal, library)
 
         if library_entry:
@@ -334,6 +363,8 @@ def prepare_content_packages(signals: list[dict]) -> list[dict]:
             "content":     content,
             "images":      image_plan,
         }
+        if strategy_view is not None and audience is not None:
+            package["strategy_audience"] = audience.model_dump()
         packages.append(package)
 
         pkg_path = PACKAGES_DIR / f"{sig_id}.json"

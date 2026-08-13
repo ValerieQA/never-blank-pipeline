@@ -29,6 +29,7 @@ from src.editorial.story_assembly import assemble_story
 from src.editorial.never_blank_voice import finalize_article
 from src.editorial.platform_composer import compose_platforms
 from src.strategy.execution_context import (
+    AudienceSelection,
     DecisionLensEditorialStrategyView,
     LinkedInStrategyView,
     WixStrategyView,
@@ -66,6 +67,7 @@ def generate_article(
     *,
     wix_strategy: WixStrategyView | None = None,
     linkedin_strategy: LinkedInStrategyView | None = None,
+    audience_selection: AudienceSelection | None = None,
 ) -> dict:
     """
     Run the full Editorial Engine V2 pipeline for one enriched signal.
@@ -107,31 +109,48 @@ def generate_article(
 
     # Merge pattern fields into signal so downstream stages receive owner-centered fields.
     # Pattern fields override same-named signal fields.
-    # Strategy context is injected last as STRATEGY_* keys (no collision with signal/pattern keys).
     enriched = {**signal, **pattern}
-    if strategy_context:
-        if isinstance(strategy_context, DecisionLensEditorialStrategyView):
-            prompt_values = strategy_context.legacy_prompt_values()
-        else:
-            prompt_values = strategy_context
-        enriched["STRATEGY_PRIMARY_MESSAGE"]    = prompt_values.get("primary_message", "")
-        enriched["STRATEGY_SELECTED_PROBLEM"]   = prompt_values.get("selected_problem", "")
-        enriched["STRATEGY_DESIRED_REALIZATION"] = prompt_values.get("desired_reader_realization", "")
-        enriched["STRATEGY_COMPOUND_ROLE"]      = prompt_values.get("compound_presence_role", "")
-        enriched["STRATEGY_ID"]                 = prompt_values.get("strategy_id", "")
-        log.debug("Strategy context injected into enriched signal: strategy_id=%s",
-                  prompt_values.get("strategy_id", "none"))
+    typed_strategy = (
+        strategy_context
+        if isinstance(strategy_context, DecisionLensEditorialStrategyView)
+        else None
+    )
+    if strategy_context is not None and typed_strategy is None:
+        # Legacy/non-canonical callers retain their mapping adapter. Controlled
+        # R1 never enters this branch and passes typed views directly.
+        enriched["STRATEGY_PRIMARY_MESSAGE"] = strategy_context.get("primary_message", "")
+        enriched["STRATEGY_SELECTED_PROBLEM"] = strategy_context.get("selected_problem", "")
+        enriched["STRATEGY_DESIRED_REALIZATION"] = strategy_context.get("desired_reader_realization", "")
+        enriched["STRATEGY_COMPOUND_ROLE"] = strategy_context.get("compound_presence_role", "")
+        enriched["STRATEGY_ID"] = strategy_context.get("strategy_id", "")
+    if typed_strategy is not None and audience_selection is None:
+        raise ArticleGenerationError(
+            "audience_selection", ValueError("typed strategy requires explicit audience selection")
+        )
+    selected_cta = typed_strategy.cta(cta_mode) if typed_strategy is not None else None
 
-    decision_lens = _run_stage("decision_lens_lite", generate_decision_lens, enriched)
+    if typed_strategy is None:
+        decision_lens = _run_stage("decision_lens_lite", generate_decision_lens, enriched)
+    else:
+        decision_lens = _run_stage(
+            "decision_lens_lite", generate_decision_lens,
+            enriched, typed_strategy, audience_selection,
+        )
     spine = _run_stage("narrative_spine", build_narrative_spine, decision_lens, enriched)
     hook = _run_stage("hook_engine", generate_hook, spine, decision_lens, enriched)
     reader_context = _run_stage("reader_context", build_reader_context, enriched)
     discovery = _run_stage("discovery_builder", build_discovery, hook, spine, decision_lens, enriched)
     story = _run_stage("story_assembly", assemble_story, discovery, spine, decision_lens, enriched)
-    structured_article = _run_stage(
-        "never_blank_voice", finalize_article,
-        hook, reader_context, discovery, story, spine, decision_lens, enriched, cta_mode,
+    voice_args = (
+        hook, reader_context, discovery, story, spine, decision_lens, enriched, cta_mode
     )
+    if typed_strategy is None:
+        structured_article = _run_stage("never_blank_voice", finalize_article, *voice_args)
+    else:
+        structured_article = _run_stage(
+            "never_blank_voice", finalize_article, *voice_args,
+            typed_strategy, audience_selection, selected_cta,
+        )
     platforms = _run_stage(
         "platform_composer",
         compose_platforms,

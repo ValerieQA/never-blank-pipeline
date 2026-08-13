@@ -46,6 +46,7 @@ def test_unsafe_path_components_are_rejected(tmp_path, value):
         resolve_run_dir(tmp_path, SIGNAL_ID, value)
 
 
+@pytest.mark.story9
 def test_two_runs_for_same_signal_preserve_both_generated_artifacts(tmp_path):
     run_a = resolve_run_dir(tmp_path, SIGNAL_ID, RUN_A)
     run_b = resolve_run_dir(tmp_path, SIGNAL_ID, RUN_B)
@@ -57,6 +58,7 @@ def test_two_runs_for_same_signal_preserve_both_generated_artifacts(tmp_path):
     assert run_a != run_b
 
 
+@pytest.mark.story9
 def test_generated_and_publication_results_are_separate_immutable_files(tmp_path):
     run_dir = resolve_run_dir(tmp_path, SIGNAL_ID, RUN_A)
     generated = {"signal_id": SIGNAL_ID, "run_id": RUN_A, "body": "immutable"}
@@ -74,6 +76,7 @@ def test_generated_and_publication_results_are_separate_immutable_files(tmp_path
     assert (run_dir / "publication_results.json").exists()
 
 
+@pytest.mark.story9
 def test_duplicate_write_fails_without_modifying_committed_artifact(tmp_path):
     path = resolve_run_dir(tmp_path, SIGNAL_ID, RUN_A) / "generated.json"
     atomic_write_json(path, {"body": "first"})
@@ -125,6 +128,7 @@ def test_concurrent_writers_are_create_once_without_overwrite(tmp_path):
     assert not list(path.parent.glob(".tmp_*.json"))
 
 
+@pytest.mark.story9
 def test_exact_reader_never_falls_back_to_another_run(tmp_path):
     write_generated_json(
         resolve_run_dir(tmp_path, SIGNAL_ID, RUN_A),
@@ -161,6 +165,7 @@ def _ok_publishers():
     return wix, linkedin
 
 
+@pytest.mark.story9
 def test_from_package_reads_exact_source_and_writes_separate_publication_run(tmp_path):
     source = _seed_canonical_source(tmp_path)
     source_bytes = source.read_bytes()
@@ -189,6 +194,7 @@ def test_from_package_reads_exact_source_and_writes_separate_publication_run(tmp
 
 
 @pytest.mark.parametrize("source_run_id", [RUN_B, "missing-run"])
+@pytest.mark.story9
 def test_wrong_or_missing_source_fails_before_side_effects(tmp_path, source_run_id):
     _seed_canonical_source(tmp_path, RUN_A)
     argv, patches = _base_patches(dry_run=False, from_package=True)
@@ -210,6 +216,7 @@ def test_wrong_or_missing_source_fails_before_side_effects(tmp_path, source_run_
     linkedin_cls.assert_not_called()
 
 
+@pytest.mark.story9
 def test_serialized_source_identity_mismatch_fails_before_side_effects(tmp_path):
     source = resolve_run_dir(tmp_path, CANONICAL_SIGNAL_ID, RUN_A) / "generated.json"
     atomic_write_json(source, _valid_package(run_id=RUN_B))
@@ -229,6 +236,7 @@ def test_serialized_source_identity_mismatch_fails_before_side_effects(tmp_path)
     wix_cls.assert_not_called()
 
 
+@pytest.mark.story9
 def test_missing_source_run_id_never_falls_back_to_legacy_flat_file(tmp_path):
     legacy = tmp_path / f"{CANONICAL_SIGNAL_ID}_generated.json"
     legacy.write_text(json.dumps(_valid_package(run_id=RUN_A)), encoding="utf-8")
