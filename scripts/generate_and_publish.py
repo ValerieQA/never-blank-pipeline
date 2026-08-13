@@ -116,13 +116,16 @@ from src.publishing.wix import WixPublisher
 from src.artifacts import (
     ArtifactCollisionError,
     load_run_generated,
+    load_business_strategy_snapshot,
     resolve_run_dir,
     write_generated_json,
+    write_business_strategy_snapshot,
     write_publication_results_json,
 )
 from src.reporting import R1RunReport
 from src.strategy.history import append_published_entry
 from src.strategy.business_config import (
+    BusinessStrategyConfiguration,
     BusinessStrategyConfigurationError,
     load_business_strategy_configuration,
 )
@@ -482,11 +485,29 @@ def main() -> int:
     except IntakeAdapterError as exc:
         print(f"  ERROR: {exc}")
         return 1
-    run_ctx = RunContext.from_assignment(assignment, execution_mode)
+    run_ctx = RunContext.from_assignment(
+        assignment,
+        execution_mode,
+        configuration_identity=strategy_execution.identity,
+    )
     _require_run_id(run_ctx.run_id, "intake")
     print(f"  ✓  run_id:        {run_ctx.run_id}")
     print(f"  ✓  assignment_id: {run_ctx.assignment_id}")
     print(f"  ✓  execution_mode:{run_ctx.execution_mode.value}")
+
+    require_configuration_identity(
+        strategy_execution.identity,
+        run_ctx.configuration_identity,
+        "run-context",
+    )
+    run_dir = resolve_run_dir(PACKAGES_DIR, signal_id, run_ctx.run_id)
+    try:
+        write_business_strategy_snapshot(
+            run_dir, business_configuration.model_dump(mode="json")
+        )
+    except ArtifactCollisionError as exc:
+        print(f"  ERROR: {exc}")
+        return 1
 
     try:
         audience_selection = strategy_execution.decision_lens_editorial.select_audience(
@@ -536,7 +557,6 @@ def main() -> int:
             return 1
 
     # Run-scoped artifact directory for this execution.
-    run_dir = resolve_run_dir(PACKAGES_DIR, signal_id, run_ctx.run_id)
     echo_line = ""
     _generation_run_id: str = run_ctx.run_id   # fresh-gen default; overridden below
     _source_run_id: str     = run_ctx.run_id   # fresh-gen default; overridden below
@@ -638,6 +658,34 @@ def main() -> int:
                 package_configuration_identity,
                 "generated-package",
             )
+            if args.from_package:
+                snapshot_data = load_business_strategy_snapshot(
+                    PACKAGES_DIR, signal_id, _source_run_id
+                )
+                try:
+                    snapshot_configuration = BusinessStrategyConfiguration.model_validate(
+                        snapshot_data
+                    )
+                except Exception as exc:
+                    raise StrategyExecutionError(
+                        "business strategy snapshot is invalid at source-run"
+                    ) from exc
+                snapshot_identity = strategy_execution.identity.from_configuration(
+                    snapshot_configuration
+                )
+                require_configuration_identity(
+                    package_configuration_identity,
+                    snapshot_identity,
+                    "source-run-snapshot",
+                )
+                require_configuration_identity(
+                    strategy_execution.identity,
+                    snapshot_identity,
+                    "current-configuration/source-run-snapshot",
+                )
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"  ERROR: {exc}")
+            return 1
         except StrategyExecutionError as exc:
             print(f"  ERROR: {exc}")
             return 1

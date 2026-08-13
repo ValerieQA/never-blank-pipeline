@@ -27,6 +27,8 @@ from src.intake.content_assignment import ContentAssignment
 from src.intake import from_jsonl_signal
 from src.run.run_context import ExecutionMode, RunContext
 from src.lifecycle.signal_lifecycle import ResearchContext
+from src.strategy.business_config import load_business_strategy_configuration
+from src.strategy.execution_context import ConfigurationIdentity
 
 
 # ---------------------------------------------------------------------------
@@ -34,6 +36,13 @@ from src.lifecycle.signal_lifecycle import ResearchContext
 # ---------------------------------------------------------------------------
 
 _SIGNAL_ID = "sig-test-001"
+
+
+def _test_configuration_identity() -> dict:
+    configuration = load_business_strategy_configuration(
+        Path("strategy/current/business_strategy.json")
+    )
+    return ConfigurationIdentity.from_configuration(configuration).model_dump()
 
 _RAW_SIGNAL = {
     "SIGNAL_ID": _SIGNAL_ID,
@@ -129,11 +138,7 @@ def _valid_package(*, strategy_version: str = "1", **overrides) -> dict:
         "signal_id":         _SIGNAL_ID,
         "strategy_id":       "2026-07-presence-debt-campaign-1",
         "strategy_version":  strategy_version,
-        "configuration_identity": {
-            "schema_version": "1",
-            "configuration_id": "never-blank",
-            "configuration_version": "1",
-        },
+        "configuration_identity": _test_configuration_identity(),
         "generated_at":      "2026-08-11T10:00:00+00:00",
         "headline":          "AI adoption accelerates in SMBs",
         "blog_article":      "Blog body text sufficient for validation.",
@@ -155,6 +160,11 @@ def _write_package(tmp_path: Path, pkg: dict | None = None) -> Path:
     f = tmp_path / _SIGNAL_ID / "runs" / str(run_id) / "generated.json"
     f.parent.mkdir(parents=True, exist_ok=True)
     f.write_text(json.dumps(data), encoding="utf-8")
+    snapshot = f.with_name("business_strategy.json")
+    snapshot.write_text(
+        Path("strategy/current/business_strategy.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
     return f
 
 

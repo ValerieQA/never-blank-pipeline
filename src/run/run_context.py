@@ -45,6 +45,8 @@ strategy_ref            Copied from ContentAssignment.strategy_ref.
 strategy_version        Copied from ContentAssignment.strategy_version.
 execution_mode          ExecutionMode enum value.
 schema_version          Fixed "1.0" — identifies this contract version.
+configuration_identity  Four-field validated business configuration identity;
+                        required on the canonical R1 path.
 
 Serialization
 -------------
@@ -71,6 +73,7 @@ from pydantic import (
 from pydantic import ValidationError as _PydanticValidationError
 
 from src.intake.content_assignment import ContentAssignment
+from src.strategy.execution_context import ConfigurationIdentity
 
 # Schema version for this contract shape.  Bump this string if fields are
 # added or removed in a breaking way.
@@ -85,6 +88,7 @@ _KNOWN_FIELDS = frozenset({
     "strategy_version",
     "execution_mode",
     "schema_version",
+    "configuration_identity",
 })
 
 
@@ -133,6 +137,7 @@ class RunContext(BaseModel):
     strategy_version:        str = Field(..., min_length=1)
     execution_mode:          ExecutionMode
     schema_version:          str
+    configuration_identity:  Optional[ConfigurationIdentity] = None
 
     # ------------------------------------------------------------------
     # Field validators
@@ -212,6 +217,7 @@ class RunContext(BaseModel):
         execution_mode: ExecutionMode,
         *,
         started_at: Optional[datetime] = None,
+        configuration_identity: Optional[ConfigurationIdentity] = None,
     ) -> "RunContext":
         """
         Create a RunContext from a validated ContentAssignment.
@@ -249,6 +255,7 @@ class RunContext(BaseModel):
             strategy_version=assignment.strategy_version,
             execution_mode=execution_mode,
             schema_version=_SCHEMA_VERSION,
+            configuration_identity=configuration_identity,
         )
 
     # ------------------------------------------------------------------
@@ -257,7 +264,7 @@ class RunContext(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a JSON-compatible dict. started_at uses ISO-8601 with UTC offset."""
-        return {
+        data = {
             "run_id":                  self.run_id,
             "assignment_id":           self.assignment_id,
             "external_correlation_id": self.external_correlation_id,
@@ -267,6 +274,9 @@ class RunContext(BaseModel):
             "execution_mode":          self.execution_mode.value,
             "schema_version":          self.schema_version,
         }
+        if self.configuration_identity is not None:
+            data["configuration_identity"] = self.configuration_identity.model_dump()
+        return data
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "RunContext":

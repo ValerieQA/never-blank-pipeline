@@ -3,6 +3,7 @@ Run-scoped artifact addressing for Release 1.
 
 Directory layout:
     <packages_dir>/<signal_id>/runs/<run_id>/generated.json
+    <packages_dir>/<signal_id>/runs/<run_id>/business_strategy.json
     <packages_dir>/<signal_id>/runs/<run_id>/publication_results.json
 
 Contract:
@@ -133,6 +134,31 @@ def write_generated_json(run_dir: Path, data: dict) -> None:
     Raises ArtifactCollisionError if generated.json already exists.
     """
     atomic_write_json(run_dir / "generated.json", data)
+
+
+def write_business_strategy_snapshot(run_dir: Path, data: dict) -> None:
+    """Commit the validated business strategy snapshot exactly once."""
+    atomic_write_json(run_dir / "business_strategy.json", data)
+
+
+def load_business_strategy_snapshot(
+    packages_dir: Path, signal_id: str, source_run_id: str
+) -> dict:
+    """Load exactly one run-scoped strategy snapshot; never fall back to current."""
+    run_dir = resolve_run_dir(packages_dir, signal_id, source_run_id)
+    path = run_dir / "business_strategy.json"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"No business_strategy.json at {path}. Historical configuration "
+            "snapshots are required for package reuse."
+        )
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise ValueError(f"Could not parse {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"Business strategy snapshot at {path} is not a JSON object")
+    return data
 
 
 def write_publication_results_json(run_dir: Path, data: dict) -> None:
