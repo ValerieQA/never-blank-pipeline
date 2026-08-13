@@ -57,17 +57,23 @@ class ResearchStrategyView(_ImmutableView):
     business: BusinessIdentity
     products_services: tuple[ProductService, ...]
     audiences: tuple[AudienceSegment, ...]
+    default_audience_id: str
     positioning: Positioning
     commercial: CommercialStrategy
     content: ContentStrategy
     restrictions: tuple[str, ...]
+    preferred_claims: tuple[str, ...]
     prompt_rule_references: tuple[PromptRuleReference, ...]
+
+    def select_audience(self, requested: str | None) -> "AudienceSelection":
+        return _select_audience(self.audiences, self.default_audience_id, requested)
 
 
 class DecisionLensEditorialStrategyView(_ImmutableView):
     identity: ConfigurationIdentity
     business: BusinessIdentity
     audiences: tuple[AudienceSegment, ...]
+    default_audience_id: str
     positioning: Positioning
     content: ContentStrategy
     brand_editorial: BrandEditorialPolicy
@@ -83,21 +89,49 @@ class DecisionLensEditorialStrategyView(_ImmutableView):
             f"{self.identity.configuration_id!r}"
         )
 
-    def legacy_prompt_values(self) -> dict[str, str]:
-        """Map configured meaning into the existing Editorial Engine boundary.
+    def select_audience(self, requested: str | None) -> "AudienceSelection":
+        return _select_audience(self.audiences, self.default_audience_id, requested)
 
-        The scalar key names are a compatibility adapter for current prompts;
-        the business meaning itself comes exclusively from configuration.
-        """
 
-        first_audience = self.audiences[0]
-        return {
-            "primary_message": self.positioning.statement,
-            "selected_problem": first_audience.problems[0],
-            "desired_reader_realization": self.content.objectives[0],
-            "compound_presence_role": self.positioning.value_propositions[0],
-            "strategy_id": self.identity.configuration_id,
-        }
+class AudienceSelection(_ImmutableView):
+    audience_id: str
+    audience_name: str
+    selected_problem: str
+    decision_factors: tuple[str, ...]
+    objections: tuple[str, ...]
+    selection_source: str
+
+
+def _normalise_selector(value: str) -> str:
+    return " ".join(value.strip().casefold().replace("_", " ").replace("-", " ").split())
+
+
+def _select_audience(
+    audiences: tuple[AudienceSegment, ...],
+    default_audience_id: str,
+    requested: str | None,
+) -> AudienceSelection:
+    selector = requested or default_audience_id
+    normalised = _normalise_selector(selector)
+    matches = []
+    for audience in audiences:
+        declared = (audience.audience_id, audience.name, *audience.selection_terms)
+        if normalised in {_normalise_selector(value) for value in declared}:
+            matches.append(audience)
+    if len(matches) != 1:
+        reason = "unknown" if not matches else "ambiguous"
+        raise StrategyExecutionError(
+            f"{reason} target audience {selector!r}; expected exactly one configured audience"
+        )
+    audience = matches[0]
+    return AudienceSelection(
+        audience_id=audience.audience_id,
+        audience_name=audience.name,
+        selected_problem=audience.default_problem,
+        decision_factors=audience.decision_factors,
+        objections=audience.objections,
+        selection_source="assignment" if requested else "configured-default",
+    )
 
 
 class WixStrategyView(_ImmutableView):
@@ -142,6 +176,7 @@ class StrategyExecutionContext(_ImmutableView):
             business=configuration.business,
             products_services=configuration.products_services,
             audiences=configuration.audiences,
+            default_audience_id=configuration.default_audience_id,
             positioning=configuration.positioning,
             commercial=configuration.commercial,
             content=configuration.content,
@@ -149,12 +184,14 @@ class StrategyExecutionContext(_ImmutableView):
                 *configuration.brand_editorial.prohibited_claims,
                 *configuration.brand_editorial.legal_factual_reputational_restrictions,
             ),
+            preferred_claims=configuration.brand_editorial.preferred_claims,
             prompt_rule_references=configuration.prompt_rule_references,
         )
         editorial = DecisionLensEditorialStrategyView(
             identity=identity,
             business=configuration.business,
             audiences=configuration.audiences,
+            default_audience_id=configuration.default_audience_id,
             positioning=configuration.positioning,
             content=configuration.content,
             brand_editorial=configuration.brand_editorial,

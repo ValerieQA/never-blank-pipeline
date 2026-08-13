@@ -16,6 +16,10 @@ checklist_pass=False is logged as a warning, not raised as a hard failure.
 """
 
 import json
+import re
+
+from src.strategy.business_config import CallToAction
+from src.strategy.execution_context import AudienceSelection, DecisionLensEditorialStrategyView
 
 from src.utils.llm_client import chat, model_article
 from src.utils.logger import get_logger
@@ -110,6 +114,9 @@ def finalize_article(
     decision_lens: dict,
     signal: dict,
     cta_mode: str = "none",
+    strategy_view: DecisionLensEditorialStrategyView | None = None,
+    audience: AudienceSelection | None = None,
+    selected_cta: CallToAction | None = None,
 ) -> dict:
     """
     Generate the Echo, optional CTA, run the Voice checklist, and assemble the
@@ -121,6 +128,24 @@ def finalize_article(
     Raises ValueError if the signature is empty when the LLM returned a non-null
     echo_line that is not a valid string.
     """
+    strategy_section = ""
+    if strategy_view is not None:
+        if audience is None or selected_cta is None:
+            raise ValueError("Never Blank Voice requires audience and configured CTA")
+        policy = strategy_view.brand_editorial
+        strategy_section = f"""
+selected_audience_id: {audience.audience_id}
+selected_audience_problem: {audience.selected_problem}
+configured_voice: {json.dumps(policy.voice, ensure_ascii=False)}
+editorial_principles: {json.dumps(policy.editorial_principles, ensure_ascii=False)}
+preferred_claims: {json.dumps(policy.preferred_claims, ensure_ascii=False)}
+prohibited_claims: {json.dumps(policy.prohibited_claims, ensure_ascii=False)}
+factual_legal_reputational_restrictions: {json.dumps(policy.legal_factual_reputational_restrictions, ensure_ascii=False)}
+configured_cta_intent: {selected_cta.intent}
+configured_cta_rules: {json.dumps(selected_cta.rules, ensure_ascii=False)}
+Follow the configured CTA intent and every configured CTA rule exactly.
+"""
+
     user = f"""HEADLINE: {signal.get('HEADLINE', '')}
 cta_mode: {cta_mode}
 selected_hook: {hook.get('selected_hook', '')}
@@ -131,6 +156,7 @@ aha_setup: {discovery.get('aha_setup', '')}
 surviving_explanation: {story.get('surviving_explanation', '')}
 reframe: {story.get('reframe', '')}
 business_translation: {story.get('business_translation', '')}
+{strategy_section}
 
 Produce the Never Blank Voice JSON. Follow cta_mode exactly."""
 
@@ -194,8 +220,23 @@ Produce the Never Blank Voice JSON. Follow cta_mode exactly."""
         "echo_candidates": data.get("echo_candidates", []),
     }
 
+    if strategy_view is not None:
+        structured_article["strategy_audience"] = audience.model_dump(mode="json")
+        structured_article["configured_cta"] = selected_cta.model_dump(mode="json")
+        rendered = _normalise_claim_text(json.dumps(structured_article, ensure_ascii=False))
+        for prohibited in strategy_view.brand_editorial.prohibited_claims:
+            if _normalise_claim_text(prohibited) in rendered:
+                raise ValueError(
+                    f"Never Blank Voice: exact prohibited claim emitted: {prohibited!r}"
+                )
+
     log.info(
         "Never Blank Voice: cta_mode=%s echo=%r cta=%s checklist_pass=%s",
         cta_mode, (echo_line or "")[:80], bool(cta_line), checklist_pass,
     )
     return structured_article
+
+
+def _normalise_claim_text(value: str) -> str:
+    """Normalize case, punctuation, and whitespace for exact phrase enforcement."""
+    return " ".join(re.sub(r"[^\w]+", " ", value.casefold()).split())

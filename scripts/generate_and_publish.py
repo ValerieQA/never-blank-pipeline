@@ -488,6 +488,19 @@ def main() -> int:
     print(f"  ✓  assignment_id: {run_ctx.assignment_id}")
     print(f"  ✓  execution_mode:{run_ctx.execution_mode.value}")
 
+    try:
+        audience_selection = strategy_execution.decision_lens_editorial.select_audience(
+            assignment.target_audience
+        )
+        research_audience = strategy_execution.research.select_audience(
+            assignment.target_audience
+        )
+        if audience_selection != research_audience:
+            raise StrategyExecutionError("audience selection differs across strategy views")
+    except StrategyExecutionError as exc:
+        print(f"  ERROR: {exc}")
+        return 1
+
     # ── Compatibility boundary: ContentAssignment → legacy ResearchContext ────
     # Injects run_id so ResearchContext carries run identity into the editorial
     # boundary.  TODO Task #29: remove once downstream stages accept
@@ -752,7 +765,9 @@ def main() -> int:
             print(f"  — {reason} — generating images for all platforms…")
             try:
                 from scripts.research.prepare_content import prepare_content_packages
-                pkgs = prepare_content_packages([signal])
+                pkgs = prepare_content_packages(
+                    [signal], strategy_execution.research, research_audience
+                )
                 if pkgs:
                     editorial_package = pkgs[0]
                     pimgs = pkgs[0].get("images", {}).get("platform_images", {})
@@ -800,7 +815,9 @@ def main() -> int:
             print(f"  — {reason} — generating images for all platforms…")
             try:
                 from scripts.research.prepare_content import prepare_content_packages
-                pkgs = prepare_content_packages([signal])
+                pkgs = prepare_content_packages(
+                    [signal], strategy_execution.research, research_audience
+                )
                 if pkgs:
                     editorial_package = pkgs[0]
                     pimgs = pkgs[0].get("images", {}).get("platform_images", {})
@@ -832,6 +849,7 @@ def main() -> int:
                 strategy_context=strategy_execution.decision_lens_editorial,
                 wix_strategy=strategy_execution.wix,
                 linkedin_strategy=strategy_execution.linkedin,
+                audience_selection=audience_selection,
             )
             platforms  = article["platforms"]
             structured = article["structured_article"]
