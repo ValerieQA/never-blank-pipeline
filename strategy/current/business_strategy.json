@@ -1,0 +1,308 @@
+{
+  "schema_version": "1",
+  "configuration_id": "never-blank",
+  "configuration_version": "1",
+  "status": "active",
+  "business": {
+    "name": "Never Blank",
+    "business_model": "Service-led B2B content intelligence and production system",
+    "description": "Never Blank turns current market signals and a configured business strategy into evidence-based, channel-specific content for founder-led service businesses. Release 1 uses controlled production for Wix and LinkedIn."
+  },
+  "products_services": [
+    {
+      "product_id": "continuous-content-presence",
+      "name": "Continuous Content Presence",
+      "description": "A controlled research, editorial, visual, validation, and publishing workflow that maintains a business's Wix and LinkedIn presence without requiring the owner to draft every publication manually."
+    },
+    {
+      "product_id": "presence-system-diagnostic",
+      "name": "Presence System Diagnostic",
+      "description": "A structured examination of where a founder-led business's public presence depends on owner availability and where the production system breaks."
+    }
+  ],
+  "audiences": [
+    {
+      "audience_id": "small-b2b-agencies",
+      "name": "Founder-led digital, web, development, and creative agencies",
+      "problems": [
+        "Client delivery displaces consistent market presence.",
+        "The work being delivered is more substantial than what prospective clients can see.",
+        "The agency becomes quiet while busy and has to restart visibility when the pipeline weakens."
+      ],
+      "decision_factors": [
+        "The system must preserve the agency's actual expertise and voice.",
+        "Claims must remain traceable to current evidence and real work.",
+        "The process must reduce owner drafting effort without publishing generic filler.",
+        "Wix and LinkedIn output must be independently useful and platform-appropriate."
+      ],
+      "objections": [
+        "An automated system will sound generic or unlike the agency.",
+        "Maintaining the system may consume as much time as writing manually.",
+        "Content activity may not produce commercially meaningful conversations."
+      ]
+    },
+    {
+      "audience_id": "independent-consultants",
+      "name": "Independent consultants and advisors",
+      "problems": [
+        "Expertise remains inside delivery work instead of becoming visible market evidence.",
+        "Publishing stops when client work becomes demanding.",
+        "Prospects cannot consistently encounter the consultant's current thinking between referrals."
+      ],
+      "decision_factors": [
+        "The content must protect nuance and avoid invented authority.",
+        "The system must distinguish evidence from interpretation.",
+        "The voice must remain direct, credible, and recognizably human.",
+        "The call to action must fit a trust-based advisory sale."
+      ],
+      "objections": [
+        "A system cannot understand specialist judgment well enough to publish safely.",
+        "Frequent publishing may weaken rather than strengthen perceived expertise.",
+        "The consultant does not want aggressive sales language."
+      ]
+    },
+    {
+      "audience_id": "managed-service-providers",
+      "name": "Founder-led managed service providers",
+      "problems": [
+        "Operational delivery is visible to clients only when something fails or a project is active.",
+        "Technical competence is difficult for non-technical buyers to evaluate from the outside.",
+        "Market communication becomes sporadic because service continuity takes priority."
+      ],
+      "decision_factors": [
+        "Technical and commercial claims must be factually defensible.",
+        "The system must avoid exposing client, security, or operationally sensitive information.",
+        "Content must translate mechanisms into buyer-relevant consequences without oversimplifying.",
+        "Publication must be traceable and controllable."
+      ],
+      "objections": [
+        "Content automation may create security or confidentiality risk.",
+        "Generic marketing language may damage technical credibility.",
+        "The team has limited capacity to review every publication."
+      ]
+    }
+  ],
+  "positioning": {
+    "statement": "Never Blank is the content intelligence and production system for founder-led B2B service businesses whose market presence disappears when delivery work becomes busy.",
+    "expertise": [
+      "Turning current signals and source evidence into business-relevant editorial decisions.",
+      "Separating business strategy, universal pipeline logic, and provider-specific publishing adapters.",
+      "Composing the same approved editorial decision independently for Wix and LinkedIn.",
+      "Preserving run identity, configuration identity, validation status, and publication results."
+    ],
+    "value_propositions": [
+      "Maintain a credible content presence without making owner free time the production bottleneck.",
+      "Turn current evidence and real business expertise into content instead of filling a calendar with generic posts.",
+      "Preserve business voice, restrictions, and channel rules as explicit configuration rather than informal prompting.",
+      "Keep generated and published artifacts traceable to the run and strategy that produced them."
+    ],
+    "proof_points": [
+      "The repository implements separate intake, research, editorial, validation, visual, Wix, and LinkedIn publishing boundaries that can be inspected and tested.",
+      "Controlled runs preserve unique run identity and immutable run-scoped generation and publication-result artifacts.",
+      "Never Blank maintains versioned strategy, brand voice, editorial methodology, and platform-rule artifacts in the repository.",
+      "Product or client outcome claims require verifiable publication records, run artifacts, analytics, or documented client evidence; the system must not infer outcomes from implementation alone."
+    ]
+  },
+  "commercial": {
+    "priorities": [
+      "Secure a first controlled pilot with a founder-led B2B service business.",
+      "Demonstrate the complete Wix and LinkedIn lifecycle using verifiable run evidence.",
+      "Use pilot evidence to decide which manual steps should be automated next.",
+      "Generate qualified conversations with agencies, consultants, and managed service providers that recognize owner-dependent presence."
+    ]
+  },
+  "content": {
+    "objectives": [
+      "Make the reader recognize a concrete presence pattern in their own business.",
+      "Explain the mechanism and commercial consequence behind that pattern.",
+      "Demonstrate Never Blank through quality of investigation and editorial judgment rather than direct product pitching.",
+      "Create a defensible path from recognition to reflection, diagnostic interest, example request, or direct conversation."
+    ],
+    "territories": [
+      "Owner-dependent visibility and the periods when busy businesses disappear.",
+      "The gap between work performed and work visible to prospective clients.",
+      "Customer memory, accumulated recognition, trust, and continuity of presence.",
+      "The systems and decisions that allow market presence to continue during delivery work.",
+      "Evidence quality, editorial judgment, and the difference between useful content and generic output."
+    ]
+  },
+  "brand_editorial": {
+    "voice": [
+      "Sharp: every sentence earns its place and the point arrives without a wind-up.",
+      "Observational: name what is happening before prescribing what should happen.",
+      "Direct and clean: avoid corporate language, inflated claims, and obscuring metaphors.",
+      "Commercially aware: connect the mechanism to recognition, pipeline, referrals, trust, or revenue timing when evidence supports that connection.",
+      "Reader-centered: the founder or owner is the central character; Never Blank is the observer."
+    ],
+    "editorial_principles": [
+      "Use current source evidence and distinguish sourced facts from model interpretation.",
+      "Open with a concrete tension or observation, never a generic topic introduction or question.",
+      "Move from recognition through mechanism and business consequence to a genuine reframe.",
+      "Do not publish generic advice, motivational filler, or content whose main value is posting frequency.",
+      "Use an Echo only when it is specific to and earned by the article's argument.",
+      "When a CTA is configured, place it before the Echo and tie it to the specific pattern."
+    ],
+    "preferred_claims": [
+      "Visibility can be treated as a business system rather than an owner personality trait.",
+      "Never Blank is designed to use current evidence and configured business meaning to produce distinct Wix and LinkedIn artifacts.",
+      "A controlled Never Blank run can preserve the identity and status of generated and publication-result artifacts.",
+      "Owner-dependent content production can create periods in which the market sees less of the work being performed."
+    ],
+    "prohibited_claims": [
+      "Do not guarantee leads, revenue, reach, search ranking, engagement, or publication performance.",
+      "Do not claim that every business loses clients when it becomes quiet.",
+      "Do not claim personal observation of hundreds of businesses without a cited dataset.",
+      "Do not call a strategy, campaign, pilot, or product successful without recorded acceptance or outcome evidence.",
+      "Do not claim fully autonomous, error-free, or human-equivalent judgment.",
+      "Do not invent client results, testimonials, research volume, statistics, or causal conclusions."
+    ],
+    "legal_factual_reputational_restrictions": [
+      "Every factual claim must be traceable to current evidence or explicitly identified as interpretation or hypothesis.",
+      "Do not expose credentials, private client information, security details, personal data, or confidential operational information.",
+      "Do not identify a client, partner, or individual as evidence without documented permission or an already-public attributable source.",
+      "Treat Presence Debt and other named concepts as hypotheses until recorded audience and commercial evidence supports stronger language.",
+      "Do not use AI or automation as a first-contact promise; describe implementation transparently when it becomes relevant.",
+      "A missing required source, restriction, approval, or configuration value blocks publication rather than triggering a generic fallback."
+    ]
+  },
+  "calls_to_action": [
+    {
+      "cta_id": "none",
+      "intent": "End on the earned editorial implication without a commercial invitation.",
+      "rules": [
+        "Produce no CTA text.",
+        "Do not convert the Echo into a disguised sales invitation."
+      ]
+    },
+    {
+      "cta_id": "reflection",
+      "intent": "Invite the reader to recognize or examine the specific pattern in their own business.",
+      "rules": [
+        "Keep the invitation soft and specific to the article.",
+        "Do not request a call, form submission, or purchase."
+      ]
+    },
+    {
+      "cta_id": "diagnostic",
+      "intent": "Invite the reader to show the current presence system and identify where it breaks.",
+      "rules": [
+        "Describe the diagnostic action concretely.",
+        "Do not promise an outcome or manufacture urgency."
+      ]
+    },
+    {
+      "cta_id": "example_request",
+      "intent": "Invite the reader to request a relevant example of the system or pattern.",
+      "rules": [
+        "Name what example the reader can request.",
+        "Do not use generic learn-more language."
+      ]
+    },
+    {
+      "cta_id": "direct_conversation",
+      "intent": "Invite a direct conversation about whether the observed pattern exists in the reader's business.",
+      "rules": [
+        "Tie the invitation to evidence established by the article.",
+        "Do not use book-a-call, free-consultation, buy-now, or transformation language."
+      ]
+    }
+  ],
+  "channels": {
+    "wix": {
+      "article_rules": [
+        "Develop one complete evidence-based argument using clear H2/H3 structure and short paragraphs.",
+        "Use 600–1200 words as a typical range; do not pad an argument to reach a target.",
+        "Include source-backed market observation, mechanism, business consequence, reframe, and an earned close.",
+        "Keep factual claims traceable and make the article quotable without removing necessary context."
+      ],
+      "metadata_rules": [
+        "Provide a descriptive headline and slug that accurately represent the article.",
+        "Use relevant SEO/GEO language naturally; do not manufacture keyword repetition.",
+        "Supply required Wix category, tag, and cover metadata through the publication package."
+      ],
+      "link_rules": [
+        "Preserve source attribution for factual claims.",
+        "Use internal links only when the destination is relevant and verified.",
+        "Do not publish empty, placeholder, malformed, or unverified links."
+      ],
+      "cta_rules": [
+        "Follow the configured CTA mode exactly.",
+        "When present, express the CTA as a natural paragraph tied to the article and place it before the Echo.",
+        "When CTA mode is none, do not add an invitation."
+      ],
+      "visual_rules": [
+        "Use the approved current-run Wix cover asset with verified identity, dimensions, and format.",
+        "Derive the visual anchor from the article's core idea, not generic entrepreneur or laptop imagery.",
+        "Missing or invalid required visual evidence blocks the Wix package."
+      ]
+    },
+    "linkedin": {
+      "opening_rules": [
+        "The first line must state a concrete professional tension or observation before the see-more boundary.",
+        "Do not open with a question, preamble, corporate news item, or generic market statement.",
+        "Begin with recognition and then explain the mechanism and specific business implication."
+      ],
+      "length_rules": [
+        "Use only the length required for one complete LinkedIn argument.",
+        "The artifact must be independently composed from the approved editorial decision, not truncated from the Wix article."
+      ],
+      "formatting_rules": [
+        "Use short paragraphs and deliberate white space for feed reading.",
+        "Use three to five article-specific niche hashtags and no blacklisted generic hashtags.",
+        "Preserve the approved Echo verbatim when the article has one."
+      ],
+      "link_rules": [
+        "Use the verified Wix article URL when the composition calls for a link.",
+        "Place source or article links according to the approved composition without placeholder URLs.",
+        "Do not report a generic LinkedIn feed URL as the created publication URL."
+      ],
+      "cta_rules": [
+        "Follow the configured CTA mode exactly.",
+        "When present, use a paragraph-length invitation tied to the post and place it before the Echo.",
+        "When CTA mode is none, do not add an invitation."
+      ],
+      "visual_rules": [
+        "Use the approved current-run LinkedIn asset or an explicitly validated link composition.",
+        "The LinkedIn visual may share a visual family with Wix but must satisfy LinkedIn dimensions and purpose.",
+        "Missing or invalid required visual evidence blocks the LinkedIn package."
+      ]
+    }
+  },
+  "prompt_rule_references": [
+    {
+      "reference_id": "brand-identity",
+      "path": "config/brand.yaml",
+      "version": "r1-2026-08-13"
+    },
+    {
+      "reference_id": "brand-voice",
+      "path": "config/brand_voice.md",
+      "version": "r1-2026-08-13"
+    },
+    {
+      "reference_id": "active-campaign-strategy",
+      "path": "strategy/current/strategy.json",
+      "version": "1"
+    },
+    {
+      "reference_id": "strategy-methodology",
+      "path": "strategy/methodology/strategy_methodology.md",
+      "version": "2026-07-22"
+    },
+    {
+      "reference_id": "editorial-strategy",
+      "path": "strategy/methodology/editorial_strategy.md",
+      "version": "2026-07-22"
+    },
+    {
+      "reference_id": "platform-strategy",
+      "path": "strategy/methodology/platform_strategy.md",
+      "version": "2026-07-22"
+    },
+    {
+      "reference_id": "platform-visual-strategy",
+      "path": "docs/PLATFORM_AND_VISUAL_STRATEGY.md",
+      "version": "r1-2026-08-13"
+    }
+  ]
+}
