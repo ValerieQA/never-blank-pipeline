@@ -9,11 +9,14 @@ import urllib.request
 import urllib.error
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, TYPE_CHECKING
 from pathlib import Path
 from typing import Optional
 
 from src.publishing.result import PublishResult, PublishStatus
+
+if TYPE_CHECKING:
+    from src.strategy.execution_context import ConfigurationIdentity
 
 
 # ── Draft loading ──────────────────────────────────────────────────────────────
@@ -45,6 +48,21 @@ class DraftPackage:
     def image_for(self, platform: str) -> Optional[str]:
         """Return the best image URL for this platform, falling back to image_url."""
         return self.platform_image_urls.get(platform) or self.image_url
+
+    def require_configuration_identity(
+        self, expected: "ConfigurationIdentity", boundary: str
+    ) -> None:
+        """Fail closed if a controlled draft carries stale strategy identity."""
+
+        from src.strategy.execution_context import (
+            identity_from_mapping,
+            require_configuration_identity,
+        )
+
+        actual = identity_from_mapping(
+            self.metadata.get("configuration_identity"), boundary=boundary
+        )
+        require_configuration_identity(expected, actual, boundary)
 
 
 def load_draft(base_dir: Optional[Path] = None) -> DraftPackage:

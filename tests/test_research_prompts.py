@@ -162,6 +162,12 @@ def test_content_package_interpolates_all_fields():
         "possible_signature_line": "Signature",
         "potential_hook": "Hook text",
         "target_audience": "founder",
+        "selected_audience_id": "operators",
+        "selected_audience_problem": "Problem",
+        "business_positioning": "Positioning",
+        "content_territories": "[\"Territory\"]",
+        "preferred_claims": "[\"Claim\"]",
+        "restrictions": "[\"Restriction\"]",
     })
     assert "BrandCo" in p["user"]
     assert "Hook text" in p["user"]
@@ -205,6 +211,11 @@ def test_no_unresolved_placeholders_after_full_injection():
             "core_fact": "F", "real_company_example": "E",
             "never_blank_angle": "A", "possible_signature_line": "P",
             "potential_hook": "K", "target_audience": "founder",
+            "selected_audience_id": "operators",
+            "selected_audience_problem": "Problem",
+            "business_positioning": "Positioning",
+            "content_territories": "[]", "preferred_claims": "[]",
+            "restrictions": "[]",
         }),
     ]
     for name, variables in cases:

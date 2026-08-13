@@ -33,11 +33,14 @@ def _valid_config() -> dict:
                 "description": "Structured advisory engagements.",
             }
         ],
+        "default_audience_id": "operators",
         "audiences": [
             {
                 "audience_id": "operators",
                 "name": "Operations leaders",
+                "selection_terms": [],
                 "problems": ["Unclear operating decisions"],
+                "default_problem": "Unclear operating decisions",
                 "decision_factors": ["Evidence", "Implementation fit"],
                 "objections": ["Change cost"],
             }

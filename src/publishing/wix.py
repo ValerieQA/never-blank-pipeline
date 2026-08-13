@@ -38,12 +38,15 @@ from __future__ import annotations
 import json
 import os
 import re
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from src.publishing.base import BasePublisher, DraftPackage, _fetch
 from src.publishing.result import PublishResult, PublishStatus
 from src.publishing.wix_media import WixMediaAsset, WixMediaImportError, import_image
 from src.utils.logger import get_logger
+
+if TYPE_CHECKING:
+    from src.strategy.execution_context import WixStrategyView
 
 
 _API = "https://www.wixapis.com"
@@ -124,7 +127,17 @@ def _md_to_rich_nodes(markdown: str) -> list[dict]:
 class WixPublisher(BasePublisher):
     name = "wix"
 
-    def publish(self, draft: DraftPackage, mode: str) -> PublishResult:
+    def publish(
+        self,
+        draft: DraftPackage,
+        mode: str,
+        *,
+        strategy_view: "WixStrategyView | None" = None,
+    ) -> PublishResult:
+        if strategy_view is not None:
+            draft.require_configuration_identity(
+                strategy_view.identity, "wix-publisher"
+            )
         api_key  = os.getenv("NB_WIX_API_KEY", "")
         site_id  = os.getenv("NB_WIX_SITE_ID", "")
         owner_id = os.getenv("NB_WIX_POST_OWNER_ID", "")

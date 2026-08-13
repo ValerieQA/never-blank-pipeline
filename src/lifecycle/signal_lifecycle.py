@@ -25,6 +25,10 @@ from __future__ import annotations
 
 import json as _json
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.strategy.execution_context import ResearchStrategyView
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +177,12 @@ class ResearchContext:
     # Default "" preserves backward compat for from_dict() on pre-Task-#27 JSONL records
     # and for the discovery-only path (run_daily_research.py) which has no RunContext.
     run_id: str = field(default="")
+
+    # Consumer-specific business framing for controlled R1 execution.
+    # Discovery-only legacy paths may leave it unset.
+    strategy_view: "ResearchStrategyView | None" = field(
+        default=None, repr=False, compare=False
+    )
 
     # Unknown legacy keys: preserved for JSONL output, never used for decisions
     _passthrough: dict = field(default_factory=dict, repr=False, compare=False)

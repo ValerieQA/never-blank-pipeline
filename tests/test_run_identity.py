@@ -210,6 +210,11 @@ def _valid_package(run_id: str = _KNOWN_RUN_ID) -> dict:
         "generated_at":        "2026-08-01T10:00:00+00:00",
         "strategy_id":         "2026-07-presence-debt-campaign-1",
         "strategy_version":    "1",
+        "configuration_identity": {
+            "schema_version": "1",
+            "configuration_id": "never-blank",
+            "configuration_version": "1",
+        },
         "strategy_started_at": "2026-07-22",
         "wix_url":             "",
         "blog_article":        "Blog body. presence consistent compound trust",

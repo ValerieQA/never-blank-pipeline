@@ -6,10 +6,14 @@ an original Echo behind an adapted one.
 """
 
 import json
+from typing import TYPE_CHECKING
 
 from src.content.output_guard import validate_platform_output
 from src.utils.llm_client import chat, model_article, model_social
 from src.utils.logger import get_logger
+
+if TYPE_CHECKING:
+    from src.strategy.execution_context import LinkedInStrategyView, WixStrategyView
 
 log = get_logger("editorial.platform_composer")
 
@@ -122,7 +126,12 @@ def _block_content(structured_article: dict, block: str):
     return mapping.get(block)
 
 
-def _build_user_prompt(structured_article: dict, format_key: str, cta_mode: str) -> str:
+def _build_user_prompt(
+    structured_article: dict,
+    format_key: str,
+    cta_mode: str,
+    strategy_rules: tuple[str, ...] = (),
+) -> str:
     lo, hi = _WORD_RANGE[format_key]
     lines = [
         f"FORMAT: {format_key}",
@@ -133,6 +142,12 @@ def _build_user_prompt(structured_article: dict, format_key: str, cta_mode: str)
         "",
         "STRUCTURED FIELDS:",
     ]
+    if strategy_rules:
+        lines.extend(
+            ["", "CONFIGURED CHANNEL RULES:"]
+            + [f"- {rule}" for rule in strategy_rules]
+            + [""]
+        )
     for block, mode in _BLOCK_TABLE[format_key].items():
         content = _block_content(structured_article, block)
         if mode == "skip" or not content:
@@ -154,11 +169,18 @@ def _build_user_prompt(structured_article: dict, format_key: str, cta_mode: str)
     return "\n".join(lines)
 
 
-def _compose_one(structured_article: dict, format_key: str, cta_mode: str = "none") -> dict:
+def _compose_one(
+    structured_article: dict,
+    format_key: str,
+    cta_mode: str = "none",
+    strategy_rules: tuple[str, ...] = (),
+) -> dict:
     model = model_article() if format_key in ("long", "reading") else model_social()
     raw = chat(
         system=_SYSTEM_PROMPT,
-        user=_build_user_prompt(structured_article, format_key, cta_mode),
+        user=_build_user_prompt(
+            structured_article, format_key, cta_mode, strategy_rules
+        ),
         json_mode=True,
         model=model,
     )
@@ -189,9 +211,54 @@ def _compose_one(structured_article: dict, format_key: str, cta_mode: str = "non
     return {"word_count": word_count, "body": body, "echo_included": echo_included}
 
 
-def compose_platforms(structured_article: dict, cta_mode: str = "none") -> dict:
+def _wix_rules(view: "WixStrategyView | None") -> tuple[str, ...]:
+    if view is None:
+        return ()
+    rules = view.rules
+    return (
+        *rules.article_rules,
+        *rules.metadata_rules,
+        *rules.link_rules,
+        *rules.cta_rules,
+    )
+
+
+def _linkedin_rules(view: "LinkedInStrategyView | None") -> tuple[str, ...]:
+    if view is None:
+        return ()
+    rules = view.rules
+    return (
+        *rules.opening_rules,
+        *rules.length_rules,
+        *rules.formatting_rules,
+        *rules.link_rules,
+        *rules.cta_rules,
+    )
+
+
+def compose_platforms(
+    structured_article: dict,
+    cta_mode: str = "none",
+    *,
+    wix_strategy: "WixStrategyView | None" = None,
+    linkedin_strategy: "LinkedInStrategyView | None" = None,
+) -> dict:
     result = {}
     for format_key in ("long", "reading", "medium", "instagram", "short"):
-        result[format_key] = _compose_one(structured_article, format_key, cta_mode=cta_mode)
+        strategy_rules = (
+            _wix_rules(wix_strategy)
+            if format_key == "long"
+            # The canonical R1 orchestrator currently consumes ``medium`` as
+            # its LinkedIn artifact. Renaming format keys is outside Task #41.
+            else _linkedin_rules(linkedin_strategy)
+            if format_key == "medium"
+            else ()
+        )
+        result[format_key] = _compose_one(
+            structured_article,
+            format_key,
+            cta_mode=cta_mode,
+            strategy_rules=strategy_rules,
+        )
         log.info("Platform Composer: %s -> %d words", format_key, result[format_key]["word_count"])
     return result

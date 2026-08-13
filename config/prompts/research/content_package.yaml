@@ -49,3 +49,13 @@ user: |
   POSSIBLE_SIGNATURE_LINE: {possible_signature_line}
   POTENTIAL_HOOK: {potential_hook}
   TARGET_AUDIENCE: {target_audience}
+  SELECTED_AUDIENCE_ID: {selected_audience_id}
+  SELECTED_AUDIENCE_PROBLEM: {selected_audience_problem}
+  BUSINESS_POSITIONING: {business_positioning}
+  CONTENT_TERRITORIES: {content_territories}
+  PREFERRED_CLAIMS: {preferred_claims}
+  RESTRICTIONS: {restrictions}
+
+  Use the positioning, selected audience/problem, and content territories to frame
+  the previews. Preferred claims are allowed framing. Restrictions are hard
+  boundaries: do not contradict them or introduce unsupported claims.
