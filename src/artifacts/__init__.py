@@ -8,7 +8,7 @@ Directory layout:
 Contract:
   Every committed artifact is create-once; existing files cause ArtifactCollisionError.
   Atomic writes use a unique tmp file in the target directory (same filesystem),
-  fsync and close, then os.replace only when the final path does not exist.
+  fsync and close, then an atomic create-once hard link that cannot overwrite.
   signal_id and run_id are validated before any path is constructed:
     - non-blank string;
     - not an absolute path;
@@ -74,8 +74,8 @@ def atomic_write_json(path: Path, data: dict) -> None:
     Steps:
       1. Create a unique tmp file in path.parent (same filesystem).
       2. Write JSON, flush, fsync, close.
-      3. If path already exists, raise ArtifactCollisionError (tmp cleaned up).
-      4. os.replace(tmp → path) — atomic rename on POSIX.
+      3. Atomically link tmp to the final create-once name.
+      4. Remove tmp after the link succeeds.
 
     On any failure before step 4, the tmp file is cleaned up.
     Raises ArtifactCollisionError when the final path already exists.
@@ -95,14 +95,24 @@ def atomic_write_json(path: Path, data: dict) -> None:
             fh.write(json.dumps(data, indent=2, ensure_ascii=False))
             fh.flush()
             os.fsync(fh.fileno())
-        # Check collision AFTER write is durable but BEFORE rename.
-        if path.exists():
+        # link(2) is atomic and, unlike os.replace(), cannot overwrite an
+        # existing destination.  This closes the check-then-replace race where
+        # two writers could both observe a missing final path.
+        try:
+            os.link(tmp_path, path)
+        except FileExistsError as exc:
             raise ArtifactCollisionError(
                 f"Artifact already exists at {path} — "
                 "each run_id may write an artifact only once."
-            )
-        os.replace(tmp_path, path)
-        tmp_path = None  # successfully renamed; no cleanup needed
+            ) from exc
+        tmp_path.unlink()
+        tmp_path = None
+        # Make the directory entry durable as well as the file contents.
+        dir_fd = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
     except Exception:
         if fd is not None:
             try:

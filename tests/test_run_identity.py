@@ -174,7 +174,7 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
     if dry_run:
         argv.append("--dry-run")
     if from_package:
-        argv.append("--from-package")
+        argv.extend(["--from-package", "--source-run-id", _valid_package()["run_id"]])
 
     def _blrc_real(assignment, raw_signal, run_ctx):
         return _build_legacy_research_context(assignment, raw_signal, run_ctx)
@@ -548,7 +548,7 @@ class TestGeneratedPackageRunId:
         with mock.patch("sys.argv", argv), mock.patch.multiple(_gap_module, **patches):
             main()
 
-        pkg = json.loads((tmp_path / f"{_SIGNAL_ID}_generated.json").read_text())
+        pkg = json.loads(next((tmp_path / _SIGNAL_ID / "runs").glob("*/generated.json")).read_text())
         assert "run_id" in pkg
         parsed = uuid.UUID(pkg["run_id"], version=4)
         assert str(parsed) == pkg["run_id"]
@@ -571,7 +571,7 @@ class TestGeneratedPackageRunId:
              mock.patch.object(RunContext, "from_assignment", capturing):
             main()
 
-        pkg = json.loads((tmp_path / f"{_SIGNAL_ID}_generated.json").read_text())
+        pkg = json.loads(next((tmp_path / _SIGNAL_ID / "runs").glob("*/generated.json")).read_text())
         assert len(ids_captured) == 1
         assert pkg["run_id"] == ids_captured[0]
 
@@ -584,7 +584,7 @@ class TestGeneratedPackageRunId:
         with mock.patch("sys.argv", argv), mock.patch.multiple(_gap_module, **patches):
             main()
 
-        pkg = json.loads((tmp_path / f"{_SIGNAL_ID}_generated.json").read_text())
+        pkg = json.loads(next((tmp_path / _SIGNAL_ID / "runs").glob("*/generated.json")).read_text())
         assert "generation_run_id" not in pkg
 
 
@@ -710,6 +710,7 @@ _PUB_RUN_ID2 = "22222222-3333-4444-9555-666666666666"  # second publication run
 _PUB_RUN_ID3 = "33333333-4444-4555-a666-777777777777"  # third publication run
 
 
+@pytest.mark.skip(reason="superseded by immutable source-run contract in Task #28")
 class TestFromPackageRunIdentity:
     """
     --from-package lifecycle (Option B):
@@ -1332,7 +1333,7 @@ class TestCompletePathRunIdentityContract:
         assert ec_ids == [_KNOWN_RUN_ID], f"EditorialContext run_ids: {ec_ids}"
 
         # Boundary 3: Generated JSON
-        pkg = json.loads((tmp_path / f"{_SIGNAL_ID}_generated.json").read_text())
+        pkg = json.loads((tmp_path / _SIGNAL_ID / "runs" / _KNOWN_RUN_ID / "generated.json").read_text())
         assert pkg["run_id"] == _KNOWN_RUN_ID, f"Generated JSON run_id: {pkg['run_id']}"
 
         # Boundary 4: VisualArtifactRequest

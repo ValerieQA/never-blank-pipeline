@@ -37,7 +37,7 @@ Artifact layout (Task #28)
                          Immutable. Never overwritten by publication or re-publication.
   publication_results.json — written once after Wix/LinkedIn attempt.
                          Carries run_id, source_run_id, generation_run_id, results.
-  Both are written atomically (tmp → os.replace) and fail closed on collision.
+  Both are written atomically with create-once semantics and fail closed on collision.
 
 --from-package lifecycle (Option B — publication is a new run)
 --------------------------------------------------------------
@@ -972,10 +972,21 @@ def main() -> int:
     }
     try:
         write_publication_results_json(run_dir, _pub_results_data)
-    except ArtifactCollisionError as exc:
-        print(f"\n  WARNING: {exc}")
-    except Exception as exc:
-        print(f"\n  WARNING: publication_results.json write failed (non-fatal): {exc}")
+    except (ArtifactCollisionError, OSError, TypeError, ValueError) as exc:
+        # Publishing already happened, but the run is not complete unless its
+        # immutable result artifact is committed.  Do not write history, run
+        # analytics, or emit a success report for an unrecorded publication.
+        print(f"\n  ERROR: publication results could not be committed: {exc}")
+        report = R1RunReport(
+            run_id=run_ctx.run_id,
+            signal_id=signal_id,
+            execution_mode=run_ctx.execution_mode.value,
+            results={name: r for name, r in results.items()},
+            errors=[*_run_errors, f"artifact commit failed: {exc}"],
+            completed=False,
+        )
+        _emit_run_report(report)
+        return 1
 
     # ── Write to History ──────────────────────────────────────────────────────
     publications: dict[str, PlatformPublication] = {}

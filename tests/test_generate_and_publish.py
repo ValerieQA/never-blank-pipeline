@@ -144,9 +144,12 @@ def _valid_package(*, strategy_version: str = "1", **overrides) -> dict:
 
 
 def _write_package(tmp_path: Path, pkg: dict | None = None) -> Path:
-    """Write package to tmp_path/<signal_id>_generated.json, return path."""
-    f = tmp_path / f"{_SIGNAL_ID}_generated.json"
-    f.write_text(json.dumps(_valid_package() if pkg is None else pkg), encoding="utf-8")
+    """Write a run-scoped generated.json and return its exact path."""
+    data = _valid_package() if pkg is None else pkg
+    run_id = data.get("run_id", "invalid-source-run")
+    f = tmp_path / _SIGNAL_ID / "runs" / str(run_id) / "generated.json"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps(data), encoding="utf-8")
     return f
 
 
@@ -182,7 +185,7 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
     if dry_run:
         argv.append("--dry-run")
     if from_package:
-        argv.append("--from-package")
+        argv.extend(["--from-package", "--source-run-id", _valid_package()["run_id"]])
 
     kwargs = {
         "load_active_strategy": mock.MagicMock(return_value=_STRATEGY_STUB),
@@ -637,7 +640,9 @@ class TestStrategyVersionProvenance:
         with mock.patch("sys.argv", argv), mock.patch.multiple(gap_module, **patches):
             main()
 
-        return tmp_path / f"{_SIGNAL_ID}_generated.json"
+        written = list((tmp_path / _SIGNAL_ID / "runs").glob("*/generated.json"))
+        assert len(written) == 1
+        return written[0]
 
     def test_fresh_gen_persists_exact_strategy_version(self, tmp_path):
         written = self._run_fresh_gen_with_real_save(tmp_path)
@@ -709,8 +714,8 @@ class TestStrategyVersionProvenance:
         out = capsys.readouterr().out
         assert "strategy_version" in out
 
-    def test_resave_after_publish_preserves_strategy_version(self, tmp_path):
-        """After controlled-live publish, re-save must keep strategy_version == "1"."""
+    def test_publish_does_not_modify_generated_strategy_provenance(self, tmp_path):
+        """Publication writes separately and leaves generated.json unchanged."""
         argv, patches = _base_patches(dry_run=False)
         del patches["_save_generated"]
         patches["PACKAGES_DIR"] = tmp_path
@@ -726,14 +731,13 @@ class TestStrategyVersionProvenance:
              mock.patch.object(gap_module, "LinkedInPublisher", return_value=li):
             main()
 
-        written = tmp_path / f"{_SIGNAL_ID}_generated.json"
-        assert written.exists(), "Re-saved JSON not found"
+        written = next((tmp_path / _SIGNAL_ID / "runs").glob("*/generated.json"))
+        assert written.exists()
         pkg = json.loads(written.read_text())
         assert pkg["strategy_version"] == "1"
         assert pkg["strategy_id"] == "2026-07-presence-debt-campaign-1"
 
-    def test_fresh_gen_generated_at_is_stable_across_resave(self, tmp_path):
-        """generated_at must be the same in both the initial save and the post-publish re-save."""
+    def test_fresh_gen_generated_at_is_immutable_after_publish(self, tmp_path):
         argv, patches = _base_patches(dry_run=False)
         del patches["_save_generated"]
         patches["PACKAGES_DIR"] = tmp_path
@@ -750,7 +754,8 @@ class TestStrategyVersionProvenance:
             exit_code = main()
 
         assert exit_code == 0
-        pkg = json.loads((tmp_path / f"{_SIGNAL_ID}_generated.json").read_text())
+        generated = next((tmp_path / _SIGNAL_ID / "runs").glob("*/generated.json"))
+        pkg = json.loads(generated.read_text())
         # Must be a valid ISO 8601 timestamp
         dt = datetime.fromisoformat(pkg["generated_at"])
         assert dt.tzinfo is not None
@@ -758,10 +763,16 @@ class TestStrategyVersionProvenance:
         # The field value is the one captured before the first save; re-save must echo it.
         assert pkg["generated_at"] == pkg["generated_at"].strip()
 
-    def test_from_package_controlled_live_preserves_original_generated_at(self, tmp_path):
-        """Re-save after --from-package publish must not overwrite generated_at with now."""
+    def test_from_package_publish_preserves_source_bytes_and_generated_at(self, tmp_path):
         original_ts = "2026-08-10T08:30:00+00:00"
-        _write_package(tmp_path, _valid_package(generated_at=original_ts))
+        source = _write_package(
+            tmp_path,
+            _valid_package(
+                generated_at=original_ts,
+                strategy_started_at="2026-07-22",
+            ),
+        )
+        original_bytes = source.read_bytes()
 
         argv, patches = _base_patches(dry_run=False, from_package=True)
         del patches["_save_generated"]
@@ -779,15 +790,22 @@ class TestStrategyVersionProvenance:
             exit_code = main()
 
         assert exit_code == 0
-        pkg = json.loads((tmp_path / f"{_SIGNAL_ID}_generated.json").read_text())
+        assert source.read_bytes() == original_bytes
+        pkg = json.loads(source.read_text())
         assert pkg["generated_at"] == original_ts, (
             f"generated_at was overwritten: expected {original_ts!r}, got {pkg['generated_at']!r}"
         )
 
-    def test_from_package_resave_preserves_all_provenance_fields(self, tmp_path):
-        """strategy_id, strategy_version, signal_id, and strategy_started_at survive re-save."""
+    def test_from_package_source_preserves_all_provenance_fields(self, tmp_path):
         original_ts = "2026-08-10T08:30:00+00:00"
-        _write_package(tmp_path, _valid_package(generated_at=original_ts))
+        source = _write_package(
+            tmp_path,
+            _valid_package(
+                generated_at=original_ts,
+                strategy_started_at="2026-07-22",
+            ),
+        )
+        original_bytes = source.read_bytes()
 
         argv, patches = _base_patches(dry_run=False, from_package=True)
         del patches["_save_generated"]
@@ -805,7 +823,8 @@ class TestStrategyVersionProvenance:
             exit_code = main()
 
         assert exit_code == 0
-        pkg = json.loads((tmp_path / f"{_SIGNAL_ID}_generated.json").read_text())
+        assert source.read_bytes() == original_bytes
+        pkg = json.loads(source.read_text())
         assert pkg["generated_at"] == original_ts
         assert pkg["strategy_id"] == "2026-07-presence-debt-campaign-1"
         assert pkg["strategy_version"] == "1"
