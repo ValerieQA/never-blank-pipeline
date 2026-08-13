@@ -298,6 +298,7 @@ class TestFreshGenerationDryRun:
         assert exit_code == 0
         assert modes_seen == [ExecutionMode.DRY_RUN]
 
+    @pytest.mark.story9
     def test_invokes_no_publisher_in_dry_run(self):
         argv, patches = _base_patches(dry_run=True)
         wix_mock = mock.MagicMock()
