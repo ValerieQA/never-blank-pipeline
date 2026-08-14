@@ -1,5 +1,17 @@
 """Editorial contracts and pipeline components."""
 
+from .decision_lens_evaluator import (
+    DecisionEvaluationFailure,
+    DecisionEvaluationFailureKind,
+    DecisionLensEvaluationResult,
+    DecisionLensEvaluator,
+    DecisionLensInstructions,
+    DecisionLensTransport,
+    DecisionLensTransportError,
+    DecisionLensTransportTimeout,
+    EvaluationOutcome,
+    production_evaluator,
+)
 from .decision_contract import (
     AudienceRelevanceBasis,
     AudienceRelevanceBasisType,
@@ -21,6 +33,16 @@ from .decision_contract import (
 )
 
 __all__ = [
+    "DecisionEvaluationFailure",
+    "DecisionEvaluationFailureKind",
+    "DecisionLensEvaluationResult",
+    "DecisionLensEvaluator",
+    "DecisionLensInstructions",
+    "DecisionLensTransport",
+    "DecisionLensTransportError",
+    "DecisionLensTransportTimeout",
+    "EvaluationOutcome",
+    "production_evaluator",
     "AudienceRelevanceBasis",
     "AudienceRelevanceBasisType",
     "BusinessAudienceRelevance",
