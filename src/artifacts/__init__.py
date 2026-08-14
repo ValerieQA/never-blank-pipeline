@@ -2,6 +2,8 @@
 Run-scoped artifact addressing for Release 1.
 
 Directory layout:
+    <packages_dir>/<signal_id>/runs/<run_id>/research.json
+    <packages_dir>/<signal_id>/runs/<run_id>/decision.json
     <packages_dir>/<signal_id>/runs/<run_id>/generated.json
     <packages_dir>/<signal_id>/runs/<run_id>/business_strategy.json
     <packages_dir>/<signal_id>/runs/<run_id>/publication_results.json
@@ -178,6 +180,22 @@ def load_research_json(packages_dir: Path, signal_id: str, source_run_id: str) -
     path = resolve_run_dir(packages_dir, signal_id, source_run_id) / "research.json"
     if not path.exists():
         raise FileNotFoundError(f"No research.json at {path}. Research lineage is required.")
+    return path.read_bytes()
+
+
+def write_decision_json(run_dir: Path, canonical_bytes: bytes) -> None:
+    """Commit the exact canonical Decision Lens decision artifact exactly once."""
+    atomic_write_bytes(run_dir / "decision.json", canonical_bytes)
+
+
+def load_decision_json(packages_dir: Path, signal_id: str, source_run_id: str) -> bytes:
+    """Load the exact immutable run-scoped decision artifact bytes."""
+    path = resolve_run_dir(packages_dir, signal_id, source_run_id) / "decision.json"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"No decision.json at {path}. A validated Decision Lens decision "
+            "is required before any downstream work."
+        )
     return path.read_bytes()
 
 

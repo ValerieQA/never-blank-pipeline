@@ -13,6 +13,12 @@ Canonical call flow
   → _require_run_id()             → fail-closed guard at intake
   → _build_legacy_research_context()  → ResearchContext with run_id injected
   → _assert_run_id_match()        → identity check at research boundary
+  → [fresh-gen] execute_and_persist_research() → run-scoped research.json
+  → [fresh-gen] evaluate_and_persist_decision() → run-scoped decision.json
+  → require_proceed()             → ONLY a reloaded PROCEED decision continues;
+                                    every other disposition or evaluator failure
+                                    stops the run before narrative/editorial/
+                                    visual/package/publisher work (Issue #60)
   → [fresh-gen] rc.to_editorial() → EditorialContext with run_id propagated
   → [fresh-gen] _assert_run_id_match() → identity check at editorial boundary
   → VisualArtifactRequest         → visual boundary typed adapter (blocked stub)
@@ -30,8 +36,14 @@ Canonical call flow
 
 Artifact layout (Task #28)
 --------------------------
+  reports/content_packages/<signal_id>/runs/<run_id>/research.json
+  reports/content_packages/<signal_id>/runs/<run_id>/decision.json
   reports/content_packages/<signal_id>/runs/<run_id>/generated.json
   reports/content_packages/<signal_id>/runs/<run_id>/publication_results.json
+
+  decision.json        — canonical Issue #58 Decision Lens artifact, written
+                         exactly once after research, before any editorial work.
+                         Immutable; create-once; reused runs revalidate it.
 
   generated.json       — written exactly once, immediately after content generation.
                          Immutable. Never overwritten by publication or re-publication.
@@ -112,6 +124,17 @@ from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
 from src.editorial.pipeline import ArticleGenerationError, generate_article
+from src.editorial.decision_lens_evaluator import (
+    DecisionLensEvaluator,
+    production_evaluator,
+)
+from src.editorial.decision_lifecycle import (
+    RELEASE1_LENS_PROFILE,
+    DecisionGateError,
+    evaluate_and_persist_decision,
+    load_decision_artifact,
+    require_proceed,
+)
 from src.publishing import formatting
 from src.publishing.base import DraftPackage
 from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
@@ -393,7 +416,11 @@ def _build_legacy_research_context(
     return rc
 
 
-def main(*, research_provider: ResearchProvider | None = None) -> int:
+def main(
+    *,
+    research_provider: ResearchProvider | None = None,
+    decision_evaluator: DecisionLensEvaluator | None = None,
+) -> int:
     parser = argparse.ArgumentParser(description="Generate + publish one signal end-to-end")
     parser.add_argument("--signal-id", required=True)
     parser.add_argument("--dry-run", action="store_true",
@@ -594,6 +621,42 @@ def main(*, research_provider: ResearchProvider | None = None) -> int:
             print(f"  ERROR: research gate blocked generation: {exc}")
             return 1
         print(f"  ✓  research: READY ({run_dir / 'research.json'})")
+
+        # ── Decision Lens gate (Issue #60) ────────────────────────────────────
+        # The Decision Lens verdict is the mandatory business gate between
+        # research and all narrative/editorial/downstream work. The persisted
+        # and strict-reloaded decision.json — not the in-memory result — is
+        # the artifact that authorizes continuation, and only PROCEED passes.
+        try:
+            evaluator = (
+                decision_evaluator
+                if decision_evaluator is not None
+                else production_evaluator()
+            )
+            decision_artifact = evaluate_and_persist_decision(
+                evaluator,
+                research=research_artifact,
+                strategy_view=strategy_execution.decision_lens_editorial,
+                audience=audience_selection,
+                configuration_identity=strategy_execution.identity,
+                lens_profile=RELEASE1_LENS_PROFILE,
+                run_id=run_ctx.run_id,
+                assignment_id=assignment.assignment_id,
+                # The authoritative signal identity is the one carried by the
+                # validated current-run research artifact — never derived from
+                # the assignment identity. run/assignment/signal remain three
+                # independently correct identities in decision.json.
+                signal_id=research_artifact.signal_id,
+                run_dir=run_dir,
+            )
+            require_proceed(decision_artifact)
+        except (DecisionGateError, ArtifactCollisionError, OSError, ValueError) as exc:
+            print(f"  ERROR: decision gate blocked generation: {exc}")
+            return 1
+        print(
+            f"  ✓  decision: PROCEED ({run_dir / 'decision.json'}) "
+            f"[{decision_artifact.decision_lens_version}]"
+        )
     elif args.legacy_package:
         print("  ERROR: legacy prepared packages have no canonical research lineage")
         return 1
@@ -732,7 +795,26 @@ def main(*, research_provider: ResearchProvider | None = None) -> int:
                     run_started_at=source_envelope.request.freshness.retrieved_not_before,
                     now=datetime.now(timezone.utc),
                 )
-        except (FileNotFoundError, ValueError, ResearchGateError) as exc:
+                # ── Decision Lens reuse gate (Issue #60) ──────────────────────
+                # Reuse loads the original generation run's immutable
+                # decision.json; the Decision Lens is never re-run and the
+                # artifact is never rewritten. Only an original validated
+                # PROCEED decision allows reuse to continue.
+                source_decision = load_decision_artifact(
+                    PACKAGES_DIR,
+                    signal_id,
+                    _source_run_id,
+                    research=research_artifact,
+                    audience=audience_selection,
+                    configuration_identity=strategy_execution.identity,
+                    lens_profile=RELEASE1_LENS_PROFILE,
+                )
+                require_proceed(source_decision)
+                print(
+                    f"  ✓  decision: PROCEED (reused from source run "
+                    f"{_source_run_id}) [{source_decision.decision_lens_version}]"
+                )
+        except (FileNotFoundError, ValueError, ResearchGateError, DecisionGateError) as exc:
             print(f"  ERROR: {exc}")
             return 1
         except StrategyExecutionError as exc:

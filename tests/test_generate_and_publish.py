@@ -113,6 +113,17 @@ _STRATEGY_CONTEXT = {
     "target_audience": "agencies",
 }
 
+# Canonical PROCEED-shaped stand-in for the Decision Lens gate (Issue #60).
+# require_proceed() inspects the real enum disposition; decision_lens_version
+# feeds the entrypoint status line.
+from src.editorial.decision_contract import DecisionDisposition as _DecisionDisposition
+
+_FAKE_DECISION = SimpleNamespace(
+    disposition=_DecisionDisposition.PROCEED,
+    decision_lens_version="never-blank-decision-lens/1.0",
+    run_id="",
+)
+
 _FAKE_ARTICLE = {
     "platforms": {
         "long":      {"body": "Blog body text."},
@@ -203,10 +214,23 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         argv.extend(["--from-package", "--source-run-id", _valid_package()["run_id"]])
 
     kwargs = {
-        "execute_and_persist_research": mock.MagicMock(return_value=mock.sentinel.ready_research),
+        # The stand-in research artifact carries the execution signal identity
+        # the decision gate reads (research_artifact.signal_id).
+        "execute_and_persist_research": mock.MagicMock(
+            return_value=mock.MagicMock(signal_id=_SIGNAL_ID)
+        ),
         "ExaResearchAdapter": mock.MagicMock(return_value=mock.sentinel.provider),
         "load_research_envelope": mock.MagicMock(return_value=mock.MagicMock()),
-        "validate_research_envelope": mock.MagicMock(return_value=mock.sentinel.ready_research),
+        "validate_research_envelope": mock.MagicMock(
+            return_value=mock.MagicMock(signal_id=_SIGNAL_ID)
+        ),
+        # Decision Lens gate (Issue #60): legacy suites patch the lifecycle
+        # boundary with a canonical PROCEED-shaped stand-in; require_proceed
+        # stays real and passes because disposition is the true enum value.
+        # The real gate behavior is covered by tests/test_decision_lifecycle.py.
+        "production_evaluator": mock.MagicMock(return_value=mock.sentinel.decision_evaluator),
+        "evaluate_and_persist_decision": mock.MagicMock(return_value=_FAKE_DECISION),
+        "load_decision_artifact": mock.MagicMock(return_value=_FAKE_DECISION),
         "load_active_strategy": mock.MagicMock(return_value=_STRATEGY_STUB),
         "get_strategy_context": mock.MagicMock(return_value=_STRATEGY_CONTEXT),
         "get_cta_mode": mock.MagicMock(return_value="reflection"),

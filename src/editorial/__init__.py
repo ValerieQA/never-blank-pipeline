@@ -1,5 +1,12 @@
 """Editorial contracts and pipeline components."""
 
+from .decision_lifecycle import (
+    RELEASE1_LENS_PROFILE,
+    DecisionGateError,
+    evaluate_and_persist_decision,
+    load_decision_artifact,
+    require_proceed,
+)
 from .decision_lens_evaluator import (
     DecisionEvaluationFailure,
     DecisionEvaluationFailureKind,
@@ -33,6 +40,11 @@ from .decision_contract import (
 )
 
 __all__ = [
+    "RELEASE1_LENS_PROFILE",
+    "DecisionGateError",
+    "evaluate_and_persist_decision",
+    "load_decision_artifact",
+    "require_proceed",
     "DecisionEvaluationFailure",
     "DecisionEvaluationFailureKind",
     "DecisionLensEvaluationResult",
