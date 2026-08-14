@@ -1,0 +1,63 @@
+# Independent PR test verification.
+#
+# Runs the complete pytest suite for every pull request targeting main and
+# compares the exact set of failed test node IDs against the reviewed baseline
+# in tests/accepted_full_suite_failures.txt (strict set equality, enforced by
+# scripts/ci/check_test_baseline.py). The check is green only when the observed
+# failure set exactly equals the accepted baseline: new failures and resolved
+# baseline entries both turn it red. Never edit the baseline just to make this
+# check green — baseline changes require explicit review.
+
+name: PR Tests
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  full-suite:
+    name: Full pytest suite vs accepted baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest pydantic
+
+      # pytest exits 1 when the accepted baseline failures occur, so that exit
+      # code alone must not fail the job; the baseline comparison below is the
+      # actual gate. Exit codes >1 (interrupted run, internal error, usage
+      # error, no tests collected) fail immediately — deliberately NOT a
+      # blanket continue-on-error.
+      - name: Run full test suite (persisted output)
+        run: |
+          set +e
+          python3 -m pytest -q -rfE --tb=no -p no:cacheprovider > pytest-output.txt 2>&1
+          status=$?
+          set -e
+          echo "pytest exit status: ${status}"
+          tail -n 40 pytest-output.txt
+          if [ "${status}" -gt 1 ]; then
+            echo "pytest did not complete a normal run (exit ${status}); failing."
+            exit "${status}"
+          fi
+
+      - name: Verify failure set against accepted baseline
+        run: |
+          python3 scripts/ci/check_test_baseline.py \
+            --baseline tests/accepted_full_suite_failures.txt \
+            --output pytest-output.txt
+
+      - name: Upload persisted pytest output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-output
+          path: pytest-output.txt
