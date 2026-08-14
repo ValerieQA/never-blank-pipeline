@@ -97,6 +97,16 @@ from src.intake import (
     JsonlIntakeAdapter,
 )
 from src.lifecycle.signal_lifecycle import ResearchContext
+from src.research.provider import ResearchProvider
+from src.research.adapters.exa import ExaResearchAdapter
+from src.research.lifecycle import (
+    ResearchGateError,
+    build_research_request,
+    execute_and_persist_research,
+    load_research_envelope,
+    validate_research_envelope,
+    MissingCredentialResearchProvider,
+)
 from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
@@ -383,7 +393,7 @@ def _build_legacy_research_context(
     return rc
 
 
-def main() -> int:
+def main(*, research_provider: ResearchProvider | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate + publish one signal end-to-end")
     parser.add_argument("--signal-id", required=True)
     parser.add_argument("--dry-run", action="store_true",
@@ -560,6 +570,33 @@ def main() -> int:
     echo_line = ""
     _generation_run_id: str = run_ctx.run_id   # fresh-gen default; overridden below
     _source_run_id: str     = run_ctx.run_id   # fresh-gen default; overridden below
+    research_artifact = None
+
+    if not args.from_package and not args.legacy_package:
+        try:
+            research_request = build_research_request(
+                run_ctx, assignment, signal, strategy_execution.research,
+                now=datetime.now(timezone.utc),
+            )
+            if research_provider is not None:
+                provider = research_provider
+            else:
+                try:
+                    provider = ExaResearchAdapter()
+                except EnvironmentError:
+                    provider = MissingCredentialResearchProvider()
+            research_artifact = execute_and_persist_research(
+                provider, research_request, run_dir,
+                identity=strategy_execution.identity,
+                run_started_at=run_ctx.started_at,
+            )
+        except (ResearchGateError, ArtifactCollisionError, OSError, ValueError, EnvironmentError) as exc:
+            print(f"  ERROR: research gate blocked generation: {exc}")
+            return 1
+        print(f"  ✓  research: READY ({run_dir / 'research.json'})")
+    elif args.legacy_package:
+        print("  ERROR: legacy prepared packages have no canonical research lineage")
+        return 1
 
     if args.from_package or args.legacy_package:
         # ── 3a. Load, verify, and validate existing package ──────────────────
@@ -683,7 +720,19 @@ def main() -> int:
                     snapshot_identity,
                     "current-configuration/source-run-snapshot",
                 )
-        except (FileNotFoundError, ValueError) as exc:
+                source_envelope = load_research_envelope(
+                    PACKAGES_DIR, signal_id, _source_run_id
+                )
+                research_artifact = validate_research_envelope(
+                    source_envelope,
+                    run_id=_source_run_id,
+                    assignment_id=assignment.assignment_id,
+                    signal_id=signal_id,
+                    identity=strategy_execution.identity,
+                    run_started_at=source_envelope.request.freshness.retrieved_not_before,
+                    now=datetime.now(timezone.utc),
+                )
+        except (FileNotFoundError, ValueError, ResearchGateError) as exc:
             print(f"  ERROR: {exc}")
             return 1
         except StrategyExecutionError as exc:
@@ -898,6 +947,7 @@ def main() -> int:
                 wix_strategy=strategy_execution.wix,
                 linkedin_strategy=strategy_execution.linkedin,
                 audience_selection=audience_selection,
+                research_artifact=research_artifact,
             )
             platforms  = article["platforms"]
             structured = article["structured_article"]

@@ -128,6 +128,59 @@ def atomic_write_json(path: Path, data: dict) -> None:
         raise
 
 
+def atomic_write_bytes(path: Path, data: bytes) -> None:
+    """Atomically commit exact bytes once, with no overwrite or partial target."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path: "Path | None" = None
+    fd: "int | None" = None
+    try:
+        fd, tmp_str = tempfile.mkstemp(dir=path.parent, prefix=".tmp_", suffix=".json")
+        tmp_path = Path(tmp_str)
+        with os.fdopen(fd, "wb") as fh:
+            fd = None
+            fh.write(data)
+            fh.flush()
+            os.fsync(fh.fileno())
+        try:
+            os.link(tmp_path, path)
+        except FileExistsError as exc:
+            raise ArtifactCollisionError(
+                f"Artifact already exists at {path} — each run_id may write an artifact only once."
+            ) from exc
+        tmp_path.unlink()
+        tmp_path = None
+        dir_fd = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+    except Exception:
+        if fd is not None:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        if tmp_path is not None:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise
+
+
+def write_research_json(run_dir: Path, canonical_bytes: bytes) -> None:
+    """Commit the complete canonical research envelope exactly once."""
+    atomic_write_bytes(run_dir / "research.json", canonical_bytes)
+
+
+def load_research_json(packages_dir: Path, signal_id: str, source_run_id: str) -> bytes:
+    """Load the exact immutable source-run research envelope bytes."""
+    path = resolve_run_dir(packages_dir, signal_id, source_run_id) / "research.json"
+    if not path.exists():
+        raise FileNotFoundError(f"No research.json at {path}. Research lineage is required.")
+    return path.read_bytes()
+
+
 def write_generated_json(run_dir: Path, data: dict) -> None:
     """
     Write generated.json under run_dir exactly once.

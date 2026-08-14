@@ -182,6 +182,10 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         return _build_legacy_research_context(assignment, raw_signal, run_ctx)
 
     kwargs = {
+        "execute_and_persist_research": mock.MagicMock(return_value=mock.sentinel.ready_research),
+        "ExaResearchAdapter": mock.MagicMock(return_value=mock.sentinel.provider),
+        "load_research_envelope": mock.MagicMock(return_value=mock.MagicMock()),
+        "validate_research_envelope": mock.MagicMock(return_value=mock.sentinel.ready_research),
         "load_active_strategy":      mock.MagicMock(return_value=_STRATEGY_STUB),
         "get_strategy_context":      mock.MagicMock(return_value=_STRATEGY_CONTEXT),
         "get_cta_mode":              mock.MagicMock(return_value="reflection"),
