@@ -642,7 +642,11 @@ def main(
                 lens_profile=RELEASE1_LENS_PROFILE,
                 run_id=run_ctx.run_id,
                 assignment_id=assignment.assignment_id,
-                signal_id=assignment.assignment_id,
+                # The authoritative signal identity is the one carried by the
+                # validated current-run research artifact — never derived from
+                # the assignment identity. run/assignment/signal remain three
+                # independently correct identities in decision.json.
+                signal_id=research_artifact.signal_id,
                 run_dir=run_dir,
             )
             require_proceed(decision_artifact)

@@ -185,10 +185,14 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         return _build_legacy_research_context(assignment, raw_signal, run_ctx)
 
     kwargs = {
-        "execute_and_persist_research": mock.MagicMock(return_value=mock.sentinel.ready_research),
+        "execute_and_persist_research": mock.MagicMock(
+            return_value=mock.MagicMock(signal_id=_SIGNAL_ID)
+        ),
         "ExaResearchAdapter": mock.MagicMock(return_value=mock.sentinel.provider),
         "load_research_envelope": mock.MagicMock(return_value=mock.MagicMock()),
-        "validate_research_envelope": mock.MagicMock(return_value=mock.sentinel.ready_research),
+        "validate_research_envelope": mock.MagicMock(
+            return_value=mock.MagicMock(signal_id=_SIGNAL_ID)
+        ),
         # Decision Lens gate (Issue #60): PROCEED-shaped stand-in; the real
         # gate is covered by tests/test_decision_lifecycle.py.
         "production_evaluator": mock.MagicMock(return_value=mock.sentinel.decision_evaluator),

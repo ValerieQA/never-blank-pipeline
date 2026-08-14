@@ -214,10 +214,16 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         argv.extend(["--from-package", "--source-run-id", _valid_package()["run_id"]])
 
     kwargs = {
-        "execute_and_persist_research": mock.MagicMock(return_value=mock.sentinel.ready_research),
+        # The stand-in research artifact carries the execution signal identity
+        # the decision gate reads (research_artifact.signal_id).
+        "execute_and_persist_research": mock.MagicMock(
+            return_value=mock.MagicMock(signal_id=_SIGNAL_ID)
+        ),
         "ExaResearchAdapter": mock.MagicMock(return_value=mock.sentinel.provider),
         "load_research_envelope": mock.MagicMock(return_value=mock.MagicMock()),
-        "validate_research_envelope": mock.MagicMock(return_value=mock.sentinel.ready_research),
+        "validate_research_envelope": mock.MagicMock(
+            return_value=mock.MagicMock(signal_id=_SIGNAL_ID)
+        ),
         # Decision Lens gate (Issue #60): legacy suites patch the lifecycle
         # boundary with a canonical PROCEED-shaped stand-in; require_proceed
         # stays real and passes because disposition is the true enum value.

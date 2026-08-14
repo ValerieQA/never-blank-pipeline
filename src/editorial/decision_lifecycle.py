@@ -107,15 +107,16 @@ def evaluate_and_persist_decision(
 
     write_decision_json(run_dir, result.decision.canonical_bytes())
 
-    packages_dir = run_dir.parent.parent.parent
-    return load_decision_artifact(
-        packages_dir,
-        signal_id,
-        run_id,
+    # Strict-reload the persisted file directly from the run directory:
+    # storage addressing (the run namespace) is deliberately independent of
+    # the execution signal identity carried inside the artifact.
+    return _validate_decision_bytes(
+        (run_dir / "decision.json").read_bytes(),
         research=research,
         audience=audience,
         configuration_identity=configuration_identity,
         lens_profile=lens_profile,
+        expected_run_id=run_id,
     )
 
 
@@ -131,16 +132,37 @@ def load_decision_artifact(
 ) -> DecisionLensDecisionArtifact:
     """Strict-reload one immutable run-scoped decision and revalidate its lineage.
 
-    Never re-runs the Decision Lens and never rewrites the artifact. Fails
-    closed for missing, corrupt, non-canonical, cross-run, configuration,
-    audience, lens-profile, research-digest, and citation-lineage mismatch.
+    ``signal_id`` here is the run-namespace address component only; the
+    execution signal identity inside the artifact is validated independently
+    against the supplied research lineage. Never re-runs the Decision Lens and
+    never rewrites the artifact. Fails closed for missing, corrupt,
+    non-canonical, cross-run, configuration, audience, lens-profile,
+    research-digest, and citation-lineage mismatch.
     """
 
     try:
         raw = load_decision_json(packages_dir, signal_id, source_run_id)
     except FileNotFoundError as exc:
         raise DecisionGateError(str(exc)) from exc
+    return _validate_decision_bytes(
+        raw,
+        research=research,
+        audience=audience,
+        configuration_identity=configuration_identity,
+        lens_profile=lens_profile,
+        expected_run_id=source_run_id,
+    )
 
+
+def _validate_decision_bytes(
+    raw: bytes,
+    *,
+    research: NormalizedResearchArtifact,
+    audience: AudienceSelection,
+    configuration_identity: ConfigurationIdentity,
+    lens_profile: DecisionLensProfileIdentity,
+    expected_run_id: str,
+) -> DecisionLensDecisionArtifact:
     try:
         artifact = DecisionLensDecisionArtifact.validate_json_for_research(
             raw,
@@ -160,10 +182,10 @@ def load_decision_artifact(
 
     if raw != artifact.canonical_bytes():
         raise DecisionGateError("decision.json is not canonical")
-    if artifact.run_id != source_run_id:
+    if artifact.run_id != expected_run_id:
         raise DecisionGateError(
             "decision.json run identity does not match the requested run: "
-            f"artifact run_id={artifact.run_id!r} requested={source_run_id!r}"
+            f"artifact run_id={artifact.run_id!r} requested={expected_run_id!r}"
         )
     return artifact
 
