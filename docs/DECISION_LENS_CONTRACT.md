@@ -112,6 +112,12 @@ at a different scale. A corporate action is admissible only when cited research
 documents its direct consequence for the configured audience. The affected audience
 remains the subject; the corporate action is supporting evidence.
 
+At the contextual boundary, every relevance basis is held to the same exact
+citation lineage as criterion results: the basis's source IDs must exactly match
+the sources supporting its cited evidence in the current-run research artifact.
+A basis cannot borrow an artifact-declared source that does not support its own
+cited evidence, and missing supporting sources are rejected.
+
 The typed basis makes the evaluator's relevance claim auditable and rejects
 analogy-only `PROCEED`. It does not perform semantic fact checking of
 natural-language claims; the evaluator and later integration must supply truthful,

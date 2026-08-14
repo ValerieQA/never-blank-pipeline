@@ -881,3 +881,100 @@ def test_criterion_sources_without_cited_evidence_are_rejected():
         ValidationError, match="citing sources must cite the evidence they support"
     ):
         DecisionLensDecisionArtifact.model_validate(payload)
+
+
+# --- Final correction: exact relevance-basis source/evidence lineage ---
+
+
+def _two_source_research() -> NormalizedResearchArtifact:
+    """Profile-neutral research with two independent evidence/source pairs."""
+
+    research_payload = _research_payload()
+    research_payload["sources"].append({
+        "source_id": "source-second",
+        "locator": {"kind": "url", "value": "https://example.test/second"},
+        "title": "Second independent current-run source",
+        "publisher": "Example",
+        "publication_time": {"status": "unknown", "value": None},
+        "retrieved_at": "2026-08-14T12:00:01Z",
+    })
+    research_payload["evidence"].append({
+        "evidence_id": "evidence-second",
+        "claim": "A second accepted claim supported only by the second source.",
+        "source_ids": ["source-second"],
+        "support": [{
+            "source_id": "source-second",
+            "excerpt": "Second supporting excerpt.",
+            "location": "page 4",
+        }],
+        "disposition": "accepted",
+    })
+    return NormalizedResearchArtifact.model_validate(research_payload)
+
+
+def _two_source_decision_payload(research: NormalizedResearchArtifact) -> dict:
+    payload = _decision_payload()
+    payload["research_digest"] = research_artifact_digest(research)
+    payload["source_ids"] = ["source-sba", "source-second"]
+    payload["evidence_ids"] = ["evidence-smb", "evidence-second"]
+    payload["judgment"]["criterion_results"][0]["evidence_ids"] = [
+        "evidence-smb",
+        "evidence-second",
+    ]
+    payload["judgment"]["criterion_results"][0]["source_ids"] = [
+        "source-sba",
+        "source-second",
+    ]
+    return payload
+
+
+def test_relevance_basis_borrowing_declared_but_unsupporting_source_is_rejected():
+    research = _two_source_research()
+    payload = _two_source_decision_payload(research)
+    # The basis cites only evidence-smb (supported by source-sba alone) but
+    # borrows source-second, which the artifact legitimately declares yet which
+    # does not support the basis's cited evidence.
+    payload["judgment"]["relevance_bases"][0]["evidence_ids"] = ["evidence-smb"]
+    payload["judgment"]["relevance_bases"][0]["source_ids"] = [
+        "source-sba",
+        "source-second",
+    ]
+    with pytest.raises(
+        DecisionContractError,
+        match="relevance basis source IDs must exactly match the sources supporting",
+    ):
+        _validate(payload, research=research)
+
+
+def test_relevance_basis_with_exactly_supporting_sources_passes():
+    research = _two_source_research()
+    payload = _two_source_decision_payload(research)
+    # The artifact declares two sources, but the basis cites one evidence record
+    # and exactly the one source supporting it — per-basis exactness, not
+    # artifact-wide subset membership.
+    payload["judgment"]["relevance_bases"][0]["evidence_ids"] = ["evidence-smb"]
+    payload["judgment"]["relevance_bases"][0]["source_ids"] = ["source-sba"]
+    decision = _validate(payload, research=research)
+    assert decision.disposition is DecisionDisposition.PROCEED
+    assert decision.judgment.relevance_bases[0].source_ids == ("source-sba",)
+
+
+def test_strict_json_reload_cannot_bypass_relevance_basis_exact_match():
+    research = _two_source_research()
+    payload = _two_source_decision_payload(research)
+    payload["judgment"]["relevance_bases"][0]["evidence_ids"] = ["evidence-smb"]
+    payload["judgment"]["relevance_bases"][0]["source_ids"] = [
+        "source-sba",
+        "source-second",
+    ]
+    with pytest.raises(
+        DecisionContractError,
+        match="relevance basis source IDs must exactly match the sources supporting",
+    ):
+        DecisionLensDecisionArtifact.validate_json_for_research(
+            json.dumps(payload),
+            research=research,
+            audience=_audience(),
+            configuration_identity=_identity(),
+            lens_profile=_lens_profile(),
+        )

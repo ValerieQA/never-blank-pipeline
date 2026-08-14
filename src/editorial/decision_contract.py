@@ -446,6 +446,17 @@ class DecisionLensDecisionArtifact(_DecisionModel):
                     "criterion source IDs must exactly match the sources supporting "
                     "its cited evidence"
                 )
+        for basis in self.judgment.relevance_bases:
+            basis_evidence_sources = {
+                source_id
+                for evidence_id in basis.evidence_ids
+                for source_id in evidence[evidence_id].source_ids
+            }
+            if set(basis.source_ids) != basis_evidence_sources:
+                raise DecisionContractError(
+                    "relevance basis source IDs must exactly match the sources "
+                    "supporting its cited evidence"
+                )
         uncertainty_ids = {item.uncertainty_id for item in research.uncertainties}
         contradiction_ids = {item.contradiction_id for item in research.contradictions}
         for handling in self.judgment.research_condition_handling:
