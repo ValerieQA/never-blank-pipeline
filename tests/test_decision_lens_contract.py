@@ -14,7 +14,7 @@ from src.editorial.decision_contract import (
     DecisionDisposition,
     DecisionEvidenceSufficiency,
     DecisionLensDecisionArtifact,
-    RelevanceBasisType,
+    DecisionLensProfileIdentity,
     research_artifact_digest,
 )
 from src.research.evidence import NormalizedResearchArtifact
@@ -43,6 +43,15 @@ def _audience() -> AudienceSelection:
         decision_factors=("cash flow", "capacity"),
         objections=("generic enterprise advice",),
         selection_source="configured-default",
+    )
+
+
+def _lens_profile() -> DecisionLensProfileIdentity:
+    """Never Blank is the first Release 1 lens profile; it is fixture data, not schema."""
+
+    return DecisionLensProfileIdentity(
+        lens_profile_id="never-blank-editorial-lens",
+        lens_profile_version="1.0",
     )
 
 
@@ -104,6 +113,7 @@ def _decision_payload(
         "signal_id": "signal-58",
         "configuration_identity": _identity().model_dump(mode="json"),
         "audience_selection": _audience().model_dump(mode="json"),
+        "lens_profile": _lens_profile().model_dump(mode="json"),
         "research_digest": research_artifact_digest(research),
         "decision_lens_version": "decision-lens-rules-v1",
         "evaluator": {
@@ -131,6 +141,14 @@ def _decision_payload(
                 "source_ids": ["source-sba"],
                 "documented_direct_consequence": direct_consequence,
             }],
+            "criterion_results": [{
+                "criterion_id": "nb-owner-presence",
+                "assessment": "satisfied",
+                "conclusion": "The evidence shows an owner-presence decision the audience must make.",
+                "evidence_ids": ["evidence-smb"],
+                "source_ids": ["source-sba"],
+                "restrictions": [],
+            }],
             "research_condition_handling": [],
             "restrictions": ["Do not generalize beyond independent service firms."],
             "disposition_reasons": ["Current-run evidence directly supports the angle."],
@@ -139,12 +157,20 @@ def _decision_payload(
     }
 
 
-def _validate(payload: dict | None = None, *, research=None, audience=None, identity=None):
+def _validate(
+    payload: dict | DecisionLensDecisionArtifact | None = None,
+    *,
+    research=None,
+    audience=None,
+    identity=None,
+    lens_profile=None,
+):
     return DecisionLensDecisionArtifact.validate_for_research(
-        payload or _decision_payload(),
+        payload if payload is not None else _decision_payload(),
         research=research or _research(),
         audience=audience or _audience(),
         configuration_identity=identity or _identity(),
+        lens_profile=lens_profile or _lens_profile(),
     )
 
 
@@ -245,7 +271,7 @@ def test_large_company_action_requires_documented_direct_audience_impact():
 def test_generic_this_matters_assertion_without_direct_basis_cannot_proceed():
     payload = _decision_payload(basis_type="analogy_only")
     payload["judgment"]["relevance_bases"][0]["statement"] = "This matters to small business."
-    with pytest.raises(ValidationError, match="direct small-business evidence"):
+    with pytest.raises(ValidationError, match="direct configured-audience evidence"):
         DecisionLensDecisionArtifact.model_validate(payload)
 
 
@@ -255,6 +281,7 @@ def test_unknown_research_references_fail_external_validation(field):
     missing = "missing-source" if field == "source_ids" else "missing-evidence"
     payload[field] = [missing]
     payload["judgment"]["relevance_bases"][0][field] = [missing]
+    payload["judgment"]["criterion_results"][0][field] = [missing]
     with pytest.raises(DecisionContractError, match="unknown research"):
         _validate(payload)
 
@@ -472,6 +499,8 @@ def test_completion_before_start_is_rejected():
         ("judgment", "prompt"),
         ("basis", "metadata"),
         ("evaluator", "model_response"),
+        ("profile", "profile_definition"),
+        ("criterion", "metadata"),
     ],
 )
 def test_extra_payload_prompt_and_metadata_escape_fields_are_rejected(target, field):
@@ -481,6 +510,8 @@ def test_extra_payload_prompt_and_metadata_escape_fields_are_rejected(target, fi
         "judgment": payload["judgment"],
         "basis": payload["judgment"]["relevance_bases"][0],
         "evaluator": payload["evaluator"],
+        "profile": payload["lens_profile"],
+        "criterion": payload["judgment"]["criterion_results"][0],
     }[target]
     selected[field] = {"forbidden": object()}
     with pytest.raises(ValidationError):
@@ -504,9 +535,11 @@ def test_all_canonical_models_are_frozen_and_forbid_extra():
         artifact,
         artifact.configuration_identity,
         artifact.audience_selection,
+        artifact.lens_profile,
         artifact.evaluator,
         artifact.judgment,
         artifact.judgment.relevance_bases[0],
+        artifact.judgment.criterion_results[0],
     ]
     for model in models:
         assert model.model_config["frozen"] is True
@@ -524,10 +557,14 @@ def test_deterministic_bytes_and_strict_contextual_round_trip():
         research=_research(),
         audience=_audience(),
         configuration_identity=_identity(),
+        lens_profile=_lens_profile(),
     )
     assert first == second == restored.canonical_bytes()
     assert restored == artifact
-    assert json.loads(first) == artifact.model_dump(mode="json")
+    dumped = json.loads(first)
+    assert dumped == artifact.model_dump(mode="json")
+    assert dumped["lens_profile"] == _lens_profile().model_dump(mode="json")
+    assert dumped["judgment"]["criterion_results"][0]["criterion_id"] == "nb-owner-presence"
 
 
 def test_strict_json_reload_cannot_bypass_proceed_invariants():
@@ -538,4 +575,247 @@ def test_strict_json_reload_cannot_bypass_proceed_invariants():
             research=_research(),
             audience=_audience(),
             configuration_identity=_identity(),
+            lens_profile=_lens_profile(),
         )
+
+
+# --- Correction Authorization: lens profile identity ---
+
+
+def test_missing_or_blank_lens_profile_identity_is_rejected():
+    payload = _decision_payload()
+    del payload["lens_profile"]
+    with pytest.raises(ValidationError):
+        DecisionLensDecisionArtifact.model_validate(payload)
+    payload = _decision_payload()
+    payload["lens_profile"]["lens_profile_id"] = ""
+    with pytest.raises(ValidationError):
+        DecisionLensDecisionArtifact.model_validate(payload)
+
+
+def test_malformed_lens_profile_identity_rejects_embedded_profile_content():
+    payload = _decision_payload()
+    payload["lens_profile"]["prompt"] = "full profile prompt text"
+    with pytest.raises(ValidationError):
+        DecisionLensDecisionArtifact.model_validate(payload)
+
+
+def test_unexpected_lens_profile_identity_is_rejected_at_the_boundary():
+    payload = _decision_payload()
+    payload["lens_profile"] = {
+        "lens_profile_id": "other-business-lens",
+        "lens_profile_version": "1.0",
+    }
+    with pytest.raises(DecisionContractError, match="lens profile identity mismatch"):
+        _validate(payload)
+
+
+def test_lens_profile_drift_cannot_bypass_direct_construction_or_strict_reload():
+    payload = _decision_payload()
+    payload["lens_profile"]["lens_profile_version"] = "9.9"
+    artifact = DecisionLensDecisionArtifact.model_validate(payload)
+    with pytest.raises(DecisionContractError, match="lens profile identity mismatch"):
+        _validate(artifact)
+    with pytest.raises(DecisionContractError, match="lens profile identity mismatch"):
+        DecisionLensDecisionArtifact.validate_json_for_research(
+            artifact.canonical_json(),
+            research=_research(),
+            audience=_audience(),
+            configuration_identity=_identity(),
+            lens_profile=_lens_profile(),
+        )
+
+
+# --- Correction Authorization: profile-defined criterion results ---
+
+
+def test_duplicate_criterion_ids_are_rejected():
+    payload = _decision_payload()
+    item = payload["judgment"]["criterion_results"][0]
+    payload["judgment"]["criterion_results"] = [item, dict(item)]
+    with pytest.raises(ValidationError, match="criterion result IDs must be unique"):
+        DecisionLensDecisionArtifact.model_validate(payload)
+
+
+@pytest.mark.parametrize("field", ["source_ids", "evidence_ids"])
+def test_dangling_criterion_references_are_rejected(field):
+    payload = _decision_payload()
+    payload["judgment"]["criterion_results"][0][field] = ["missing-reference"]
+    with pytest.raises(ValidationError, match="undeclared decision"):
+        DecisionLensDecisionArtifact.model_validate(payload)
+
+
+def test_cross_kind_criterion_reference_collision_is_rejected():
+    payload = _decision_payload()
+    payload["judgment"]["criterion_results"][0]["evidence_ids"] = ["source-sba"]
+    with pytest.raises(ValidationError, match="undeclared decision evidence"):
+        DecisionLensDecisionArtifact.model_validate(payload)
+
+
+def test_criterion_cannot_cite_research_ids_outside_the_declared_decision_set():
+    research_payload = _research_payload()
+    research_payload["sources"].append({
+        "source_id": "source-extra",
+        "locator": {"kind": "url", "value": "https://example.test/extra"},
+        "title": "Additional current-run source",
+        "publisher": "Example",
+        "publication_time": {"status": "unknown", "value": None},
+        "retrieved_at": "2026-08-14T12:00:01Z",
+    })
+    research_payload["evidence"].append({
+        "evidence_id": "evidence-extra",
+        "claim": "An additional accepted claim exists in the current run.",
+        "source_ids": ["source-extra"],
+        "support": [{
+            "source_id": "source-extra",
+            "excerpt": "Additional supporting excerpt.",
+            "location": "page 2",
+        }],
+        "disposition": "accepted",
+    })
+    research = NormalizedResearchArtifact.model_validate(research_payload)
+    payload = _decision_payload()
+    payload["research_digest"] = research_artifact_digest(research)
+    payload["judgment"]["criterion_results"][0]["evidence_ids"] = [
+        "evidence-smb",
+        "evidence-extra",
+    ]
+    with pytest.raises(ValidationError, match="undeclared decision evidence"):
+        DecisionLensDecisionArtifact.model_validate(payload)
+
+
+def test_satisfied_criterion_requires_cited_evidence():
+    payload = _decision_payload()
+    payload["judgment"]["criterion_results"][0]["evidence_ids"] = []
+    payload["judgment"]["criterion_results"][0]["source_ids"] = []
+    with pytest.raises(ValidationError, match="satisfied criterion requires cited evidence"):
+        DecisionLensDecisionArtifact.model_validate(payload)
+
+
+# --- Correction Authorization: one schema, many business profiles ---
+
+
+def _contrasting_profile_payloads():
+    """A non-small-business lens profile expressed through the same canonical schema."""
+
+    audience = AudienceSelection(
+        audience_id="hospital-quality-director",
+        audience_name="Hospital quality and safety director",
+        selected_problem="Prioritizing safety interventions under regulatory scrutiny.",
+        decision_factors=("patient outcomes", "compliance exposure"),
+        objections=("generic consulting frameworks",),
+        selection_source="configured-default",
+    )
+    identity = ConfigurationIdentity(
+        schema_version="1",
+        configuration_id="clinical-quality-production",
+        configuration_version="1.0",
+        configuration_hash="sha256:" + "c" * 64,
+    )
+    profile = DecisionLensProfileIdentity(
+        lens_profile_id="clinical-quality-lens",
+        lens_profile_version="1.0",
+    )
+    research_payload = _research_payload()
+    research_payload["configuration_identity"] = identity.model_dump(mode="json")
+    research_payload["sources"][0].update({
+        "source_id": "source-outcomes",
+        "locator": {"kind": "url", "value": "https://outcomes.example/report"},
+        "title": "Hospital safety intervention outcomes",
+        "publisher": "Clinical outcomes research group",
+    })
+    research_payload["evidence"][0].update({
+        "evidence_id": "evidence-clinical",
+        "claim": "Quality directors report intervention prioritization as a material constraint.",
+        "source_ids": ["source-outcomes"],
+    })
+    research_payload["evidence"][0]["support"][0]["source_id"] = "source-outcomes"
+    research = NormalizedResearchArtifact.model_validate(research_payload)
+
+    payload = _decision_payload()
+    payload["configuration_identity"] = identity.model_dump(mode="json")
+    payload["audience_selection"] = audience.model_dump(mode="json")
+    payload["lens_profile"] = profile.model_dump(mode="json")
+    payload["research_digest"] = research_artifact_digest(research)
+    payload["source_ids"] = ["source-outcomes"]
+    payload["evidence_ids"] = ["evidence-clinical"]
+    judgment = payload["judgment"]
+    judgment["audience_problem_or_opportunity"] = (
+        "Choose the safety intervention with the strongest outcome evidence."
+    )
+    judgment["relevance_bases"] = [{
+        "basis_type": "direct_audience_evidence",
+        "audience_id": audience.audience_id,
+        "statement": "The cited outcomes research directly concerns hospital quality directors.",
+        "evidence_ids": ["evidence-clinical"],
+        "source_ids": ["source-outcomes"],
+        "documented_direct_consequence": None,
+    }]
+    judgment["criterion_results"] = [{
+        "criterion_id": "clinical-outcome-support",
+        "assessment": "satisfied",
+        "conclusion": "The cited research supports a defensible intervention priority.",
+        "evidence_ids": ["evidence-clinical"],
+        "source_ids": ["source-outcomes"],
+        "restrictions": [],
+    }]
+    return payload, research, audience, identity, profile
+
+
+def test_non_small_business_audience_with_direct_evidence_can_proceed():
+    payload, research, audience, identity, profile = _contrasting_profile_payloads()
+    decision = _validate(
+        payload,
+        research=research,
+        audience=audience,
+        identity=identity,
+        lens_profile=profile,
+    )
+    assert decision.disposition is DecisionDisposition.PROCEED
+    assert decision.lens_profile == profile
+
+
+def test_profiles_use_different_criterion_ids_through_one_schema():
+    never_blank = _validate()
+    payload, research, audience, identity, profile = _contrasting_profile_payloads()
+    contrasting = _validate(
+        payload,
+        research=research,
+        audience=audience,
+        identity=identity,
+        lens_profile=profile,
+    )
+    nb_ids = {item.criterion_id for item in never_blank.judgment.criterion_results}
+    other_ids = {item.criterion_id for item in contrasting.judgment.criterion_results}
+    assert nb_ids and other_ids and not (nb_ids & other_ids)
+    assert type(never_blank) is type(contrasting)
+    assert set(type(never_blank).model_fields) == set(type(contrasting).model_fields)
+
+
+def test_universal_contract_has_no_business_specific_names():
+    import inspect
+
+    import src.editorial.decision_contract as module
+
+    source = inspect.getsource(module).lower()
+    forbidden_terms = (
+        "small business",
+        "small-business",
+        "small_business",
+        "smallbusiness",
+        "never blank",
+        "never_blank",
+        "neverblank",
+        "sba",
+        "census",
+        "toyota",
+        "nike",
+        "owner presence",
+        "owner_presence",
+        "customer memory",
+        "customer_memory",
+        "compound presence",
+        "compound_presence",
+    )
+    for term in forbidden_terms:
+        assert term not in source, f"business-specific term {term!r} in universal contract"

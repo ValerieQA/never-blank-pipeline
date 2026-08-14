@@ -80,12 +80,18 @@ class DecisionEvidenceSufficiency(str, Enum):
     INSUFFICIENT = "insufficient"
 
 
-class RelevanceBasisType(str, Enum):
+class AudienceRelevanceBasisType(str, Enum):
     DIRECT_AUDIENCE_EVIDENCE = "direct_audience_evidence"
     CLIENT_FIRST_PARTY_EVIDENCE = "client_first_party_evidence"
     DOCUMENTED_DIRECT_IMPACT = "documented_direct_impact"
     CREDIBLE_SECTOR_EVIDENCE = "credible_sector_evidence"
     ANALOGY_ONLY = "analogy_only"
+
+
+class CriterionAssessment(str, Enum):
+    SATISFIED = "satisfied"
+    NOT_SATISFIED = "not_satisfied"
+    UNCERTAIN = "uncertain"
 
 
 class EvaluatorKind(str, Enum):
@@ -117,10 +123,27 @@ class DecisionEvaluatorAttribution(_DecisionModel):
         return _bounded_text(value)
 
 
-class SmallBusinessRelevanceBasis(_DecisionModel):
-    """A typed claim about why cited research directly concerns the audience."""
+class DecisionLensProfileIdentity(_DecisionModel):
+    """Identity of the lens profile whose semantics produced this judgment.
 
-    basis_type: RelevanceBasisType
+    Profile identity is separate from configuration identity, audience selection,
+    evaluator attribution, and the decision artifact schema version. The complete
+    profile definition and its prompts are never stored in the artifact.
+    """
+
+    lens_profile_id: str = Field(min_length=1, max_length=120)
+    lens_profile_version: str = Field(min_length=1, max_length=80)
+
+    @field_validator("lens_profile_id", "lens_profile_version")
+    @classmethod
+    def _safe_text(cls, value: str) -> str:
+        return _bounded_text(value)
+
+
+class AudienceRelevanceBasis(_DecisionModel):
+    """A typed claim about why cited research directly concerns the configured audience."""
+
+    basis_type: AudienceRelevanceBasisType
     audience_id: str = Field(min_length=1, max_length=200)
     statement: str = Field(min_length=1, max_length=2000)
     evidence_ids: tuple[str, ...] = Field(min_length=1, max_length=30)
@@ -139,15 +162,52 @@ class SmallBusinessRelevanceBasis(_DecisionModel):
         if len(set(self.source_ids)) != len(self.source_ids):
             raise ValueError("relevance source IDs must be unique")
         if (
-            self.basis_type is RelevanceBasisType.DOCUMENTED_DIRECT_IMPACT
+            self.basis_type is AudienceRelevanceBasisType.DOCUMENTED_DIRECT_IMPACT
             and not self.documented_direct_consequence
         ):
             raise ValueError("documented direct impact requires the direct consequence")
         if (
-            self.basis_type is RelevanceBasisType.ANALOGY_ONLY
+            self.basis_type is AudienceRelevanceBasisType.ANALOGY_ONLY
             and self.documented_direct_consequence is not None
         ):
             raise ValueError("analogy-only relevance cannot claim a documented direct consequence")
+        return self
+
+
+class DecisionCriterionResult(_DecisionModel):
+    """One profile-defined criterion conclusion grounded in cited research.
+
+    Criterion IDs are defined by the applied lens profile, not by this schema.
+    The universal contract never enumerates any business's criterion IDs.
+    """
+
+    criterion_id: str = Field(min_length=1, max_length=120)
+    assessment: CriterionAssessment
+    conclusion: str = Field(min_length=1, max_length=2000)
+    evidence_ids: tuple[str, ...] = Field(default=(), max_length=30)
+    source_ids: tuple[str, ...] = Field(default=(), max_length=30)
+    restrictions: tuple[str, ...] = Field(default=(), max_length=20)
+
+    @field_validator("criterion_id", "conclusion")
+    @classmethod
+    def _safe_text(cls, value: str) -> str:
+        return _bounded_text(value)
+
+    @field_validator("restrictions")
+    @classmethod
+    def _safe_collection(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if len(set(values)) != len(values):
+            raise ValueError("criterion restrictions must be unique")
+        return tuple(_bounded_text(value) for value in values)
+
+    @model_validator(mode="after")
+    def _criterion_is_structured(self) -> Self:
+        if len(set(self.evidence_ids)) != len(self.evidence_ids):
+            raise ValueError("criterion evidence IDs must be unique")
+        if len(set(self.source_ids)) != len(self.source_ids):
+            raise ValueError("criterion source IDs must be unique")
+        if self.assessment is CriterionAssessment.SATISFIED and not self.evidence_ids:
+            raise ValueError("a satisfied criterion requires cited evidence")
         return self
 
 
@@ -171,8 +231,11 @@ class DecisionLensJudgment(_DecisionModel):
     audience_problem_or_opportunity: str = Field(min_length=1, max_length=2000)
     defensible_perspective: str = Field(min_length=1, max_length=3000)
     supported_editorial_angle: str = Field(min_length=1, max_length=2000)
-    relevance_bases: tuple[SmallBusinessRelevanceBasis, ...] = Field(
+    relevance_bases: tuple[AudienceRelevanceBasis, ...] = Field(
         min_length=1, max_length=12
+    )
+    criterion_results: tuple[DecisionCriterionResult, ...] = Field(
+        default=(), max_length=40
     )
     research_condition_handling: tuple[DecisionResearchConditionHandling, ...] = Field(
         default=(), max_length=30
@@ -199,10 +262,13 @@ class DecisionLensJudgment(_DecisionModel):
         return tuple(_bounded_text(value) for value in values)
 
     @model_validator(mode="after")
-    def _condition_ids_are_unique(self) -> Self:
-        ids = tuple(item.condition_id for item in self.research_condition_handling)
-        if len(set(ids)) != len(ids):
+    def _bounded_ids_are_unique(self) -> Self:
+        condition_ids = tuple(item.condition_id for item in self.research_condition_handling)
+        if len(set(condition_ids)) != len(condition_ids):
             raise ValueError("research condition handling IDs must be unique")
+        criterion_ids = tuple(item.criterion_id for item in self.criterion_results)
+        if len(set(criterion_ids)) != len(criterion_ids):
+            raise ValueError("criterion result IDs must be unique")
         return self
 
 
@@ -216,6 +282,7 @@ class DecisionLensDecisionArtifact(_DecisionModel):
     signal_id: str = Field(min_length=1, max_length=200)
     configuration_identity: ConfigurationIdentity
     audience_selection: AudienceSelection
+    lens_profile: DecisionLensProfileIdentity
     research_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     decision_lens_version: str = Field(min_length=1, max_length=80)
     evaluator: DecisionEvaluatorAttribution
@@ -271,6 +338,11 @@ class DecisionLensDecisionArtifact(_DecisionModel):
                 raise DecisionContractError("relevance basis cites undeclared decision sources")
             if not set(basis.evidence_ids) <= set(self.evidence_ids):
                 raise DecisionContractError("relevance basis cites undeclared decision evidence")
+        for criterion in self.judgment.criterion_results:
+            if not set(criterion.source_ids) <= set(self.source_ids):
+                raise DecisionContractError("criterion result cites undeclared decision sources")
+            if not set(criterion.evidence_ids) <= set(self.evidence_ids):
+                raise DecisionContractError("criterion result cites undeclared decision evidence")
         if self.disposition is DecisionDisposition.PROCEED:
             if self.judgment.relevance is not BusinessAudienceRelevance.DIRECT:
                 raise DecisionContractError("PROCEED requires direct audience relevance")
@@ -279,11 +351,12 @@ class DecisionLensDecisionArtifact(_DecisionModel):
             if not self.source_ids or not self.evidence_ids:
                 raise DecisionContractError("PROCEED requires cited source and evidence IDs")
             if all(
-                basis.basis_type is RelevanceBasisType.ANALOGY_ONLY
+                basis.basis_type is AudienceRelevanceBasisType.ANALOGY_ONLY
                 for basis in self.judgment.relevance_bases
             ):
                 raise DecisionContractError(
-                    "PROCEED requires direct small-business evidence, not analogy-only relevance"
+                    "PROCEED requires direct configured-audience evidence, "
+                    "not analogy-only relevance"
                 )
         return self
 
@@ -295,9 +368,12 @@ class DecisionLensDecisionArtifact(_DecisionModel):
         research: NormalizedResearchArtifact,
         audience: AudienceSelection,
         configuration_identity: ConfigurationIdentity,
+        lens_profile: DecisionLensProfileIdentity,
     ) -> "DecisionLensDecisionArtifact":
         artifact = value if isinstance(value, cls) else cls.model_validate(value)
-        artifact._validate_external_lineage(research, audience, configuration_identity)
+        artifact._validate_external_lineage(
+            research, audience, configuration_identity, lens_profile
+        )
         return artifact
 
     @classmethod
@@ -308,9 +384,12 @@ class DecisionLensDecisionArtifact(_DecisionModel):
         research: NormalizedResearchArtifact,
         audience: AudienceSelection,
         configuration_identity: ConfigurationIdentity,
+        lens_profile: DecisionLensProfileIdentity,
     ) -> "DecisionLensDecisionArtifact":
         artifact = cls.model_validate_json(value)
-        artifact._validate_external_lineage(research, audience, configuration_identity)
+        artifact._validate_external_lineage(
+            research, audience, configuration_identity, lens_profile
+        )
         return artifact
 
     def _validate_external_lineage(
@@ -318,11 +397,14 @@ class DecisionLensDecisionArtifact(_DecisionModel):
         research: NormalizedResearchArtifact,
         audience: AudienceSelection,
         configuration_identity: ConfigurationIdentity,
+        lens_profile: DecisionLensProfileIdentity,
     ) -> None:
         if self.configuration_identity != configuration_identity:
             raise DecisionContractError("decision configuration identity mismatch")
         if self.audience_selection != audience:
             raise DecisionContractError("decision audience selection mismatch")
+        if self.lens_profile != lens_profile:
+            raise DecisionContractError("decision lens profile identity mismatch")
         if research.configuration_identity != configuration_identity:
             raise DecisionContractError("research configuration identity mismatch")
         if (self.run_id, self.assignment_id, self.signal_id) != (
