@@ -233,6 +233,7 @@ def test_every_public_provider_model_is_strict_and_immutable():
     "timestamp",
     [NOW.replace(tzinfo=None), NOW.astimezone(timezone(timedelta(hours=-6)))],
 )
+@pytest.mark.story11
 def test_request_and_freshness_reject_naive_and_non_utc(timestamp):
     with pytest.raises(ValidationError):
         FreshnessRequirement(
@@ -263,6 +264,7 @@ def test_invocation_rejects_completion_before_start():
     "timestamp",
     [NOW.replace(tzinfo=None), NOW.astimezone(timezone(timedelta(hours=2)))],
 )
+@pytest.mark.story11
 def test_source_attempt_and_retrieval_timestamps_require_strict_utc(timestamp):
     with pytest.raises(ValidationError, match="UTC"):
         SourceRetrievalOutcome(
@@ -276,6 +278,7 @@ def test_source_attempt_and_retrieval_timestamps_require_strict_utc(timestamp):
         )
 
 
+@pytest.mark.story11
 def test_required_url_is_attempted_and_normalized_non_ready():
     transport = RecordingTransport()
     result = _adapter(transport).research(_request())
@@ -308,6 +311,7 @@ def test_preferred_exact_url_uses_contents_capability():
     ]
 
 
+@pytest.mark.story11
 def test_failed_material_required_source_forces_partial_and_non_ready():
     transport = RecordingTransport()
     transport.content_results["https://client.example.test/source"] = ExaUnavailable()
@@ -563,6 +567,7 @@ def test_existing_domain_label_boundaries_remain_distinct(candidate):
 
 
 @pytest.mark.parametrize("path", ["direct", "preferred", "discovery"])
+@pytest.mark.story11
 def test_provider_returned_userinfo_is_sanitized_before_canonical_records(path, caplog):
     unsafe = "https://alice:hunter2@discovered.example.test/report"
     transport = RecordingTransport()
@@ -593,6 +598,7 @@ def test_provider_returned_userinfo_is_sanitized_before_canonical_records(path, 
     assert result.operation_failure.message == "Research provider returned an unsafe source locator"
 
 
+@pytest.mark.story11
 def test_unsafe_discovery_result_with_safe_result_is_honest_partial():
     unsafe = "https://alice:hunter2@discovered.example.test/unsafe"
     safe = "https://discovered.example.test/safe"
@@ -618,6 +624,7 @@ def test_unsafe_discovery_result_with_safe_result_is_honest_partial():
         "https://example.com/path#mention=@name",
     ],
 )
+@pytest.mark.story11
 def test_at_outside_authority_remains_valid_end_to_end(safe_url):
     transport = RecordingTransport()
     transport.content_results[safe_url] = (_document(safe_url),)
@@ -692,6 +699,7 @@ def test_multiple_sources_have_unique_ids_and_exact_references():
         (FakeResearchScenario.UNAVAILABLE, ProviderFailureCode.UNAVAILABLE),
     ],
 )
+@pytest.mark.story11
 def test_fake_normalizes_fatal_outcome_without_artifact(scenario, code):
     result = execute_research(DeterministicFakeResearchProvider(scenario), _request())
     assert isinstance(result, FailedResearchResult)
@@ -709,6 +717,7 @@ def test_fake_normalizes_fatal_outcome_without_artifact(scenario, code):
         (ExaUnavailable(), ProviderFailureCode.SOURCE_RETRIEVAL_FAILED),
     ],
 )
+@pytest.mark.story11
 def test_exa_exceptions_are_normalized_and_do_not_cross_boundary(error, code):
     transport = RecordingTransport()
     transport.content_results["https://client.example.test/source"] = error
@@ -720,6 +729,7 @@ def test_exa_exceptions_are_normalized_and_do_not_cross_boundary(error, code):
     assert type(error).__name__ not in serialized
 
 
+@pytest.mark.story11
 def test_individual_source_failure_retains_successful_sources():
     result = execute_research(
         DeterministicFakeResearchProvider(FakeResearchScenario.SOURCE_FAILURE),
@@ -791,6 +801,7 @@ def test_false_ready_mapping_is_rejected_by_canonical_issue50_model():
         NormalizedResearchArtifact.model_validate(payload)
 
 
+@pytest.mark.story11
 def test_envelope_serialization_is_deterministic_strict_and_lossless():
     result = execute_research(DeterministicFakeResearchProvider(), _request())
     envelope = ResearchResultEnvelope(request=_request(), result=result)
