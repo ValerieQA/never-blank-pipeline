@@ -171,6 +171,9 @@ def _make_run_ctx(assignment=None):
     return RunContext.from_assignment(ca, ExecutionMode.DRY_RUN)
 
 
+from tests import test_generate_and_publish as legacy
+
+
 def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[list, dict]:
     argv = ["prog", "--signal-id", _SIGNAL_ID]
     if dry_run:
@@ -186,6 +189,11 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "ExaResearchAdapter": mock.MagicMock(return_value=mock.sentinel.provider),
         "load_research_envelope": mock.MagicMock(return_value=mock.MagicMock()),
         "validate_research_envelope": mock.MagicMock(return_value=mock.sentinel.ready_research),
+        # Decision Lens gate (Issue #60): PROCEED-shaped stand-in; the real
+        # gate is covered by tests/test_decision_lifecycle.py.
+        "production_evaluator": mock.MagicMock(return_value=mock.sentinel.decision_evaluator),
+        "evaluate_and_persist_decision": mock.MagicMock(return_value=legacy._FAKE_DECISION),
+        "load_decision_artifact": mock.MagicMock(return_value=legacy._FAKE_DECISION),
         "load_active_strategy":      mock.MagicMock(return_value=_STRATEGY_STUB),
         "get_strategy_context":      mock.MagicMock(return_value=_STRATEGY_CONTEXT),
         "get_cta_mode":              mock.MagicMock(return_value="reflection"),
