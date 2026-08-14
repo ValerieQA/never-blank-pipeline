@@ -15,8 +15,12 @@ contextual boundary before any caller sees it.
 - typed `AudienceSelection`;
 - supplied `ConfigurationIdentity`;
 - expected `DecisionLensProfileIdentity`;
-- exact `run_id`, `assignment_id`, `signal_id`;
-- an optional bounded signal mapping used only as request context.
+- exact `run_id`, `assignment_id`, `signal_id`.
+
+There is no unrestricted signal/context mapping on this boundary: arbitrary
+metadata, nested mappings, credentials, headers, or provider data cannot cross
+the public evaluator API. The judgment is grounded in the research artifact,
+strategy boundaries, audience, and exact execution identity alone.
 
 Canonical lineage fields — run/assignment/signal identity, configuration
 identity, audience selection, lens profile, research digest, evaluator
@@ -82,11 +86,15 @@ artifact with an explicit non-success disposition.
 
 The Decision Lens instructions are externalized to
 `config/prompts/decision_lens/never_blank.yaml` with explicit
-`instruction_id`, `profile_id`, and `version`. The evaluator records
+`instruction_id`, `profile_id`, `profile_version`, and `version`.
+`profile_id`/`profile_version` name the complete lens profile identity the
+instructions implement; `version` is the instruction revision — distinct
+concepts that are not collapsed. The evaluator records
 `<instruction_id>/<version>` in the canonical `decision_lens_version` field and
-refuses to run when the expected `DecisionLensProfileIdentity` does not match
-the instruction profile. Changing judgment semantics requires a version bump in
-a reviewed commit.
+refuses to run — before any transport call — when the expected
+`DecisionLensProfileIdentity` does not match the instruction profile identity
+in full (ID and version). Changing judgment semantics requires a version bump
+in a reviewed commit.
 
 Never Blank is the Release 1 lens profile; its judgment criteria
 (`nb-owner-presence`, `nb-customer-memory`) live in the instruction artifact

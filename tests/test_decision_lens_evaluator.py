@@ -74,6 +74,7 @@ def _instructions() -> DecisionLensInstructions:
     return DecisionLensInstructions(
         instruction_id="never-blank-decision-lens",
         profile_id="never-blank-editorial-lens",
+        profile_version="1.0",
         version="1.0",
         instructions="Judge the signal for the configured audience. Return JSON.",
     )
@@ -386,6 +387,26 @@ def test_profile_mismatch_fails_before_transport():
     assert transport.calls == []
 
 
+def test_correct_profile_id_with_wrong_version_fails_before_transport():
+    evaluator, transport = _evaluator(_model_output())
+    wrong_version = DecisionLensProfileIdentity(
+        lens_profile_id="never-blank-editorial-lens", lens_profile_version="9.9"
+    )
+    _expect_failure(
+        _evaluate(evaluator, lens_profile=wrong_version),
+        DecisionEvaluationFailureKind.PROFILE_MISMATCH,
+    )
+    assert transport.calls == []
+
+
+def test_complete_profile_identity_succeeds_and_is_preserved_in_the_artifact():
+    evaluator, _ = _evaluator(_model_output())
+    result = _evaluate(evaluator)
+    assert result.outcome is EvaluationOutcome.DECISION
+    assert result.decision.lens_profile == _lens_profile()
+    assert result.decision.lens_profile.lens_profile_version == "1.0"
+
+
 def test_configuration_mismatch_fails_before_transport():
     evaluator, transport = _evaluator(_model_output())
     other = ConfigurationIdentity(
@@ -536,6 +557,46 @@ def test_evaluator_source_contains_no_provider_branching():
         assert provider_term not in source.lower()
 
 
+# --- strict typed public boundary: no unrestricted signal mapping ---
+
+
+def test_arbitrary_signal_metadata_cannot_pass_the_canonical_api():
+    evaluator, _ = _evaluator(_model_output())
+    with pytest.raises(TypeError):
+        _evaluate(evaluator, signal={"arbitrary": {"nested": "metadata"}})
+
+
+def test_credential_shaped_signal_payload_cannot_reach_the_transport():
+    evaluator, transport = _evaluator(_model_output())
+    with pytest.raises(TypeError):
+        _evaluate(
+            evaluator,
+            signal={"headers": {"Authorization": "Bearer sk-abcdefghijklmnop"}},
+        )
+    assert transport.calls == []
+
+
+def test_request_carries_exact_trusted_identity_and_only_known_sections():
+    evaluator, transport = _evaluator(_model_output())
+    result = _evaluate(evaluator)
+    assert result.outcome is EvaluationOutcome.DECISION
+    request = json.loads(transport.calls[0]["request"])
+    assert request["execution"] == {
+        "run_id": RUN_ID,
+        "assignment_id": "assignment-59",
+        "signal_id": "signal-59",
+    }
+    assert set(request) == {
+        "execution",
+        "audience",
+        "strategy_boundaries",
+        "research_evidence",
+        "research_conditions",
+        "research_readiness",
+    }
+    assert "sk-" not in transport.calls[0]["request"]
+
+
 # --- maintained instruction artifact ---
 
 
@@ -543,8 +604,10 @@ def test_production_instruction_artifact_loads_with_stable_version():
     instructions = DecisionLensInstructions.load()
     assert instructions.instruction_id == "never-blank-decision-lens"
     assert instructions.profile_id == "never-blank-editorial-lens"
+    assert instructions.profile_version == "1.0"
     assert instructions.version == "1.0"
     assert instructions.decision_lens_version == "never-blank-decision-lens/1.0"
+    assert instructions.profile_identity == _lens_profile()
     assert "evidence" in instructions.instructions.lower()
 
 

@@ -5,8 +5,13 @@
 # "<instruction_id>/<version>" in the canonical decision_lens_version field.
 # Changing judgment semantics requires bumping `version` in a reviewed commit.
 
+# profile_id/profile_version = the complete lens profile identity implemented
+# by these instructions; version = the instruction revision. The evaluator
+# rejects an expected DecisionLensProfileIdentity that does not match
+# profile_id AND profile_version before any transport call.
 instruction_id: never-blank-decision-lens
 profile_id: never-blank-editorial-lens
+profile_version: "1.0"
 version: "1.0"
 instructions: |
   You are the Decision Lens for the Never Blank editorial system.

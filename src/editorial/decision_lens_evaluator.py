@@ -128,16 +128,30 @@ class DecisionLensEvaluationResult(_EvaluatorModel):
 
 
 class DecisionLensInstructions(_EvaluatorModel):
-    """Versioned maintained Decision Lens instruction artifact."""
+    """Versioned maintained Decision Lens instruction artifact.
+
+    ``profile_id``/``profile_version`` name the complete lens profile identity
+    these instructions implement; ``version`` is the instruction revision.
+    They are distinct concepts: instructions may be revised without changing
+    which profile they implement.
+    """
 
     instruction_id: str = Field(min_length=1, max_length=120)
     profile_id: str = Field(min_length=1, max_length=120)
+    profile_version: str = Field(min_length=1, max_length=80)
     version: str = Field(min_length=1, max_length=40)
     instructions: str = Field(min_length=1)
 
     @property
     def decision_lens_version(self) -> str:
         return f"{self.instruction_id}/{self.version}"
+
+    @property
+    def profile_identity(self) -> DecisionLensProfileIdentity:
+        return DecisionLensProfileIdentity(
+            lens_profile_id=self.profile_id,
+            lens_profile_version=self.profile_version,
+        )
 
     @classmethod
     def load(cls, path: Path | str = DEFAULT_INSTRUCTIONS_PATH) -> "DecisionLensInstructions":
@@ -189,7 +203,6 @@ class DecisionLensEvaluator:
         run_id: str,
         assignment_id: str,
         signal_id: str,
-        signal: dict | None = None,
     ) -> DecisionLensEvaluationResult:
         precheck = self._check_context(
             research=research,
@@ -213,7 +226,6 @@ class DecisionLensEvaluator:
             run_id=run_id,
             assignment_id=assignment_id,
             signal_id=signal_id,
-            signal=signal or {},
         )
 
         started_at = self._clock()
@@ -315,10 +327,11 @@ class DecisionLensEvaluator:
         assignment_id: str,
         signal_id: str,
     ) -> DecisionLensEvaluationResult | None:
-        if lens_profile.lens_profile_id != self._instructions.profile_id:
+        if lens_profile != self._instructions.profile_identity:
             return _failure(
                 DecisionEvaluationFailureKind.PROFILE_MISMATCH,
-                "expected lens profile does not match the loaded instruction profile",
+                "expected lens profile identity (id and version) does not match "
+                "the loaded instruction profile",
             )
         if strategy_view.identity != configuration_identity:
             return _failure(
@@ -363,7 +376,6 @@ class DecisionLensEvaluator:
         run_id: str,
         assignment_id: str,
         signal_id: str,
-        signal: dict,
     ) -> str:
         editorial = strategy_view.brand_editorial
         evidence_boundary = [
@@ -421,7 +433,6 @@ class DecisionLensEvaluator:
                     "Every factual claim must cite the normalized research evidence."
                 ),
             },
-            "signal": signal,
             "research_evidence": evidence_boundary,
             "research_conditions": conditions,
             "research_readiness": research.readiness.value,
