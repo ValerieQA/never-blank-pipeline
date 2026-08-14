@@ -379,6 +379,7 @@ def test_ready_requires_evidence():
 
 
 @pytest.mark.parametrize("disposition", ["not_assessed", "conflicting", "rejected"])
+@pytest.mark.story11
 def test_ready_rejects_blocking_evidence_dispositions(disposition: str):
     payload = _ready_payload()
     payload["evidence"][0]["disposition"] = disposition
@@ -386,6 +387,7 @@ def test_ready_rejects_blocking_evidence_dispositions(disposition: str):
         NormalizedResearchArtifact.model_validate(payload)
 
 
+@pytest.mark.story11
 def test_ready_rejects_unresolved_contradiction():
     payload = _ready_payload()
     payload["contradictions"] = [{
@@ -399,6 +401,7 @@ def test_ready_rejects_unresolved_contradiction():
         NormalizedResearchArtifact.model_validate(payload)
 
 
+@pytest.mark.story11
 def test_ready_rejects_unresolved_material_uncertainty():
     payload = _ready_payload()
     payload["uncertainties"] = [{
@@ -414,6 +417,7 @@ def test_ready_rejects_unresolved_material_uncertainty():
         NormalizedResearchArtifact.model_validate(payload)
 
 
+@pytest.mark.story11
 def test_partial_unassessed_research_is_accepted_only_as_non_ready():
     payload = _ready_payload()
     payload["evidence"][0]["disposition"] = "not_assessed"
@@ -423,6 +427,7 @@ def test_partial_unassessed_research_is_accepted_only_as_non_ready():
     assert artifact.evidence[0].disposition is EvidenceDisposition.NOT_ASSESSED
 
 
+@pytest.mark.story11
 def test_conflicting_research_and_unresolved_contradiction_require_non_ready():
     artifact = _artifact()
     assert artifact.readiness is EvidenceReadiness.NEEDS_REVIEW

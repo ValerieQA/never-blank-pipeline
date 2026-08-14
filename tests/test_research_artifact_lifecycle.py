@@ -15,14 +15,20 @@ from scripts.generate_and_publish import main
 from src.artifacts import ArtifactCollisionError
 from src.intake import from_jsonl_signal
 from src.research.evidence import (
-    EvidenceDisposition, EvidenceReadiness, ExtractedEvidence,
+    Contradiction, EvidenceDisposition, EvidenceReadiness, ExtractedEvidence,
+    ModelInterpretation,
     NormalizedResearchArtifact, NormalizedSource, PublicationTime,
-    PublicationTimeStatus, SourceLocator, SourceLocatorKind, SupportReference,
+    PublicationTimeStatus, ResolutionStatus, SourceLocator, SourceLocatorKind,
+    SupportReference, UncertaintyAssessment, UncertaintyLevel,
+    UncertaintyMateriality,
 )
 from src.research.lifecycle import (
     ResearchGateError, build_research_request, build_source_directives,
     execute_and_persist_research, load_research_envelope, validate_research_envelope,
     MissingCredentialResearchProvider,
+)
+from src.research.adapters.fake import (
+    DeterministicFakeResearchProvider, FakeResearchScenario,
 )
 from src.research.provider import (
     CompleteResearchResult, PartialResearchResult, ProviderAttribution,
@@ -35,6 +41,9 @@ from src.strategy.business_config import load_business_strategy_configuration
 from src.strategy.execution_context import StrategyExecutionContext
 from tests import test_generate_and_publish as legacy
 from tests import test_research_provider_adapter as provider_tests
+
+
+pytestmark = pytest.mark.story11
 
 
 class ReadyProvider:
@@ -50,7 +59,10 @@ class ReadyProvider:
         source = NormalizedSource(
             source_id="source-1",
             locator=SourceLocator(kind=SourceLocatorKind.URL, value="https://source.example/report"),
-            title="Verified report", publication_time=PublicationTime(status=PublicationTimeStatus.UNKNOWN),
+            title="Verified report", publication_time=PublicationTime(
+                status=PublicationTimeStatus.KNOWN,
+                value=started - timedelta(days=1),
+            ),
             retrieved_at=started,
         )
         evidence = ExtractedEvidence(
@@ -62,7 +74,26 @@ class ReadyProvider:
             artifact_id="artifact-1", run_id=request.run_id,
             assignment_id=request.assignment_id, signal_id=request.signal_id,
             configuration_identity=request.strategy.identity, created_at=completed,
-            sources=(source,), evidence=(evidence,), readiness=self.readiness,
+            sources=(source,), evidence=(evidence,),
+            interpretations=(ModelInterpretation(
+                interpretation_id="interpretation-1",
+                statement="The verified claim is relevant to the assignment.",
+                evidence_ids=("evidence-1",),
+            ),),
+            uncertainties=(UncertaintyAssessment(
+                uncertainty_id="uncertainty-1", level=UncertaintyLevel.LOW,
+                materiality=UncertaintyMateriality.NON_MATERIAL,
+                resolution=ResolutionStatus.UNRESOLVED,
+                description="A non-material detail remains uncertain.",
+                evidence_ids=("evidence-1",),
+            ),),
+            contradictions=(Contradiction(
+                contradiction_id="contradiction-1",
+                resolution=ResolutionStatus.RESOLVED,
+                description="The apparent wording difference was resolved.",
+                evidence_ids=("evidence-1",), source_ids=("source-1",),
+            ),),
+            readiness=self.readiness,
         )
         invocation = ProviderInvocation(
             attribution=ProviderAttribution(
@@ -137,6 +168,13 @@ def test_ready_envelope_is_persisted_canonically_and_strictly_reloaded(lifecycle
     envelope = load_research_envelope(root, assignment.assignment_id, run.run_id)
     assert path.read_bytes() == envelope.canonical_json().encode()
     assert envelope.result.artifact == artifact
+    assert artifact.sources[0].publication_time.status is PublicationTimeStatus.KNOWN
+    assert artifact.sources[0].publication_time.value is not None
+    assert artifact.sources[0].retrieved_at >= run.started_at
+    assert artifact.interpretations[0].evidence_ids == (artifact.evidence[0].evidence_id,)
+    assert artifact.uncertainties[0].level is UncertaintyLevel.LOW
+    assert artifact.contradictions[0].resolution is ResolutionStatus.RESOLVED
+    assert artifact.configuration_identity == strategy.identity
 
 
 @pytest.mark.parametrize("readiness", [
@@ -216,6 +254,13 @@ def test_corrupt_and_noncanonical_research_are_rejected(lifecycle):
     with pytest.raises(ResearchGateError, match="malformed"):
         load_research_envelope(root, assignment.assignment_id, run.run_id)
 
+    valid = ResearchResultEnvelope(
+        request=lifecycle[-1], result=ReadyProvider().research(lifecycle[-1])
+    )
+    path.write_text(json.dumps(valid.model_dump(mode="json"), indent=2))
+    with pytest.raises(ResearchGateError, match="not canonical"):
+        load_research_envelope(root, assignment.assignment_id, run.run_id)
+
 
 def test_current_run_identity_and_configuration_mismatch_fail_closed(lifecycle):
     _, strategy, _, assignment, run, request = lifecycle
@@ -284,7 +329,11 @@ def test_canonical_main_persists_ready_research_before_editorial(tmp_path):
     def assert_research_precedes_editorial(*args, **kwargs):
         files = list(tmp_path.glob("*/runs/*/research.json"))
         assert len(files) == 1
-        assert isinstance(kwargs["research_artifact"], NormalizedResearchArtifact)
+        artifact = kwargs["research_artifact"]
+        assert isinstance(artifact, NormalizedResearchArtifact)
+        assert artifact.evidence[0].claim == "A verified claim"
+        assert artifact.interpretations[0].statement != artifact.evidence[0].claim
+        assert artifact.uncertainties and artifact.contradictions
         return legacy._FAKE_ARTICLE
 
     generated.side_effect = assert_research_precedes_editorial
@@ -363,3 +412,172 @@ def test_provider_userinfo_is_persisted_only_as_sanitized_failed_envelope(lifecy
     assert "unsafe source locator" in raw
     for forbidden in (unsafe, "alice", "hunter2"):
         assert forbidden not in raw
+
+
+def test_canonical_main_holds_honest_exa_retrieval_before_editorial(tmp_path):
+    argv, patches = legacy._base_patches(dry_run=True)
+    patches["PACKAGES_DIR"] = tmp_path
+    del patches["execute_and_persist_research"]
+    transport = provider_tests.RecordingTransport()
+    provider = provider_tests.ExaResearchAdapter(
+        transport,
+        clock=lambda: datetime.now(timezone.utc),
+        uuid_factory=lambda: "11111111-1111-4111-8111-111111111111",
+    )
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main(research_provider=provider) == 1
+
+    patches["generate_article"].assert_not_called()
+    patches["_load_package_images"].assert_not_called()
+    research_path = next(tmp_path.glob("*/runs/*/research.json"))
+    envelope = ResearchResultEnvelope.model_validate_json(research_path.read_bytes())
+    assert envelope.result.outcome is ResearchOperationOutcome.COMPLETE
+    assert envelope.result.artifact.readiness is EvidenceReadiness.NEEDS_REVIEW
+    assert all(
+        item.disposition is EvidenceDisposition.NOT_ASSESSED
+        for item in envelope.result.artifact.evidence
+    )
+    assert not list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+@pytest.mark.parametrize("scenario", [
+    FakeResearchScenario.EMPTY,
+    FakeResearchScenario.TIMEOUT,
+    FakeResearchScenario.AUTHENTICATION,
+    FakeResearchScenario.RATE_LIMITED,
+    FakeResearchScenario.MALFORMED,
+    FakeResearchScenario.UNAVAILABLE,
+])
+def test_canonical_main_persists_typed_provider_failure_before_side_effects(
+    tmp_path, scenario
+):
+    argv, patches = legacy._base_patches(dry_run=True)
+    patches["PACKAGES_DIR"] = tmp_path
+    del patches["execute_and_persist_research"]
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main(research_provider=DeterministicFakeResearchProvider(scenario)) == 1
+
+    patches["generate_article"].assert_not_called()
+    patches["_load_package_images"].assert_not_called()
+    envelope = ResearchResultEnvelope.model_validate_json(
+        next(tmp_path.glob("*/runs/*/research.json")).read_bytes()
+    )
+    assert envelope.result.outcome is ResearchOperationOutcome.FAILED
+    assert envelope.result.artifact is None
+    assert envelope.result.operation_failure is not None
+    assert not list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+def test_two_generation_runs_keep_distinct_immutable_research_artifacts(tmp_path):
+    paths = []
+    for _ in range(2):
+        argv, patches = legacy._base_patches(dry_run=True)
+        patches["PACKAGES_DIR"] = tmp_path
+        del patches["execute_and_persist_research"]
+        with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+            assert main(research_provider=ReadyProvider()) == 0
+        paths = sorted(tmp_path.glob("*/runs/*/research.json"))
+    assert len(paths) == 2
+    envelopes = [ResearchResultEnvelope.model_validate_json(path.read_bytes()) for path in paths]
+    assert envelopes[0].request.run_id != envelopes[1].request.run_id
+    assert paths[0].read_bytes() == envelopes[0].canonical_json().encode()
+    assert paths[1].read_bytes() == envelopes[1].canonical_json().encode()
+
+
+def test_from_package_reuses_original_ready_lineage_without_provider_or_rewrite(tmp_path):
+    generation_argv, generation_patches = legacy._base_patches(dry_run=True)
+    generation_patches["PACKAGES_DIR"] = tmp_path
+    del generation_patches["execute_and_persist_research"]
+    del generation_patches["_save_generated"]
+    with mock.patch.object(sys, "argv", generation_argv), mock.patch.multiple(
+        gap, **generation_patches
+    ):
+        assert main(research_provider=ReadyProvider()) == 0
+
+    research_path = next(tmp_path.glob("*/runs/*/research.json"))
+    source_run_id = research_path.parent.name
+    source_bytes = research_path.read_bytes()
+    package_path = research_path.with_name("generated.json")
+    package_bytes = package_path.read_bytes()
+
+    reuse_argv, reuse_patches = legacy._base_patches(dry_run=True, from_package=True)
+    reuse_argv[-1] = source_run_id
+    reuse_patches["PACKAGES_DIR"] = tmp_path
+    del reuse_patches["load_research_envelope"]
+    del reuse_patches["validate_research_envelope"]
+    provider = mock.MagicMock()
+    with mock.patch.object(sys, "argv", reuse_argv), mock.patch.multiple(
+        gap, **reuse_patches
+    ):
+        assert main(research_provider=provider) == 0
+
+    provider.research.assert_not_called()
+    assert research_path.read_bytes() == source_bytes
+    assert package_path.read_bytes() == package_bytes
+    reuse_patches["_load_package_images"].assert_called_once()
+
+
+@pytest.mark.parametrize("damage", [
+    "missing", "corrupt", "noncanonical", "nonready", "cross_run",
+    "assignment", "signal", "configuration",
+])
+def test_from_package_rejects_invalid_research_lineage_before_side_effects(tmp_path, damage):
+    generation_argv, generation_patches = legacy._base_patches(dry_run=True)
+    generation_patches["PACKAGES_DIR"] = tmp_path
+    del generation_patches["execute_and_persist_research"]
+    del generation_patches["_save_generated"]
+    with mock.patch.object(sys, "argv", generation_argv), mock.patch.multiple(
+        gap, **generation_patches
+    ):
+        assert main(research_provider=ReadyProvider()) == 0
+
+    research_path = next(tmp_path.glob("*/runs/*/research.json"))
+    source_run_id = research_path.parent.name
+    if damage == "missing":
+        research_path.unlink()
+    elif damage == "corrupt":
+        research_path.write_text('{"truncated":')
+    else:
+        envelope = ResearchResultEnvelope.model_validate_json(research_path.read_bytes())
+        payload = envelope.model_dump(mode="json")
+        if damage == "nonready":
+            payload["result"]["artifact"]["readiness"] = "needs_review"
+            payload["result"]["artifact"]["evidence"][0]["disposition"] = "not_assessed"
+        elif damage == "cross_run":
+            replacement = "11111111-1111-4111-8111-111111111111"
+            payload["request"]["run_id"] = replacement
+            payload["result"]["request_run_id"] = replacement
+            payload["result"]["artifact"]["run_id"] = replacement
+        elif damage == "assignment":
+            payload["request"]["assignment_id"] = "other-assignment"
+            payload["result"]["request_assignment_id"] = "other-assignment"
+            payload["result"]["artifact"]["assignment_id"] = "other-assignment"
+        elif damage == "signal":
+            payload["request"]["signal_id"] = "other-signal"
+            payload["result"]["request_signal_id"] = "other-signal"
+            payload["result"]["artifact"]["signal_id"] = "other-signal"
+        elif damage == "configuration":
+            for identity in (
+                payload["request"]["strategy"]["identity"],
+                payload["result"]["artifact"]["configuration_identity"],
+            ):
+                identity["configuration_hash"] = "sha256:" + "0" * 64
+        if damage == "noncanonical":
+            research_path.write_text(json.dumps(payload, indent=2))
+        else:
+            repaired = ResearchResultEnvelope.model_validate(payload)
+            research_path.write_text(repaired.canonical_json())
+
+    reuse_argv, reuse_patches = legacy._base_patches(dry_run=True, from_package=True)
+    reuse_argv[-1] = source_run_id
+    reuse_patches["PACKAGES_DIR"] = tmp_path
+    del reuse_patches["load_research_envelope"]
+    del reuse_patches["validate_research_envelope"]
+    with mock.patch.object(sys, "argv", reuse_argv), mock.patch.multiple(
+        gap, **reuse_patches
+    ):
+        assert main(research_provider=mock.MagicMock()) == 1
+
+    reuse_patches["_load_package_images"].assert_not_called()
+    reuse_patches["generate_article"].assert_not_called()
