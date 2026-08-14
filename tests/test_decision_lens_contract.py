@@ -819,3 +819,65 @@ def test_universal_contract_has_no_business_specific_names():
     )
     for term in forbidden_terms:
         assert term not in source, f"business-specific term {term!r} in universal contract"
+
+
+# --- Review follow-up: exact criterion source/evidence citation integrity ---
+
+
+def test_satisfied_criterion_with_evidence_but_no_sources_is_rejected():
+    payload = _decision_payload()
+    payload["judgment"]["criterion_results"][0]["source_ids"] = []
+    with pytest.raises(
+        ValidationError, match="citing evidence must cite its supporting sources"
+    ):
+        DecisionLensDecisionArtifact.model_validate(payload)
+
+
+def test_criterion_source_declared_in_artifact_but_not_supporting_its_evidence_is_rejected():
+    research_payload = _research_payload()
+    research_payload["sources"].append({
+        "source_id": "source-extra",
+        "locator": {"kind": "url", "value": "https://example.test/extra"},
+        "title": "Additional current-run source",
+        "publisher": "Example",
+        "publication_time": {"status": "unknown", "value": None},
+        "retrieved_at": "2026-08-14T12:00:01Z",
+    })
+    research_payload["evidence"].append({
+        "evidence_id": "evidence-extra",
+        "claim": "An additional accepted claim exists in the current run.",
+        "source_ids": ["source-extra"],
+        "support": [{
+            "source_id": "source-extra",
+            "excerpt": "Additional supporting excerpt.",
+            "location": "page 2",
+        }],
+        "disposition": "accepted",
+    })
+    research = NormalizedResearchArtifact.model_validate(research_payload)
+    payload = _decision_payload()
+    payload["research_digest"] = research_artifact_digest(research)
+    payload["source_ids"] = ["source-sba", "source-extra"]
+    payload["evidence_ids"] = ["evidence-smb", "evidence-extra"]
+    # The criterion cites only evidence-smb (supported by source-sba alone) but
+    # borrows source-extra, which is declared at the artifact level yet does not
+    # support the criterion's cited evidence.
+    payload["judgment"]["criterion_results"][0]["source_ids"] = [
+        "source-sba",
+        "source-extra",
+    ]
+    with pytest.raises(
+        DecisionContractError,
+        match="criterion source IDs must exactly match the sources supporting",
+    ):
+        _validate(payload, research=research)
+
+
+def test_criterion_sources_without_cited_evidence_are_rejected():
+    payload = _decision_payload()
+    payload["judgment"]["criterion_results"][0]["assessment"] = "uncertain"
+    payload["judgment"]["criterion_results"][0]["evidence_ids"] = []
+    with pytest.raises(
+        ValidationError, match="citing sources must cite the evidence they support"
+    ):
+        DecisionLensDecisionArtifact.model_validate(payload)

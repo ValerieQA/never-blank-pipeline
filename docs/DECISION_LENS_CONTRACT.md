@@ -75,6 +75,13 @@ Invariants:
 - criterion citations must be subsets of the decision's declared source and
   evidence IDs, which in turn resolve against the current-run research artifact;
 - a `SATISFIED` criterion requires at least one cited evidence item;
+- a criterion citing evidence must cite its supporting sources, and a criterion
+  citing sources must cite the evidence they support — neither list may be
+  non-empty alone;
+- at the contextual boundary, a criterion's source IDs must exactly match the
+  sources supporting its cited evidence in the current-run research artifact —
+  a criterion cannot borrow an artifact-declared source that does not support
+  its own cited evidence;
 - raw mappings, prompts, provider payloads, credentials, and unrestricted metadata
   remain forbidden.
 

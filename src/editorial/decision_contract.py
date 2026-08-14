@@ -208,6 +208,10 @@ class DecisionCriterionResult(_DecisionModel):
             raise ValueError("criterion source IDs must be unique")
         if self.assessment is CriterionAssessment.SATISFIED and not self.evidence_ids:
             raise ValueError("a satisfied criterion requires cited evidence")
+        if self.evidence_ids and not self.source_ids:
+            raise ValueError("a criterion citing evidence must cite its supporting sources")
+        if self.source_ids and not self.evidence_ids:
+            raise ValueError("a criterion citing sources must cite the evidence they support")
         return self
 
 
@@ -431,6 +435,17 @@ class DecisionLensDecisionArtifact(_DecisionModel):
             raise DecisionContractError(
                 "decision source IDs must exactly match the cited evidence sources"
             )
+        for criterion in self.judgment.criterion_results:
+            criterion_evidence_sources = {
+                source_id
+                for evidence_id in criterion.evidence_ids
+                for source_id in evidence[evidence_id].source_ids
+            }
+            if set(criterion.source_ids) != criterion_evidence_sources:
+                raise DecisionContractError(
+                    "criterion source IDs must exactly match the sources supporting "
+                    "its cited evidence"
+                )
         uncertainty_ids = {item.uncertainty_id for item in research.uncertainties}
         contradiction_ids = {item.contradiction_id for item in research.contradictions}
         for handling in self.judgment.research_condition_handling:
