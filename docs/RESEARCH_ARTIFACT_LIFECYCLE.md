@@ -32,3 +32,10 @@ cannot satisfy the gate. Legacy packages without canonical research lineage bloc
 
 Production credentials remain only at the Exa composition root. They are never
 persisted. Tests inject deterministic providers and make no network or paid calls.
+
+HTTP(S) source authorities must never contain user-info. Client directives are
+rejected before provider construction or transport invocation; provider-returned
+unsafe locators become a bounded sanitized typed failure before source, evidence,
+outcome, envelope, log, temporary file, or `research.json` construction. Unsafe
+URLs are rejected rather than stripped or rewritten. An `@` in a path, query, or
+fragment remains valid because it is outside the authority component.

@@ -562,6 +562,88 @@ def test_existing_domain_label_boundaries_remain_distinct(candidate):
     assert result.artifact.sources[0].locator.value == candidate
 
 
+@pytest.mark.parametrize("path", ["direct", "preferred", "discovery"])
+def test_provider_returned_userinfo_is_sanitized_before_canonical_records(path, caplog):
+    unsafe = "https://alice:hunter2@discovered.example.test/report"
+    transport = RecordingTransport()
+    if path == "direct":
+        directive = _directive(value="https://discovered.example.test/report")
+        transport.content_results[directive.value] = (_document(unsafe),)
+    elif path == "preferred":
+        directive = _directive(
+            "preferred", SourcePriority.PREFERRED, SourceDirectiveKind.DOMAIN,
+            "discovered.example.test",
+        )
+        transport.search_results = [(_document(unsafe),)]
+    else:
+        directive = _directive(
+            "discovery", SourcePriority.DISCOVERY, SourceDirectiveKind.QUERY,
+            "market evidence",
+        )
+        transport.search_results = [(_document(unsafe),)]
+    request = _request(directive)
+    result = execute_research(_adapter(transport), request)
+    assert isinstance(result, FailedResearchResult)
+    assert result.artifact is None
+    assert all(item.status is RetrievalStatus.FAILED for item in result.source_outcomes)
+    serialized = ResearchResultEnvelope(request=request, result=result).canonical_json()
+    combined = serialized + caplog.text
+    for forbidden in (unsafe, "alice", "hunter2"):
+        assert forbidden not in combined
+    assert result.operation_failure.message == "Research provider returned an unsafe source locator"
+
+
+def test_unsafe_discovery_result_with_safe_result_is_honest_partial():
+    unsafe = "https://alice:hunter2@discovered.example.test/unsafe"
+    safe = "https://discovered.example.test/safe"
+    transport = RecordingTransport()
+    transport.search_results = [(_document(unsafe), _document(safe))]
+    request = _request(_directive(
+        "discovery", SourcePriority.DISCOVERY, SourceDirectiveKind.QUERY, "evidence"
+    ))
+    result = execute_research(_adapter(transport), request)
+    assert isinstance(result, PartialResearchResult)
+    assert [item.locator.value for item in result.artifact.sources] == [safe]
+    serialized = ResearchResultEnvelope(request=request, result=result).canonical_json()
+    assert unsafe not in serialized and "hunter2" not in serialized
+
+
+@pytest.mark.parametrize(
+    "safe_url",
+    [
+        "https://example.com/path/@name",
+        "https://example.com/path?mention=@name",
+        "https://example.com/path/%40name",
+        "https://example.com/search?q=a%40b.com",
+        "https://example.com/path#mention=@name",
+    ],
+)
+def test_at_outside_authority_remains_valid_end_to_end(safe_url):
+    transport = RecordingTransport()
+    transport.content_results[safe_url] = (_document(safe_url),)
+    result = execute_research(_adapter(transport), _request(_directive(value=safe_url)))
+    assert isinstance(result, CompleteResearchResult)
+    assert result.artifact.sources[0].locator.value == safe_url
+
+
+@pytest.mark.parametrize(
+    "unsafe_url",
+    [
+        "https://alice:token@example.com/path",
+        "https://alice@example.com/path",
+        "https://alice:@example.com/path",
+        "https://a%6cice:t%6fken@example.com/path",
+        "https://alice%40example.com/path",
+        "HTTPS://a%253Alice:h%2540x@example.com/path",
+    ],
+)
+def test_strict_contracts_reject_structural_authority_userinfo(unsafe_url):
+    with pytest.raises(ValidationError, match="must not contain user-info"):
+        _directive(value=unsafe_url)
+    with pytest.raises(ValidationError, match="must not contain user-info"):
+        SourceLocator(kind=SourceLocatorKind.URL, value=unsafe_url)
+
+
 def test_open_discovery_is_rejected_when_not_allowed():
     with pytest.raises(ValidationError, match="allow_open_discovery"):
         _request(

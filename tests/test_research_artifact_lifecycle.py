@@ -34,6 +34,7 @@ from src.run import ExecutionMode, RunContext
 from src.strategy.business_config import load_business_strategy_configuration
 from src.strategy.execution_context import StrategyExecutionContext
 from tests import test_generate_and_publish as legacy
+from tests import test_research_provider_adapter as provider_tests
 
 
 class ReadyProvider:
@@ -303,3 +304,62 @@ def test_canonical_main_blocks_nonready_before_all_downstream_effects(tmp_path):
     patches["generate_article"].assert_not_called()
     assert list(tmp_path.glob("*/runs/*/research.json"))
     assert not list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+@pytest.mark.parametrize(
+    ("unsafe_url", "secrets"),
+    [
+        ("https://alice:hunter2@example.com/report", ("alice", "hunter2")),
+        ("https://alice@example.com/report", ("alice",)),
+        ("https://alice:@example.com/report", ("alice",)),
+        ("https://a%6cice@example.com/report", ("a%6cice", "alice")),
+        ("https://alice:hunt%65r2@example.com/report", ("alice", "hunt%65r2", "hunter2")),
+        ("HTTPS://a%253Alice:h%2540x@example.com/report", ("a%253Alice", "h%2540x")),
+        ("https://alice%40example.com/report", ("alice%40example.com",)),
+    ],
+)
+def test_canonical_entrypoint_rejects_client_userinfo_before_provider_or_side_effects(
+    tmp_path, capsys, unsafe_url, secrets
+):
+    argv, patches = legacy._base_patches(dry_run=True)
+    signal = dict(legacy._RAW_SIGNAL, SOURCE_URL=unsafe_url)
+    patches["_load_signal"] = mock.MagicMock(return_value=signal)
+    patches["PACKAGES_DIR"] = tmp_path
+    provider = mock.MagicMock()
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main(research_provider=provider) == 1
+    provider.research.assert_not_called()
+    patches["generate_article"].assert_not_called()
+    patches["_load_package_images"].assert_not_called()
+    assert not list(tmp_path.glob("*/runs/*/research.json"))
+    assert not list(tmp_path.glob("*/runs/*/.tmp_*.json"))
+    assert not list(tmp_path.glob("*/runs/*/generated.json"))
+    output = capsys.readouterr().out
+    assert unsafe_url not in output
+    for secret in secrets:
+        assert secret not in output
+
+
+def test_provider_userinfo_is_persisted_only_as_sanitized_failed_envelope(lifecycle):
+    root, strategy, _, assignment, run, request = lifecycle
+    unsafe = "https://alice:hunter2@gartner.com/report"
+    transport = provider_tests.RecordingTransport()
+    transport.content_results[request.source_directives[0].value] = (
+        provider_tests._document(unsafe),
+    )
+    adapter = provider_tests.ExaResearchAdapter(
+        transport,
+        clock=lambda: request.requested_at,
+        uuid_factory=lambda: "11111111-1111-4111-8111-111111111111",
+    )
+    run_dir = root / assignment.assignment_id / "runs" / run.run_id
+    with pytest.raises(ResearchGateError, match="failed"):
+        execute_and_persist_research(
+            adapter, request, run_dir, identity=strategy.identity,
+            run_started_at=run.started_at,
+            clock=lambda: request.requested_at + timedelta(seconds=2),
+        )
+    raw = (run_dir / "research.json").read_text()
+    assert "unsafe source locator" in raw
+    for forbidden in (unsafe, "alice", "hunter2"):
+        assert forbidden not in raw

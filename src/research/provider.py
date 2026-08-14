@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from src.research.evidence import EvidenceReadiness, NormalizedResearchArtifact
 from src.strategy.execution_context import ResearchStrategyView
+from src.research.url_safety import require_safe_url_authority
 
 
 class _ProviderModel(BaseModel):
@@ -122,6 +123,14 @@ class SourceDirective(_ProviderModel):
             raise ValueError("EXCLUDED directives must identify a URL or domain")
         if self.priority is SourcePriority.DISCOVERY and self.kind is not SourceDirectiveKind.QUERY:
             raise ValueError("DISCOVERY directives must contain a search query")
+        if self.kind in {
+            SourceDirectiveKind.URL,
+            SourceDirectiveKind.FEED,
+            SourceDirectiveKind.DOMAIN,
+        }:
+            require_safe_url_authority(
+                self.value, allow_domain=self.kind is SourceDirectiveKind.DOMAIN
+            )
         return self
 
 
@@ -250,6 +259,7 @@ class SourceRetrievalOutcome(_ProviderModel):
 
     @model_validator(mode="after")
     def _status_shape(self) -> "SourceRetrievalOutcome":
+        require_safe_url_authority(self.locator)
         if self.status is RetrievalStatus.RETRIEVED:
             if self.source_id is None or self.retrieved_at is None or self.failure is not None:
                 raise ValueError("retrieved source requires source_id/time and no failure")
