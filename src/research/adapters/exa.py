@@ -11,9 +11,9 @@ import hashlib
 import os
 import uuid
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 
 from src.research.evidence import (
     EvidenceDisposition,
@@ -382,8 +382,8 @@ class ExaResearchAdapter:
             matching = tuple(
                 document
                 for document in found
-                if document.url.rstrip("/").casefold()
-                == directive.value.rstrip("/").casefold()
+                if _canonical_url(document.url).rstrip("/")
+                == _canonical_url(directive.value).rstrip("/")
             )
             if not matching:
                 raise ExaMalformedResponse("Exact source response did not match request")
@@ -418,18 +418,30 @@ class ExaResearchAdapter:
             outcomes.append(_failed_outcome(directive, failure, self._now()))
             return failure
         try:
+            normalized_includes = tuple(_domain(item) for item in include_domains)
             found = self._transport.search(
                 _research_query(request, directive.value),
-                include_domains=include_domains,
+                include_domains=normalized_includes,
                 exclude_domains=_domain_exclusions(excluded),
             )
             retrieved_at = self._now()
-            for document in found:
-                if not _is_excluded(document.url, excluded):
-                    documents.append(
-                        (document, SourceOrigin.PROVIDER_DISCOVERED, directive.directive_id, retrieved_at)
+            usable = tuple(
+                document
+                for document in found
+                if not _is_excluded(document.url, excluded)
+                and (
+                    not normalized_includes
+                    or any(
+                        _is_within_domain(document.url, domain)
+                        for domain in normalized_includes
                     )
-            if not found:
+                )
+            )
+            for document in usable:
+                documents.append(
+                    (document, SourceOrigin.PROVIDER_DISCOVERED, directive.directive_id, retrieved_at)
+                )
+            if not usable:
                 failure = ProviderFailure(
                     code=ProviderFailureCode.SOURCE_RETRIEVAL_FAILED,
                     message="Search produced no usable sources",
@@ -457,7 +469,11 @@ class ExaResearchAdapter:
         unique: dict[str, tuple[ExaDocument, SourceOrigin, str | None, datetime]] = {}
         for item in documents:
             if not _is_excluded(item[0].url, excluded):
-                unique.setdefault(item[0].url, item)
+                canonical_url = _canonical_url(item[0].url)
+                unique.setdefault(
+                    canonical_url,
+                    (replace(item[0], url=canonical_url), *item[1:]),
+                )
         return tuple(unique.values())
 
     @staticmethod
@@ -549,22 +565,46 @@ def _digest(value: str) -> str:
 
 def _domain(value: str) -> str:
     parsed = urlsplit(value if "://" in value else f"https://{value}")
-    return (parsed.hostname or value).casefold().removeprefix("www.")
+    return (parsed.hostname or value).casefold().rstrip(".").removeprefix("www.")
+
+
+def _canonical_url(value: str) -> str:
+    """Normalize only URL syntax that identifies the same network resource."""
+
+    parsed = urlsplit(value)
+    if not parsed.scheme or not parsed.hostname:
+        return value
+    hostname = parsed.hostname.casefold().rstrip(".")
+    host = f"[{hostname}]" if ":" in hostname else hostname
+    port = f":{parsed.port}" if parsed.port is not None else ""
+    userinfo, separator, _host_port = parsed.netloc.rpartition("@")
+    authority = f"{userinfo}@" if separator else ""
+    return urlunsplit(
+        (
+            parsed.scheme.casefold(),
+            f"{authority}{host}{port}",
+            parsed.path,
+            parsed.query,
+            parsed.fragment,
+        )
+    )
+
+
+def _is_within_domain(url_or_domain: str, expected_domain: str) -> bool:
+    candidate = _domain(url_or_domain)
+    expected = _domain(expected_domain)
+    return candidate == expected or candidate.endswith("." + expected)
 
 
 def _is_excluded(url_or_domain: str, exclusions: Sequence[str]) -> bool:
-    candidate_domain = _domain(url_or_domain)
-    candidate_url = url_or_domain.rstrip("/").casefold()
+    candidate_url = _canonical_url(url_or_domain).rstrip("/")
     for blocked in exclusions:
         parsed = urlsplit(blocked)
         if parsed.scheme and parsed.path.rstrip("/"):
-            if candidate_url == blocked.rstrip("/").casefold():
+            if candidate_url == _canonical_url(blocked).rstrip("/"):
                 return True
         else:
-            blocked_domain = _domain(blocked)
-            if candidate_domain == blocked_domain or candidate_domain.endswith(
-                "." + blocked_domain
-            ):
+            if _is_within_domain(url_or_domain, blocked):
                 return True
     return False
 

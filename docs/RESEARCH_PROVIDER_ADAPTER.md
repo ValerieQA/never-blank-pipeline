@@ -42,6 +42,13 @@ Directives implement the accepted order:
    and contradictions. It runs only when the request explicitly permits it.
 4. `EXCLUDED` is a URL or domain that must not be queried or returned.
 
+Domain policy uses symmetric canonical hostname comparison: hostnames are
+case-insensitive and trailing DNS root dots are removed before local include or
+exclude checks. Label boundaries remain significant, so a suffix such as
+`blocked.example.com.evil.test` is not treated as `blocked.example.com`.
+Equivalent URL spellings that differ only by hostname case or a trailing root
+dot share one canonical source identity and cannot create duplicate evidence.
+
 Per-source outcomes retain a typed `client_supplied` or
 `provider_discovered` origin. Client input determines where retrieval starts;
 it is never automatically treated as verified evidence.

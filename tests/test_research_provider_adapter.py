@@ -379,6 +379,189 @@ def test_excluded_domains_are_passed_to_search_and_filtered_from_results():
     ]
 
 
+@pytest.mark.parametrize(
+    "blocked_url",
+    [
+        "https://blocked.example.com./report",
+        "https://BLOCKED.EXAMPLE.COM./report",
+        "https://blocked.example.com.:443/report",
+    ],
+)
+def test_discovery_rejects_trailing_dot_excluded_host_end_to_end(blocked_url):
+    transport = RecordingTransport()
+    transport.search_results = [(_document(blocked_url),)]
+    request = _request(
+        _directive(
+            "excluded",
+            SourcePriority.EXCLUDED,
+            SourceDirectiveKind.DOMAIN,
+            "blocked.example.com",
+        ),
+        _directive(
+            "discovery",
+            SourcePriority.DISCOVERY,
+            SourceDirectiveKind.QUERY,
+            "market evidence",
+        ),
+    )
+    result = execute_research(_adapter(transport), request)
+    assert isinstance(result, FailedResearchResult)
+    assert result.artifact is None
+    assert all(item.locator != blocked_url for item in result.source_outcomes)
+
+
+def test_suffix_attack_remains_a_distinct_allowed_host_end_to_end():
+    attack_like_but_distinct = "https://blocked.example.com.evil.test/report"
+    transport = RecordingTransport()
+    transport.search_results = [(_document(attack_like_but_distinct),)]
+    request = _request(
+        _directive(
+            "excluded",
+            SourcePriority.EXCLUDED,
+            SourceDirectiveKind.DOMAIN,
+            "blocked.example.com",
+        ),
+        _directive(
+            "discovery",
+            SourcePriority.DISCOVERY,
+            SourceDirectiveKind.QUERY,
+            "market evidence",
+        ),
+    )
+    result = execute_research(_adapter(transport), request)
+    assert isinstance(result, CompleteResearchResult)
+    assert result.artifact.sources[0].locator.value == attack_like_but_distinct
+
+
+def test_trailing_dot_url_spellings_deduplicate_to_one_canonical_source():
+    transport = RecordingTransport()
+    transport.search_results = [
+        (
+            _document("https://pub.example.com/report"),
+            _document("https://pub.example.com./report"),
+        )
+    ]
+    request = _request(
+        _directive(
+            "discovery",
+            SourcePriority.DISCOVERY,
+            SourceDirectiveKind.QUERY,
+            "market evidence",
+        )
+    )
+    result = execute_research(_adapter(transport), request)
+    assert isinstance(result, CompleteResearchResult)
+    assert len(result.source_outcomes) == 1
+    assert len(result.artifact.sources) == 1
+    assert len(result.artifact.evidence) == 1
+    assert result.artifact.sources[0].locator.value == (
+        "https://pub.example.com/report"
+    )
+
+
+def test_canonical_identity_preserves_meaningful_url_distinctions():
+    urls = (
+        "https://pub.example.com/report",
+        "https://pub.example.com/other",
+        "https://pub.example.com/report?edition=2",
+        "http://pub.example.com/report",
+        "https://pub.example.com:8443/report",
+    )
+    transport = RecordingTransport()
+    transport.search_results = [(tuple(_document(url) for url in urls))]
+    request = _request(
+        _directive(
+            "discovery",
+            SourcePriority.DISCOVERY,
+            SourceDirectiveKind.QUERY,
+            "market evidence",
+        )
+    )
+    result = execute_research(_adapter(transport), request)
+    assert isinstance(result, CompleteResearchResult)
+    assert tuple(item.locator.value for item in result.artifact.sources) == urls
+    assert len({item.source_id for item in result.artifact.sources}) == len(urls)
+
+
+def test_direct_path_rejects_trailing_dot_form_of_excluded_host():
+    transport = RecordingTransport()
+    blocked_url = "https://blocked.example.com./report"
+    request = _request(
+        _directive(
+            "excluded",
+            SourcePriority.EXCLUDED,
+            SourceDirectiveKind.DOMAIN,
+            "blocked.example.com",
+        ),
+        _directive(
+            "required",
+            SourcePriority.REQUIRED,
+            SourceDirectiveKind.URL,
+            blocked_url,
+        ),
+    )
+    result = execute_research(_adapter(transport), request)
+    assert isinstance(result, FailedResearchResult)
+    assert transport.calls == []
+    assert result.source_outcomes[0].locator == blocked_url
+
+
+def test_preferred_domain_path_filters_trailing_dot_excluded_result_locally():
+    transport = RecordingTransport()
+    transport.search_results = [
+        (_document("https://blocked.example.com./report"),)
+    ]
+    request = _request(
+        _directive(
+            "excluded",
+            SourcePriority.EXCLUDED,
+            SourceDirectiveKind.DOMAIN,
+            "blocked.example.com.",
+        ),
+        _directive(
+            "preferred",
+            SourcePriority.PREFERRED,
+            SourceDirectiveKind.DOMAIN,
+            "PREFERRED.EXAMPLE.COM.",
+        ),
+    )
+    result = execute_research(_adapter(transport), request)
+    assert isinstance(result, FailedResearchResult)
+    assert transport.calls[0][2] == ("preferred.example.com",)
+    assert transport.calls[0][3] == ("blocked.example.com",)
+    assert result.artifact is None
+
+
+@pytest.mark.parametrize(
+    "candidate",
+    [
+        "https://notblocked.example.com/report",
+        "https://blocked-example.com/report",
+        "https://example.com/report",
+    ],
+)
+def test_existing_domain_label_boundaries_remain_distinct(candidate):
+    transport = RecordingTransport()
+    transport.search_results = [(_document(candidate),)]
+    request = _request(
+        _directive(
+            "excluded",
+            SourcePriority.EXCLUDED,
+            SourceDirectiveKind.DOMAIN,
+            "blocked.example.com",
+        ),
+        _directive(
+            "discovery",
+            SourcePriority.DISCOVERY,
+            SourceDirectiveKind.QUERY,
+            "market evidence",
+        ),
+    )
+    result = execute_research(_adapter(transport), request)
+    assert isinstance(result, CompleteResearchResult)
+    assert result.artifact.sources[0].locator.value == candidate
+
+
 def test_open_discovery_is_rejected_when_not_allowed():
     with pytest.raises(ValidationError, match="allow_open_discovery"):
         _request(
