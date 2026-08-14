@@ -45,6 +45,7 @@ from src.research.provider import (
     SourcePriority,
     SourceRetrievalOutcome,
 )
+from src.research.url_safety import UnsafeResearchUrl, require_safe_url_authority
 
 
 EXA_PROVIDER_ID = "exa"
@@ -379,6 +380,13 @@ class ExaResearchAdapter:
             found = self._transport.contents((directive.value,))
             if not found:
                 raise ExaUnavailable("Exact source was not retrieved")
+            try:
+                for document in found:
+                    require_safe_url_authority(document.url)
+            except UnsafeResearchUrl:
+                failure = _unsafe_url_failure()
+                outcomes.append(_failed_outcome(directive, failure, self._now()))
+                return failure
             matching = tuple(
                 document
                 for document in found
@@ -425,9 +433,21 @@ class ExaResearchAdapter:
                 exclude_domains=_domain_exclusions(excluded),
             )
             retrieved_at = self._now()
+            safe_found: list[ExaDocument] = []
+            unsafe_found = False
+            for document in found:
+                try:
+                    require_safe_url_authority(document.url)
+                    safe_found.append(document)
+                except UnsafeResearchUrl:
+                    unsafe_found = True
+            if unsafe_found:
+                outcomes.append(
+                    _failed_outcome(directive, _unsafe_url_failure(), self._now())
+                )
             usable = tuple(
                 document
-                for document in found
+                for document in safe_found
                 if not _is_excluded(document.url, excluded)
                 and (
                     not normalized_includes
@@ -442,12 +462,17 @@ class ExaResearchAdapter:
                     (document, SourceOrigin.PROVIDER_DISCOVERED, directive.directive_id, retrieved_at)
                 )
             if not usable:
-                failure = ProviderFailure(
-                    code=ProviderFailureCode.SOURCE_RETRIEVAL_FAILED,
-                    message="Search produced no usable sources",
-                    retryable=False,
+                failure = (
+                    _unsafe_url_failure()
+                    if unsafe_found
+                    else ProviderFailure(
+                        code=ProviderFailureCode.SOURCE_RETRIEVAL_FAILED,
+                        message="Search produced no usable sources",
+                        retryable=False,
+                    )
                 )
-                outcomes.append(_failed_outcome(directive, failure, self._now()))
+                if not unsafe_found:
+                    outcomes.append(_failed_outcome(directive, failure, self._now()))
                 return failure
             return None
         except ExaTransportError as exc:
@@ -571,22 +596,29 @@ def _domain(value: str) -> str:
 def _canonical_url(value: str) -> str:
     """Normalize only URL syntax that identifies the same network resource."""
 
+    require_safe_url_authority(value)
     parsed = urlsplit(value)
     if not parsed.scheme or not parsed.hostname:
         return value
     hostname = parsed.hostname.casefold().rstrip(".")
     host = f"[{hostname}]" if ":" in hostname else hostname
     port = f":{parsed.port}" if parsed.port is not None else ""
-    userinfo, separator, _host_port = parsed.netloc.rpartition("@")
-    authority = f"{userinfo}@" if separator else ""
     return urlunsplit(
         (
             parsed.scheme.casefold(),
-            f"{authority}{host}{port}",
+            f"{host}{port}",
             parsed.path,
             parsed.query,
             parsed.fragment,
         )
+    )
+
+
+def _unsafe_url_failure() -> ProviderFailure:
+    return ProviderFailure(
+        code=ProviderFailureCode.MALFORMED_RESPONSE,
+        message="Research provider returned an unsafe source locator",
+        retryable=False,
     )
 
 

@@ -18,6 +18,7 @@ not publish a generic article to fill the gap.
 """
 
 from typing import Callable, Mapping
+from src.research.evidence import NormalizedResearchArtifact
 
 from src.editorial.pattern_extractor import extract_pattern, SignalRejectedError
 from src.editorial.decision_lens_lite import generate_decision_lens
@@ -68,6 +69,7 @@ def generate_article(
     wix_strategy: WixStrategyView | None = None,
     linkedin_strategy: LinkedInStrategyView | None = None,
     audience_selection: AudienceSelection | None = None,
+    research_artifact: NormalizedResearchArtifact | None = None,
 ) -> dict:
     """
     Run the full Editorial Engine V2 pipeline for one enriched signal.
@@ -134,7 +136,7 @@ def generate_article(
     else:
         decision_lens = _run_stage(
             "decision_lens_lite", generate_decision_lens,
-            enriched, typed_strategy, audience_selection,
+            enriched, typed_strategy, audience_selection, research_artifact,
         )
     spine = _run_stage("narrative_spine", build_narrative_spine, decision_lens, enriched)
     hook = _run_stage("hook_engine", generate_hook, spine, decision_lens, enriched)

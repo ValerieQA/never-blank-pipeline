@@ -20,6 +20,7 @@ from src.strategy.execution_context import (
     AudienceSelection,
     DecisionLensEditorialStrategyView,
 )
+from src.research.evidence import NormalizedResearchArtifact
 
 from src.utils.llm_client import chat, model_enrich
 from src.utils.logger import get_logger
@@ -118,6 +119,7 @@ def generate_decision_lens(
     signal: dict,
     strategy_view: DecisionLensEditorialStrategyView | None = None,
     audience: AudienceSelection | None = None,
+    research_artifact: NormalizedResearchArtifact | None = None,
 ) -> dict:
     """
     Produce a Decision Lens output dict focused on the owner's presence system.
@@ -132,6 +134,11 @@ def generate_decision_lens(
         if audience is None:
             raise ValueError("Decision Lens requires an explicit audience selection")
         editorial = strategy_view.brand_editorial
+        evidence_boundary = [
+            {"evidence_id": item.evidence_id, "claim": item.claim,
+             "source_ids": item.source_ids, "disposition": item.disposition.value}
+            for item in research_artifact.evidence
+        ] if research_artifact is not None else []
         strategy_section = f"""
 Configured business strategy (treat every list as a boundary, not source material):
 business_positioning: {strategy_view.positioning.statement}
@@ -145,6 +152,8 @@ prohibited_claims: {json.dumps(editorial.prohibited_claims, ensure_ascii=False)}
 factual_legal_reputational_restrictions: {json.dumps(editorial.legal_factual_reputational_restrictions, ensure_ascii=False)}
 content_objectives: {json.dumps(strategy_view.content.objectives, ensure_ascii=False)}
 content_territories: {json.dumps(strategy_view.content.territories, ensure_ascii=False)}
+validated_normalized_research_evidence: {json.dumps(evidence_boundary, ensure_ascii=False)}
+Use only this normalized evidence boundary for factual support. Do not invent provider data or unsupported outcomes.
 """
 
     user = f"""HEADLINE: {signal.get('HEADLINE', '')}

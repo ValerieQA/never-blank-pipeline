@@ -23,6 +23,7 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from src.strategy.execution_context import ConfigurationIdentity
+from src.research.url_safety import require_safe_url_authority
 
 
 RESEARCH_ARTIFACT_SCHEMA_VERSION = "1.0"
@@ -133,6 +134,7 @@ class SourceLocator(_ContractModel):
     @model_validator(mode="after")
     def _url_is_normalized_web_location(self) -> Self:
         if self.kind is SourceLocatorKind.URL:
+            require_safe_url_authority(self.value)
             parsed = urlsplit(self.value)
             if parsed.scheme not in {"http", "https"} or not parsed.netloc:
                 raise ValueError("URL source locator must be an absolute HTTP(S) URL")
