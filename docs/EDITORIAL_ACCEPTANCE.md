@@ -85,13 +85,22 @@ malformed/empty revised article, revision transport failure, missing or
 invalid rubric identity. Raw provider output and exception messages never
 cross the boundary — failures carry evaluator-authored bounded detail only.
 
-## Audit minimum
+## Audit
 
-For every accepted run, `generated.json` carries an `editorial_acceptance`
-record: rubric identity, whether a revision occurred, the full initial
-review, and the full final review (null when no revision ran). Blocked runs
-print the disposition and failed criteria and persist nothing new — retry
-follows existing new-run semantics.
+Every run that reaches editorial acceptance — accepted **or blocked** —
+persists one immutable run-scoped `editorial_acceptance.json` (create-once,
+same atomic protocol as the other run artifacts): run and signal identity,
+rubric identity, `accepted`, `revised`, `final_disposition`, the full initial
+review, and the full final review (null when no revision ran). This is the
+single source of truth for the editorial decision history; `generated.json`
+carries no duplicate audit record and continues to exist only for accepted,
+publishable articles.
+
+Persisting the audit is not permission to continue: blocked outcomes still
+produce zero packaging and publication effects (no `generated.json`, no Wix,
+no LinkedIn, no publication/history writes). Runs that fail before a verdict
+exists (reviewer/revision transport failure, malformed output) stop with
+nothing to audit. Retry follows existing new-run semantics.
 
 ## Production transports and testing
 

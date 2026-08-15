@@ -100,7 +100,19 @@ def _generated(tmp_path) -> dict:
     return json.loads(next(tmp_path.glob("*/runs/*/generated.json")).read_text())
 
 
+def _audit(tmp_path) -> dict:
+    """The run-scoped editorial acceptance audit record (single source of truth)."""
+
+    records = list(tmp_path.glob("*/runs/*/editorial_acceptance.json"))
+    assert len(records) == 1
+    data = json.loads(records[0].read_text())
+    assert data["run_id"] == records[0].parent.name  # run identity preserved
+    return data
+
+
 def _assert_no_publication_effects(tmp_path, patches):
+    """Zero packaging/publication effects — the audit artifact is NOT one of them."""
+
     assert not patches["WixPublisher"].called
     assert not patches["LinkedInPublisher"].called
     assert not patches["append_published_entry"].called
@@ -120,11 +132,16 @@ def test_strong_article_is_accepted_and_continues(tmp_path):
     assert code == 0
     assert len(reviewer.calls) == 1
     assert revisor.calls == []  # no revision for an accepted article
-    record = _generated(tmp_path)["editorial_acceptance"]
+    record = _audit(tmp_path)
     assert record["rubric"] == RUBRIC.identity
+    assert record["accepted"] is True
     assert record["revised"] is False
+    assert record["final_disposition"] == "accept"
     assert record["initial_review"]["disposition"] == "accept"
     assert record["final_review"] is None
+    # accepted path still produces the publishable package, with the audit in
+    # exactly one place (no duplicate source of truth inside generated.json)
+    assert "editorial_acceptance" not in _generated(tmp_path)
 
 
 def test_weak_article_revised_once_then_accepted_continues(tmp_path):
@@ -149,8 +166,10 @@ def test_weak_article_revised_once_then_accepted_continues(tmp_path):
     # the revised article continued into the generated package
     generated = _generated(tmp_path)
     assert "Sharpened revised article body." in generated["blog_article"]
-    record = generated["editorial_acceptance"]
+    record = _audit(tmp_path)
     assert record["revised"] is True
+    assert record["accepted"] is True
+    assert record["final_disposition"] == "accept"
     assert record["initial_review"]["disposition"] == "revise"
     assert record["final_review"]["disposition"] == "accept"
 
@@ -163,13 +182,20 @@ def test_weak_article_revised_once_then_accepted_continues(tmp_path):
 def test_revision_that_still_fails_review_stops(tmp_path):
     reviewer = FakeReviewTransport(
         _review_payload(disposition="revise", failed=["voice"]),
-        _review_payload(disposition="revise", failed=["voice"]),
+        _review_payload(disposition="revise", failed=["voice", "generic-filler"]),
     )
     revisor = FakeRevisionTransport()
     code, patches = _run_entry(tmp_path, reviewer=reviewer, revisor=revisor, dry_run=False)
     assert code == 1
     assert len(revisor.calls) == 1  # never a second automatic revision
     _assert_no_publication_effects(tmp_path, patches)
+    # both reviews survive persistence even though the run was blocked
+    record = _audit(tmp_path)
+    assert record["accepted"] is False
+    assert record["revised"] is True
+    assert record["final_disposition"] == "revise"
+    assert record["initial_review"]["failed_criterion_ids"] == ["voice"]
+    assert record["final_review"]["failed_criterion_ids"] == ["voice", "generic-filler"]
 
 
 def test_rejection_after_revision_stops(tmp_path):
@@ -177,9 +203,19 @@ def test_rejection_after_revision_stops(tmp_path):
         _review_payload(disposition="revise", failed=["insight"]),
         _review_payload(disposition="reject", failed=["insight", "reader-value"]),
     )
-    code, patches = _run_entry(tmp_path, reviewer=reviewer, dry_run=False)
+    revisor = FakeRevisionTransport()
+    code, patches = _run_entry(tmp_path, reviewer=reviewer, revisor=revisor, dry_run=False)
     assert code == 1
+    assert len(revisor.calls) == 1  # exactly one revision before the rejection
     _assert_no_publication_effects(tmp_path, patches)
+    # the full editorial history of the blocked run is preserved
+    record = _audit(tmp_path)
+    assert record["accepted"] is False
+    assert record["revised"] is True
+    assert record["final_disposition"] == "reject"
+    assert record["initial_review"]["disposition"] == "revise"
+    assert record["final_review"]["disposition"] == "reject"
+    assert record["final_review"]["failed_criterion_ids"] == ["insight", "reader-value"]
 
 
 def test_initial_reject_stops_with_zero_revision_calls(tmp_path):
@@ -191,6 +227,11 @@ def test_initial_reject_stops_with_zero_revision_calls(tmp_path):
     assert code == 1
     assert revisor.calls == []  # REJECT never triggers automatic revision
     _assert_no_publication_effects(tmp_path, patches)
+    record = _audit(tmp_path)
+    assert record["accepted"] is False
+    assert record["revised"] is False
+    assert record["final_disposition"] == "reject"
+    assert record["final_review"] is None
 
 
 # ===========================================================================

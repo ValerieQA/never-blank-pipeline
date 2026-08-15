@@ -316,26 +316,28 @@ def run_editorial_acceptance(
         reviewer, rubric, article_body=article_body, research=research, run_id=run_id
     )
 
-    def _audit(final: EditorialReview | None, revised: bool) -> dict:
-        record: dict = {
+    def _audit(final: EditorialReview | None, revised: bool, accepted: bool) -> dict:
+        effective = final if final is not None else initial
+        return {
             "rubric": rubric.identity,
+            "accepted": accepted,
             "revised": revised,
+            "final_disposition": effective.disposition.value,
             "initial_review": initial.model_dump(mode="json"),
             "final_review": None if final is None else final.model_dump(mode="json"),
         }
-        return record
 
     if initial.disposition is EditorialDisposition.ACCEPT:
         return EditorialAcceptanceOutcome(
             accepted=True, revised=False, final_article_body=article_body,
             initial_review=initial, final_review=None,
-            audit=_audit(None, False),
+            audit=_audit(None, False, True),
         )
     if initial.disposition is EditorialDisposition.REJECT:
         return EditorialAcceptanceOutcome(
             accepted=False, revised=False, final_article_body=article_body,
             initial_review=initial, final_review=None,
-            audit=_audit(None, False),
+            audit=_audit(None, False, False),
         )
 
     # REVISE: exactly one controlled revision, then exactly one recheck.
@@ -345,13 +347,14 @@ def run_editorial_acceptance(
     final = _review_article(
         reviewer, rubric, article_body=revised_body, research=research, run_id=run_id
     )
+    accepted = final.disposition is EditorialDisposition.ACCEPT
     return EditorialAcceptanceOutcome(
-        accepted=final.disposition is EditorialDisposition.ACCEPT,
+        accepted=accepted,
         revised=True,
         final_article_body=revised_body,
         initial_review=initial,
         final_review=final,
-        audit=_audit(final, True),
+        audit=_audit(final, True, accepted),
     )
 
 

@@ -4,6 +4,7 @@ Run-scoped artifact addressing for Release 1.
 Directory layout:
     <packages_dir>/<signal_id>/runs/<run_id>/research.json
     <packages_dir>/<signal_id>/runs/<run_id>/decision.json
+    <packages_dir>/<signal_id>/runs/<run_id>/editorial_acceptance.json
     <packages_dir>/<signal_id>/runs/<run_id>/generated.json
     <packages_dir>/<signal_id>/runs/<run_id>/business_strategy.json
     <packages_dir>/<signal_id>/runs/<run_id>/publication_results.json
@@ -197,6 +198,16 @@ def load_decision_json(packages_dir: Path, signal_id: str, source_run_id: str) -
             "is required before any downstream work."
         )
     return path.read_bytes()
+
+
+def write_editorial_acceptance_json(run_dir: Path, data: dict) -> None:
+    """Commit the run's editorial acceptance audit record exactly once.
+
+    Written for every run that reaches editorial acceptance — accepted or
+    blocked — so the editorial decision history stays auditable even when the
+    run stops before a publishable generated package exists.
+    """
+    atomic_write_json(run_dir / "editorial_acceptance.json", data)
 
 
 def write_generated_json(run_dir: Path, data: dict) -> None:

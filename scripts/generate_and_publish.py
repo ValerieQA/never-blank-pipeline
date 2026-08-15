@@ -43,8 +43,14 @@ Artifact layout (Task #28)
 --------------------------
   reports/content_packages/<signal_id>/runs/<run_id>/research.json
   reports/content_packages/<signal_id>/runs/<run_id>/decision.json
+  reports/content_packages/<signal_id>/runs/<run_id>/editorial_acceptance.json
   reports/content_packages/<signal_id>/runs/<run_id>/generated.json
   reports/content_packages/<signal_id>/runs/<run_id>/publication_results.json
+
+  editorial_acceptance.json — editorial audit record written once for every
+                         run that reaches editorial acceptance, accepted or
+                         blocked (rubric identity, both reviews, disposition).
+                         generated.json exists only for accepted articles.
 
   decision.json        — canonical Issue #58 Decision Lens artifact, written
                          exactly once after research, before any editorial work.
@@ -165,6 +171,7 @@ from src.artifacts import (
     load_run_generated,
     load_business_strategy_snapshot,
     resolve_run_dir,
+    write_editorial_acceptance_json,
     write_generated_json,
     write_business_strategy_snapshot,
     write_publication_results_json,
@@ -1089,6 +1096,24 @@ def main(
         except (EditorialAcceptanceError, ValueError, OSError) as exc:
             print(f"  ERROR: editorial acceptance blocked publication: {exc}")
             return 1
+        # The editorial verdict is persisted for every run that reaches
+        # acceptance — accepted or blocked — so the decision history stays
+        # auditable. Persisting the audit is NOT permission to continue: the
+        # accepted check below still stops every non-ACCEPT outcome before
+        # any packaging or publication effect.
+        try:
+            write_editorial_acceptance_json(
+                run_dir,
+                {
+                    "run_id": run_ctx.run_id,
+                    "signal_id": signal_id,
+                    **_acceptance.audit,
+                },
+            )
+        except (ArtifactCollisionError, OSError) as exc:
+            print(f"  ERROR: editorial acceptance audit could not be persisted: {exc}")
+            return 1
+        print(f"  ✓  editorial audit: {run_dir / 'editorial_acceptance.json'}")
         if not _acceptance.accepted:
             _final = _acceptance.final_review or _acceptance.initial_review
             print(
@@ -1168,9 +1193,6 @@ def main(
             "instagram_caption":   instagram_text,
             "threads_sequence":    threads_seq,
             "telegram_text":       telegram_text,
-            # Story #13 audit minimum: rubric identity plus the initial and
-            # final editorial reviews (final is null when no revision ran).
-            "editorial_acceptance": _acceptance.audit,
         }
         try:
             write_generated_json(run_dir, _generated_data)
