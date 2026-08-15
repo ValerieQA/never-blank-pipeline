@@ -58,11 +58,30 @@ upload failure, validation failure, missing — never collapsed into `None`).
 
 ## Wiring
 
-The gate runs in both canonical branches of the entrypoint — fresh
-generation (after the LinkedIn composition gate, before `generated.json`)
-and `--from-package` reuse (after image preparation, before publication).
-`VisualArtifactRequest` is now active (`blocked=False`); rendering continues
-to use the existing image pipeline and the master→derivative architecture.
+The gate runs in both canonical branches of the entrypoint. Fresh
+generation validates and persists the passport after the LinkedIn
+composition gate, before `generated.json`; the record is its own origin
+(`origin_run_id == run_id`, `reused: false`). `VisualArtifactRequest` is now
+active (`blocked=False`); rendering continues to use the existing image
+pipeline and the master→derivative architecture.
+
+## Truthful reuse provenance (`--from-package`)
+
+`--from-package` is a **new publication run** reusing artifacts produced by
+the original generation run — a reused visual is never represented as
+produced by the publication run. The only accepted provenance source is the
+originating run's persisted `visual_assets.json`:
+
+- origin is never inferred from `signal_id`, content shape, or the legacy
+  signal-scoped image mapping (which the reuse path no longer consults);
+- the source passport is strictly validated: its `run_id` must equal the
+  requested source run (cross-run visual laundering fails closed) and its
+  `source_article_digest` must match the reused article content;
+- the publication run persists a reuse passport with `run_id` = publication
+  run, `origin_run_id` = the true producing run, `reused: true`, and exactly
+  the derivatives the source passport proves — publication uses those URLs;
+- a source run without a trustworthy passport (all pre-#96 legacy runs)
+  fails closed before any publication effect.
 
 ## Deferred live verification
 

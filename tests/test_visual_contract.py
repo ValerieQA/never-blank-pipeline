@@ -268,3 +268,105 @@ def test_entrypoint_fails_closed_for_attempted_invalid_linkedin_visual(tmp_path)
     assert code == 1
     assert not list(tmp_path.glob("*/runs/*/generated.json"))
     assert not patches["LinkedInPublisher"].called
+
+
+# ===========================================================================
+# Review follow-up: truthful --from-package reuse provenance
+# ===========================================================================
+
+
+def test_fresh_generation_record_is_its_own_origin(tmp_path):
+    record = _build(tmp_path)
+    assert record.reused is False
+    assert record.origin_run_id == record.run_id
+
+
+def _reuse_entry(tmp_path, source_run_id):
+    """Real canonical --from-package run with the real visual reuse gate."""
+
+    from tests.test_decision_lifecycle import _reuse_patches
+
+    argv, patches = _reuse_patches(tmp_path, source_run_id)
+    del patches["load_visual_assets_json"]        # exercise the real seam
+    del patches["reuse_visual_assets_record"]
+    del patches["write_visual_assets_json"]
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main()
+    return code, patches
+
+
+def _build_source_run_with_visuals(tmp_path):
+    pimgs = _pimgs(tmp_path)
+    code, _ = _entry(tmp_path, pimgs=pimgs)
+    assert code == 0
+    passport = next(tmp_path.glob("*/runs/*/visual_assets.json"))
+    return passport.parent.name
+
+
+def test_from_package_reuse_preserves_true_visual_origin(tmp_path):
+    """Mandated: publication run B reuses run A's visuals with truthful lineage."""
+
+    run_a = _build_source_run_with_visuals(tmp_path)
+    code, _ = _reuse_entry(tmp_path, run_a)
+    assert code == 0
+    records = {
+        p.parent.name: json.loads(p.read_text())
+        for p in tmp_path.glob("*/runs/*/visual_assets.json")
+    }
+    assert len(records) == 2
+    run_b = next(r for r in records if r != run_a)
+    reuse = records[run_b]
+    # publication run stays B; visual origin stays A; B never claims production
+    assert reuse["run_id"] == run_b
+    assert reuse["origin_run_id"] == run_a
+    assert reuse["reused"] is True
+    original = records[run_a]
+    assert original["origin_run_id"] == run_a and original["reused"] is False
+    # article/source linkage and derivatives match run A's passport
+    assert reuse["source_article_digest"] == original["source_article_digest"]
+    assert reuse["derivatives"] == original["derivatives"]
+    VisualAssetsRecord.model_validate(reuse)  # strict contract holds
+
+
+def test_from_package_fails_closed_without_source_visual_passport(tmp_path):
+    """Mandated: unprovable legacy reuse fails closed with no fabricated record."""
+
+    run_a = _build_source_run_with_visuals(tmp_path)
+    passport = next(tmp_path.glob(f"*/runs/{run_a}/visual_assets.json"))
+    passport.unlink()  # legacy-style source run without a visual passport
+
+    code, patches = _reuse_entry(tmp_path, run_a)
+    assert code == 1
+    # no fabricated visual_assets.json claiming the publication run as origin
+    assert not list(tmp_path.glob("*/runs/*/visual_assets.json"))
+    assert not patches["WixPublisher"].called
+    assert not patches["LinkedInPublisher"].called
+    assert not patches["append_published_entry"].called
+
+
+def test_cross_run_visual_laundering_is_rejected(tmp_path):
+    """Mandated: run C's passport is not accepted for run A merely because
+    signal/content shape matches."""
+
+    run_a = _build_source_run_with_visuals(tmp_path)
+    # a second, independent fresh run C of the same signal/content
+    pimgs = _pimgs(tmp_path)
+    code, _ = _entry(tmp_path, pimgs=pimgs)
+    assert code == 0
+    run_c = next(
+        p.parent.name
+        for p in tmp_path.glob("*/runs/*/visual_assets.json")
+        if p.parent.name != run_a
+    )
+    # substitute C's passport into A's namespace (same signal, same digest)
+    passport_a = next(tmp_path.glob(f"*/runs/{run_a}/visual_assets.json"))
+    passport_c = next(tmp_path.glob(f"*/runs/{run_c}/visual_assets.json"))
+    passport_a.unlink()
+    passport_a.write_bytes(passport_c.read_bytes())
+
+    code, patches = _reuse_entry(tmp_path, run_a)
+    assert code == 1
+    assert not patches["WixPublisher"].called
+    assert not patches["LinkedInPublisher"].called

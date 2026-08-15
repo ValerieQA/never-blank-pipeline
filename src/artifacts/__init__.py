@@ -215,6 +215,23 @@ def write_visual_assets_json(run_dir: Path, data: dict) -> None:
     atomic_write_json(run_dir / "visual_assets.json", data)
 
 
+def load_visual_assets_json(packages_dir: Path, signal_id: str, source_run_id: str) -> dict:
+    """Load the exact immutable source-run visual passport."""
+    path = resolve_run_dir(packages_dir, signal_id, source_run_id) / "visual_assets.json"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"No visual_assets.json at {path}. Reused visuals must prove their "
+            "originating run; origin is never inferred from signal_id."
+        )
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise ValueError(f"Could not parse {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"Visual passport at {path} is not a JSON object")
+    return data
+
+
 def write_linkedin_composition_json(run_dir: Path, data: dict) -> None:
     """Commit the run's LinkedIn composition traceability record exactly once."""
     atomic_write_json(run_dir / "linkedin_composition.json", data)

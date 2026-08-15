@@ -136,6 +136,21 @@ def _fake_visual_record(*args, **kwargs):
     )
 
 
+# REUSED-shaped stand-in for the --from-package visual reuse gate (Issue #96):
+# the entrypoint reads .status, .origin_run_id, .linkedin_visual.value,
+# .wix_url, .linkedin_url, and .model_dump_json().
+def _fake_reuse_visual_record(*args, **kwargs):
+    return SimpleNamespace(
+        status="valid",
+        reused=True,
+        origin_run_id=kwargs.get("source_run_id", "source-run"),
+        linkedin_visual=SimpleNamespace(value="not_requested"),
+        wix_url="https://res.cloudinary.com/test/blog.png",
+        linkedin_url=None,
+        model_dump_json=lambda **_: "{}",
+    )
+
+
 # ACCEPTED-shaped stand-in for the LinkedIn composition gate (Issue #93): the
 # entrypoint reads .word_count, .composition_rules_version, .model_dump().
 def _fake_linkedin_composition(**kwargs):
@@ -282,6 +297,8 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         # Visual contract gate (Issue #96): VALID-shaped stand-in; the real
         # gate is covered by tests/test_visual_contract.py.
         "build_visual_assets_record": mock.MagicMock(side_effect=_fake_visual_record),
+        "load_visual_assets_json": mock.MagicMock(return_value={"stand-in": True}),
+        "reuse_visual_assets_record": mock.MagicMock(side_effect=_fake_reuse_visual_record),
         "write_visual_assets_json": mock.MagicMock(),
         "load_active_strategy": mock.MagicMock(return_value=_STRATEGY_STUB),
         "get_strategy_context": mock.MagicMock(return_value=_STRATEGY_CONTEXT),

@@ -202,6 +202,8 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "accept_linkedin_composition": mock.MagicMock(side_effect=legacy._fake_linkedin_composition),
         "write_linkedin_composition_json": mock.MagicMock(),
         "build_visual_assets_record": mock.MagicMock(side_effect=legacy._fake_visual_record),
+        "load_visual_assets_json": mock.MagicMock(return_value={"stand-in": True}),
+        "reuse_visual_assets_record": mock.MagicMock(side_effect=legacy._fake_reuse_visual_record),
         "write_visual_assets_json": mock.MagicMock(),
         "load_active_strategy":      mock.MagicMock(return_value=_STRATEGY_STUB),
         "get_strategy_context":      mock.MagicMock(return_value=_STRATEGY_CONTEXT),

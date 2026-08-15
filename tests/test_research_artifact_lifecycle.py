@@ -515,7 +515,11 @@ def test_from_package_reuses_original_ready_lineage_without_provider_or_rewrite(
     provider.research.assert_not_called()
     assert research_path.read_bytes() == source_bytes
     assert package_path.read_bytes() == package_bytes
-    reuse_patches["_load_package_images"].assert_called_once()
+    # Since Issue #96 the reuse path derives publication visuals from the
+    # source run's immutable visual passport only — the legacy signal-scoped
+    # image mapping is no longer consulted (origin is never inferred from
+    # signal_id).
+    reuse_patches["_load_package_images"].assert_not_called()
 
 
 @pytest.mark.parametrize("damage", [

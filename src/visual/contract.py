@@ -32,7 +32,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from src.editorial.linkedin_composition import article_digest
 from src.publishing.image_pipeline import PLATFORM_SIZES
@@ -85,10 +85,20 @@ class ChannelDerivative(_VisualModel):
 
 
 class VisualAssetsRecord(_VisualModel):
-    """Immutable run-scoped passport of the run's publication visuals."""
+    """Immutable run-scoped passport of the run's publication visuals.
+
+    ``run_id`` is the run this record belongs to (its persistence namespace);
+    ``origin_run_id`` is the run that actually produced the visuals. For a
+    fresh generation they are identical (``reused=False``). For
+    ``--from-package`` reuse the publication run persists a reuse passport
+    whose ``origin_run_id`` preserves the true producing run — a reused
+    visual is never represented as produced by the new publication run.
+    """
 
     schema_version: str = VISUAL_ASSETS_SCHEMA_VERSION
     run_id: str = Field(min_length=1, max_length=200)
+    origin_run_id: str = Field(min_length=1, max_length=200)
+    reused: bool
     signal_id: str = Field(min_length=1, max_length=200)
     source_article_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     provider: str = Field(min_length=1, max_length=80)
@@ -106,6 +116,30 @@ class VisualAssetsRecord(_VisualModel):
         if value != VISUAL_ASSETS_SCHEMA_VERSION:
             raise ValueError(f"unsupported visual assets schema_version: {value!r}")
         return value
+
+    @model_validator(mode="after")
+    def _truthful_origin(self) -> "VisualAssetsRecord":
+        if self.reused and self.origin_run_id == self.run_id:
+            raise ValueError("a reused visual record cannot claim itself as origin")
+        if not self.reused and self.origin_run_id != self.run_id:
+            raise ValueError(
+                "a freshly produced visual record must be its own origin"
+            )
+        return self
+
+    def _derivative_url(self, channel: str) -> str | None:
+        for item in self.derivatives:
+            if item.channel == channel:
+                return item.url
+        return None
+
+    @property
+    def wix_url(self) -> str | None:
+        return self._derivative_url("wix")
+
+    @property
+    def linkedin_url(self) -> str | None:
+        return self._derivative_url("linkedin")
 
 
 def _actual_image_properties(path_value: str | None) -> tuple[int, int, str] | None:
@@ -224,6 +258,8 @@ def build_visual_assets_record(
     master_url = derivatives[0].url
     return VisualAssetsRecord(
         run_id=run_id,
+        origin_run_id=run_id,
+        reused=False,
         signal_id=signal_id,
         source_article_digest=article_digest(article_body),
         provider=_provider_for(master_url),
@@ -254,3 +290,58 @@ def verify_visual_assets_record(
         raise VisualGateError(
             "visual assets record does not match the accepted source article"
         )
+
+
+def reuse_visual_assets_record(
+    loaded: dict,
+    *,
+    source_run_id: str,
+    publication_run_id: str,
+    article_body: str,
+) -> VisualAssetsRecord:
+    """Build the truthful reuse passport for a ``--from-package`` publication run.
+
+    The ONLY accepted provenance source is the originating run's persisted
+    ``visual_assets.json``. Origin is never inferred from ``signal_id`` or
+    content shape, and the current publication run is never stamped as the
+    visual origin. Fails closed when the source identity cannot be proven.
+    """
+
+    if not isinstance(loaded, dict) or not loaded:
+        raise VisualGateError(
+            "source run has no trustworthy visual passport — reused visuals "
+            "cannot prove their originating run; failing closed"
+        )
+    try:
+        source = VisualAssetsRecord.model_validate(loaded)
+    except Exception as exc:  # noqa: BLE001 — malformed passport is a truthful stop
+        raise VisualGateError(
+            "source visual passport is malformed or violates the strict contract"
+        ) from exc
+
+    if source.run_id != source_run_id:
+        raise VisualGateError(
+            "source visual passport belongs to a different run "
+            f"(record={source.run_id!r}, requested source={source_run_id!r}) — "
+            "cross-run visual laundering is not allowed"
+        )
+    if source.source_article_digest != article_digest(article_body):
+        raise VisualGateError(
+            "source visual passport does not match the reused article content"
+        )
+
+    return VisualAssetsRecord(
+        run_id=publication_run_id,
+        origin_run_id=source.origin_run_id,
+        reused=True,
+        signal_id=source.signal_id,
+        source_article_digest=source.source_article_digest,
+        provider=source.provider,
+        method=source.method,
+        created_at=datetime.now(timezone.utc),
+        design_version=source.design_version,
+        status=source.status,
+        linkedin_visual=source.linkedin_visual,
+        master_asset_url=source.master_asset_url,
+        derivatives=source.derivatives,
+    )
