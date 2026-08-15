@@ -127,6 +127,59 @@ class VisualAssetsRecord(_VisualModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def _channel_semantics(self) -> "VisualAssetsRecord":
+        """Publication invariants live in the strict model itself.
+
+        Every construction path — the fresh gate, strict reload, and the
+        reuse seam — therefore enforces the same channel semantics: a
+        schema-shaped but semantically invalid passport (wrong dimensions,
+        unsupported format, missing required Wix derivative, foreign or
+        duplicate channels, master/Wix mismatch, or a LinkedIn state that
+        contradicts the derivatives) can never be validated, reused, or
+        published.
+        """
+
+        channels = [item.channel for item in self.derivatives]
+        if len(set(channels)) != len(channels):
+            raise ValueError("visual derivative channels must be unique")
+        unknown = sorted(set(channels) - set(RELEASE1_CHANNELS))
+        if unknown:
+            raise ValueError(
+                "visual record carries non-Release-1 channels: " + ", ".join(unknown)
+            )
+        by_channel = {item.channel: item for item in self.derivatives}
+        wix = by_channel.get("wix")
+        if wix is None:
+            raise ValueError("the required Wix derivative is missing")
+        for item in self.derivatives:
+            platform_key = RELEASE1_CHANNELS[item.channel][0]
+            expected = PLATFORM_SIZES[platform_key]
+            if (item.width, item.height) != expected:
+                raise ValueError(
+                    f"{item.channel} derivative dimensions "
+                    f"{item.width}x{item.height} do not match the required "
+                    f"{expected[0]}x{expected[1]}"
+                )
+            if item.format not in SUPPORTED_FORMATS:
+                raise ValueError(
+                    f"{item.channel} derivative format {item.format!r} is unsupported"
+                )
+        if self.master_asset_url != wix.url:
+            raise ValueError(
+                "master asset URL must be the required Wix derivative URL"
+            )
+        has_linkedin = "linkedin" in by_channel
+        if self.linkedin_visual is LinkedInVisualState.VALID and not has_linkedin:
+            raise ValueError(
+                "linkedin_visual claims a valid LinkedIn derivative that is absent"
+            )
+        if self.linkedin_visual is LinkedInVisualState.NOT_REQUESTED and has_linkedin:
+            raise ValueError(
+                "linkedin_visual claims not_requested but a LinkedIn derivative exists"
+            )
+        return self
+
     def _derivative_url(self, channel: str) -> str | None:
         for item in self.derivatives:
             if item.channel == channel:

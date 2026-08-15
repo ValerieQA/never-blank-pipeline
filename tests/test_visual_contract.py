@@ -370,3 +370,79 @@ def test_cross_run_visual_laundering_is_rejected(tmp_path):
     assert code == 1
     assert not patches["WixPublisher"].called
     assert not patches["LinkedInPublisher"].called
+
+
+# ===========================================================================
+# Review follow-up 2: channel semantics enforced by the strict model itself
+# ===========================================================================
+
+
+def _record_dict(tmp_path) -> dict:
+    return json.loads(_build(tmp_path).model_dump_json())
+
+
+@pytest.mark.parametrize(
+    "tamper,expect",
+    [
+        (lambda d: d["derivatives"][0].update(width=1, height=1),
+         "dimensions"),
+        (lambda d: d["derivatives"][0].update(format="bmp"),
+         "unsupported"),
+        (lambda d: d["derivatives"].pop(0),
+         "required Wix derivative"),
+        (lambda d: d["derivatives"].append(dict(d["derivatives"][0])),
+         "unique"),
+        (lambda d: d["derivatives"][1].update(channel="instagram"),
+         "non-Release-1"),
+        (lambda d: d.update(master_asset_url="https://res.cloudinary.com/other.png"),
+         "master asset URL"),
+        (lambda d: d.update(linkedin_visual="not_requested"),
+         "not_requested but a LinkedIn derivative exists"),
+    ],
+    ids=["wix-1x1", "wix-bmp", "no-wix", "duplicate-channel",
+         "foreign-channel", "master-mismatch", "linkedin-state-lie"],
+)
+def test_schema_valid_but_semantically_invalid_passports_are_rejected(
+    tmp_path, tamper, expect
+):
+    data = _record_dict(tmp_path)
+    tamper(data)
+    with pytest.raises(Exception, match=expect):
+        VisualAssetsRecord.model_validate(data)
+
+
+def test_linkedin_state_cannot_claim_absent_derivative(tmp_path):
+    data = json.loads(_build(tmp_path, with_linkedin=False).model_dump_json())
+    data["linkedin_visual"] = "valid"
+    with pytest.raises(Exception, match="absent"):
+        VisualAssetsRecord.model_validate(data)
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    [
+        lambda d: d["derivatives"][0].update(width=1, height=1, format="bmp"),
+        lambda d: d["derivatives"].pop(0),
+    ],
+    ids=["tampered-wix-dims-format", "missing-wix-derivative"],
+)
+def test_from_package_rejects_semantically_invalid_source_passport(
+    tmp_path, tamper
+):
+    """Mandated: a model-shaped but semantically invalid source passport
+    fails closed on reuse with zero publisher effects."""
+
+    run_a = _build_source_run_with_visuals(tmp_path)
+    passport = next(tmp_path.glob(f"*/runs/{run_a}/visual_assets.json"))
+    data = json.loads(passport.read_text())
+    tamper(data)
+    passport.unlink()
+    passport.write_text(json.dumps(data))
+
+    code, patches = _reuse_entry(tmp_path, run_a)
+    assert code == 1
+    # no reuse passport is fabricated for the publication run
+    assert len(list(tmp_path.glob("*/runs/*/visual_assets.json"))) == 1
+    assert not patches["WixPublisher"].called
+    assert not patches["LinkedInPublisher"].called
+    assert not patches["append_published_entry"].called
