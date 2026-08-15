@@ -563,13 +563,17 @@ class TestPlatformComposer:
                 compose_platforms(self.STRUCTURED_ARTICLE)
 
     def test_echo_appended_if_missing(self):
-        """When echo is present but missing from body, it must be appended."""
+        """Accepted contract since 18f1be7: a missing verbatim echo FAILS CLOSED.
+
+        The composer no longer silently appends the echo (the historical name
+        of this node ID predates that change and is kept so the baseline
+        reduction stays byte-traceable). A verbatim-echo format whose body
+        omits the echo must raise, never repair.
+        """
         body_without_echo = "A body that forgot to include the echo line."
         with patch("src.editorial.platform_composer.chat", return_value=_json_response({"body": body_without_echo})):
-            result = compose_platforms(self.STRUCTURED_ARTICLE)
-        echo = self.STRUCTURED_ARTICLE["echo_line"]
-        for fmt in ("long", "reading", "medium", "instagram", "short"):
-            assert echo in result[fmt]["body"]
+            with pytest.raises(ValueError, match="verbatim Echo must appear exactly once at end"):
+                compose_platforms(self.STRUCTURED_ARTICLE)
 
     def test_no_echo_article_composes_without_crash(self):
         """When echo_line is None and signature is empty, Platform Composer must not crash."""
@@ -579,18 +583,40 @@ class TestPlatformComposer:
             result = compose_platforms(article_no_echo)
         assert set(result.keys()) == set(_WORD_RANGE.keys())
 
+    def _valid_body_response(self) -> str:
+        """A body satisfying the accepted echo contract for every format:
+        verbatim formats need the echo exactly once at the very end, adapt
+        formats need echo_included=True."""
+        echo = self.STRUCTURED_ARTICLE["echo_line"]
+        filler = " ".join((
+            "Delivery deadlines crowd out visibility work during every busy stretch.",
+            "The owner answers client calls instead of writing anything public.",
+            "Quiet weeks follow loud ones in a predictable operational rhythm.",
+            "Nobody plans the silence; the calendar simply produces it again.",
+            "Urgent tasks always outrank the merely important presence habits.",
+            "A referral pipeline thins slowly enough that nobody notices early.",
+        ))
+        return _json_response({"body": f"{filler} {echo}", "echo_included": True})
+
     def test_all_five_formats_present(self):
-        with patch("src.editorial.platform_composer.chat", return_value=_json_response({"body": "some body text " * 20})):
+        with patch("src.editorial.platform_composer.chat", return_value=self._valid_body_response()):
             result = compose_platforms(self.STRUCTURED_ARTICLE)
         assert set(result.keys()) == set(_WORD_RANGE.keys())
 
     def test_instagram_cta_mode_diagnostic_adds_cta_note_to_prompt(self):
-        """When cta_mode=diagnostic, the user prompt sent to the LLM must mention
-        the CTA instruction for Instagram."""
+        """Accepted contract: cta_mode=diagnostic surfaces the CTA in the
+        Instagram prompt as a `CTA MODE:` line plus the cta block (when CTA
+        content exists). The old `INSTAGRAM CTA` literal was removed by the
+        strategy-context prompt rework."""
         from src.editorial.platform_composer import _build_user_prompt
-        prompt = _build_user_prompt(self.STRUCTURED_ARTICLE, "instagram", cta_mode="diagnostic")
-        assert "INSTAGRAM CTA" in prompt
-        assert "diagnostic" in prompt
+        article = {**self.STRUCTURED_ARTICLE,
+                   "cta_line": "What does your presence system do when you are busy?"}
+        prompt = _build_user_prompt(article, "instagram", "diagnostic")
+        assert "CTA MODE: diagnostic" in prompt
+        assert "- cta [" in prompt
+        # with mode none the cta block is suppressed even when content exists
+        prompt_none = _build_user_prompt(article, "instagram", "none")
+        assert "- cta [" not in prompt_none
 
     def test_instagram_cta_mode_none_has_no_cta_note(self):
         """When cta_mode=none, no CTA note must appear in the Instagram prompt."""
@@ -599,27 +625,38 @@ class TestPlatformComposer:
         assert "INSTAGRAM CTA" not in prompt
 
     def test_instagram_cta_default_is_none(self):
-        """cta_mode defaults to 'none' — Instagram must not get a CTA note by default."""
-        from src.editorial.platform_composer import _build_user_prompt
-        prompt = _build_user_prompt(self.STRUCTURED_ARTICLE, "instagram")
-        assert "INSTAGRAM CTA" not in prompt
+        """The public default lives on compose_platforms: cta_mode='none', so
+        the Instagram prompt carries `CTA MODE: none` and no cta block."""
+        article = {**self.STRUCTURED_ARTICLE,
+                   "cta_line": "What does your presence system do when you are busy?"}
+        prompts: list[str] = []
+
+        def capture(**kwargs):
+            prompts.append(kwargs["user"])
+            return self._valid_body_response()
+
+        with patch("src.editorial.platform_composer.chat", side_effect=capture):
+            compose_platforms(article)
+        instagram_prompt = next(p for p in prompts if "FORMAT: instagram" in p)
+        assert "CTA MODE: none" in instagram_prompt
+        assert "- cta [" not in instagram_prompt
 
     def test_echo_adaptation_note_for_instagram(self):
-        """Instagram prompt must include the ECHO ADAPTATION note when echo is present."""
+        """Instagram (adapt-echo format) prompt must carry the adapt echo note."""
         from src.editorial.platform_composer import _build_user_prompt
-        prompt = _build_user_prompt(self.STRUCTURED_ARTICLE, "instagram")
-        assert "ECHO ADAPTATION" in prompt
+        prompt = _build_user_prompt(self.STRUCTURED_ARTICLE, "instagram", "none")
+        assert "ECHO MODE: adapt" in prompt
 
     def test_echo_no_adaptation_note_for_long_format(self):
-        """Long format (Blog) must NOT include ECHO ADAPTATION note — echo is verbatim."""
+        """Long format (Blog) uses the verbatim echo note, never the adapt note."""
         from src.editorial.platform_composer import _build_user_prompt
-        prompt = _build_user_prompt(self.STRUCTURED_ARTICLE, "long")
-        assert "ECHO ADAPTATION" not in prompt
+        prompt = _build_user_prompt(self.STRUCTURED_ARTICLE, "long", "none")
+        assert "ECHO MODE: verbatim" in prompt
+        assert "ECHO MODE: adapt" not in prompt
 
     def test_compose_platforms_accepts_cta_mode(self):
         """compose_platforms must accept cta_mode without error."""
-        body = "some body text " * 20
-        with patch("src.editorial.platform_composer.chat", return_value=_json_response({"body": body})):
+        with patch("src.editorial.platform_composer.chat", return_value=self._valid_body_response()):
             result = compose_platforms(self.STRUCTURED_ARTICLE, cta_mode="diagnostic")
         assert set(result.keys()) == set(_WORD_RANGE.keys())
 
