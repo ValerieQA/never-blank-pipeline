@@ -1,5 +1,15 @@
 """Editorial contracts and pipeline components."""
 
+from .editorial_acceptance import (
+    ArticleRevisionTransport,
+    EditorialAcceptanceError,
+    EditorialAcceptanceOutcome,
+    EditorialAcceptanceRubric,
+    EditorialDisposition,
+    EditorialReview,
+    EditorialReviewTransport,
+    run_editorial_acceptance,
+)
 from .decision_lifecycle import (
     RELEASE1_LENS_PROFILE,
     DecisionGateError,
@@ -40,6 +50,14 @@ from .decision_contract import (
 )
 
 __all__ = [
+    "ArticleRevisionTransport",
+    "EditorialAcceptanceError",
+    "EditorialAcceptanceOutcome",
+    "EditorialAcceptanceRubric",
+    "EditorialDisposition",
+    "EditorialReview",
+    "EditorialReviewTransport",
+    "run_editorial_acceptance",
     "RELEASE1_LENS_PROFILE",
     "DecisionGateError",
     "evaluate_and_persist_decision",

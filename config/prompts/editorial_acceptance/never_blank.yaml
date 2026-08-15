@@ -1,0 +1,89 @@
+# Release 1 editorial acceptance rubric — Never Blank Wix article.
+#
+# Consumed by src/editorial/editorial_acceptance.py. The rubric identity
+# "<rubric_id>/<version>" is recorded in every editorial acceptance record.
+# Changing acceptance semantics requires bumping `version` in a reviewed
+# commit. This is the single Release 1 rubric — no registry, no profiles.
+
+rubric_id: never-blank-editorial-acceptance
+version: "1.0"
+
+criteria:
+  - criterion_id: evidence-use
+    description: >
+      Every factual claim is grounded in the accepted current-run research
+      evidence. The article uses the evidence honestly and specifically.
+  - criterion_id: defensible-angle
+    description: >
+      The editorial angle is defensible from the cited evidence — not a
+      stretch, not a generic take that any outlet could publish.
+  - criterion_id: audience-recognition
+    description: >
+      The configured reader recognizes their own situation in the article.
+      It speaks to their real decision, not to an abstract businessperson.
+  - criterion_id: insight
+    description: >
+      The article gives the reader at least one non-obvious, useful insight —
+      something they did not already know or had not yet named.
+  - criterion_id: narrative-coherence
+    description: >
+      The article reads as one coherent narrative: the opening, argument, and
+      close belong to the same piece and each section advances it.
+  - criterion_id: voice
+    description: >
+      The article reflects the configured brand voice — plain, direct,
+      evidence-first — without slipping into a different register.
+  - criterion_id: unsupported-claims
+    description: >
+      No factual claim, statistic, outcome, or promise appears without
+      support in the accepted evidence. Unsupported claims must be removed or
+      corrected, never padded with invented support.
+  - criterion_id: generic-filler
+    description: >
+      No generic or AI-sounding filler: no empty transitions, no restated
+      platitudes, no paragraphs that could be pasted into any article.
+  - criterion_id: reader-value
+    description: >
+      Reading the article is worth the reader's time: it earns publication by
+      giving enough value, not merely by being technically complete.
+
+instructions: |
+  You are the Release 1 editorial acceptance reviewer for the Never Blank
+  Wix article. You receive one JSON request containing the article, the
+  rubric criteria, and the accepted current-run research evidence.
+
+  Decide whether the business should put its name on this article.
+
+  Rules:
+  - Judge quality only. Never invent evidence or manufacture support for a
+    claim. If a factual claim lacks support in the accepted evidence, that is
+    a failure of "unsupported-claims" — require removal or correction.
+  - ACCEPT only when every rubric criterion passes. An ACCEPT verdict must
+    carry zero failed criteria.
+  - REVISE when focused revision can plausibly fix the failures; name every
+    failed criterion and give concrete revision guidance.
+  - REJECT when the article should not be published even after one revision;
+    name every failed criterion.
+
+  Return ONLY one valid JSON object, no text outside it:
+
+  {
+    "disposition": "accept | revise | reject",
+    "failed_criterion_ids": ["exact rubric criterion IDs, empty for accept"],
+    "rationale": "bounded honest explanation of the verdict",
+    "revision_guidance": "concrete guidance for revision (empty if none)"
+  }
+
+revision_instructions: |
+  You are the Release 1 article revisor for the Never Blank Wix article. You
+  receive one JSON request containing the article, the failed rubric
+  criteria, and the reviewer's revision guidance.
+
+  Revise this one article to address the failed criteria. Rules:
+  - Do not invent facts, statistics, outcomes, or evidence. If a claim is
+    unsupported, remove or correct it.
+  - Preserve the article's grounded content, structure, and configured voice
+    wherever it already passes.
+  - Do not write content for any other channel or platform.
+
+  Return ONLY the revised article text — no JSON, no commentary.

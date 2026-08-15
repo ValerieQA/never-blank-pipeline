@@ -21,6 +21,11 @@ Canonical call flow
                                     visual/package/publisher work (Issue #60)
   → [fresh-gen] rc.to_editorial() → EditorialContext with run_id propagated
   → [fresh-gen] _assert_run_id_match() → identity check at editorial boundary
+  → [fresh-gen] run_editorial_acceptance() → explicit editorial verdict on the
+                                    Wix article: ACCEPT continues; REVISE gets
+                                    exactly one controlled revision + recheck;
+                                    everything else stops before packaging and
+                                    publication (Issue #89 / Story #13)
   → VisualArtifactRequest         → visual boundary typed adapter (blocked stub)
   → _require_run_id()             → guard at image-preparation
   → _require_run_id()             → guard at validation
@@ -38,8 +43,14 @@ Artifact layout (Task #28)
 --------------------------
   reports/content_packages/<signal_id>/runs/<run_id>/research.json
   reports/content_packages/<signal_id>/runs/<run_id>/decision.json
+  reports/content_packages/<signal_id>/runs/<run_id>/editorial_acceptance.json
   reports/content_packages/<signal_id>/runs/<run_id>/generated.json
   reports/content_packages/<signal_id>/runs/<run_id>/publication_results.json
+
+  editorial_acceptance.json — editorial audit record written once for every
+                         run that reaches editorial acceptance, accepted or
+                         blocked (rubric identity, both reviews, disposition).
+                         generated.json exists only for accepted articles.
 
   decision.json        — canonical Issue #58 Decision Lens artifact, written
                          exactly once after research, before any editorial work.
@@ -135,6 +146,15 @@ from src.editorial.decision_lifecycle import (
     load_decision_artifact,
     require_proceed,
 )
+from src.editorial.editorial_acceptance import (
+    ArticleRevisionTransport,
+    EditorialAcceptanceError,
+    EditorialAcceptanceRubric,
+    EditorialReviewTransport,
+    LlmChatArticleRevisionTransport,
+    LlmChatEditorialReviewTransport,
+    run_editorial_acceptance,
+)
 from src.publishing import formatting
 from src.publishing.base import DraftPackage
 from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
@@ -151,6 +171,7 @@ from src.artifacts import (
     load_run_generated,
     load_business_strategy_snapshot,
     resolve_run_dir,
+    write_editorial_acceptance_json,
     write_generated_json,
     write_business_strategy_snapshot,
     write_publication_results_json,
@@ -420,6 +441,8 @@ def main(
     *,
     research_provider: ResearchProvider | None = None,
     decision_evaluator: DecisionLensEvaluator | None = None,
+    editorial_reviewer: EditorialReviewTransport | None = None,
+    article_revisor: ArticleRevisionTransport | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(description="Generate + publish one signal end-to-end")
     parser.add_argument("--signal-id", required=True)
@@ -1044,6 +1067,69 @@ def main(
         threads_seq    = _build_threads(structured)
         telegram_text  = _build_telegram(structured)
         echo_line      = structured.get("echo_line", "")
+
+        # ── Editorial acceptance gate (Issue #89 / Story #13) ────────────────
+        # A technically valid article is not automatically publishable. One
+        # explicit editorial decision on the canonical Wix article: ACCEPT
+        # continues, REVISE triggers exactly one controlled revision followed
+        # by one recheck, everything else stops before packaging/publication.
+        # Revision touches the Wix article body only — no other channel is
+        # regenerated.
+        try:
+            _acceptance_rubric = EditorialAcceptanceRubric.load()
+            _acceptance = run_editorial_acceptance(
+                article_body=blog_body,
+                research=research_artifact,
+                run_id=run_ctx.run_id,
+                rubric=_acceptance_rubric,
+                reviewer=(
+                    editorial_reviewer
+                    if editorial_reviewer is not None
+                    else LlmChatEditorialReviewTransport()
+                ),
+                revisor=(
+                    article_revisor
+                    if article_revisor is not None
+                    else LlmChatArticleRevisionTransport()
+                ),
+            )
+        except (EditorialAcceptanceError, ValueError, OSError) as exc:
+            print(f"  ERROR: editorial acceptance blocked publication: {exc}")
+            return 1
+        # The editorial verdict is persisted for every run that reaches
+        # acceptance — accepted or blocked — so the decision history stays
+        # auditable. Persisting the audit is NOT permission to continue: the
+        # accepted check below still stops every non-ACCEPT outcome before
+        # any packaging or publication effect.
+        try:
+            write_editorial_acceptance_json(
+                run_dir,
+                {
+                    "run_id": run_ctx.run_id,
+                    "signal_id": signal_id,
+                    **_acceptance.audit,
+                },
+            )
+        except (ArtifactCollisionError, OSError) as exc:
+            print(f"  ERROR: editorial acceptance audit could not be persisted: {exc}")
+            return 1
+        print(f"  ✓  editorial audit: {run_dir / 'editorial_acceptance.json'}")
+        if not _acceptance.accepted:
+            _final = _acceptance.final_review or _acceptance.initial_review
+            print(
+                "  ERROR: editorial acceptance blocked publication: "
+                f"disposition={_final.disposition.value!r} "
+                f"failed_criteria={list(_final.failed_criterion_ids)} "
+                f"[{_acceptance_rubric.identity}] — the article does not "
+                "continue toward packaging or publication"
+            )
+            return 1
+        blog_body = _acceptance.final_article_body
+        print(
+            f"  ✓  editorial acceptance: ACCEPT "
+            f"({'after one revision' if _acceptance.revised else 'original article'}) "
+            f"[{_acceptance_rubric.identity}]"
+        )
 
         print(f"  ✓  blog:      {len(blog_body)} chars")
         print(f"  ✓  linkedin:  {len(linkedin_text)} chars")
