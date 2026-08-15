@@ -124,6 +124,16 @@ _FAKE_DECISION = SimpleNamespace(
     run_id="",
 )
 
+# ACCEPTED-shaped stand-in for the LinkedIn composition gate (Issue #93): the
+# entrypoint reads .word_count, .composition_rules_version, .model_dump().
+def _fake_linkedin_composition(**kwargs):
+    return SimpleNamespace(
+        word_count=len(kwargs["linkedin_body"].split()),
+        composition_rules_version="linkedin-medium-native/1.0",
+        model_dump=lambda **_: {"status": "accepted"},
+    )
+
+
 # ACCEPT-shaped stand-in for the editorial acceptance gate (Issue #89): the
 # entrypoint reads .accepted, .final_article_body, .revised, and .audit.
 def _fake_acceptance(**kwargs):
@@ -253,6 +263,10 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         # returns the original article; the real gate is covered by
         # tests/test_editorial_acceptance.py.
         "run_editorial_acceptance": mock.MagicMock(side_effect=_fake_acceptance),
+        # LinkedIn composition gate (Issue #93): ACCEPTED-shaped stand-in; the
+        # real gate is covered by tests/test_linkedin_composition.py.
+        "accept_linkedin_composition": mock.MagicMock(side_effect=_fake_linkedin_composition),
+        "write_linkedin_composition_json": mock.MagicMock(),
         "load_active_strategy": mock.MagicMock(return_value=_STRATEGY_STUB),
         "get_strategy_context": mock.MagicMock(return_value=_STRATEGY_CONTEXT),
         "get_cta_mode": mock.MagicMock(return_value="reflection"),

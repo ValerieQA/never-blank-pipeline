@@ -199,6 +199,8 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "evaluate_and_persist_decision": mock.MagicMock(return_value=legacy._FAKE_DECISION),
         "load_decision_artifact": mock.MagicMock(return_value=legacy._FAKE_DECISION),
         "run_editorial_acceptance": mock.MagicMock(side_effect=legacy._fake_acceptance),
+        "accept_linkedin_composition": mock.MagicMock(side_effect=legacy._fake_linkedin_composition),
+        "write_linkedin_composition_json": mock.MagicMock(),
         "load_active_strategy":      mock.MagicMock(return_value=_STRATEGY_STUB),
         "get_strategy_context":      mock.MagicMock(return_value=_STRATEGY_CONTEXT),
         "get_cta_mode":              mock.MagicMock(return_value="reflection"),

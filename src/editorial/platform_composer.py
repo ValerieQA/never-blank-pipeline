@@ -50,23 +50,37 @@ _WORD_RANGE = {
     "instagram": (80, 150), "short": (20, 80),
 }
 
+# Platform identities for output validation. Canonical Release 1 (Issue #93):
+# ``medium`` is the LinkedIn artifact the orchestrator publishes; ``reading``
+# is the non-R1 Facebook long-form.
 _PLATFORM_NAMES = {
-    "long": "blog", "reading": "linkedin", "medium": "facebook",
+    "long": "blog", "reading": "facebook", "medium": "linkedin",
     "instagram": "instagram", "short": "short",
 }
+
+# Version of the LinkedIn-native composition instruction and rule wiring for
+# the canonical ``medium`` artifact. Recorded in every LinkedIn composition
+# record; bump in a reviewed commit when composition semantics change.
+LINKEDIN_COMPOSITION_RULES_VERSION = "linkedin-medium-native/1.0"
 
 _FORMAT_CONSTRAINTS = {
     "long": (
         "Develop the full owner-centered argument. Corporate evidence, if present, may occupy at most "
         "20 percent of the body. The article must remain coherent without the company example."
     ),
+    # Canonical Release 1 mapping (Issue #93): ``medium`` IS the LinkedIn
+    # artifact consumed by the orchestrator; ``reading`` is the non-R1
+    # Facebook long-form. Format keys stay stable; only channel semantics
+    # were realigned to the authoritative consumer.
     "reading": (
-        "Write a native LinkedIn post, not a shortened blog. Begin with the owner's recognizable "
-        "situation. Use short paragraphs. One corporate example maximum."
+        "Write conversationally for Facebook. Use a human owner scenario and one complete "
+        "mechanism. Do not reuse the Blog or LinkedIn opening sentence."
     ),
     "medium": (
-        "Write conversationally for Facebook. Use a human owner scenario and one complete mechanism. "
-        "Do not reuse the Blog or LinkedIn opening sentence."
+        "Write a native LinkedIn post, not a shortened blog. Begin with the owner's "
+        "recognizable situation, never with the Blog opening sentence. Use short paragraphs "
+        "of one to three sentences. One corporate example maximum. Stay within the target "
+        "length; LinkedIn readers scan."
     ),
     "instagram": (
         "Make the reader feel a specific owner situation before explaining it. No research diary, "
