@@ -146,6 +146,10 @@ from src.editorial.decision_lifecycle import (
     load_decision_artifact,
     require_proceed,
 )
+from src.editorial.linkedin_composition import (
+    LinkedInCompositionError,
+    accept_linkedin_composition,
+)
 from src.editorial.editorial_acceptance import (
     ArticleRevisionTransport,
     EditorialAcceptanceError,
@@ -173,6 +177,7 @@ from src.artifacts import (
     resolve_run_dir,
     write_editorial_acceptance_json,
     write_generated_json,
+    write_linkedin_composition_json,
     write_business_strategy_snapshot,
     write_publication_results_json,
 )
@@ -1175,6 +1180,38 @@ def main(
         instagram_text  = formatting.append_hashtags(
             formatting.bold_signature_prefix(instagram_text, "unicode"),
             generate_hashtags(signal, "instagram"),
+        )
+
+        # ── LinkedIn composition acceptance (Issue #93 / Story #14) ──────────
+        # The canonical Release 1 LinkedIn artifact (the composer `medium`
+        # body, 120–220-word target) must be demonstrably channel-native and
+        # traceable before it may continue toward packaging/publication. A
+        # failed LinkedIn acceptance stops the run — never a fallback to
+        # another platform body, never a revision loop.
+        try:
+            _li_record = accept_linkedin_composition(
+                linkedin_body=linkedin_text,
+                article_body=blog_body,
+                # Truthful Story #13 seam: a revised article invalidates the
+                # pre-revision LinkedIn composition (fail closed, new run).
+                article_revised=_acceptance.revised,
+                run_id=run_ctx.run_id,
+                signal_id=signal_id,
+                configuration_identity=strategy_execution.identity,
+                strategy_id=strategy_id,
+                strategy_version=strategy_version,
+            )
+            write_linkedin_composition_json(
+                run_dir, _li_record.model_dump(mode="json")
+            )
+        except (LinkedInCompositionError, ArtifactCollisionError, OSError) as exc:
+            print(f"  ERROR: LinkedIn composition blocked publication: {exc}")
+            return 1
+        print(
+            f"  ✓  linkedin composition: ACCEPTED "
+            f"({_li_record.word_count} words) "
+            f"[{_li_record.composition_rules_version}] "
+            f"({run_dir / 'linkedin_composition.json'})"
         )
 
         _generated_at = datetime.now(timezone.utc).isoformat()

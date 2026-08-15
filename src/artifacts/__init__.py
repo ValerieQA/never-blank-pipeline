@@ -210,6 +210,11 @@ def write_editorial_acceptance_json(run_dir: Path, data: dict) -> None:
     atomic_write_json(run_dir / "editorial_acceptance.json", data)
 
 
+def write_linkedin_composition_json(run_dir: Path, data: dict) -> None:
+    """Commit the run's LinkedIn composition traceability record exactly once."""
+    atomic_write_json(run_dir / "linkedin_composition.json", data)
+
+
 def write_generated_json(run_dir: Path, data: dict) -> None:
     """
     Write generated.json under run_dir exactly once.

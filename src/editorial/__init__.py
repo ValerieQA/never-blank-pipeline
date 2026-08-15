@@ -1,5 +1,13 @@
 """Editorial contracts and pipeline components."""
 
+from .linkedin_composition import (
+    LinkedInCompositionError,
+    LinkedInCompositionRecord,
+    LinkedInCompositionStatus,
+    accept_linkedin_composition,
+    article_digest,
+    verify_linkedin_composition_record,
+)
 from .editorial_acceptance import (
     ArticleRevisionTransport,
     EditorialAcceptanceError,
@@ -50,6 +58,12 @@ from .decision_contract import (
 )
 
 __all__ = [
+    "LinkedInCompositionError",
+    "LinkedInCompositionRecord",
+    "LinkedInCompositionStatus",
+    "accept_linkedin_composition",
+    "article_digest",
+    "verify_linkedin_composition_record",
     "ArticleRevisionTransport",
     "EditorialAcceptanceError",
     "EditorialAcceptanceOutcome",
