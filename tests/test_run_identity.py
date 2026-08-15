@@ -198,6 +198,7 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "production_evaluator": mock.MagicMock(return_value=mock.sentinel.decision_evaluator),
         "evaluate_and_persist_decision": mock.MagicMock(return_value=legacy._FAKE_DECISION),
         "load_decision_artifact": mock.MagicMock(return_value=legacy._FAKE_DECISION),
+        "run_editorial_acceptance": mock.MagicMock(side_effect=legacy._fake_acceptance),
         "load_active_strategy":      mock.MagicMock(return_value=_STRATEGY_STUB),
         "get_strategy_context":      mock.MagicMock(return_value=_STRATEGY_CONTEXT),
         "get_cta_mode":              mock.MagicMock(return_value="reflection"),

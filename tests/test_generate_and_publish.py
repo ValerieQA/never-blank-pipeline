@@ -124,6 +124,24 @@ _FAKE_DECISION = SimpleNamespace(
     run_id="",
 )
 
+# ACCEPT-shaped stand-in for the editorial acceptance gate (Issue #89): the
+# entrypoint reads .accepted, .final_article_body, .revised, and .audit.
+def _fake_acceptance(**kwargs):
+    return SimpleNamespace(
+        accepted=True,
+        revised=False,
+        final_article_body=kwargs["article_body"],
+        initial_review=None,
+        final_review=None,
+        audit={
+            "rubric": "never-blank-editorial-acceptance/1.0",
+            "revised": False,
+            "initial_review": {"disposition": "accept"},
+            "final_review": None,
+        },
+    )
+
+
 _FAKE_ARTICLE = {
     "platforms": {
         "long":      {"body": "Blog body text."},
@@ -231,6 +249,10 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "production_evaluator": mock.MagicMock(return_value=mock.sentinel.decision_evaluator),
         "evaluate_and_persist_decision": mock.MagicMock(return_value=_FAKE_DECISION),
         "load_decision_artifact": mock.MagicMock(return_value=_FAKE_DECISION),
+        # Editorial acceptance gate (Issue #89): ACCEPT-shaped stand-in that
+        # returns the original article; the real gate is covered by
+        # tests/test_editorial_acceptance.py.
+        "run_editorial_acceptance": mock.MagicMock(side_effect=_fake_acceptance),
         "load_active_strategy": mock.MagicMock(return_value=_STRATEGY_STUB),
         "get_strategy_context": mock.MagicMock(return_value=_STRATEGY_CONTEXT),
         "get_cta_mode": mock.MagicMock(return_value="reflection"),

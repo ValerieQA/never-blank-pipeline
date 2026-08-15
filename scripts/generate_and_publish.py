@@ -21,6 +21,11 @@ Canonical call flow
                                     visual/package/publisher work (Issue #60)
   → [fresh-gen] rc.to_editorial() → EditorialContext with run_id propagated
   → [fresh-gen] _assert_run_id_match() → identity check at editorial boundary
+  → [fresh-gen] run_editorial_acceptance() → explicit editorial verdict on the
+                                    Wix article: ACCEPT continues; REVISE gets
+                                    exactly one controlled revision + recheck;
+                                    everything else stops before packaging and
+                                    publication (Issue #89 / Story #13)
   → VisualArtifactRequest         → visual boundary typed adapter (blocked stub)
   → _require_run_id()             → guard at image-preparation
   → _require_run_id()             → guard at validation
@@ -134,6 +139,15 @@ from src.editorial.decision_lifecycle import (
     evaluate_and_persist_decision,
     load_decision_artifact,
     require_proceed,
+)
+from src.editorial.editorial_acceptance import (
+    ArticleRevisionTransport,
+    EditorialAcceptanceError,
+    EditorialAcceptanceRubric,
+    EditorialReviewTransport,
+    LlmChatArticleRevisionTransport,
+    LlmChatEditorialReviewTransport,
+    run_editorial_acceptance,
 )
 from src.publishing import formatting
 from src.publishing.base import DraftPackage
@@ -420,6 +434,8 @@ def main(
     *,
     research_provider: ResearchProvider | None = None,
     decision_evaluator: DecisionLensEvaluator | None = None,
+    editorial_reviewer: EditorialReviewTransport | None = None,
+    article_revisor: ArticleRevisionTransport | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(description="Generate + publish one signal end-to-end")
     parser.add_argument("--signal-id", required=True)
@@ -1045,6 +1061,51 @@ def main(
         telegram_text  = _build_telegram(structured)
         echo_line      = structured.get("echo_line", "")
 
+        # ── Editorial acceptance gate (Issue #89 / Story #13) ────────────────
+        # A technically valid article is not automatically publishable. One
+        # explicit editorial decision on the canonical Wix article: ACCEPT
+        # continues, REVISE triggers exactly one controlled revision followed
+        # by one recheck, everything else stops before packaging/publication.
+        # Revision touches the Wix article body only — no other channel is
+        # regenerated.
+        try:
+            _acceptance_rubric = EditorialAcceptanceRubric.load()
+            _acceptance = run_editorial_acceptance(
+                article_body=blog_body,
+                research=research_artifact,
+                run_id=run_ctx.run_id,
+                rubric=_acceptance_rubric,
+                reviewer=(
+                    editorial_reviewer
+                    if editorial_reviewer is not None
+                    else LlmChatEditorialReviewTransport()
+                ),
+                revisor=(
+                    article_revisor
+                    if article_revisor is not None
+                    else LlmChatArticleRevisionTransport()
+                ),
+            )
+        except (EditorialAcceptanceError, ValueError, OSError) as exc:
+            print(f"  ERROR: editorial acceptance blocked publication: {exc}")
+            return 1
+        if not _acceptance.accepted:
+            _final = _acceptance.final_review or _acceptance.initial_review
+            print(
+                "  ERROR: editorial acceptance blocked publication: "
+                f"disposition={_final.disposition.value!r} "
+                f"failed_criteria={list(_final.failed_criterion_ids)} "
+                f"[{_acceptance_rubric.identity}] — the article does not "
+                "continue toward packaging or publication"
+            )
+            return 1
+        blog_body = _acceptance.final_article_body
+        print(
+            f"  ✓  editorial acceptance: ACCEPT "
+            f"({'after one revision' if _acceptance.revised else 'original article'}) "
+            f"[{_acceptance_rubric.identity}]"
+        )
+
         print(f"  ✓  blog:      {len(blog_body)} chars")
         print(f"  ✓  linkedin:  {len(linkedin_text)} chars")
         print(f"  ✓  threads:   {len(threads_seq)} posts")
@@ -1107,6 +1168,9 @@ def main(
             "instagram_caption":   instagram_text,
             "threads_sequence":    threads_seq,
             "telegram_text":       telegram_text,
+            # Story #13 audit minimum: rubric identity plus the initial and
+            # final editorial reviews (final is null when no revision ran).
+            "editorial_acceptance": _acceptance.audit,
         }
         try:
             write_generated_json(run_dir, _generated_data)
