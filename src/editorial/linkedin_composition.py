@@ -105,6 +105,7 @@ def accept_linkedin_composition(
     *,
     linkedin_body: str,
     article_body: str,
+    article_revised: bool,
     run_id: str,
     signal_id: str,
     configuration_identity: ConfigurationIdentity,
@@ -116,8 +117,26 @@ def accept_linkedin_composition(
     Returns the strict traceability record on success; raises
     ``LinkedInCompositionError`` otherwise. Never falls back to another
     platform body and never revises.
+
+    Story #13 seam (truthful lineage): the LinkedIn ``medium`` body is
+    composed in the same generation pass as the original article. When the
+    Story #13 editorial review revised the article (``article_revised``),
+    the pre-revision LinkedIn body no longer truthfully derives from the
+    final accepted article — content removed or materially changed by the
+    revision may survive in it. Release 1 fails closed: a stale
+    pre-revision LinkedIn body can never become ``ACCEPTED`` or publishable,
+    and no record is written whose digest would claim a composition
+    relationship that did not exist. The remedy follows existing new-run
+    semantics (a fresh run composes all bodies from one content state).
     """
 
+    if article_revised:
+        raise LinkedInCompositionError(
+            "the accepted article was revised by editorial acceptance after "
+            "the LinkedIn body was composed — the stale pre-revision LinkedIn "
+            "composition cannot be accepted or published; retry as a new run "
+            "so every channel derives from the final accepted content state"
+        )
     if not isinstance(linkedin_body, str) or not linkedin_body.strip():
         raise LinkedInCompositionError(
             "LinkedIn composition is empty or malformed — nothing acceptable to publish"

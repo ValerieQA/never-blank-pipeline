@@ -78,6 +78,7 @@ def _accept_kwargs(**overrides):
     kwargs = dict(
         linkedin_body=_native_linkedin_body(),
         article_body=ARTICLE_BODY,
+        article_revised=False,
         run_id="run-a",
         signal_id="sig-test-001",
         configuration_identity=_identity(),
@@ -207,6 +208,13 @@ def test_malformed_or_empty_composition_fails_closed(bad):
         accept_linkedin_composition(**_accept_kwargs(linkedin_body=bad))
 
 
+def test_revised_article_invalidates_pre_revision_composition():
+    """Story #13 seam: a stale pre-revision body can never become ACCEPTED."""
+
+    with pytest.raises(LinkedInCompositionError, match="revised by editorial acceptance"):
+        accept_linkedin_composition(**_accept_kwargs(article_revised=True))
+
+
 # ===========================================================================
 # 9. Cross-run / configuration / source drift fails closed
 # ===========================================================================
@@ -295,3 +303,100 @@ def test_failed_linkedin_acceptance_produces_zero_publisher_effects(tmp_path):
     assert not list(tmp_path.glob("*/runs/*/publication_results.json"))
     # no record for a failed composition, and no fallback to reading (12)
     assert not list(tmp_path.glob("*/runs/*/linkedin_composition.json"))
+
+
+# ===========================================================================
+# Review follow-up: truthful lineage across the Story #13 REVISE path
+# ===========================================================================
+
+
+STALE_CLAIM = (
+    "Nine out of ten surveyed owners reportedly lose repeat bookings within a quarter."
+)
+
+
+def _entry_with_real_story13(tmp_path, *, reviewer, medium_body, long_body,
+                             revised_body=None, dry_run=False):
+    """Real canonical entrypoint with BOTH real gates: Story #13 editorial
+    acceptance (fake reviewer/revisor transports) and the LinkedIn gate."""
+
+    from tests.test_editorial_acceptance import FakeRevisionTransport
+
+    argv, patches = _entry_patches(tmp_path, dry_run=dry_run)
+    del patches["run_editorial_acceptance"]         # real Story #13 gate
+    del patches["accept_linkedin_composition"]      # real LinkedIn gate
+    del patches["write_linkedin_composition_json"]
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    article = json.loads(json.dumps(legacy._FAKE_ARTICLE))
+    article["platforms"]["long"]["body"] = long_body
+    article["platforms"]["medium"]["body"] = medium_body
+    patches["generate_article"] = mock.MagicMock(return_value=article)
+    evaluator, _ = _evaluator(_model_output())
+    revisor = FakeRevisionTransport(revised_body or "unused")
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main(
+            research_provider=ReadyProvider(),
+            decision_evaluator=evaluator,
+            editorial_reviewer=reviewer,
+            article_revisor=revisor,
+        )
+    return code, patches
+
+
+def test_stale_pre_revision_linkedin_body_fails_closed_after_story13_revision(tmp_path):
+    """Mandated adversarial scenario: Story #13 removes material claim X from
+    the article; the pre-revision LinkedIn body still carries X and must
+    never be recorded as deriving from the revised accepted article."""
+
+    from tests.test_editorial_acceptance import FakeReviewTransport, _review_payload
+
+    original_article = ARTICLE_BODY + " " + STALE_CLAIM
+    stale_medium = _native_linkedin_body() + " " + STALE_CLAIM
+    revised_article = (
+        "The revised accepted article keeps the structural visibility argument "
+        "but removes the unsupported survey claim entirely, grounding every "
+        "statement in the accepted current-run evidence instead."
+    )
+    reviewer = FakeReviewTransport(
+        _review_payload(disposition="revise", failed=["unsupported-claims"],
+                        guidance="Remove the unsupported survey statistic."),
+        _review_payload(),  # revised article is accepted
+    )
+    code, patches = _entry_with_real_story13(
+        tmp_path, reviewer=reviewer, medium_body=stale_medium,
+        long_body=original_article, revised_body=revised_article,
+    )
+    assert code == 1
+    # the stale artifact cannot receive an ACCEPTED record…
+    assert not list(tmp_path.glob("*/runs/*/linkedin_composition.json"))
+    # …cannot reach LinkedIn publication or packaging…
+    assert not patches["LinkedInPublisher"].called
+    assert not patches["WixPublisher"].called
+    assert not patches["append_published_entry"].called
+    assert not list(tmp_path.glob("*/runs/*/generated.json"))
+    # …while the Story #13 editorial history of the run is honestly preserved
+    audit = json.loads(
+        next(tmp_path.glob("*/runs/*/editorial_acceptance.json")).read_text()
+    )
+    assert audit["revised"] is True and audit["accepted"] is True
+
+
+def test_unrevised_accepted_path_still_continues_successfully(tmp_path):
+    """Companion proof: the valid (unrevised) path continues end to end."""
+
+    from tests.test_editorial_acceptance import FakeReviewTransport, _review_payload
+
+    reviewer = FakeReviewTransport(_review_payload())  # immediate ACCEPT
+    code, patches = _entry_with_real_story13(
+        tmp_path, reviewer=reviewer,
+        medium_body=_native_linkedin_body(), long_body=ARTICLE_BODY,
+        dry_run=True,
+    )
+    assert code == 0
+    record = json.loads(
+        next(tmp_path.glob("*/runs/*/linkedin_composition.json")).read_text()
+    )
+    assert record["status"] == "accepted"
+    generated = json.loads(next(tmp_path.glob("*/runs/*/generated.json")).read_text())
+    assert record["source_article_digest"] == article_digest(generated["blog_article"])

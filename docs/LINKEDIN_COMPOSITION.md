@@ -49,6 +49,22 @@ body, no revision loop (Story #13 owns article editorial quality; this
 boundary only proves LinkedIn-specific composition of already accepted
 content).
 
+## Story #13 seam: truthful lineage across article revision
+
+The LinkedIn `medium` body is composed in the same generation pass as the
+original article. When Story #13 editorial acceptance **revises** the article,
+the pre-revision LinkedIn body no longer truthfully derives from the final
+accepted article — content removed or materially changed by the revision may
+survive in it. Release 1 fails closed (`article_revised=True`): a stale
+pre-revision LinkedIn body can never become `ACCEPTED` or publishable, and no
+record is written whose `source_article_digest` would claim a composition
+relationship that did not exist. The run's Story #13 editorial history stays
+honestly preserved in `editorial_acceptance.json`; the remedy follows
+existing new-run semantics — a fresh run composes every channel from one
+accepted content state. Consequence: in Release 1, a run whose article needed
+revision publishes nothing until re-run; digests in accepted records always
+identify the article state that actually supported the composition.
+
 ## Traceability record
 
 On acceptance, one immutable run-scoped `linkedin_composition.json`

@@ -1192,6 +1192,9 @@ def main(
             _li_record = accept_linkedin_composition(
                 linkedin_body=linkedin_text,
                 article_body=blog_body,
+                # Truthful Story #13 seam: a revised article invalidates the
+                # pre-revision LinkedIn composition (fail closed, new run).
+                article_revised=_acceptance.revised,
                 run_id=run_ctx.run_id,
                 signal_id=signal_id,
                 configuration_identity=strategy_execution.identity,
