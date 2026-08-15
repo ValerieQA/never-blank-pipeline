@@ -24,21 +24,20 @@ class VisualArtifactRequest:
     Typed boundary adapter for visual artifact preparation.
 
     Constructed by the canonical entry point before image preparation.
-    `blocked=True` until the Visual System story is implemented.
-    The canonical path checks `blocked`, logs it, and falls through to
-    the direct image pipeline — it does NOT raise when blocked.
+    Since Issue #96 the canonical Release 1 path is active
+    (``blocked=False``): the resulting derivatives are validated and
+    persisted through ``src.visual.contract`` (the fail-closed visual gate),
+    while rendering continues to use the existing image pipeline.
     Identity assertion still runs so run_id mismatch is caught immediately.
 
-    Deferred: full image routing, design-version locking, Cloudinary upload.
+    Deferred: full image routing and provider abstraction (post-R1).
     """
     run_id:         str
     signal_id:      str
     design_version: str
     strategy_view: "VisualStrategyView | None" = None
-    blocked:        bool = True
-    blocked_reason: str  = (
-        "Visual System story not yet implemented — image pipeline called directly"
-    )
+    blocked:        bool = False
+    blocked_reason: str  = ""
 
     def assert_identity(self, expected_run_id: str) -> None:
         """Fail closed if this request's run_id does not match the expected value."""

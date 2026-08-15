@@ -150,6 +150,10 @@ from src.editorial.linkedin_composition import (
     LinkedInCompositionError,
     accept_linkedin_composition,
 )
+from src.visual.contract import (
+    VisualGateError,
+    build_visual_assets_record,
+)
 from src.editorial.editorial_acceptance import (
     ArticleRevisionTransport,
     EditorialAcceptanceError,
@@ -178,6 +182,7 @@ from src.artifacts import (
     write_editorial_acceptance_json,
     write_generated_json,
     write_linkedin_composition_json,
+    write_visual_assets_json,
     write_business_strategy_snapshot,
     write_publication_results_json,
 )
@@ -994,6 +999,30 @@ def main(
         print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
         print(f"  ✓  Platform images: {list(platform_image_urls.keys())}")
 
+        # ── Visual contract gate — reuse path (Issue #96 / Story #15) ────────
+        # The same Release 1 rule guards the reuse/publication path: a valid
+        # Wix visual is required before publication; an attempted-but-invalid
+        # LinkedIn visual fails closed.
+        try:
+            _visual_record = build_visual_assets_record(
+                pimgs,
+                run_id=run_ctx.run_id,
+                signal_id=signal_id,
+                article_body=blog_body,
+                design_version=CURRENT_DESIGN_VERSION,
+            )
+            write_visual_assets_json(
+                run_dir, json.loads(_visual_record.model_dump_json())
+            )
+        except (VisualGateError, ArtifactCollisionError, OSError) as exc:
+            print(f"  ERROR: visual gate blocked publication: {exc}")
+            return 1
+        print(
+            f"  ✓  visuals: {_visual_record.status} "
+            f"(wix required ok; linkedin {_visual_record.linkedin_visual.value}) "
+            f"({run_dir / 'visual_assets.json'})"
+        )
+
     else:
         # ── Visual boundary — typed adapter (fresh-gen path) ──────────────────
         _vis_req = VisualArtifactRequest(
@@ -1212,6 +1241,34 @@ def main(
             f"({_li_record.word_count} words) "
             f"[{_li_record.composition_rules_version}] "
             f"({run_dir / 'linkedin_composition.json'})"
+        )
+
+        # ── Visual contract gate (Issue #96 / Story #15) ─────────────────────
+        # Release 1 rule: the Wix visual is required (no valid Wix visual → no
+        # Wix package/publication); a LinkedIn visual is optional, but an
+        # attempted LinkedIn visual that failed or is invalid is never
+        # silently converted into text-only success. The gate validates the
+        # RESULTING derivatives (remote URL, dimensions, format, lineage,
+        # design version) and persists the immutable visual passport.
+        try:
+            _visual_record = build_visual_assets_record(
+                pimgs,
+                run_id=run_ctx.run_id,
+                signal_id=signal_id,
+                article_body=blog_body,
+                design_version=CURRENT_DESIGN_VERSION,
+            )
+            write_visual_assets_json(
+                run_dir, json.loads(_visual_record.model_dump_json())
+            )
+        except (VisualGateError, ArtifactCollisionError, OSError) as exc:
+            print(f"  ERROR: visual gate blocked publication: {exc}")
+            return 1
+        print(
+            f"  ✓  visuals: {_visual_record.status} "
+            f"(wix required ok; linkedin {_visual_record.linkedin_visual.value}) "
+            f"[{_visual_record.design_version}] "
+            f"({run_dir / 'visual_assets.json'})"
         )
 
         _generated_at = datetime.now(timezone.utc).isoformat()

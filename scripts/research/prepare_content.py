@@ -202,17 +202,23 @@ def _generate_signal_image(signal: dict) -> dict:
         img_path  = out_dir / f"{sig_id}_{platform}.png"
         sized_img.save(str(img_path), "PNG", optimize=True)
 
+        # A local filesystem path is never a publishable remote asset URL
+        # (Issue #96): upload failure stays an explicit failure instead of
+        # masquerading as a usable URL downstream.
+        upload_failed = False
         try:
             url = upload_to_cloudinary(img_path, slug=f"research/{sig_id}/{platform}")
         except Exception as cld_exc:
             log.warning("Cloudinary upload failed for %s/%s: %s", sig_id, platform, cld_exc)
-            url = str(img_path)
+            url = ""
+            upload_failed = True
 
         platform_images[platform] = {
             "url":    url,
             "path":   str(img_path),
             "size":   f"{w}x{h}",
             "reused": False,
+            "upload_failed": upload_failed,
         }
         if platform == "blog":
             master_url = url
@@ -230,6 +236,7 @@ def _generate_signal_image(signal: dict) -> dict:
             "hook_text":      hook_text,
         }
         platform_images["_design_version"] = CURRENT_DESIGN_VERSION
+        platform_images["_method"] = method
         return {
             "platform_images": platform_images,
             "new_images":      1,
@@ -252,6 +259,7 @@ def _generate_signal_image(signal: dict) -> dict:
 
     # Fallback: no Cloudinary URL at all (local paths only)
     platform_images["_design_version"] = CURRENT_DESIGN_VERSION
+    platform_images["_method"] = method
     return {
         "platform_images": platform_images,
         "new_images":      1,
