@@ -183,6 +183,7 @@ from src.publishing.preflight import (
 )
 from src.publishing.package import (
     LinkedInPublicationTarget,
+    PackageFailureCategory,
     PublicationPackageError,
     WixPublicationTarget,
     build_linkedin_publication_package,
@@ -1481,7 +1482,9 @@ def main(
                 )
         except PydanticValidationError as exc:
             return ChannelPackageOutcome.failed(
-                channel, f"{type(exc).__name__}: {exc}", kind="target"
+                channel,
+                f"{type(exc).__name__}: {exc}",
+                category=PackageFailureCategory.TARGET,
             )
         try:
             if channel == "wix":
@@ -1496,7 +1499,9 @@ def main(
             else:
                 if _li_composition is None:
                     return ChannelPackageOutcome.failed(
-                        channel, _li_composition_failure or "no LinkedIn composition"
+                        channel,
+                        _li_composition_failure or "no LinkedIn composition",
+                        category=PackageFailureCategory.CHANNEL_PACKAGE,
                     )
                 package = build_linkedin_publication_package(
                     run_id=run_ctx.run_id,
@@ -1507,8 +1512,20 @@ def main(
                     visual_record=_visual_record,
                     target=target,
                 )
-        except (PublicationPackageError, PydanticValidationError) as exc:
-            return ChannelPackageOutcome.failed(channel, f"{type(exc).__name__}: {exc}")
+        except PublicationPackageError as exc:
+            # The builder classifies its own failure scope: a channel-local
+            # payload problem isolates this channel, while configuration /
+            # provenance / lineage corruption is shared run evidence and stops
+            # every channel. Scope is never inferred from message text.
+            return ChannelPackageOutcome.failed(
+                channel, f"{type(exc).__name__}: {exc}", category=exc.category
+            )
+        except PydanticValidationError as exc:
+            return ChannelPackageOutcome.failed(
+                channel,
+                f"{type(exc).__name__}: {exc}",
+                category=PackageFailureCategory.CHANNEL_PACKAGE,
+            )
         return ChannelPackageOutcome.valid(channel, package)
 
     _channel_outcomes = [_build_channel(name) for name in _R1_PUBLISHERS]

@@ -34,6 +34,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from enum import Enum
 from typing import Literal, Mapping, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -51,8 +52,55 @@ PUBLICATION_PACKAGE_SCHEMA_VERSION = "1.0"
 _REMOTE_URL = re.compile(r"^https://[^\s]+$")
 
 
+class PackageFailureCategory(str, Enum):
+    """Why a canonical publication package could not be constructed.
+
+    The category carries the *scope* of the failure, which the Story #17
+    preflight (Issue #101) needs in order to decide whether one channel is
+    isolated or the whole run is blocked. Channel-scoped categories mean the
+    channel's own publication payload is unusable while the run's canonical
+    evidence stays trustworthy; run-scoped categories mean that evidence is
+    itself inconsistent, so no channel may publish.
+    """
+
+    TARGET = "target"                    # channel: unusable publication target
+    CHANNEL_PACKAGE = "channel_package"  # channel: unusable channel payload
+    CONFIGURATION = "configuration"      # run: authoritative configuration drift
+    PROVENANCE = "provenance"            # run: cross-run / cross-signal evidence
+    LINEAGE = "lineage"                  # run: article/visual/composition lineage
+
+    @property
+    def is_run_scoped(self) -> bool:
+        return self in _RUN_SCOPED_CATEGORIES
+
+
+_RUN_SCOPED_CATEGORIES = frozenset(
+    {
+        PackageFailureCategory.CONFIGURATION,
+        PackageFailureCategory.PROVENANCE,
+        PackageFailureCategory.LINEAGE,
+    }
+)
+
+
 class PublicationPackageError(Exception):
-    """A canonical publication package could not be constructed."""
+    """A canonical publication package could not be constructed.
+
+    ``category`` classifies the failure so callers never have to infer scope
+    from the message text.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        category: PackageFailureCategory = PackageFailureCategory.CHANNEL_PACKAGE,
+    ) -> None:
+        super().__init__(message)
+        self.category = category
+
+    @property
+    def is_run_scoped(self) -> bool:
+        return self.category.is_run_scoped
 
 
 def canonical_slug(title: str) -> str:
@@ -202,28 +250,43 @@ class LinkedInPublicationPackage(_PackageModel):
         return value
 
 
-def _require(condition: bool, message: str) -> None:
+def _require(
+    condition: bool,
+    message: str,
+    category: PackageFailureCategory = PackageFailureCategory.CHANNEL_PACKAGE,
+) -> None:
     if not condition:
-        raise PublicationPackageError(message)
+        raise PublicationPackageError(message, category)
 
 
-def _required_str(mapping: Mapping, key: str, artifact: str) -> str:
+def _required_str(
+    mapping: Mapping,
+    key: str,
+    artifact: str,
+    category: PackageFailureCategory = PackageFailureCategory.CHANNEL_PACKAGE,
+) -> str:
     value = mapping.get(key)
     _require(
         isinstance(value, str) and bool(value.strip()),
         f"{artifact} field {key!r} must be a non-blank string",
+        category,
     )
     return value  # type: ignore[return-value]
 
 
 def _configuration_of(mapping: Mapping, artifact: str) -> ConfigurationIdentity:
     data = mapping.get("configuration_identity")
-    _require(isinstance(data, dict), f"{artifact} carries no configuration identity")
+    _require(
+        isinstance(data, dict),
+        f"{artifact} carries no configuration identity",
+        PackageFailureCategory.CONFIGURATION,
+    )
     try:
         return ConfigurationIdentity.model_validate(data)
     except Exception as exc:  # noqa: BLE001 — malformed identity fails closed
         raise PublicationPackageError(
-            f"{artifact} configuration identity is invalid"
+            f"{artifact} configuration identity is invalid",
+            PackageFailureCategory.CONFIGURATION,
         ) from exc
 
 
@@ -242,49 +305,71 @@ def _bind_generated_to_run(
     authoritative configuration, and the publication run has been proven.
     """
 
-    _require(bool(run_id and run_id.strip()), "publication run_id must be non-empty")
-    _require(bool(signal_id and signal_id.strip()), "signal_id must be non-empty")
+    _require(
+        bool(run_id and run_id.strip()),
+        "publication run_id must be non-empty",
+        PackageFailureCategory.PROVENANCE,
+    )
+    _require(
+        bool(signal_id and signal_id.strip()),
+        "signal_id must be non-empty",
+        PackageFailureCategory.PROVENANCE,
+    )
     _require(
         isinstance(generated, Mapping),
         "generated artifact must be a mapping",
+        PackageFailureCategory.PROVENANCE,
     )
     _require(
         visual_record.signal_id == signal_id,
         "visual passport belongs to a different signal",
+        PackageFailureCategory.PROVENANCE,
     )
-    generated_signal = _required_str(generated, "signal_id", "generated artifact")
+    generated_signal = _required_str(
+        generated, "signal_id", "generated artifact", PackageFailureCategory.PROVENANCE
+    )
     _require(
         generated_signal == signal_id,
         "generated artifact belongs to a different signal",
+        PackageFailureCategory.PROVENANCE,
     )
-    generated_run = _required_str(generated, "run_id", "generated artifact")
+    generated_run = _required_str(
+        generated, "run_id", "generated artifact", PackageFailureCategory.PROVENANCE
+    )
     _require(
         visual_record.run_id == run_id,
         "visual passport belongs to a different publication run",
+        PackageFailureCategory.PROVENANCE,
     )
     if visual_record.reused:
         _require(
             generated_run == visual_record.origin_run_id,
             "cross-run substitution: generated artifact does not belong to "
             "the visual passport's origin run",
+            PackageFailureCategory.PROVENANCE,
         )
     else:
         _require(
             generated_run == run_id,
             "cross-run substitution: generated artifact does not belong to "
             "the publication run",
+            PackageFailureCategory.PROVENANCE,
         )
     generated_configuration = _configuration_of(generated, "generated artifact")
     _require(
         generated_configuration == configuration_identity,
         "generated artifact configuration does not match the run's "
         "authoritative configuration identity",
+        PackageFailureCategory.CONFIGURATION,
     )
-    article_body = _required_str(generated, "blog_article", "generated artifact")
+    article_body = _required_str(
+        generated, "blog_article", "generated artifact", PackageFailureCategory.PROVENANCE
+    )
     _require(
         article_digest(article_body) == visual_record.source_article_digest,
         "cross-run substitution: visual passport was not produced from the "
         "accepted article",
+        PackageFailureCategory.LINEAGE,
     )
     return article_body
 
@@ -303,6 +388,7 @@ def build_wix_publication_package(
     _require(
         isinstance(visual_record, VisualAssetsRecord),
         "the required Wix visual passport is missing",
+        PackageFailureCategory.PROVENANCE,
     )
     assert visual_record is not None  # for type-checkers; _require guards above
     article_body = _bind_generated_to_run(
@@ -316,8 +402,11 @@ def build_wix_publication_package(
     _require(
         bool(cover),
         "the visual passport carries no required Wix derivative",
+        PackageFailureCategory.LINEAGE,
     )
-    title = _required_str(generated, "headline", "generated artifact")
+    title = _required_str(
+        generated, "headline", "generated artifact", PackageFailureCategory.PROVENANCE
+    )
     try:
         return WixPublicationPackage(
             run_id=run_id,
@@ -359,6 +448,7 @@ def build_linkedin_publication_package(
     _require(
         isinstance(visual_record, VisualAssetsRecord),
         "the visual passport is missing — LinkedIn visual state cannot be proven",
+        PackageFailureCategory.PROVENANCE,
     )
     assert visual_record is not None
     article_body = _bind_generated_to_run(
@@ -385,34 +475,42 @@ def build_linkedin_publication_package(
     _require(
         composition.signal_id == signal_id,
         "linkedin composition belongs to a different signal",
+        PackageFailureCategory.PROVENANCE,
     )
     generated_run = generated["run_id"]
     _require(
         composition.run_id == generated_run,
         "cross-run substitution: linkedin composition does not belong to "
         "the generation run",
+        PackageFailureCategory.PROVENANCE,
     )
     _require(
         composition.source_article_digest == article_digest(article_body),
         "cross-run substitution: linkedin composition was not accepted "
         "against the accepted article",
+        PackageFailureCategory.LINEAGE,
     )
     _require(
         composition.configuration_identity == configuration_identity,
         "linkedin composition configuration does not match the run's "
         "authoritative configuration identity",
+        PackageFailureCategory.CONFIGURATION,
     )
-    generated_linkedin = _required_str(generated, "linkedin_post", "generated artifact")
+    generated_linkedin = _required_str(
+        generated, "linkedin_post", "generated artifact", PackageFailureCategory.PROVENANCE
+    )
     _require(
         composition.linkedin_body == generated_linkedin,
         "generated linkedin_post does not match the accepted canonical "
         "LinkedIn composition — no channel-body fallback is permitted",
+        PackageFailureCategory.LINEAGE,
     )
     if visual_record.linkedin_visual is LinkedInVisualState.VALID:
         linkedin_image_url = visual_record.linkedin_url
         _require(
             bool(linkedin_image_url),
             "visual passport claims a valid LinkedIn derivative that is absent",
+            PackageFailureCategory.LINEAGE,
         )
     else:
         linkedin_image_url = None

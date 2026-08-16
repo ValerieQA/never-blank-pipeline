@@ -94,6 +94,17 @@ Concretely:
   canonical package could not be constructed carries **no** digest and **no**
   target — a digest is never fabricated — and the strict model enforces that
   an `ALLOW` always carries a real digest and target.
+- *Construction failures carry their scope*. The #100 builders enforce two
+  different classes of invariant, so `PublicationPackageError` now carries a
+  typed `PackageFailureCategory`: `TARGET` and `CHANNEL_PACKAGE` are
+  channel-scoped, while `CONFIGURATION`, `PROVENANCE` and `LINEAGE` are
+  run-scoped. A run-scoped construction failure — authoritative configuration
+  drift, cross-run or cross-signal substitution of the generated artifact,
+  visual passport or LinkedIn composition, and accepted-article ↔ visual ↔
+  composition digest corruption — blocks **every** channel
+  (`configuration_mismatch` / `run_evidence_inconsistent`) even when the other
+  channel's package builds perfectly. Scope is read from the typed category,
+  never inferred from exception message text.
 
 **6. "Fake-client tests prove zero external calls after a blocked preflight."**
 `SATISFIED` (#101): deterministic fake transports prove zero calls for

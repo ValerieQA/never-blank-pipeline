@@ -47,6 +47,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from src.artifacts.provenance import ProvenanceError, verify_run_provenance
 from src.publishing.package import (
     LinkedInPublicationPackage,
+    PackageFailureCategory,
     LinkedInPublicationTarget,
     WixPublicationPackage,
     WixPublicationTarget,
@@ -83,6 +84,7 @@ class BlockingReason(str, Enum):
     CONFIGURATION_MISMATCH = "configuration_mismatch"
     FRESHNESS_FAILED = "freshness_failed"
     READINESS_FAILED = "readiness_failed"
+    RUN_EVIDENCE_INCONSISTENT = "run_evidence_inconsistent"
     OVERRIDE_ATTEMPTED_ON_BLOCKING_CONDITION = (
         "override_attempted_on_blocking_condition"
     )
@@ -157,9 +159,18 @@ class ChannelPackageOutcome:
     target failure becomes a typed channel BLOCK instead of collapsing the
     whole run. A failed channel carries no package and therefore no digest —
     a digest is never fabricated for a package that does not exist.
+
+    A failure also carries the #100 builder's typed
+    :class:`~src.publishing.package.PackageFailureCategory`, because the same
+    builders enforce two different classes of invariant: the channel's own
+    payload/target validity, and shared run-integrity (configuration,
+    cross-run/cross-signal substitution, article/visual/composition lineage).
+    Only the first class may isolate one channel; the second means the run's
+    canonical evidence is inconsistent, so no channel may publish. The scope
+    comes from the category, never from matching message text.
     """
 
-    __slots__ = ("channel", "package", "failure_reason", "failure_kind")
+    __slots__ = ("channel", "package", "failure_reason", "failure_category")
 
     def __init__(
         self,
@@ -167,18 +178,25 @@ class ChannelPackageOutcome:
         *,
         package=None,
         failure_reason: Optional[str] = None,
-        failure_kind: Optional[str] = None,
+        failure_category: Optional[PackageFailureCategory] = None,
     ) -> None:
         if (package is None) == (failure_reason is None):
             raise ValueError(
                 "a channel outcome is either a valid package or a typed failure"
             )
-        if failure_kind not in (None, "package", "target"):
-            raise ValueError(f"unsupported channel failure kind: {failure_kind!r}")
+        if failure_reason is not None and failure_category is None:
+            raise ValueError("a channel failure must carry its typed category")
         self.channel = channel
         self.package = package
         self.failure_reason = failure_reason
-        self.failure_kind = failure_kind or ("package" if failure_reason else None)
+        self.failure_category = failure_category
+
+    @property
+    def failure_is_run_scoped(self) -> bool:
+        return (
+            self.failure_category is not None
+            and self.failure_category.is_run_scoped
+        )
 
     @classmethod
     def valid(cls, channel: str, package) -> "ChannelPackageOutcome":
@@ -186,9 +204,13 @@ class ChannelPackageOutcome:
 
     @classmethod
     def failed(
-        cls, channel: str, reason: str, *, kind: str = "package"
+        cls,
+        channel: str,
+        reason: str,
+        *,
+        category: PackageFailureCategory = PackageFailureCategory.CHANNEL_PACKAGE,
     ) -> "ChannelPackageOutcome":
-        return cls(channel, failure_reason=reason, failure_kind=kind)
+        return cls(channel, failure_reason=reason, failure_category=category)
 
 
 class ChannelPreflightVerdict(_PreflightModel):
@@ -367,6 +389,19 @@ def evaluate_publication_preflight(
     if any(package.run_id != run_id for package in packages):
         run_reasons.append(BlockingReason.RUN_BLOCKED)
 
+    # ── shared: run-scoped construction failures ─────────────────────────────
+    # A builder failure that proves the run's canonical evidence is
+    # inconsistent (authoritative configuration drift, cross-run/cross-signal
+    # substitution, article/visual/composition lineage corruption) is never
+    # downgraded to a single-channel BLOCK: the whole run stops.
+    for outcome in channel_outcomes:
+        if not outcome.failure_is_run_scoped:
+            continue
+        if outcome.failure_category is PackageFailureCategory.CONFIGURATION:
+            run_reasons.append(BlockingReason.CONFIGURATION_MISMATCH)
+        else:
+            run_reasons.append(BlockingReason.RUN_EVIDENCE_INCONSISTENT)
+
     # ── override: never converts BLOCK into ALLOW (Release 1 decision) ───────
     override_state = OverrideState.NONE
     if override_attempted:
@@ -387,11 +422,14 @@ def evaluate_publication_preflight(
             # The canonical package could not be constructed: an explicit,
             # fail-closed channel state carrying no digest and no target.
             package_valid = False
-            channel_reasons.append(
-                BlockingReason.TARGET_MISSING
-                if outcome.failure_kind == "target"
-                else BlockingReason.PACKAGE_INVALID
-            )
+            if outcome.failure_category is PackageFailureCategory.TARGET:
+                channel_reasons.append(BlockingReason.TARGET_MISSING)
+            elif outcome.failure_is_run_scoped:
+                # The channel is blocked because the run's evidence is
+                # inconsistent, not because its own payload was unusable.
+                channel_reasons.append(BlockingReason.RUN_EVIDENCE_INCONSISTENT)
+            else:
+                channel_reasons.append(BlockingReason.PACKAGE_INVALID)
             digest = None
             target = None
         else:

@@ -735,3 +735,112 @@ def test_readiness_block_with_override_attempt_is_preserved(tmp_path, monkeypatc
     assert result.allowed_channels() == ()
     wix_mock.publish.assert_not_called()
     li_mock.publish.assert_not_called()
+
+
+# ── Shared run-integrity failures surfaced during package construction ───────
+#
+# The #100 builders enforce two different classes of invariant. A channel's own
+# unusable payload/target isolates that channel (proved above). A builder
+# failure that proves the run's canonical evidence is inconsistent —
+# authoritative configuration drift, cross-run/cross-signal substitution, or
+# article/visual/composition lineage corruption — must stop every channel, even
+# when the other channel's package builds perfectly.
+
+
+def test_foreign_linkedin_configuration_blocks_the_whole_run(tmp_path, monkeypatch):
+    """A syntactically valid but foreign ConfigurationIdentity is corruption."""
+
+    _target_env(monkeypatch)
+
+    def foreign_configuration(**kwargs):
+        from src.editorial.linkedin_composition import accept_linkedin_composition
+
+        record = accept_linkedin_composition(**kwargs)
+        # Syntactically valid, but a different authoritative configuration:
+        # the run's canonical evidence is inconsistent.
+        return record.model_copy(update={"configuration_identity": FOREIGN_CONFIG})
+
+    code, wix_mock, li_mock, verdicts = _live_run(
+        tmp_path,
+        accept_linkedin_composition=mock.MagicMock(side_effect=foreign_configuration),
+        write_linkedin_composition_json=mock.MagicMock(),
+    )
+
+    assert code == 1
+    assert len(verdicts) == 1
+    result = PreflightResult.model_validate_json(verdicts[0].read_bytes())
+    assert result.run_disposition is PreflightDisposition.BLOCK
+    assert BlockingReason.CONFIGURATION_MISMATCH in result.run_blocking_reasons
+    assert result.allowed_channels() == ()
+    # Wix built perfectly and still must not publish.
+    wix_mock.publish.assert_not_called()
+    li_mock.publish.assert_not_called()
+    linkedin = result.verdict_for("linkedin")
+    assert linkedin.blocking_reasons != (BlockingReason.PACKAGE_INVALID,)
+
+
+def test_cross_run_linkedin_composition_blocks_the_whole_run(tmp_path, monkeypatch):
+    _target_env(monkeypatch)
+
+    def foreign_run(**kwargs):
+        from src.editorial.linkedin_composition import accept_linkedin_composition
+
+        record = accept_linkedin_composition(**kwargs)
+        return record.model_copy(update={"run_id": "run-some-other-generation"})
+
+    code, wix_mock, li_mock, verdicts = _live_run(
+        tmp_path,
+        accept_linkedin_composition=mock.MagicMock(side_effect=foreign_run),
+        write_linkedin_composition_json=mock.MagicMock(),
+    )
+
+    assert code == 1
+    result = PreflightResult.model_validate_json(verdicts[0].read_bytes())
+    assert result.run_disposition is PreflightDisposition.BLOCK
+    assert BlockingReason.RUN_EVIDENCE_INCONSISTENT in result.run_blocking_reasons
+    assert result.allowed_channels() == ()
+    wix_mock.publish.assert_not_called()
+    li_mock.publish.assert_not_called()
+
+
+def test_article_visual_lineage_corruption_blocks_the_whole_run(tmp_path, monkeypatch):
+    """The visual passport was not produced from the accepted article."""
+
+    _target_env(monkeypatch)
+    def foreign_article_digest(*args, **kwargs):
+        from src.visual.contract import build_visual_assets_record
+
+        record = build_visual_assets_record(*args, **kwargs)
+        # A passport that was not produced from this run's accepted article.
+        return record.model_copy(
+            update={"source_article_digest": "sha256:" + "f" * 64}
+        )
+
+    code, wix_mock, li_mock, verdicts = _live_run(
+        tmp_path,
+        build_visual_assets_record=mock.MagicMock(side_effect=foreign_article_digest),
+        write_visual_assets_json=mock.MagicMock(),
+    )
+
+    assert code == 1
+    result = PreflightResult.model_validate_json(verdicts[0].read_bytes())
+    assert result.run_disposition is PreflightDisposition.BLOCK
+    assert BlockingReason.RUN_EVIDENCE_INCONSISTENT in result.run_blocking_reasons
+    assert result.allowed_channels() == ()
+    wix_mock.publish.assert_not_called()
+    li_mock.publish.assert_not_called()
+
+
+def test_channel_local_and_shared_failures_are_distinguished(tmp_path):
+    """Unit-level proof of the classification the entrypoint relies on."""
+
+    from src.publishing.package import PackageFailureCategory as Cat
+
+    local = ChannelPackageOutcome.failed("linkedin", "bad target", category=Cat.TARGET)
+    channel = ChannelPackageOutcome.failed("linkedin", "bad payload", category=Cat.CHANNEL_PACKAGE)
+    assert not local.failure_is_run_scoped
+    assert not channel.failure_is_run_scoped
+    for shared in (Cat.CONFIGURATION, Cat.PROVENANCE, Cat.LINEAGE):
+        assert ChannelPackageOutcome.failed(
+            "linkedin", "corrupt", category=shared
+        ).failure_is_run_scoped
