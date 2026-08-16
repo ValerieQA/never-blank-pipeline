@@ -351,3 +351,105 @@ def test_reused_visual_with_false_origin_fails(two_runs):
     (_run_dir(tmp_path, pub_run) / "publication_results.json").write_text(json.dumps(pub))
     with pytest.raises(ProvenanceError, match="does not match the visual origin run"):
         _verify(tmp_path, pub_run)
+
+
+# ===========================================================================
+# Review follow-up: reuse publication must verify the source generation run
+# ===========================================================================
+
+
+def _build_reuse_run(tmp_path, source_run_id):
+    from tests.test_decision_lifecycle import _reuse_patches
+
+    argv, patches = _reuse_patches(tmp_path, source_run_id)
+    del patches["load_visual_assets_json"]
+    del patches["reuse_visual_assets_record"]
+    del patches["write_visual_assets_json"]
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main() == 0
+    return next(
+        p.parent.name
+        for p in tmp_path.glob(f"{SIG}/runs/*/visual_assets.json")
+        if json.loads(p.read_text()).get("reused")
+    )
+
+
+@pytest.fixture
+def reuse_pair(tmp_path):
+    code, runs = _full_run(tmp_path)
+    assert code == 0
+    run_a = runs[0]
+    run_b = _build_reuse_run(tmp_path, run_a)
+    return tmp_path, run_a, run_b
+
+
+def test_valid_reuse_chain_verifies_against_verified_source(reuse_pair):
+    tmp_path, run_a, run_b = reuse_pair
+    report = _verify(tmp_path, run_b)
+    assert report.run_kind == "reuse-publication"
+    # and the source itself still verifies independently
+    assert _verify(tmp_path, run_a).run_kind == "generation"
+
+
+def test_source_article_tampered_after_reuse_fails_closed(reuse_pair):
+    tmp_path, run_a, run_b = reuse_pair
+    path = _run_dir(tmp_path, run_a) / "generated.json"
+    data = json.loads(path.read_text())
+    data["blog_article"] = data["blog_article"] + " Tampered after reuse."
+    path.unlink()
+    path.write_text(json.dumps(data))
+    # the file still EXISTS — existence must not be provenance
+    assert path.exists()
+    with pytest.raises(ProvenanceError, match="source generation run .* failed provenance"):
+        _verify(tmp_path, run_b)
+
+
+def test_source_generated_from_another_run_fails_closed(reuse_pair, tmp_path):
+    tmp_path_, run_a, run_b = reuse_pair
+    # a third independent generation run C of the same signal
+    before = {p.parent.name for p in tmp_path_.glob(f"{SIG}/runs/*/assignment.json")}
+    code, _ = _full_run(tmp_path_)
+    assert code == 0
+    run_c = _new_run_ids(before, tmp_path_)[0]
+    target = _run_dir(tmp_path_, run_a) / "generated.json"
+    target.unlink()
+    target.write_bytes((_run_dir(tmp_path_, run_c) / "generated.json").read_bytes())
+    with pytest.raises(ProvenanceError, match="source generation run .* failed provenance"):
+        _verify(tmp_path_, run_b)
+
+
+def test_publication_configuration_laundering_fails_closed(reuse_pair):
+    """B made internally self-consistent under a DIFFERENT configuration
+    must still fail: reuse must match the source generation configuration."""
+
+    from src.strategy.business_config import BusinessStrategyConfiguration
+    from src.strategy.execution_context import ConfigurationIdentity
+
+    tmp_path, run_a, run_b = reuse_pair
+    b_dir = _run_dir(tmp_path, run_b)
+
+    # craft a genuinely different configuration snapshot for B
+    snapshot = json.loads((b_dir / "business_strategy.json").read_text())
+    snapshot["business"]["name"] = snapshot["business"]["name"] + " (laundered)"
+    laundered = BusinessStrategyConfiguration.model_validate(snapshot)
+    base_identity = ConfigurationIdentity.model_validate(
+        json.loads((b_dir / "assignment.json").read_text())["configuration_identity"]
+    )
+    laundered_identity = base_identity.from_configuration(laundered)
+    assert laundered_identity != base_identity
+
+    (b_dir / "business_strategy.json").unlink()
+    (b_dir / "business_strategy.json").write_text(json.dumps(snapshot))
+    assignment = json.loads((b_dir / "assignment.json").read_text())
+    assignment["configuration_identity"] = json.loads(
+        laundered_identity.model_dump_json()
+    )
+    (b_dir / "assignment.json").unlink()
+    (b_dir / "assignment.json").write_text(json.dumps(assignment))
+
+    # B is now internally self-consistent (assignment matches its snapshot)…
+    with pytest.raises(
+        ProvenanceError,
+        match="does not match the source generation configuration",
+    ):
+        _verify(tmp_path, run_b)

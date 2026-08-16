@@ -422,11 +422,68 @@ def _verify_reuse_publication_run(
         source_run_id is not None,
         "reuse-publication run has no verifiable source-run reference",
     )
-    # The originating generation run must itself hold canonical evidence.
-    source_dir = resolve_run_dir(packages_dir, signal_id, source_run_id)
     _require(
-        (source_dir / "generated.json").exists(),
+        publication is None or visual is not None,
+        "reuse publication exists without its reuse visual passport",
+    )
+
+    # The originating generation run must itself be a VALID canonical
+    # generation provenance chain — a filename in the source directory is not
+    # provenance. The existing verifier is reused (no second source
+    # verifier); a source that is itself a reuse run is rejected, which also
+    # bounds the recursion at depth one.
+    try:
+        source_report = verify_run_provenance(packages_dir, signal_id, source_run_id)
+    except ProvenanceError as exc:
+        raise ProvenanceError(
+            f"source generation run {source_run_id} failed provenance "
+            f"verification: {exc}"
+        ) from exc
+    _require(
+        source_report.run_kind == "generation",
+        f"source run {source_run_id} is not a generation run — a reuse "
+        "publication cannot chain to another reuse run",
+    )
+    _require(
+        "generated" in source_report.verified_artifacts,
+        f"source generation run {source_run_id} never reached the generated "
+        "stage — there is no accepted content to reuse",
+    )
+
+    source_dir = resolve_run_dir(packages_dir, signal_id, source_run_id)
+    source_generated = _load(source_dir, "generated.json")
+    _require(
+        source_generated is not None,
         f"originating generation run {source_run_id} has no generated.json",
+    )
+    # the reused article/visual state must be the state actually proven by A
+    if visual is not None:
+        source_article = source_generated.get("blog_article")
+        _require(
+            isinstance(source_article, str) and bool(source_article.strip()),
+            "source generated.json carries no article body",
+        )
+        _require(
+            visual.source_article_digest == _article_digest(source_article),
+            "reused visual passport does not match the source run's actual "
+            "accepted article state",
+        )
+    # the publication run must use the source generation's configuration
+    source_assignment_raw = _load(source_dir, "assignment.json")
+    _require(
+        source_assignment_raw is not None,
+        f"source generation run {source_run_id} has no assignment.json",
+    )
+    try:
+        source_assignment = AssignmentRecord.model_validate(source_assignment_raw)
+    except Exception as exc:  # noqa: BLE001
+        raise ProvenanceError(
+            "source assignment.json violates the strict contract"
+        ) from exc
+    _require(
+        source_assignment.configuration_identity == config,
+        "reuse publication configuration does not match the source "
+        "generation configuration",
     )
 
     return RunProvenanceReport(

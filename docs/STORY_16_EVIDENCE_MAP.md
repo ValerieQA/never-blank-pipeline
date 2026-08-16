@@ -94,6 +94,17 @@ digest/reference inconsistency; later artifacts without their valid upstream
 chain; malformed artifacts. A blocked business outcome is not corrupted
 provenance.
 
+For a reuse-publication run the verifier **recursively verifies the
+originating generation run with the same verifier** (existence of a filename
+is not provenance): the source must verify as a valid generation chain that
+reached the `generated` stage; the source's actual accepted-article digest
+must equal the reused visual `source_article_digest`; the publication run's
+configuration identity must equal the source generation configuration; and a
+reuse run can never chain to another reuse run (which also bounds the
+recursion at depth one). Tampering or substituting the source
+`generated.json` after reuse, and internally self-consistent
+configuration laundering of the publication run, both fail closed.
+
 No `run_manifest.json`, no universal artifact-ID migration, no provenance
 platform: verification is performed directly over the existing canonical
 artifacts, and no existing artifact contract required a new field (the only
