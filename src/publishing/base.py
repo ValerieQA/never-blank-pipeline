@@ -40,6 +40,14 @@ class DraftPackage:
     wix_slug:       str = ""
     wix_category_id: str = ""
     wix_tags:       list = field(default_factory=list)
+    # Non-secret publication target identity — derived from the canonical
+    # publication packages (Issue #100 / Story #17). The environment provides
+    # the target exactly once, at package construction in the entrypoint;
+    # publishers MUST consume these fields and never independently re-read
+    # target identity from the environment (credential secrets stay env-only).
+    wix_site_id:          str = ""
+    wix_owner_member_id:  str = ""
+    linkedin_account_id:  str = ""
     # Run identity — propagated from RunContext at the canonical entry point.
     # Default "" for backward compat with non-canonical callers and existing tests.
     run_id:         str = ""

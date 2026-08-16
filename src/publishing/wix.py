@@ -22,10 +22,12 @@ Typed errors (all subclass WixPublisherError):
   WixDraftMediaVerificationError — draft exists but media is missing or wrong
   WixPublishError               — POST /publish failed
 
-Env vars:
+Env vars (credential secret only — Issue #100):
   NB_WIX_API_KEY        — Wix REST API key
-  NB_WIX_SITE_ID        — Wix site ID
-  NB_WIX_POST_OWNER_ID  — Wix member ID for post authorship
+
+Target identity (site ID, post owner member ID) is NOT read here: it comes
+from the canonical publication package via the draft package, so the target
+recorded by the package is exactly the target the external call uses.
 
 modes:
   dry_run    — validate payload, no API calls
@@ -138,17 +140,28 @@ class WixPublisher(BasePublisher):
             draft.require_configuration_identity(
                 strategy_view.identity, "wix-publisher"
             )
+        # Credential secret — environment-only (readiness gate is Issue #101).
         api_key  = os.getenv("NB_WIX_API_KEY", "")
-        site_id  = os.getenv("NB_WIX_SITE_ID", "")
-        owner_id = os.getenv("NB_WIX_POST_OWNER_ID", "")
+        # Target identity — package-derived (Issue #100): the environment was
+        # read exactly once at canonical package construction; a second
+        # independent target selection here would let the external call go to
+        # a target the package digest does not identify.
+        site_id  = draft.wix_site_id
+        owner_id = draft.wix_owner_member_id
 
         missing = [k for k, v in {
             "NB_WIX_API_KEY":        api_key,
-            "NB_WIX_SITE_ID":        site_id,
-            "NB_WIX_POST_OWNER_ID":  owner_id,
         }.items() if not v]
         if missing:
             return self._fail(f"Missing env vars: {missing}")
+        missing_target = [k for k, v in {
+            "wix_site_id":           site_id,
+            "wix_owner_member_id":   owner_id,
+        }.items() if not v]
+        if missing_target:
+            return self._fail(
+                f"Missing package target identity: {missing_target}"
+            )
 
         headers = {
             "Authorization": api_key,

@@ -68,6 +68,10 @@ def _draft_package(image_url: Optional[str] = "https://res.cloudinary.com/nb/ima
         wix_slug="the-month-you-went-quiet",
         wix_category_id="cat-001",
         wix_tags=["presence", "agency"],
+        # Package-derived target identity (Issue #100): publishers no longer
+        # read NB_WIX_SITE_ID / NB_WIX_POST_OWNER_ID at publish() time.
+        wix_site_id="test-site",
+        wix_owner_member_id="test-owner",
         metadata={},
     )
 
