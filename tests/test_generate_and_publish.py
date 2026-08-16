@@ -175,6 +175,8 @@ def _fake_wix_package(**kwargs):
     visual = kwargs.get("visual_record")
     title = generated.get("headline", "")
     return SimpleNamespace(
+        run_id=kwargs["run_id"],
+        signal_id=kwargs["signal_id"],
         title=title,
         slug=canonical_slug(title),
         body_markdown=generated.get("blog_article", ""),
@@ -191,10 +193,39 @@ def _fake_linkedin_package(**kwargs):
     generated = kwargs["generated"]
     visual = kwargs.get("visual_record")
     return SimpleNamespace(
+        run_id=kwargs["run_id"],
+        signal_id=kwargs["signal_id"],
         linkedin_body=generated.get("linkedin_post", ""),
         linkedin_image_url=getattr(visual, "linkedin_url", None),
         target=SimpleNamespace(account_id="stand-in-account"),
         package_digest=lambda: "sha256:" + "1" * 64,
+    )
+
+
+# ALLOW-shaped stand-in for the publication preflight gate (Issue #101): the
+# entrypoint reads .run_disposition, .channels, .run_blocking_reasons and
+# .verdict_for(channel). Digests are taken from the packages actually passed
+# in, so the harness still exercises the real digest-binding assertion at the
+# publisher boundary. The real gate is covered by
+# tests/test_publication_preflight.py.
+def _fake_preflight(**kwargs):
+    from src.publishing.preflight import PreflightDisposition
+
+    verdicts = {
+        name: SimpleNamespace(
+            channel=name,
+            disposition=PreflightDisposition.ALLOW,
+            blocking_reasons=(),
+            package_digest=kwargs[f"{name}_package"].package_digest(),
+        )
+        for name in ("wix", "linkedin")
+    }
+    return SimpleNamespace(
+        run_disposition=PreflightDisposition.ALLOW,
+        run_blocking_reasons=(),
+        channels=tuple(verdicts.values()),
+        verdict_for=verdicts.get,
+        model_dump_json=lambda **_: "{}",
     )
 
 
@@ -340,6 +371,10 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         # stand-ins; the real builders are covered by
         # tests/test_publication_package.py. Target models are stubbed so the
         # harness needs no NB_* target environment.
+        # Publication preflight gate (Issue #101): ALLOW-shaped stand-in; the
+        # real gate is covered by tests/test_publication_preflight.py.
+        "evaluate_publication_preflight": mock.MagicMock(side_effect=_fake_preflight),
+        "write_preflight_result_json": mock.MagicMock(),
         "build_wix_publication_package": mock.MagicMock(side_effect=_fake_wix_package),
         "build_linkedin_publication_package": mock.MagicMock(side_effect=_fake_linkedin_package),
         "WixPublicationTarget": mock.MagicMock(return_value=mock.sentinel.wix_target),

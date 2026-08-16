@@ -34,6 +34,7 @@ from src.publishing.base import BasePublisher, DraftPackage, _fetch
 from src.publishing.result import PublishResult, PublishStatus
 
 if TYPE_CHECKING:
+    from src.publishing.package import LinkedInPublicationPackage
     from src.strategy.execution_context import LinkedInStrategyView
 
 _ZERNIO_POSTS_URL = "https://zernio.com/api/v1/posts"
@@ -44,15 +45,18 @@ class LinkedInPublisher(BasePublisher):
 
     def publish(
         self,
-        draft: DraftPackage,
+        package: "LinkedInPublicationPackage",
         mode: str,
         *,
         strategy_view: "LinkedInStrategyView | None" = None,
     ) -> PublishResult:
-        if strategy_view is not None:
-            draft.require_configuration_identity(
-                strategy_view.identity, "linkedin-publisher"
+        # Issue #101: exact frozen package in, internal representation derived
+        # here — no mutable object can diverge from the authorized digest.
+        if strategy_view is not None and package.configuration_identity != strategy_view.identity:
+            return self._fail(
+                "package configuration identity does not match the LinkedIn strategy view"
             )
+        draft = DraftPackage.from_linkedin_package(package)
         import os
 
         # Credential secret — environment-only (readiness gate is Issue #101).

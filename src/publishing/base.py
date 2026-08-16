@@ -53,6 +53,62 @@ class DraftPackage:
     run_id:         str = ""
     metadata:       dict = field(default_factory=dict)
 
+    @classmethod
+    def from_wix_package(cls, package) -> "DraftPackage":
+        """Derive the adapter-internal representation from the frozen package.
+
+        Deterministic and total: every field comes from the package that the
+        preflight authorized. No environment value and no external file can
+        alter the converted payload (the credential secret, read at execution
+        time, is the only runtime environment input).
+        """
+        return cls(
+            draft_dir=Path("."),
+            blog_title=package.title,
+            blog_body=package.body_markdown,
+            blog_meta={"title": package.title, "wix_slug": package.slug},
+            linkedin_text="",
+            instagram_text="",
+            facebook_text="",
+            threads_sequence=[],
+            telegram_text="",
+            image_url=package.cover_image_url,
+            platform_image_urls={"blog": package.cover_image_url},
+            wix_slug=package.slug,
+            wix_category_id=(
+                package.target.category_ids[0] if package.target.category_ids else ""
+            ),
+            wix_tags=list(package.target.tag_ids),
+            wix_site_id=package.target.site_id,
+            wix_owner_member_id=package.target.owner_member_id,
+            run_id=package.run_id,
+            metadata={"signal_id": package.signal_id},
+        )
+
+    @classmethod
+    def from_linkedin_package(cls, package) -> "DraftPackage":
+        """Derive the adapter-internal representation from the frozen package."""
+        return cls(
+            draft_dir=Path("."),
+            blog_title="",
+            blog_body="",
+            blog_meta={},
+            linkedin_text=package.linkedin_body,
+            instagram_text="",
+            facebook_text="",
+            threads_sequence=[],
+            telegram_text="",
+            image_url=package.linkedin_image_url,
+            platform_image_urls=(
+                {"linkedin": package.linkedin_image_url}
+                if package.linkedin_image_url
+                else {}
+            ),
+            linkedin_account_id=package.target.account_id,
+            run_id=package.run_id,
+            metadata={"signal_id": package.signal_id},
+        )
+
     def image_for(self, platform: str) -> Optional[str]:
         """Return the best image URL for this platform, falling back to image_url."""
         return self.platform_image_urls.get(platform) or self.image_url
@@ -200,8 +256,14 @@ class BasePublisher(ABC):
     name: str
 
     @abstractmethod
-    def publish(self, draft: DraftPackage, mode: str) -> PublishResult:
-        """
+    def publish(self, package, mode: str) -> PublishResult:
+        """Publish one canonical frozen publication package (Issue #101).
+
+        Adapters receive the exact frozen package that the publication
+        preflight authorized — never a mutable object whose content or target
+        could diverge from the authorized digest. Any legacy internal
+        representation is derived inside the adapter from that package.
+
         mode: 'dry_run' | 'draft_only' | 'live'
         """
 

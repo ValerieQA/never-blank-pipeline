@@ -53,26 +53,42 @@ from src.publishing.wix import (
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _draft_package(image_url: Optional[str] = "https://res.cloudinary.com/nb/image/upload/v1/cover.jpg"):
-    from src.publishing.base import DraftPackage
-    return DraftPackage(
-        draft_dir=Path("/tmp/draft"),
-        blog_title="The Month You Went Quiet",
-        blog_body="## The Pattern\n\nClients notice absence.",
-        blog_meta={"meta_description": "Why agencies go dark."},
-        linkedin_text="LinkedIn text",
-        instagram_text="Instagram text",
-        facebook_text="Facebook text",
-        threads_sequence=["Thread 1"],
-        telegram_text="Telegram text",
-        image_url=image_url,
-        wix_slug="the-month-you-went-quiet",
-        wix_category_id="cat-001",
-        wix_tags=["presence", "agency"],
-        # Package-derived target identity (Issue #100): publishers no longer
-        # read NB_WIX_SITE_ID / NB_WIX_POST_OWNER_ID at publish() time.
-        wix_site_id="test-site",
-        wix_owner_member_id="test-owner",
-        metadata={},
+    """Issue #101: publishers consume the frozen canonical Wix package.
+
+    Built directly (not through the #100 builder) so this suite stays a
+    publisher-adapter suite: it exercises the external payload semantics, not
+    package construction, which tests/test_publication_package.py owns.
+    """
+    from src.editorial.linkedin_composition import article_digest
+    from src.publishing.package import (
+        WixPublicationPackage,
+        WixPublicationTarget,
+        canonical_slug,
+    )
+    from src.strategy.execution_context import ConfigurationIdentity
+
+    title = "The Month You Went Quiet"
+    body = "## The Pattern\n\nClients notice absence."
+    return WixPublicationPackage(
+        run_id="run-wix-publisher-001",
+        signal_id="sig-wix-publisher-001",
+        configuration_identity=ConfigurationIdentity(
+            schema_version="1.0",
+            configuration_id="cfg-wix-tests",
+            configuration_version="1",
+            configuration_hash="sha256:" + "e" * 64,
+        ),
+        source_article_digest=article_digest(body),
+        title=title,
+        slug=canonical_slug(title),
+        body_markdown=body,
+        cover_image_url=image_url or "https://res.cloudinary.com/nb/fallback.png",
+        target=WixPublicationTarget(
+            site_id="test-site",
+            owner_member_id="test-owner",
+            category_ids=("cat-001",),
+            tag_ids=("presence", "agency"),
+        ),
     )
 
 
@@ -169,10 +185,19 @@ class TestWixPublisherDryRun:
         result = WixPublisher().publish(_draft_package(image_url="https://cloudinary.com/x.jpg"), "dry_run")
         assert "pending_import" in result.error_message
 
-    def test_dry_run_shows_no_image_when_absent(self, monkeypatch):
+    def test_canonical_package_always_carries_a_cover(self, monkeypatch):
+        """Issue #96/#100: the Wix visual is required, so a canonical Wix
+        package can never reach the adapter without a cover. The adapter's
+        legacy no-cover branch is unreachable from the canonical boundary."""
         _wix_env(monkeypatch)
-        result = WixPublisher().publish(_draft_package(image_url=None), "dry_run")
-        assert "no_image" in result.error_message
+        from pydantic import ValidationError
+
+        package = _draft_package()
+        assert package.cover_image_url.startswith("https://")
+        with pytest.raises(ValidationError):
+            type(package)(**{**package.model_dump(), "cover_image_url": ""})
+        result = WixPublisher().publish(package, "dry_run")
+        assert "pending_import" in result.error_message
 
     def test_dry_run_makes_no_api_calls(self, monkeypatch):
         _wix_env(monkeypatch)
@@ -232,7 +257,7 @@ class TestWixPublisherImageImport:
         image_id = draft_post.get("media", {}).get("wixMedia", {}).get("image", {}).get("id")
         assert image_id == "wix-abc-123"
 
-    def test_no_image_url_skips_import_and_omits_media(self, monkeypatch):
+    def test_required_cover_is_imported_and_carried_in_the_payload(self, monkeypatch):
         _wix_env(monkeypatch)
         captured_payloads = []
 
@@ -246,13 +271,16 @@ class TestWixPublisherImageImport:
                 return 200, {"post": {"id": "post-001", "url": "https://neverblank.co/post/x"}}, ""
             return 200, {}, ""
 
-        with patch("src.publishing.wix.import_image") as mock_import:
+        with patch("src.publishing.wix.import_image",
+                   return_value=WixMediaAsset(file_id="wix-file-1")) as mock_import:
             with patch("src.publishing.wix._fetch", side_effect=fake_fetch):
-                WixPublisher().publish(_draft_package(image_url=None), "live")
+                WixPublisher().publish(_draft_package(), "live")
 
-        mock_import.assert_not_called()
+        # Issue #96/#100: the canonical Wix package always carries the required
+        # cover, so the media step always runs and the payload always carries it.
+        mock_import.assert_called_once()
         draft_post = captured_payloads[0].get("draftPost", {})
-        assert "media" not in draft_post
+        assert draft_post["media"]["wixMedia"]["image"]["id"] == "wix-file-1"
 
 
 class TestWixPublisherDraftVerification:
@@ -352,13 +380,15 @@ class TestWixPublisherUrlResolution:
             if method == "POST" and "draft-posts" in url and "publish" not in url:
                 return 201, {"draftPost": {"id": "draft-001"}}, ""
             if method == "GET" and "draft-posts" in url:
-                return 200, {"draftPost": {}}, ""
+                return 200, {"draftPost": {"media": {"wixMedia": {"image": {"id": "wix-file-1"}}}}}, ""
             if method == "POST" and "publish" in url:
                 return 200, {"post": {"id": "post-001", "url": "https://neverblank.co/post/the-slug"}}, ""
             return 200, {}, ""
 
-        with patch("src.publishing.wix._fetch", side_effect=fake_fetch):
-            result = WixPublisher().publish(_draft_package(image_url=None), "live")
+        with patch("src.publishing.wix.import_image",
+                   return_value=WixMediaAsset(file_id="wix-file-1")), \
+             patch("src.publishing.wix._fetch", side_effect=fake_fetch):
+            result = WixPublisher().publish(_draft_package(), "live")
 
         assert result.url == "https://neverblank.co/post/the-slug"
 
@@ -371,7 +401,7 @@ class TestWixPublisherUrlResolution:
             if method == "POST" and "draft-posts" in url and "publish" not in url:
                 return 201, {"draftPost": {"id": "draft-001"}}, ""
             if method == "GET" and "draft-posts" in url:
-                return 200, {"draftPost": {}}, ""
+                return 200, {"draftPost": {"media": {"wixMedia": {"image": {"id": "wix-file-1"}}}}}, ""
             if method == "POST" and "publish" in url:
                 return 200, {"post": {"id": "post-001"}}, ""   # no URL
             if method == "GET" and "/posts/" in url:
@@ -379,8 +409,10 @@ class TestWixPublisherUrlResolution:
                 return 200, {"post": {"id": "post-001", "url": "https://neverblank.co/post/resolved"}}, ""
             return 200, {}, ""
 
-        with patch("src.publishing.wix._fetch", side_effect=fake_fetch):
-            result = WixPublisher().publish(_draft_package(image_url=None), "live")
+        with patch("src.publishing.wix.import_image",
+                   return_value=WixMediaAsset(file_id="wix-file-1")), \
+             patch("src.publishing.wix._fetch", side_effect=fake_fetch):
+            result = WixPublisher().publish(_draft_package(), "live")
 
         assert result.url == "https://neverblank.co/post/resolved"
         assert any("/posts/" in u for u in resolve_calls)
@@ -392,13 +424,15 @@ class TestWixPublisherUrlResolution:
             if method == "POST" and "draft-posts" in url and "publish" not in url:
                 return 201, {"draftPost": {"id": "draft-001"}}, ""
             if method == "GET":
-                return 200, {"draftPost": {}}, ""
+                return 200, {"draftPost": {"media": {"wixMedia": {"image": {"id": "wix-file-1"}}}}}, ""
             if method == "POST" and "publish" in url:
                 return 500, {"message": "Internal server error"}, ""
             return 200, {}, ""
 
-        with patch("src.publishing.wix._fetch", side_effect=fake_fetch):
-            result = WixPublisher().publish(_draft_package(image_url=None), "live")
+        with patch("src.publishing.wix.import_image",
+                   return_value=WixMediaAsset(file_id="wix-file-1")), \
+             patch("src.publishing.wix._fetch", side_effect=fake_fetch):
+            result = WixPublisher().publish(_draft_package(), "live")
 
         assert result.status == PublishStatus.FAILED
         assert "HTTP 500" in result.error_message
@@ -411,13 +445,15 @@ class TestWixPublisherUrlResolution:
             if method == "POST" and "draft-posts" in url and "publish" not in url:
                 return 201, {"draftPost": {"id": "draft-001"}}, ""
             if method == "GET":
-                return 200, {"draftPost": {}}, ""
+                return 200, {"draftPost": {"media": {"wixMedia": {"image": {"id": "wix-file-1"}}}}}, ""
             if method == "POST" and "publish" in url:
                 return 200, {"post": {}}, ""   # 2xx but no id field
             return 200, {}, ""
 
-        with patch("src.publishing.wix._fetch", side_effect=fake_fetch):
-            result = WixPublisher().publish(_draft_package(image_url=None), "live")
+        with patch("src.publishing.wix.import_image",
+                   return_value=WixMediaAsset(file_id="wix-file-1")), \
+             patch("src.publishing.wix._fetch", side_effect=fake_fetch):
+            result = WixPublisher().publish(_draft_package(), "live")
 
         assert result.status == PublishStatus.FAILED
         assert "no post ID" in result.error_message
@@ -433,13 +469,15 @@ class TestWixPublisherDraftOnly:
             if method == "POST" and "draft-posts" in url and "publish" not in url:
                 return 201, {"draftPost": {"id": "draft-001"}}, ""
             if method == "GET":
-                return 200, {"draftPost": {}}, ""
+                return 200, {"draftPost": {"media": {"wixMedia": {"image": {"id": "wix-file-1"}}}}}, ""
             if "publish" in url:
                 publish_calls.append(url)
             return 200, {}, ""
 
-        with patch("src.publishing.wix._fetch", side_effect=fake_fetch):
-            result = WixPublisher().publish(_draft_package(image_url=None), "draft_only")
+        with patch("src.publishing.wix.import_image",
+                   return_value=WixMediaAsset(file_id="wix-file-1")), \
+             patch("src.publishing.wix._fetch", side_effect=fake_fetch):
+            result = WixPublisher().publish(_draft_package(), "draft_only")
 
         assert result.status == PublishStatus.DRAFT_CREATED
         assert result.external_id == "draft-001"

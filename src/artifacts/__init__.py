@@ -314,6 +314,34 @@ def load_business_strategy_snapshot(
     return data
 
 
+def write_preflight_result_json(run_dir: Path, data: dict) -> None:
+    """Commit the run's publication preflight verdict exactly once.
+
+    Written before any allowed external publisher call, so the preserved
+    authorization always precedes the side effect it authorizes.
+    """
+    atomic_write_json(run_dir / "preflight_result.json", data)
+
+
+def load_preflight_result_json(
+    packages_dir: Path, signal_id: str, source_run_id: str
+) -> dict:
+    """Load the exact immutable preflight verdict of one run."""
+    path = (
+        resolve_run_dir(packages_dir, signal_id, source_run_id)
+        / "preflight_result.json"
+    )
+    if not path.exists():
+        raise FileNotFoundError(f"No preflight_result.json at {path}")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise ValueError(f"Could not parse {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"Preflight result at {path} is not a JSON object")
+    return data
+
+
 def write_publication_results_json(run_dir: Path, data: dict) -> None:
     """
     Write publication_results.json under run_dir exactly once.
