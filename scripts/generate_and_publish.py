@@ -172,6 +172,16 @@ from src.publishing.hashtags import generate_hashtags
 from src.publishing.facebook import FacebookPublisher
 from src.publishing.instagram import InstagramPublisher
 from src.publishing.linkedin import LinkedInPublisher
+from pydantic import ValidationError as PydanticValidationError
+
+from src.publishing.package import (
+    LinkedInPublicationTarget,
+    PublicationPackageError,
+    WixPublicationTarget,
+    build_linkedin_publication_package,
+    build_wix_publication_package,
+    canonical_slug,
+)
 from src.publishing.result import PublishResult, PublishStatus
 from src.publishing.telegram import TelegramPublisher
 from src.publishing.threads import ThreadsPublisher
@@ -181,6 +191,7 @@ from src.artifacts import (
     load_run_generated,
     load_business_strategy_snapshot,
     resolve_run_dir,
+    load_linkedin_composition_json,
     load_visual_assets_json,
     write_assignment_json,
     write_editorial_acceptance_json,
@@ -258,8 +269,8 @@ def _load_package_images(signal_id: str) -> dict:
 
 
 def _slugify(text: str) -> str:
-    slug = re.sub(r"[^\w\s-]", "", text.lower().strip())
-    return re.sub(r"[\s_]+", "-", slug)[:80]
+    # Canonical implementation lives with the publication package contract.
+    return canonical_slug(text)
 
 
 def _build_threads(structured: dict) -> list[str]:
@@ -1341,27 +1352,92 @@ def main(
             print(f"  WARNING: Wix delete failed ({exc}) — continuing anyway")
 
     _require_run_id(run_ctx.run_id, "publication")
-    wix_slug = _slugify(headline)
+
+    # ── Canonical publication packages (Issue #100 / Story #17) ──────────────
+    # The strict frozen per-channel packages are the single source for
+    # everything handed to the R1 publishers. They are composed only from the
+    # run's accepted canonical artifacts plus explicit non-secret target
+    # identity; credentials never enter a package (credential readiness is
+    # Issue #101 preflight scope). Construction fails closed on any cross-run,
+    # cross-signal, or configuration mismatch.
+    _generated_source: dict = pkg if (args.from_package or args.legacy_package) else _generated_data
+    if args.from_package or args.legacy_package:
+        try:
+            _li_composition = load_linkedin_composition_json(
+                PACKAGES_DIR, signal_id, _source_run_id
+            )
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"  ERROR: publication package blocked: {exc}")
+            return 1
+    else:
+        _li_composition = _li_record.model_dump(mode="json")
+    try:
+        wix_package = build_wix_publication_package(
+            run_id=run_ctx.run_id,
+            signal_id=signal_id,
+            configuration_identity=strategy_execution.identity,
+            generated=_generated_source,
+            visual_record=_visual_record,
+            target=WixPublicationTarget(
+                site_id=os.getenv("NB_WIX_SITE_ID", ""),
+                owner_member_id=os.getenv("NB_WIX_POST_OWNER_ID", ""),
+                category_ids=tuple(
+                    x.strip()
+                    for x in [os.getenv("NB_WIX_BLOG_CATEGORY_ID", "")]
+                    if x.strip()
+                ),
+                tag_ids=tuple(
+                    x.strip()
+                    for x in os.getenv("NB_WIX_BLOG_TAG_IDS", "").split(",")
+                    if x.strip()
+                ),
+            ),
+        )
+        linkedin_package = build_linkedin_publication_package(
+            run_id=run_ctx.run_id,
+            signal_id=signal_id,
+            configuration_identity=strategy_execution.identity,
+            generated=_generated_source,
+            linkedin_composition=_li_composition,
+            visual_record=_visual_record,
+            target=LinkedInPublicationTarget(
+                account_id=os.getenv("NB_ZERNIO_LINKEDIN_ACCOUNT_ID", ""),
+            ),
+        )
+    except (PublicationPackageError, PydanticValidationError) as exc:
+        print(f"  ERROR: publication package blocked: {exc}")
+        return 1
+    print(f"  ✓  wix package:      {wix_package.package_digest()}")
+    print(f"  ✓  linkedin package: {linkedin_package.package_digest()}")
+
+    wix_slug = wix_package.slug
     draft = DraftPackage(
         draft_dir=PACKAGES_DIR,
-        blog_title=headline,
-        blog_body=blog_body,
+        blog_title=wix_package.title,
+        blog_body=wix_package.body_markdown,
         blog_meta={
-            "title": headline,
-            "wix_slug": wix_slug,
-            "wix_category_id": os.getenv("NB_WIX_BLOG_CATEGORY_ID", ""),
-            "wix_tags": [x.strip() for x in os.getenv("NB_WIX_BLOG_TAG_IDS", "").split(",") if x.strip()],
+            "title": wix_package.title,
+            "wix_slug": wix_package.slug,
+            "wix_category_id": wix_package.target.category_ids[0] if wix_package.target.category_ids else "",
+            "wix_tags": list(wix_package.target.tag_ids),
         },
-        linkedin_text=linkedin_text,
+        linkedin_text=linkedin_package.linkedin_body,
         instagram_text=instagram_text,
         facebook_text=facebook_text,
         threads_sequence=threads_seq,
         telegram_text=telegram_text,
-        image_url=blog_image_url,
-        platform_image_urls=platform_image_urls,
-        wix_slug=wix_slug,
-        wix_category_id=os.getenv("NB_WIX_BLOG_CATEGORY_ID", ""),
-        wix_tags=[x.strip() for x in os.getenv("NB_WIX_BLOG_TAG_IDS", "").split(",") if x.strip()],
+        image_url=wix_package.cover_image_url,
+        platform_image_urls={
+            p: url
+            for p, url in (
+                ("blog", wix_package.cover_image_url),
+                ("linkedin", linkedin_package.linkedin_image_url),
+            )
+            if url
+        },
+        wix_slug=wix_package.slug,
+        wix_category_id=wix_package.target.category_ids[0] if wix_package.target.category_ids else "",
+        wix_tags=list(wix_package.target.tag_ids),
         run_id=run_ctx.run_id,
         metadata={
             "signal_id": signal_id,

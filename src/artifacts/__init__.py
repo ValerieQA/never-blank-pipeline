@@ -259,6 +259,28 @@ def write_linkedin_composition_json(run_dir: Path, data: dict) -> None:
     atomic_write_json(run_dir / "linkedin_composition.json", data)
 
 
+def load_linkedin_composition_json(
+    packages_dir: Path, signal_id: str, source_run_id: str
+) -> dict:
+    """Load the exact immutable source-run LinkedIn composition record."""
+    path = (
+        resolve_run_dir(packages_dir, signal_id, source_run_id)
+        / "linkedin_composition.json"
+    )
+    if not path.exists():
+        raise FileNotFoundError(
+            f"No linkedin_composition.json at {path}. The canonical LinkedIn "
+            "body must come from the source run's accepted composition record."
+        )
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise ValueError(f"Could not parse {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"LinkedIn composition at {path} is not a JSON object")
+    return data
+
+
 def write_generated_json(run_dir: Path, data: dict) -> None:
     """
     Write generated.json under run_dir exactly once.

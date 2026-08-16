@@ -11,6 +11,8 @@ import json
 from datetime import date, datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
+
+from src.publishing.package import canonical_slug
 from unittest import mock
 
 import pytest
@@ -161,6 +163,37 @@ def _fake_linkedin_composition(**kwargs):
     )
 
 
+# Package-shaped stand-ins for the canonical publication packages (Issue
+# #100): the entrypoint reads .package_digest(), .title, .slug,
+# .body_markdown, .cover_image_url, .target.category_ids/.tag_ids from the
+# Wix package and .package_digest(), .linkedin_body, .linkedin_image_url from
+# the LinkedIn package. Values are derived from the builder inputs so the
+# DraftPackage handed to publishers keeps the exact pre-#100 contents. The
+# real builders are covered by tests/test_publication_package.py.
+def _fake_wix_package(**kwargs):
+    generated = kwargs["generated"]
+    visual = kwargs.get("visual_record")
+    title = generated.get("headline", "")
+    return SimpleNamespace(
+        title=title,
+        slug=canonical_slug(title),
+        body_markdown=generated.get("blog_article", ""),
+        cover_image_url=getattr(visual, "wix_url", None),
+        target=SimpleNamespace(category_ids=(), tag_ids=()),
+        package_digest=lambda: "sha256:" + "0" * 64,
+    )
+
+
+def _fake_linkedin_package(**kwargs):
+    generated = kwargs["generated"]
+    visual = kwargs.get("visual_record")
+    return SimpleNamespace(
+        linkedin_body=generated.get("linkedin_post", ""),
+        linkedin_image_url=getattr(visual, "linkedin_url", None),
+        package_digest=lambda: "sha256:" + "1" * 64,
+    )
+
+
 # ACCEPT-shaped stand-in for the editorial acceptance gate (Issue #89): the
 # entrypoint reads .accepted, .final_article_body, .revised, and .audit.
 def _fake_acceptance(**kwargs):
@@ -299,6 +332,15 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         # Visual contract gate (Issue #96): VALID-shaped stand-in; the real
         # gate is covered by tests/test_visual_contract.py.
         "build_visual_assets_record": mock.MagicMock(side_effect=_fake_visual_record),
+        # Canonical publication packages (Issue #100): package-shaped
+        # stand-ins; the real builders are covered by
+        # tests/test_publication_package.py. Target models are stubbed so the
+        # harness needs no NB_* target environment.
+        "build_wix_publication_package": mock.MagicMock(side_effect=_fake_wix_package),
+        "build_linkedin_publication_package": mock.MagicMock(side_effect=_fake_linkedin_package),
+        "WixPublicationTarget": mock.MagicMock(return_value=mock.sentinel.wix_target),
+        "LinkedInPublicationTarget": mock.MagicMock(return_value=mock.sentinel.linkedin_target),
+        "load_linkedin_composition_json": mock.MagicMock(return_value={"stand-in": True}),
         "load_visual_assets_json": mock.MagicMock(return_value={"stand-in": True}),
         "reuse_visual_assets_record": mock.MagicMock(side_effect=_fake_reuse_visual_record),
         "write_visual_assets_json": mock.MagicMock(),
