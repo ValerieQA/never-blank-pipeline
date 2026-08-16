@@ -119,6 +119,7 @@ from src.intake import (
     IntakeAdapterError,
     JsonlIntakeAdapter,
 )
+from src.intake.assignment_record import AssignmentRecord
 from src.lifecycle.signal_lifecycle import ResearchContext
 from src.research.provider import ResearchProvider
 from src.research.adapters.exa import ExaResearchAdapter
@@ -181,6 +182,7 @@ from src.artifacts import (
     load_business_strategy_snapshot,
     resolve_run_dir,
     load_visual_assets_json,
+    write_assignment_json,
     write_editorial_acceptance_json,
     write_generated_json,
     write_linkedin_composition_json,
@@ -576,6 +578,18 @@ def main(
     try:
         write_business_strategy_snapshot(
             run_dir, business_configuration.model_dump(mode="json")
+        )
+        # Canonical intake evidence (Issue #98 / Story #16): the immutable
+        # record of what this run was asked to process — the anchor of the
+        # run's provenance chain. Written for every run, both branches.
+        _assignment_record = AssignmentRecord(
+            run_id=run_ctx.run_id,
+            execution_mode=run_ctx.execution_mode.value,
+            configuration_identity=strategy_execution.identity,
+            assignment=assignment,
+        )
+        write_assignment_json(
+            run_dir, json.loads(_assignment_record.model_dump_json())
         )
     except ArtifactCollisionError as exc:
         print(f"  ERROR: {exc}")
