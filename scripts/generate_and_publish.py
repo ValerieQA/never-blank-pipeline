@@ -150,6 +150,11 @@ from src.editorial.linkedin_composition import (
     LinkedInCompositionError,
     accept_linkedin_composition,
 )
+from src.visual.contract import (
+    VisualGateError,
+    build_visual_assets_record,
+    reuse_visual_assets_record,
+)
 from src.editorial.editorial_acceptance import (
     ArticleRevisionTransport,
     EditorialAcceptanceError,
@@ -175,9 +180,11 @@ from src.artifacts import (
     load_run_generated,
     load_business_strategy_snapshot,
     resolve_run_dir,
+    load_visual_assets_json,
     write_editorial_acceptance_json,
     write_generated_json,
     write_linkedin_composition_json,
+    write_visual_assets_json,
     write_business_strategy_snapshot,
     write_publication_results_json,
 )
@@ -959,37 +966,46 @@ def main(
             _vis_req.run_id, _vis_req.blocked, _vis_req.blocked_reason,
         )
 
-        # ── Image preparation (only after package fully validated) ────────────
-        pimgs = _load_package_images(signal_id)
-        editorial_package: dict = {"images": {"platform_images": pimgs}}
-        pkg_design_version = pimgs.get("_design_version") if pimgs else None
-        needs_regen = (
-            not pimgs.get("blog", {}).get("url")
-            or pkg_design_version != CURRENT_DESIGN_VERSION
+        # ── Visual reuse gate — truthful provenance (Issue #96 / Story #15) ──
+        # --from-package is a NEW publication run reusing artifacts produced
+        # by the original generation run. The ONLY accepted provenance source
+        # is that run's immutable visual passport: origin is never inferred
+        # from signal_id or legacy signal-scoped image mappings, the current
+        # publication run is never stamped as the visual origin, and the
+        # publication uses exactly the derivatives that passport proves.
+        # Sources without a trustworthy passport fail closed.
+        try:
+            _source_visual = load_visual_assets_json(
+                PACKAGES_DIR, signal_id, _source_run_id
+            )
+            _visual_record = reuse_visual_assets_record(
+                _source_visual,
+                source_run_id=_source_run_id,
+                publication_run_id=run_ctx.run_id,
+                article_body=blog_body,
+            )
+            write_visual_assets_json(
+                run_dir, json.loads(_visual_record.model_dump_json())
+            )
+        except (VisualGateError, FileNotFoundError, ValueError,
+                ArtifactCollisionError, OSError) as exc:
+            print(f"  ERROR: visual gate blocked publication: {exc}")
+            return 1
+        print(
+            f"  ✓  visuals: {_visual_record.status} reused "
+            f"(origin run {_visual_record.origin_run_id}; "
+            f"linkedin {_visual_record.linkedin_visual.value}) "
+            f"({run_dir / 'visual_assets.json'})"
         )
-        if needs_regen:
-            reason = "no pre-generated image" if not pimgs else f"stale design v{pkg_design_version}"
-            print(f"  — {reason} — generating images for all platforms…")
-            try:
-                from scripts.research.prepare_content import prepare_content_packages
-                pkgs = prepare_content_packages(
-                    [signal], strategy_execution.research, research_audience
-                )
-                if pkgs:
-                    editorial_package = pkgs[0]
-                    pimgs = pkgs[0].get("images", {}).get("platform_images", {})
-                    blog_url = pimgs.get("blog", {}).get("url") or ""
-                    print(f"  ✓  Images generated: {blog_url[:60] if blog_url else '(none)'}")
-                else:
-                    print(f"  ⚠  Image generation returned no packages — visual platforms will skip")
-            except Exception as exc:
-                print(f"  ⚠  Image generation failed ({exc}) — visual platforms will skip")
 
-        blog_image_url: Optional[str] = pimgs.get("blog", {}).get("url") or None
+        blog_image_url: Optional[str] = _visual_record.wix_url
         platform_image_urls = {
-            p: (pimgs.get(p, {}).get("url") or None)
-            for p in ("blog", "linkedin", "facebook", "instagram", "threads", "stories")
-            if pimgs.get(p, {}).get("url")
+            p: url
+            for p, url in (
+                ("blog", _visual_record.wix_url),
+                ("linkedin", _visual_record.linkedin_url),
+            )
+            if url
         }
         print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
         print(f"  ✓  Platform images: {list(platform_image_urls.keys())}")
@@ -1212,6 +1228,34 @@ def main(
             f"({_li_record.word_count} words) "
             f"[{_li_record.composition_rules_version}] "
             f"({run_dir / 'linkedin_composition.json'})"
+        )
+
+        # ── Visual contract gate (Issue #96 / Story #15) ─────────────────────
+        # Release 1 rule: the Wix visual is required (no valid Wix visual → no
+        # Wix package/publication); a LinkedIn visual is optional, but an
+        # attempted LinkedIn visual that failed or is invalid is never
+        # silently converted into text-only success. The gate validates the
+        # RESULTING derivatives (remote URL, dimensions, format, lineage,
+        # design version) and persists the immutable visual passport.
+        try:
+            _visual_record = build_visual_assets_record(
+                pimgs,
+                run_id=run_ctx.run_id,
+                signal_id=signal_id,
+                article_body=blog_body,
+                design_version=CURRENT_DESIGN_VERSION,
+            )
+            write_visual_assets_json(
+                run_dir, json.loads(_visual_record.model_dump_json())
+            )
+        except (VisualGateError, ArtifactCollisionError, OSError) as exc:
+            print(f"  ERROR: visual gate blocked publication: {exc}")
+            return 1
+        print(
+            f"  ✓  visuals: {_visual_record.status} "
+            f"(wix required ok; linkedin {_visual_record.linkedin_visual.value}) "
+            f"[{_visual_record.design_version}] "
+            f"({run_dir / 'visual_assets.json'})"
         )
 
         _generated_at = datetime.now(timezone.utc).isoformat()

@@ -201,6 +201,10 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "run_editorial_acceptance": mock.MagicMock(side_effect=legacy._fake_acceptance),
         "accept_linkedin_composition": mock.MagicMock(side_effect=legacy._fake_linkedin_composition),
         "write_linkedin_composition_json": mock.MagicMock(),
+        "build_visual_assets_record": mock.MagicMock(side_effect=legacy._fake_visual_record),
+        "load_visual_assets_json": mock.MagicMock(return_value={"stand-in": True}),
+        "reuse_visual_assets_record": mock.MagicMock(side_effect=legacy._fake_reuse_visual_record),
+        "write_visual_assets_json": mock.MagicMock(),
         "load_active_strategy":      mock.MagicMock(return_value=_STRATEGY_STUB),
         "get_strategy_context":      mock.MagicMock(return_value=_STRATEGY_CONTEXT),
         "get_cta_mode":              mock.MagicMock(return_value="reflection"),
@@ -454,10 +458,14 @@ class TestVisualArtifactRequest:
         assert req.run_id == _KNOWN_RUN_ID
 
     def test_blocked_by_default(self):
+        # Since Issue #96 the canonical visual path is active: the request
+        # boundary is unblocked by default and the fail-closed visual gate
+        # (src.visual.contract) owns validation.
         req = VisualArtifactRequest(
             run_id=_KNOWN_RUN_ID, signal_id=_SIGNAL_ID, design_version="v1"
         )
-        assert req.blocked is True
+        assert req.blocked is False
+        assert req.blocked_reason == ""
 
     def test_assert_identity_passes_on_match(self):
         req = VisualArtifactRequest(
