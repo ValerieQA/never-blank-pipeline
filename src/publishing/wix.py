@@ -48,6 +48,7 @@ from src.publishing.wix_media import WixMediaAsset, WixMediaImportError, import_
 from src.utils.logger import get_logger
 
 if TYPE_CHECKING:
+    from src.publishing.package import WixPublicationPackage
     from src.strategy.execution_context import WixStrategyView
 
 
@@ -131,15 +132,19 @@ class WixPublisher(BasePublisher):
 
     def publish(
         self,
-        draft: DraftPackage,
+        package: "WixPublicationPackage",
         mode: str,
         *,
         strategy_view: "WixStrategyView | None" = None,
     ) -> PublishResult:
-        if strategy_view is not None:
-            draft.require_configuration_identity(
-                strategy_view.identity, "wix-publisher"
+        # Issue #101: the adapter receives the exact frozen package the
+        # preflight authorized and derives its internal representation from
+        # it. Nothing between ALLOW and this call can change content or target.
+        if strategy_view is not None and package.configuration_identity != strategy_view.identity:
+            return self._fail(
+                "package configuration identity does not match the Wix strategy view"
             )
+        draft = DraftPackage.from_wix_package(package)
         # Credential secret — environment-only (readiness gate is Issue #101).
         api_key  = os.getenv("NB_WIX_API_KEY", "")
         # Target identity — package-derived (Issue #100): the environment was

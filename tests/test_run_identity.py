@@ -11,7 +11,7 @@ Structure:
   TestVisualArtifactRequest — visual boundary stub carries run_id
   TestValidationResultRunId — ValidationResult typed output carries run_id
   TestGeneratedPackageRunId — generated JSON persists run_id
-  TestDraftPackageRunId     — DraftPackage carries run_id
+  TestDraftPackageRunId     — DraftPackage and publication packages carry run_id
   TestPublishResultRunId    — PublishResult receives run_id via normalizer
   TestFromPackageRunIdentity — --from-package BLOCKER 1 cases
   TestMismatchRejected      — BLOCKER 3 mismatch detection at boundaries
@@ -202,6 +202,8 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "accept_linkedin_composition": mock.MagicMock(side_effect=legacy._fake_linkedin_composition),
         "write_linkedin_composition_json": mock.MagicMock(),
         "build_visual_assets_record": mock.MagicMock(side_effect=legacy._fake_visual_record),
+        "evaluate_publication_preflight": mock.MagicMock(side_effect=legacy._fake_preflight),
+        "write_preflight_result_json": mock.MagicMock(),
         "build_wix_publication_package": mock.MagicMock(side_effect=legacy._fake_wix_package),
         "build_linkedin_publication_package": mock.MagicMock(side_effect=legacy._fake_linkedin_package),
         "WixPublicationTarget": mock.MagicMock(return_value=mock.sentinel.wix_target),
@@ -652,10 +654,12 @@ class TestDraftPackageRunId:
         )
         assert draft.run_id == _KNOWN_RUN_ID
 
-    def test_canonical_path_passes_run_id_to_draft(self, tmp_path):
+    def test_canonical_path_passes_run_id_to_publisher_packages(self, tmp_path):
+        """Issue #101: publishers receive the frozen canonical packages, so the
+        run-identity boundary at publication is the package itself."""
+
         argv, patches = _base_patches(dry_run=False)
         patches["PACKAGES_DIR"] = tmp_path
-        drafts_seen: list[DraftPackage] = []
 
         wix_r = PublishResult(platform="wix", status=PublishStatus.PUBLISHED)
         li_r  = PublishResult(platform="linkedin", status=PublishStatus.PUBLISHED)
@@ -673,24 +677,17 @@ class TestDraftPackageRunId:
             rc_ids.append(rc.run_id)
             return rc
 
-        OrigDP = DraftPackage
-
-        def spy_dp(**kw):
-            dp = OrigDP(**kw)
-            drafts_seen.append(dp)
-            return dp
-
         with mock.patch("sys.argv", argv), \
              mock.patch.multiple(_gap_module, **patches), \
              mock.patch.object(RunContext, "from_assignment", capturing), \
-             mock.patch.object(_gap_module, "DraftPackage", spy_dp), \
              mock.patch.object(_gap_module, "WixPublisher", return_value=wix_m), \
              mock.patch.object(_gap_module, "LinkedInPublisher", return_value=li_m):
             main()
 
         assert len(rc_ids) == 1
-        assert len(drafts_seen) == 1
-        assert drafts_seen[0].run_id == rc_ids[0]
+        for publisher in (wix_m, li_m):
+            package = publisher.publish.call_args.args[0]
+            assert package.run_id == rc_ids[0]
 
 
 # ===========================================================================
@@ -1095,21 +1092,37 @@ class TestMismatchRejected:
                     main()
 
     @pytest.mark.story9
-    def test_draft_package_run_id_mismatch_raises(self):
-        """If DraftPackage is constructed with wrong run_id, _assert_run_id_match raises."""
+    def test_package_digest_divergence_blocks_the_external_call(self, tmp_path):
+        """Issue #101: the object that crosses the boundary must be the exact
+        object the preflight verdict authorized. A package whose digest no
+        longer matches its recorded verdict never reaches the publisher."""
+
         argv, patches = _base_patches(dry_run=False)
+        patches["PACKAGES_DIR"] = tmp_path
 
-        orig_dp_init = DraftPackage.__init__
+        def drifting_wix_package(**kwargs):
+            package = legacy._fake_wix_package(**kwargs)
+            digests = iter(["sha256:" + "0" * 64, "sha256:" + "d" * 64])
+            package.package_digest = lambda: next(digests)
+            return package
 
-        def bad_dp_init(self, **kw):
-            kw["run_id"] = "wrong-id"
-            orig_dp_init(self, **kw)
+        patches["build_wix_publication_package"] = mock.MagicMock(
+            side_effect=drifting_wix_package
+        )
+        wix_m = mock.MagicMock()
+        li_m = mock.MagicMock()
+        li_m.publish.return_value = PublishResult(
+            platform="linkedin", status=PublishStatus.PUBLISHED
+        )
 
         with mock.patch("sys.argv", argv), \
              mock.patch.multiple(_gap_module, **patches), \
-             mock.patch.object(DraftPackage, "__init__", bad_dp_init):
-            with pytest.raises(RuntimeError, match="draft-package"):
-                main()
+             mock.patch.object(_gap_module, "WixPublisher", return_value=wix_m), \
+             mock.patch.object(_gap_module, "LinkedInPublisher", return_value=li_m):
+            exit_code = main()
+
+        assert exit_code == 1
+        wix_m.publish.assert_not_called()
 
     @pytest.mark.story9
     def test_publish_result_mismatch_fails_publisher_not_silently_accepted(self, tmp_path):
@@ -1270,7 +1283,7 @@ class TestCompletePathRunIdentityContract:
     everywhere.  Traces that exact value through every named boundary:
 
       intake → ResearchContext → EditorialContext → generated JSON →
-      VisualArtifactRequest → ValidationResult → DraftPackage →
+      VisualArtifactRequest → ValidationResult → publication packages →
       PublishResult (normalized) → R1RunReport
 
     Asserts:
@@ -1325,12 +1338,6 @@ class TestCompletePathRunIdentityContract:
                 super().__init__(**kw)
                 vr_ids.append(self.run_id)
 
-        # Spy: DraftPackage constructor
-        OrigDP = DraftPackage
-        def spy_dp(**kw):
-            dp = OrigDP(**kw)
-            draft_ids.append(dp.run_id)
-            return dp
 
         # Spy: _emit_run_report
         def spy_emit(report):
@@ -1359,7 +1366,6 @@ class TestCompletePathRunIdentityContract:
              mock.patch.object(_gap_module, "_build_legacy_research_context", spy_blrc), \
              mock.patch.object(_gap_module, "VisualArtifactRequest", SpyVAR), \
              mock.patch.object(_gap_module, "ValidationResult", SpyVR), \
-             mock.patch.object(_gap_module, "DraftPackage", spy_dp), \
              mock.patch.object(_gap_module, "_emit_run_report", spy_emit), \
              mock.patch.object(RunContext, "from_assignment", spy_from_assignment), \
              mock.patch.object(ResearchContext, "to_editorial", spy_to_editorial), \
@@ -1389,8 +1395,13 @@ class TestCompletePathRunIdentityContract:
         assert len(vr_ids) >= 2
         assert all(rid == _KNOWN_RUN_ID for rid in vr_ids), f"ValidationResult run_ids: {vr_ids}"
 
-        # Boundary 6: DraftPackage
-        assert draft_ids == [_KNOWN_RUN_ID], f"DraftPackage run_ids: {draft_ids}"
+        # Boundary 6: canonical publication packages handed to the publishers
+        draft_ids.extend(
+            publisher.publish.call_args.args[0].run_id for publisher in (wix_m, li_m)
+        )
+        assert draft_ids == [_KNOWN_RUN_ID, _KNOWN_RUN_ID], (
+            f"publication package run_ids: {draft_ids}"
+        )
 
         # Boundary 7: PublishResult (normalized — injected from empty by _normalize_publish_result)
         assert wix_r.run_id == _KNOWN_RUN_ID, f"Wix PublishResult run_id: {wix_r.run_id}"

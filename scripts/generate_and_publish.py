@@ -31,8 +31,9 @@ Canonical call flow
   → _require_run_id()             → guard at validation
   → validate_article_for_publish() → ValidationResult per platform
   → _assert_run_id_match()        → identity check on each ValidationResult
-  → DraftPackage(run_id=)         → run_id carried to publishers
-  → _assert_run_id_match()        → identity check at draft-package boundary
+  → canonical packages            → frozen Wix/LinkedIn publication packages
+  → evaluate_publication_preflight() → per-channel ALLOW/BLOCK verdict
+  → write_preflight_result_json() → verdict persisted before any external call
   → _require_run_id()             → guard at publication
   → publisher.publish()           → PublishResult (run_id empty from publisher)
   → _normalize_publish_result()   → inject/verify run_id, fail closed on mismatch
@@ -166,7 +167,6 @@ from src.editorial.editorial_acceptance import (
     run_editorial_acceptance,
 )
 from src.publishing import formatting
-from src.publishing.base import DraftPackage
 from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
 from src.publishing.hashtags import generate_hashtags
 from src.publishing.facebook import FacebookPublisher
@@ -174,8 +174,16 @@ from src.publishing.instagram import InstagramPublisher
 from src.publishing.linkedin import LinkedInPublisher
 from pydantic import ValidationError as PydanticValidationError
 
+from src.publishing.preflight import (
+    ChannelPackageOutcome,
+    FreshnessVerdict,
+    PreflightDisposition,
+    ReadinessVerdict,
+    evaluate_publication_preflight,
+)
 from src.publishing.package import (
     LinkedInPublicationTarget,
+    PackageFailureCategory,
     PublicationPackageError,
     WixPublicationTarget,
     build_linkedin_publication_package,
@@ -199,6 +207,7 @@ from src.artifacts import (
     write_linkedin_composition_json,
     write_visual_assets_json,
     write_business_strategy_snapshot,
+    write_preflight_result_json,
     write_publication_results_json,
 )
 from src.reporting import R1RunReport
@@ -363,6 +372,53 @@ def _save_generated(
 # Release 1 publishing scope — only these two publishers are invoked.
 _R1_PUBLISHERS = ("wix", "linkedin")
 _NON_R1_PUBLISHERS = ("facebook", "instagram", "threads", "telegram")
+
+
+def _stop_with_preflight(
+    *,
+    run_dir: Path,
+    run_id: str,
+    signal_id: str,
+    configuration_identity,
+    readiness: ReadinessVerdict,
+    override_attempted: bool,
+    freshness: Optional[FreshnessVerdict] = None,
+) -> int:
+    """Persist the authorization verdict for a stop that precedes packaging.
+
+    Issue #101: a publication decision inside Story #17's authorization model
+    is never taken outside the canonical preflight boundary. When no channel
+    package can exist yet, every channel is recorded in the explicit
+    fail-closed state "the canonical package could not be constructed".
+    """
+
+    outcomes = [
+        ChannelPackageOutcome.failed(
+            channel,
+            "no canonical package was constructed: the run was blocked before "
+            "publication packaging",
+        )
+        for channel in _R1_PUBLISHERS
+    ]
+    try:
+        verdict = evaluate_publication_preflight(
+            packages_dir=PACKAGES_DIR,
+            run_id=run_id,
+            signal_id=signal_id,
+            configuration_identity=configuration_identity,
+            channel_outcomes=outcomes,
+            override_attempted=override_attempted,
+            readiness=readiness,
+            freshness=freshness or FreshnessVerdict(verified=True),
+        )
+        write_preflight_result_json(run_dir, json.loads(verdict.model_dump_json()))
+        print(
+            f"  preflight: run={verdict.run_disposition.value} "
+            f"({run_dir / 'preflight_result.json'})"
+        )
+    except (ArtifactCollisionError, OSError, ValueError) as exc:
+        print(f"  ERROR: publication preflight could not be committed: {exc}")
+    return 1
 
 
 def _require_run_id(run_id: str, stage: str) -> None:
@@ -630,28 +686,53 @@ def main(
     )
     _assert_run_id_match(run_ctx.run_id, rc.run_id, "research-context")
 
-    # Preflight: fail-closed readiness check via typed ResearchContext.
-    if not rc.article_ready:
-        if rc.force_override:
+    # Readiness gate (Issue #101): Release 1 has no trustworthy authorization
+    # identity, so a raw override boolean never bypasses a blocking condition.
+    # The attempt is carried forward and recorded truthfully in the preserved
+    # preflight verdict; it never becomes an authorization claim.
+    # Readiness (Issue #101): the rule is unchanged, but its final publication
+    # authorization decision belongs to the canonical preflight boundary, so a
+    # readiness stop — and any override attempted against it — is preserved
+    # evidence instead of an undocumented pre-preflight return.
+    _override_attempted = bool(rc.force_override)
+    if rc.article_ready:
+        _readiness = ReadinessVerdict(verified=True)
+    else:
+        field_note = (
+            "field absent (pre-dates readiness gate)"
+            if not signal.get("ARTICLE_READY")
+            else f"ARTICLE_READY={rc.article_ready!r}"
+        )
+        _readiness = ReadinessVerdict(
+            verified=False,
+            failure_reason=(
+                f"{field_note}; SOURCE_PREMISE_VERIFIED="
+                f"{rc.source_premise_verified}"
+            ),
+        )
+        if _override_attempted:
             print(
-                f"  WARNING: FORCE_PUBLISH_OVERRIDE active for {signal_id!r} "
-                f"(factual_readiness={rc.factual_readiness!r}, "
-                f"SOURCE_PREMISE_VERIFIED={rc.source_premise_verified}). "
-                "Bypassing readiness check — ensure this signal was manually reviewed."
+                f"  NOTE: an override was attempted for {signal_id!r} "
+                "(FORCE_PUBLISH_OVERRIDE / APPROVED_OVERRIDE). Release 1 has "
+                "no trustworthy authorization identity, so an override never "
+                "converts a blocking condition into permission to publish."
             )
-        else:
-            field_note = (
-                "field absent (pre-dates readiness gate)"
-                if not signal.get("ARTICLE_READY")
-                else f"ARTICLE_READY={rc.article_ready!r}"
-            )
-            print(
-                f"  ERROR: Signal {signal_id!r} blocked by preflight — {field_note} "
-                f"(SOURCE_PREMISE_VERIFIED={rc.source_premise_verified}). "
-                "This signal did not pass enrichment verification and cannot be published. "
-                "Set FORCE_PUBLISH_OVERRIDE=true in the signal record to override."
-            )
-            return 1
+        print(
+            f"  ERROR: Signal {signal_id!r} blocked by readiness — {field_note} "
+            f"(SOURCE_PREMISE_VERIFIED={rc.source_premise_verified}). "
+            "This signal did not pass enrichment verification and cannot be published."
+        )
+        # No canonical package can exist for an unready signal: every channel
+        # is recorded as an explicit fail-closed "package not constructed"
+        # state, and the verdict is persisted before the run stops.
+        return _stop_with_preflight(
+            run_dir=run_dir,
+            run_id=run_ctx.run_id,
+            signal_id=signal_id,
+            configuration_identity=strategy_execution.identity,
+            readiness=_readiness,
+            override_attempted=_override_attempted,
+        )
 
     # Run-scoped artifact directory for this execution.
     echo_line = ""
@@ -1361,100 +1442,175 @@ def main(
     # Issue #101 preflight scope). Construction fails closed on any cross-run,
     # cross-signal, or configuration mismatch.
     _generated_source: dict = pkg if (args.from_package or args.legacy_package) else _generated_data
+    _li_composition: dict | None = None
+    _li_composition_failure: str | None = None
     if args.from_package or args.legacy_package:
         try:
             _li_composition = load_linkedin_composition_json(
                 PACKAGES_DIR, signal_id, _source_run_id
             )
         except (FileNotFoundError, ValueError) as exc:
-            print(f"  ERROR: publication package blocked: {exc}")
-            return 1
+            # Channel-local: the LinkedIn channel has no accepted composition
+            # to publish. Wix is unaffected and still reaches preflight.
+            _li_composition_failure = f"{type(exc).__name__}: {exc}"
     else:
         _li_composition = _li_record.model_dump(mode="json")
-    try:
-        wix_package = build_wix_publication_package(
-            run_id=run_ctx.run_id,
-            signal_id=signal_id,
-            configuration_identity=strategy_execution.identity,
-            generated=_generated_source,
-            visual_record=_visual_record,
-            target=WixPublicationTarget(
-                site_id=os.getenv("NB_WIX_SITE_ID", ""),
-                owner_member_id=os.getenv("NB_WIX_POST_OWNER_ID", ""),
-                category_ids=tuple(
-                    x.strip()
-                    for x in [os.getenv("NB_WIX_BLOG_CATEGORY_ID", "")]
-                    if x.strip()
-                ),
-                tag_ids=tuple(
-                    x.strip()
-                    for x in os.getenv("NB_WIX_BLOG_TAG_IDS", "").split(",")
-                    if x.strip()
-                ),
-            ),
-        )
-        linkedin_package = build_linkedin_publication_package(
-            run_id=run_ctx.run_id,
-            signal_id=signal_id,
-            configuration_identity=strategy_execution.identity,
-            generated=_generated_source,
-            linkedin_composition=_li_composition,
-            visual_record=_visual_record,
-            target=LinkedInPublicationTarget(
-                account_id=os.getenv("NB_ZERNIO_LINKEDIN_ACCOUNT_ID", ""),
-            ),
-        )
-    except (PublicationPackageError, PydanticValidationError) as exc:
-        print(f"  ERROR: publication package blocked: {exc}")
-        return 1
-    print(f"  ✓  wix package:      {wix_package.package_digest()}")
-    print(f"  ✓  linkedin package: {linkedin_package.package_digest()}")
 
-    wix_slug = wix_package.slug
-    draft = DraftPackage(
-        draft_dir=PACKAGES_DIR,
-        blog_title=wix_package.title,
-        blog_body=wix_package.body_markdown,
-        blog_meta={
-            "title": wix_package.title,
-            "wix_slug": wix_package.slug,
-            "wix_category_id": wix_package.target.category_ids[0] if wix_package.target.category_ids else "",
-            "wix_tags": list(wix_package.target.tag_ids),
-        },
-        linkedin_text=linkedin_package.linkedin_body,
-        instagram_text=instagram_text,
-        facebook_text=facebook_text,
-        threads_sequence=threads_seq,
-        telegram_text=telegram_text,
-        image_url=wix_package.cover_image_url,
-        platform_image_urls={
-            p: url
-            for p, url in (
-                ("blog", wix_package.cover_image_url),
-                ("linkedin", linkedin_package.linkedin_image_url),
+    # Each channel is constructed independently (Issue #101): a channel-local
+    # package or target failure becomes a typed channel BLOCK recorded in the
+    # preserved verdict, never a whole-run stop that hides the decision.
+    def _build_channel(channel: str) -> ChannelPackageOutcome:
+        try:
+            if channel == "wix":
+                target = WixPublicationTarget(
+                    site_id=os.getenv("NB_WIX_SITE_ID", ""),
+                    owner_member_id=os.getenv("NB_WIX_POST_OWNER_ID", ""),
+                    category_ids=tuple(
+                        x.strip()
+                        for x in [os.getenv("NB_WIX_BLOG_CATEGORY_ID", "")]
+                        if x.strip()
+                    ),
+                    tag_ids=tuple(
+                        x.strip()
+                        for x in os.getenv("NB_WIX_BLOG_TAG_IDS", "").split(",")
+                        if x.strip()
+                    ),
+                )
+            else:
+                target = LinkedInPublicationTarget(
+                    account_id=os.getenv("NB_ZERNIO_LINKEDIN_ACCOUNT_ID", ""),
+                )
+        except PydanticValidationError as exc:
+            return ChannelPackageOutcome.failed(
+                channel,
+                f"{type(exc).__name__}: {exc}",
+                category=PackageFailureCategory.TARGET,
             )
-            if url
-        },
-        wix_slug=wix_package.slug,
-        wix_category_id=wix_package.target.category_ids[0] if wix_package.target.category_ids else "",
-        wix_tags=list(wix_package.target.tag_ids),
-        wix_site_id=wix_package.target.site_id,
-        wix_owner_member_id=wix_package.target.owner_member_id,
-        linkedin_account_id=linkedin_package.target.account_id,
-        run_id=run_ctx.run_id,
-        metadata={
-            "signal_id": signal_id,
-            "configuration_identity": strategy_execution.identity.model_dump(),
-        },
+        try:
+            if channel == "wix":
+                package = build_wix_publication_package(
+                    run_id=run_ctx.run_id,
+                    signal_id=signal_id,
+                    configuration_identity=strategy_execution.identity,
+                    generated=_generated_source,
+                    visual_record=_visual_record,
+                    target=target,
+                )
+            else:
+                if _li_composition is None:
+                    return ChannelPackageOutcome.failed(
+                        channel,
+                        _li_composition_failure or "no LinkedIn composition",
+                        category=PackageFailureCategory.CHANNEL_PACKAGE,
+                    )
+                package = build_linkedin_publication_package(
+                    run_id=run_ctx.run_id,
+                    signal_id=signal_id,
+                    configuration_identity=strategy_execution.identity,
+                    generated=_generated_source,
+                    linkedin_composition=_li_composition,
+                    visual_record=_visual_record,
+                    target=target,
+                )
+        except PublicationPackageError as exc:
+            # The builder classifies its own failure scope: a channel-local
+            # payload problem isolates this channel, while configuration /
+            # provenance / lineage corruption is shared run evidence and stops
+            # every channel. Scope is never inferred from message text.
+            return ChannelPackageOutcome.failed(
+                channel, f"{type(exc).__name__}: {exc}", category=exc.category
+            )
+        except PydanticValidationError as exc:
+            return ChannelPackageOutcome.failed(
+                channel,
+                f"{type(exc).__name__}: {exc}",
+                category=PackageFailureCategory.CHANNEL_PACKAGE,
+            )
+        return ChannelPackageOutcome.valid(channel, package)
+
+    _channel_outcomes = [_build_channel(name) for name in _R1_PUBLISHERS]
+    for _outcome in _channel_outcomes:
+        if _outcome.package is not None:
+            print(f"  ✓  {_outcome.channel} package: {_outcome.package.package_digest()}")
+        else:
+            print(f"  ✗  {_outcome.channel} package: {_outcome.failure_reason}")
+
+    # ── Publication preflight (Issue #101 / Story #17) ───────────────────────
+    # The last gate before any external side effect: the exact frozen packages
+    # built above are evaluated, the verdict is persisted BEFORE any allowed
+    # call, and only ALLOWed channels reach a publisher. Run-level failures
+    # block every channel; channel-scoped failures block only their channel.
+    _freshness = FreshnessVerdict(
+        verified=True,
+        rules=(
+            ("source_package_generated_at_not_before_strategy_start",
+             "strategy_id_and_version_match_active",
+             "configuration_identity_matches_source_snapshot")
+            if (args.from_package or args.legacy_package)
+            else ("configuration_identity_matches_active_strategy",)
+        ),
     )
-    _assert_run_id_match(run_ctx.run_id, draft.run_id, "draft-package")
+    try:
+        preflight = evaluate_publication_preflight(
+            packages_dir=PACKAGES_DIR,
+            run_id=run_ctx.run_id,
+            signal_id=signal_id,
+            configuration_identity=strategy_execution.identity,
+            channel_outcomes=_channel_outcomes,
+            override_attempted=_override_attempted,
+            readiness=_readiness,
+            freshness=_freshness,
+        )
+        write_preflight_result_json(
+            run_dir, json.loads(preflight.model_dump_json())
+        )
+    except (ArtifactCollisionError, OSError, ValueError) as exc:
+        print(f"\n  ERROR: publication preflight could not be committed: {exc}")
+        return 1
+    print(f"\n  preflight: run={preflight.run_disposition.value} "
+          f"({run_dir / 'preflight_result.json'})")
+    for _verdict in preflight.channels:
+        _detail = (
+            ", ".join(reason.value for reason in _verdict.blocking_reasons)
+            or _verdict.package_digest
+        )
+        print(f"    {_verdict.channel:<9} {_verdict.disposition.value:<5} {_detail}")
+    if preflight.run_disposition is PreflightDisposition.BLOCK:
+        print("  ERROR: publication preflight blocked this run — no channel published.")
+        _emit_run_report(R1RunReport(
+            run_id=run_ctx.run_id,
+            signal_id=signal_id,
+            execution_mode=run_ctx.execution_mode.value,
+            errors=[reason.value for reason in preflight.run_blocking_reasons],
+            completed=False,
+            notes="publication preflight blocked the run",
+        ))
+        return 1
 
     results: dict = {}
     wix_post_id: Optional[str] = None
     wix_url = ""
 
     _r1_cls = {"wix": WixPublisher, "linkedin": LinkedInPublisher}
+    _r1_packages = {
+        outcome.channel: outcome.package
+        for outcome in _channel_outcomes
+        if outcome.package is not None
+    }
     for name in _R1_PUBLISHERS:
+        _verdict = preflight.verdict_for(name)
+        if _verdict is None or _verdict.disposition is PreflightDisposition.BLOCK:
+            _reasons = (
+                ", ".join(r.value for r in _verdict.blocking_reasons)
+                if _verdict is not None else "no preflight verdict"
+            )
+            print(f"  ✗  {name:<12} BLOCKED by preflight ({_reasons}) — not published")
+            results[name] = {
+                "platform": name, "status": "BLOCKED",
+                "error_message": f"publication preflight: {_reasons}",
+                "external_id": None, "url": None, "run_id": run_ctx.run_id,
+            }
+            continue
         try:
             channel_view = (
                 strategy_execution.wix
@@ -1466,8 +1622,15 @@ def main(
                 channel_view.identity,
                 f"{name}-publication",
             )
+            _package = _r1_packages[name]
+            # The authorized object is the one that crosses the boundary: its
+            # digest must still be exactly what the persisted verdict allowed.
+            if _package.package_digest() != _verdict.package_digest:
+                raise ValueError(
+                    f"{name} package digest does not match the preflight verdict"
+                )
             result = _r1_cls[name]().publish(
-                draft, "live", strategy_view=channel_view
+                _package, "live", strategy_view=channel_view
             )
             result = _normalize_publish_result(result, run_ctx.run_id, name)
             results[name] = result.to_dict()

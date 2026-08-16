@@ -19,6 +19,8 @@ import json
 import pytest
 from unittest.mock import patch
 
+from pydantic import ValidationError
+
 from src.publishing.base import DraftPackage
 from src.publishing.linkedin import LinkedInPublisher
 from src.publishing.package import (
@@ -48,7 +50,12 @@ ZERNIO_KEY = "zernio-secret-key-do-not-leak"
 
 
 def _draft_from_packages(tmp_path):
-    """Derive the publisher-facing object exactly as the entrypoint does."""
+    """Build the canonical packages — after Issue #101 they ARE the boundary.
+
+    The publisher receives the frozen package directly and derives its
+    internal representation from it, so there is no mutable object between
+    the authorized package and the external call.
+    """
 
     wix_package = _build_wix(
         tmp_path,
@@ -59,30 +66,8 @@ def _draft_from_packages(tmp_path):
     linkedin_package = _build_linkedin(
         tmp_path, target=LinkedInPublicationTarget(account_id=ACCOUNT_A)
     )
-    draft = DraftPackage(
-        draft_dir=tmp_path,
-        blog_title=wix_package.title,
-        blog_body=wix_package.body_markdown,
-        blog_meta={"title": wix_package.title, "wix_slug": wix_package.slug},
-        linkedin_text=linkedin_package.linkedin_body,
-        instagram_text="",
-        facebook_text="",
-        threads_sequence=[],
-        telegram_text="",
-        image_url=wix_package.cover_image_url,
-        platform_image_urls={
-            "blog": wix_package.cover_image_url,
-            "linkedin": linkedin_package.linkedin_image_url,
-        },
-        wix_slug=wix_package.slug,
-        wix_category_id=wix_package.target.category_ids[0],
-        wix_tags=list(wix_package.target.tag_ids),
-        wix_site_id=wix_package.target.site_id,
-        wix_owner_member_id=wix_package.target.owner_member_id,
-        linkedin_account_id=linkedin_package.target.account_id,
-        run_id=wix_package.run_id,
-        metadata={},
-    )
+    draft = DraftPackage.from_wix_package(wix_package)
+    draft.linkedin_account_id = linkedin_package.target.account_id
     return wix_package, linkedin_package, draft
 
 
@@ -100,7 +85,7 @@ def _hijack_environment(monkeypatch):
 
 
 def test_wix_publishes_to_package_target_after_environment_moves(tmp_path, monkeypatch):
-    _, _, draft = _draft_from_packages(tmp_path)
+    wix_package, _, _ = _draft_from_packages(tmp_path)
     _hijack_environment(monkeypatch)
     calls: list[dict] = []
 
@@ -121,7 +106,7 @@ def test_wix_publishes_to_package_target_after_environment_moves(tmp_path, monke
     with patch("src.publishing.wix.import_image",
                return_value=WixMediaAsset(file_id="wix-file-1")):
         with patch("src.publishing.wix._fetch", side_effect=fake_fetch):
-            result = WixPublisher().publish(draft, "live")
+            result = WixPublisher().publish(wix_package, "live")
 
     assert result.status == PublishStatus.PUBLISHED
     assert calls, "the publisher must have made outbound calls"
@@ -150,7 +135,7 @@ def test_wix_publishes_to_package_target_after_environment_moves(tmp_path, monke
 def test_wix_image_import_uses_package_site(tmp_path, monkeypatch):
     """The media-import step is a Wix side effect too — it must target site A."""
 
-    _, _, draft = _draft_from_packages(tmp_path)
+    wix_package, _, _ = _draft_from_packages(tmp_path)
     _hijack_environment(monkeypatch)
     seen: dict = {}
 
@@ -169,7 +154,7 @@ def test_wix_image_import_uses_package_site(tmp_path, monkeypatch):
 
     with patch("src.publishing.wix.import_image", side_effect=fake_import):
         with patch("src.publishing.wix._fetch", side_effect=fake_fetch):
-            WixPublisher().publish(draft, "live")
+            WixPublisher().publish(wix_package, "live")
 
     assert seen["site_id"] == SITE_A
     assert seen["site_id"] != SITE_B
@@ -177,29 +162,30 @@ def test_wix_image_import_uses_package_site(tmp_path, monkeypatch):
     assert seen["api_key"] == API_KEY
 
 
-def test_wix_without_package_target_fails_closed(tmp_path, monkeypatch):
-    """A draft carrying no package target never falls back to the environment."""
+def test_wix_target_cannot_be_emptied_after_construction(tmp_path, monkeypatch):
+    """The frozen package is the boundary: an absent target is unconstructible,
+    and the authorized package cannot be emptied on the way to the publisher."""
 
-    _, _, draft = _draft_from_packages(tmp_path)
-    draft.wix_site_id = ""
-    draft.wix_owner_member_id = ""
+    wix_package, _, _ = _draft_from_packages(tmp_path)
     _hijack_environment(monkeypatch)
 
-    with patch("src.publishing.wix._fetch") as fetch:
-        with patch("src.publishing.wix.import_image") as importer:
-            result = WixPublisher().publish(draft, "live")
-
-    assert result.status == PublishStatus.FAILED
-    assert "package target identity" in result.error_message
-    fetch.assert_not_called()
-    importer.assert_not_called()
+    with pytest.raises(ValidationError):
+        WixPublicationTarget(site_id="", owner_member_id=MEMBER_A)
+    with pytest.raises(ValidationError):
+        wix_package.target = WixPublicationTarget(
+            site_id=SITE_B, owner_member_id=MEMBER_B
+        )
+    # …and the derived internal representation still carries target A.
+    derived = DraftPackage.from_wix_package(wix_package)
+    assert derived.wix_site_id == SITE_A
+    assert derived.wix_owner_member_id == MEMBER_A
 
 
 # ── LinkedIn target TOCTOU ───────────────────────────────────────────────────
 
 
 def test_linkedin_posts_to_package_account_after_environment_moves(tmp_path, monkeypatch):
-    _, _, draft = _draft_from_packages(tmp_path)
+    _, linkedin_package, _ = _draft_from_packages(tmp_path)
     _hijack_environment(monkeypatch)
     calls: list[dict] = []
 
@@ -208,7 +194,7 @@ def test_linkedin_posts_to_package_account_after_environment_moves(tmp_path, mon
         return 201, {"post": {"_id": "zernio-post-1"}}, ""
 
     with patch("src.publishing.linkedin._fetch", side_effect=fake_fetch):
-        result = LinkedInPublisher().publish(draft, "live")
+        result = LinkedInPublisher().publish(linkedin_package, "live")
 
     assert result.status == PublishStatus.PUBLISHED
     assert len(calls) == 1
@@ -219,11 +205,11 @@ def test_linkedin_posts_to_package_account_after_environment_moves(tmp_path, mon
 
 
 def test_linkedin_dry_run_reports_package_account(tmp_path, monkeypatch):
-    _, _, draft = _draft_from_packages(tmp_path)
+    _, linkedin_package, _ = _draft_from_packages(tmp_path)
     _hijack_environment(monkeypatch)
 
     with patch("src.publishing.linkedin._fetch") as fetch:
-        result = LinkedInPublisher().publish(draft, "dry_run")
+        result = LinkedInPublisher().publish(linkedin_package, "dry_run")
 
     assert result.status == PublishStatus.SKIPPED
     assert ACCOUNT_A in result.error_message
@@ -231,17 +217,16 @@ def test_linkedin_dry_run_reports_package_account(tmp_path, monkeypatch):
     fetch.assert_not_called()
 
 
-def test_linkedin_without_package_target_fails_closed(tmp_path, monkeypatch):
-    _, _, draft = _draft_from_packages(tmp_path)
-    draft.linkedin_account_id = ""
+def test_linkedin_target_cannot_be_emptied_after_construction(tmp_path, monkeypatch):
+    _, linkedin_package, _ = _draft_from_packages(tmp_path)
     _hijack_environment(monkeypatch)
 
-    with patch("src.publishing.linkedin._fetch") as fetch:
-        result = LinkedInPublisher().publish(draft, "live")
-
-    assert result.status == PublishStatus.FAILED
-    assert "package target identity" in result.error_message
-    fetch.assert_not_called()
+    with pytest.raises(ValidationError):
+        LinkedInPublicationTarget(account_id="")
+    with pytest.raises(ValidationError):
+        linkedin_package.target = LinkedInPublicationTarget(account_id=ACCOUNT_B)
+    derived = DraftPackage.from_linkedin_package(linkedin_package)
+    assert derived.linkedin_account_id == ACCOUNT_A
 
 
 # ── Credential boundary ──────────────────────────────────────────────────────
@@ -250,19 +235,19 @@ def test_linkedin_without_package_target_fails_closed(tmp_path, monkeypatch):
 def test_api_keys_are_read_from_environment_at_the_publisher_boundary(tmp_path, monkeypatch):
     """Credential readiness stays where it is (Issue #101 owns preflight)."""
 
-    _, _, draft = _draft_from_packages(tmp_path)
+    wix_package, linkedin_package, _ = _draft_from_packages(tmp_path)
     _hijack_environment(monkeypatch)
 
     monkeypatch.delenv("NB_WIX_API_KEY", raising=False)
     with patch("src.publishing.wix._fetch") as fetch:
-        wix_result = WixPublisher().publish(draft, "live")
+        wix_result = WixPublisher().publish(wix_package, "live")
     assert wix_result.status == PublishStatus.FAILED
     assert "NB_WIX_API_KEY" in wix_result.error_message
     fetch.assert_not_called()
 
     monkeypatch.delenv("NB_ZERNIO_API_KEY", raising=False)
     with patch("src.publishing.linkedin._fetch") as fetch:
-        li_result = LinkedInPublisher().publish(draft, "live")
+        li_result = LinkedInPublisher().publish(linkedin_package, "live")
     assert li_result.status == PublishStatus.FAILED
     assert "NB_ZERNIO_API_KEY" in li_result.error_message
     fetch.assert_not_called()

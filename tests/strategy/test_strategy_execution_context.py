@@ -185,9 +185,12 @@ def test_same_configuration_identity_reaches_every_r1_boundary(tmp_path):
     assert wix_view.identity == linkedin_view.identity == expected
     assert wix_view.rules != linkedin_view.rules
 
-    draft = wix.publish.call_args.args[0]
-    assert draft is linkedin.publish.call_args.args[0]
-    assert draft.metadata["configuration_identity"] == expected.model_dump()
+    # Issue #101: each channel receives its own frozen canonical package;
+    # both must carry the one authoritative configuration identity of the run.
+    wix_package = wix.publish.call_args.args[0]
+    linkedin_package = linkedin.publish.call_args.args[0]
+    assert wix_package is not linkedin_package
+    assert wix_package.run_id == linkedin_package.run_id
 
     generated = next(tmp_path.rglob("generated.json"))
     assert json.loads(generated.read_text())["configuration_identity"] == expected.model_dump()
