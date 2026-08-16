@@ -27,12 +27,14 @@ from src.publishing.package import (
 )
 from src.publishing.preflight import (
     BlockingReason,
+    ChannelPackageOutcome,
     ChannelPreflightVerdict,
     FreshnessVerdict,
     OverrideState,
     PreflightDisposition,
     PreflightResult,
     ProvenanceVerdict,
+    ReadinessVerdict,
     evaluate_publication_preflight,
 )
 from src.publishing.result import PublishStatus
@@ -47,6 +49,11 @@ from tests.test_publication_package import (
     _build_wix,
 )
 
+READY = ReadinessVerdict(verified=True)
+UNREADY = ReadinessVerdict(
+    verified=False,
+    failure_reason="ARTICLE_READY=False; SOURCE_PREMISE_VERIFIED=unknown",
+)
 FRESH = FreshnessVerdict(verified=True, rules=("configuration_identity_matches_active_strategy",))
 STALE = FreshnessVerdict(
     verified=False,
@@ -64,14 +71,19 @@ def credentials(monkeypatch):
 def _evaluate(tmp_path, *, provenance_ok=True, **overrides):
     """Evaluate preflight with real packages; provenance is stubbed per case."""
 
+    wix_package = overrides.pop("wix_package", None) or _build_wix(tmp_path)
+    linkedin_package = overrides.pop("linkedin_package", None) or _build_linkedin(tmp_path)
     kwargs = dict(
         packages_dir=tmp_path / "packages",
         run_id=RUN,
         signal_id=SIG,
         configuration_identity=CONFIG,
-        wix_package=_build_wix(tmp_path),
-        linkedin_package=_build_linkedin(tmp_path),
+        channel_outcomes=[
+            ChannelPackageOutcome.valid("wix", wix_package),
+            ChannelPackageOutcome.valid("linkedin", linkedin_package),
+        ],
         override_attempted=False,
+        readiness=READY,
         freshness=FRESH,
     )
     kwargs.update(overrides)
@@ -603,5 +615,123 @@ def test_unready_signal_is_never_rescued_by_an_override(tmp_path, monkeypatch):
         tmp_path, _build_legacy_research_context=mock.MagicMock(side_effect=unready_rc)
     )
     assert code == 1
+    wix_mock.publish.assert_not_called()
+    li_mock.publish.assert_not_called()
+
+
+# ── Channel-local package/target failure does not stop the other channel ─────
+#
+# Fixture choice matters here: the Wix *visual* requirement is an upstream
+# Story #15 shared invariant (a run without a valid Wix visual never reaches
+# packaging at all) and is deliberately NOT reclassified. The failures
+# exercised below are genuinely Issue #101 channel-local: the channel's own
+# publication target is unusable, which is exactly what the strict #100 target
+# models reject at construction.
+
+
+def test_linkedin_target_failure_blocks_only_linkedin_end_to_end(tmp_path, monkeypatch):
+    _target_env(monkeypatch)
+    monkeypatch.delenv("NB_ZERNIO_LINKEDIN_ACCOUNT_ID", raising=False)
+
+    code, wix_mock, li_mock, verdicts = _live_run(tmp_path)
+
+    assert len(verdicts) == 1
+    result = PreflightResult.model_validate_json(verdicts[0].read_bytes())
+    # LinkedIn's channel-local failure never became a shared stop…
+    assert result.run_disposition is PreflightDisposition.ALLOW
+    assert result.allowed_channels() == ("wix",)
+    linkedin = result.verdict_for("linkedin")
+    assert linkedin.disposition is PreflightDisposition.BLOCK
+    assert BlockingReason.TARGET_MISSING in linkedin.blocking_reasons
+    assert linkedin.package_digest is None          # no fabricated digest
+    assert linkedin.target is None
+    assert linkedin.package_failure_reason
+    # …and Wix published normally.
+    assert result.verdict_for("wix").disposition is PreflightDisposition.ALLOW
+    assert wix_mock.publish.called
+    li_mock.publish.assert_not_called()
+    assert code == 1                                 # run incomplete, not silent
+
+
+def test_wix_target_failure_blocks_only_wix_end_to_end(tmp_path, monkeypatch):
+    _target_env(monkeypatch)
+    monkeypatch.delenv("NB_WIX_POST_OWNER_ID", raising=False)
+
+    code, wix_mock, li_mock, verdicts = _live_run(tmp_path)
+
+    result = PreflightResult.model_validate_json(verdicts[0].read_bytes())
+    assert result.run_disposition is PreflightDisposition.ALLOW
+    assert result.allowed_channels() == ("linkedin",)
+    wix = result.verdict_for("wix")
+    assert BlockingReason.TARGET_MISSING in wix.blocking_reasons
+    assert wix.package_digest is None
+    wix_mock.publish.assert_not_called()
+    assert li_mock.publish.called
+
+
+def test_channel_local_failure_leaves_the_other_channel_published(tmp_path, monkeypatch):
+    """The published channel's evidence is recorded; the blocked one is not."""
+
+    _target_env(monkeypatch)
+    monkeypatch.delenv("NB_ZERNIO_LINKEDIN_ACCOUNT_ID", raising=False)
+    _live_run(tmp_path)
+    published = json.loads(
+        next(tmp_path.glob(f"{legacy._SIGNAL_ID}/runs/*/publication_results.json")).read_text()
+    )
+    assert published["results"]["wix"]["status"] == "PUBLISHED"
+    assert published["results"]["linkedin"]["status"] == "BLOCKED"
+    assert published["completed"] is False
+
+
+# ── Readiness decisions are preserved by the canonical boundary ──────────────
+
+
+def _unready_run(tmp_path, *, override: bool):
+    def unready_rc(assignment, raw_signal, run_ctx):
+        rc = legacy._make_rc_mock(run_ctx.run_id)
+        rc.article_ready = False
+        rc.force_override = override
+        rc.source_premise_verified = "false"
+        return rc
+
+    return _live_run(
+        tmp_path, _build_legacy_research_context=mock.MagicMock(side_effect=unready_rc)
+    )
+
+
+def test_readiness_block_without_override_is_preserved(tmp_path, monkeypatch):
+    _target_env(monkeypatch)
+    code, wix_mock, li_mock, verdicts = _unready_run(tmp_path, override=False)
+
+    assert code == 1
+    assert len(verdicts) == 1, "the readiness decision must be preserved evidence"
+    result = PreflightResult.model_validate_json(verdicts[0].read_bytes())
+    assert result.run_disposition is PreflightDisposition.BLOCK
+    assert BlockingReason.READINESS_FAILED in result.run_blocking_reasons
+    assert result.readiness.verified is False
+    assert result.readiness.failure_reason
+    assert result.override_state is OverrideState.NONE
+    for verdict in result.channels:
+        assert verdict.disposition is PreflightDisposition.BLOCK
+        assert verdict.package_digest is None
+    wix_mock.publish.assert_not_called()
+    li_mock.publish.assert_not_called()
+
+
+def test_readiness_block_with_override_attempt_is_preserved(tmp_path, monkeypatch):
+    _target_env(monkeypatch)
+    code, wix_mock, li_mock, verdicts = _unready_run(tmp_path, override=True)
+
+    assert code == 1
+    result = PreflightResult.model_validate_json(verdicts[0].read_bytes())
+    assert result.run_disposition is PreflightDisposition.BLOCK
+    assert result.override_state is OverrideState.ATTEMPTED_REJECTED
+    assert BlockingReason.READINESS_FAILED in result.run_blocking_reasons
+    assert (
+        BlockingReason.OVERRIDE_ATTEMPTED_ON_BLOCKING_CONDITION
+        in result.run_blocking_reasons
+    )
+    assert "authorized_by" not in verdicts[0].read_text()
+    assert result.allowed_channels() == ()
     wix_mock.publish.assert_not_called()
     li_mock.publish.assert_not_called()

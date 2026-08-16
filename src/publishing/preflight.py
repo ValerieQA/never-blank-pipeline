@@ -40,7 +40,7 @@ import os
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Sequence, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -82,6 +82,7 @@ class BlockingReason(str, Enum):
     PROVENANCE_FAILED = "provenance_failed"
     CONFIGURATION_MISMATCH = "configuration_mismatch"
     FRESHNESS_FAILED = "freshness_failed"
+    READINESS_FAILED = "readiness_failed"
     OVERRIDE_ATTEMPTED_ON_BLOCKING_CONDITION = (
         "override_attempted_on_blocking_condition"
     )
@@ -127,12 +128,81 @@ class FreshnessVerdict(_PreflightModel):
         return self
 
 
+class ReadinessVerdict(_PreflightModel):
+    """The existing publication-readiness rule, evaluated as a shared check.
+
+    The rule itself is unchanged (``ResearchContext.article_ready`` plus the
+    signal's source-premise state); Issue #101 only moves its final
+    publication-authorization decision into the auditable boundary, so a
+    readiness stop is preserved evidence instead of an undocumented
+    pre-preflight return.
+    """
+
+    verified: bool
+    failure_reason: Optional[str] = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def _truthful(self) -> "ReadinessVerdict":
+        if self.verified and self.failure_reason is not None:
+            raise ValueError("a verified readiness result carries no failure reason")
+        if not self.verified and not self.failure_reason:
+            raise ValueError("a failed readiness result must state its reason")
+        return self
+
+
+class ChannelPackageOutcome:
+    """Per-channel result of canonical package construction.
+
+    Channels are built independently so that a channel-local package or
+    target failure becomes a typed channel BLOCK instead of collapsing the
+    whole run. A failed channel carries no package and therefore no digest —
+    a digest is never fabricated for a package that does not exist.
+    """
+
+    __slots__ = ("channel", "package", "failure_reason", "failure_kind")
+
+    def __init__(
+        self,
+        channel: str,
+        *,
+        package=None,
+        failure_reason: Optional[str] = None,
+        failure_kind: Optional[str] = None,
+    ) -> None:
+        if (package is None) == (failure_reason is None):
+            raise ValueError(
+                "a channel outcome is either a valid package or a typed failure"
+            )
+        if failure_kind not in (None, "package", "target"):
+            raise ValueError(f"unsupported channel failure kind: {failure_kind!r}")
+        self.channel = channel
+        self.package = package
+        self.failure_reason = failure_reason
+        self.failure_kind = failure_kind or ("package" if failure_reason else None)
+
+    @classmethod
+    def valid(cls, channel: str, package) -> "ChannelPackageOutcome":
+        return cls(channel, package=package)
+
+    @classmethod
+    def failed(
+        cls, channel: str, reason: str, *, kind: str = "package"
+    ) -> "ChannelPackageOutcome":
+        return cls(channel, failure_reason=reason, failure_kind=kind)
+
+
 class ChannelPreflightVerdict(_PreflightModel):
     """The authorization record of one channel's exact publication package."""
 
     channel: str = Field(min_length=1, max_length=40)
-    package_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
-    target: Union[WixPublicationTarget, LinkedInPublicationTarget]
+    # Absent only for the explicit state "the canonical package could not be
+    # constructed" — a digest is never fabricated for a package that does not
+    # exist, and an ALLOW always carries a real one.
+    package_digest: Optional[str] = Field(
+        default=None, pattern=r"^sha256:[0-9a-f]{64}$"
+    )
+    target: Optional[Union[WixPublicationTarget, LinkedInPublicationTarget]] = None
+    package_failure_reason: Optional[str] = Field(default=None, max_length=500)
     package_valid: bool
     credential_ready: bool
     disposition: PreflightDisposition
@@ -154,8 +224,19 @@ class ChannelPreflightVerdict(_PreflightModel):
                 raise ValueError(
                     "an ALLOW verdict requires a valid package and a ready credential"
                 )
+            if self.package_digest is None or self.target is None:
+                raise ValueError(
+                    "an ALLOW verdict requires the digest and target of a real "
+                    "canonical package"
+                )
         elif not self.blocking_reasons:
             raise ValueError("a BLOCK verdict must state at least one blocking reason")
+        if self.package_valid and self.package_failure_reason is not None:
+            raise ValueError("a valid package carries no construction failure reason")
+        if not self.package_valid and self.package_digest is not None:
+            raise ValueError(
+                "a package that failed validation cannot present a package digest"
+            )
         return self
 
 
@@ -169,6 +250,7 @@ class PreflightResult(_PreflightModel):
     evaluated_at: datetime
     override_state: OverrideState
     provenance: ProvenanceVerdict
+    readiness: ReadinessVerdict
     freshness: FreshnessVerdict
     configuration_consistent: bool
     run_disposition: PreflightDisposition
@@ -226,18 +308,24 @@ def evaluate_publication_preflight(
     run_id: str,
     signal_id: str,
     configuration_identity: ConfigurationIdentity,
-    wix_package: WixPublicationPackage,
-    linkedin_package: LinkedInPublicationPackage,
+    channel_outcomes: "Sequence[ChannelPackageOutcome]",
     override_attempted: bool,
+    readiness: ReadinessVerdict,
     freshness: FreshnessVerdict,
     now: Optional[datetime] = None,
 ) -> PreflightResult:
     """Evaluate the fail-closed publication preflight for one run.
 
-    The packages passed here are the exact frozen objects that will be handed
-    to the publishers on ALLOW: their digests are computed from these objects
-    and recorded in the verdict, so the preserved authorization identifies the
-    exact external side effect.
+    ``channel_outcomes`` carries each channel's independent construction
+    result: either the frozen canonical package that will be handed to that
+    publisher on ALLOW — its digest is computed from that exact object and
+    recorded here — or a typed construction failure, which becomes a
+    channel-scoped BLOCK rather than a whole-run stop.
+
+    This is the single publication-authorization boundary: shared readiness,
+    provenance, configuration, freshness and override state are all evaluated
+    here, so every publication decision inside Story #17's authorization model
+    is explained by the preserved verdict.
     """
 
     run_reasons: list[BlockingReason] = []
@@ -256,10 +344,17 @@ def evaluate_publication_preflight(
         )
         run_reasons.append(BlockingReason.PROVENANCE_FAILED)
 
+    # ── shared: publication readiness (existing rule, now auditable) ─────────
+    if not readiness.verified:
+        run_reasons.append(BlockingReason.READINESS_FAILED)
+
     # ── shared: authoritative configuration identity ─────────────────────────
-    configuration_consistent = (
-        wix_package.configuration_identity == configuration_identity
-        and linkedin_package.configuration_identity == configuration_identity
+    packages = [
+        outcome.package for outcome in channel_outcomes if outcome.package is not None
+    ]
+    configuration_consistent = all(
+        package.configuration_identity == configuration_identity
+        for package in packages
     )
     if not configuration_consistent:
         run_reasons.append(BlockingReason.CONFIGURATION_MISMATCH)
@@ -269,7 +364,7 @@ def evaluate_publication_preflight(
         run_reasons.append(BlockingReason.FRESHNESS_FAILED)
 
     # ── shared: run identity of the packages themselves ──────────────────────
-    if wix_package.run_id != run_id or linkedin_package.run_id != run_id:
+    if any(package.run_id != run_id for package in packages):
         run_reasons.append(BlockingReason.RUN_BLOCKED)
 
     # ── override: never converts BLOCK into ALLOW (Release 1 decision) ───────
@@ -285,16 +380,27 @@ def evaluate_publication_preflight(
 
     # ── per-channel verdicts ─────────────────────────────────────────────────
     channels: list[ChannelPreflightVerdict] = []
-    for channel, package in (("wix", wix_package), ("linkedin", linkedin_package)):
+    for outcome in channel_outcomes:
         channel_reasons: list[BlockingReason] = []
-        # The package exists and is strict-valid by construction (#100 models
-        # reject anything else); preflight records that fact and binds to it.
-        package_valid = True
-        target_present = _target_is_identified(package)
-        if not target_present:
+        package = outcome.package
+        if package is None:
+            # The canonical package could not be constructed: an explicit,
+            # fail-closed channel state carrying no digest and no target.
             package_valid = False
-            channel_reasons.append(BlockingReason.TARGET_MISSING)
-        credential_ready = _credential_ready(channel)
+            channel_reasons.append(
+                BlockingReason.TARGET_MISSING
+                if outcome.failure_kind == "target"
+                else BlockingReason.PACKAGE_INVALID
+            )
+            digest = None
+            target = None
+        else:
+            package_valid = _target_is_identified(package)
+            if not package_valid:
+                channel_reasons.append(BlockingReason.TARGET_MISSING)
+            digest = package.package_digest() if package_valid else None
+            target = package.target if package_valid else None
+        credential_ready = _credential_ready(outcome.channel)
         if not credential_ready:
             channel_reasons.append(BlockingReason.CREDENTIAL_MISSING)
         if run_blocked:
@@ -306,9 +412,12 @@ def evaluate_publication_preflight(
         )
         channels.append(
             ChannelPreflightVerdict(
-                channel=channel,
-                package_digest=package.package_digest(),
-                target=package.target,
+                channel=outcome.channel,
+                package_digest=digest,
+                target=target,
+                package_failure_reason=(
+                    outcome.failure_reason[:500] if outcome.failure_reason else None
+                ),
                 package_valid=package_valid,
                 credential_ready=credential_ready,
                 disposition=disposition,
@@ -323,6 +432,7 @@ def evaluate_publication_preflight(
         evaluated_at=now or datetime.now(timezone.utc),
         override_state=override_state,
         provenance=provenance,
+        readiness=readiness,
         freshness=freshness,
         configuration_consistent=configuration_consistent,
         run_disposition=(

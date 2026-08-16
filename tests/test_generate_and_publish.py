@@ -212,13 +212,15 @@ def _fake_preflight(**kwargs):
     from src.publishing.preflight import PreflightDisposition
 
     verdicts = {
-        name: SimpleNamespace(
-            channel=name,
+        outcome.channel: SimpleNamespace(
+            channel=outcome.channel,
             disposition=PreflightDisposition.ALLOW,
             blocking_reasons=(),
-            package_digest=kwargs[f"{name}_package"].package_digest(),
+            package_digest=(
+                outcome.package.package_digest() if outcome.package is not None else None
+            ),
         )
-        for name in ("wix", "linkedin")
+        for outcome in kwargs["channel_outcomes"]
     }
     return SimpleNamespace(
         run_disposition=PreflightDisposition.ALLOW,

@@ -71,11 +71,29 @@ Real override authorization remains a separate post-R1 product decision.
 `SATISFIED` (#101): run-scoped create-once `preflight_result.json`
 (`PreflightResult`, strict/frozen/reloadable) carrying schema version, run and
 signal identity, authoritative configuration identity, `evaluated_at`,
-`override_state`, provenance verdict, freshness verdict, run disposition with
-machine-readable reasons, and per-channel verdicts (channel, exact
-`package_digest`, non-secret target, package validity, credential readiness,
-`ALLOW`/`BLOCK`, blocking reasons). No secrets, tokens, raw provider objects,
-or adapter responses are persisted.
+`override_state`, provenance verdict, readiness verdict, freshness verdict,
+run disposition with machine-readable reasons, and per-channel verdicts
+(channel, exact `package_digest`, non-secret target, package validity,
+optional construction-failure reason, credential readiness, `ALLOW`/`BLOCK`,
+blocking reasons). No secrets, tokens, raw provider objects, or adapter
+responses are persisted.
+
+The preflight is the **single publication-authorization boundary**: every
+decision inside Story #17's authorization model is explained by the preserved
+verdict, and no publication decision is taken before the artifact exists.
+Concretely:
+
+- *Readiness* is evaluated as a shared check and its stop persists the verdict
+  (run-level `readiness_failed`, both channels blocked, zero publisher calls)
+  before the run ends. An override attempted against it is recorded as
+  `attempted_rejected` in that same artifact — the rejection that motivated
+  the audit requirement is canonical run evidence, not a console message.
+- *Channel packages are constructed independently*, so a channel-local package
+  or target failure is a typed channel BLOCK (`package_invalid` /
+  `target_missing`) while a valid channel still publishes. A channel whose
+  canonical package could not be constructed carries **no** digest and **no**
+  target — a digest is never fabricated — and the strict model enforces that
+  an `ALLOW` always carries a real digest and target.
 
 **6. "Fake-client tests prove zero external calls after a blocked preflight."**
 `SATISFIED` (#101): deterministic fake transports prove zero calls for
@@ -92,6 +110,13 @@ proof that no publication evidence or history is fabricated for a blocked run.
   gate is fail-closed on both branches; after #100 the Wix package cannot even
   be constructed without a valid required cover, making the adapter's legacy
   no-cover branch unreachable from the canonical boundary.
+  **Scope boundary preserved by #101**: the Wix *visual* requirement remains
+  an upstream Story #15 **shared** invariant — a run without a valid Wix
+  visual never reaches publication packaging at all, and that was deliberately
+  not reclassified as channel-local. What #101 treats as channel-local is the
+  channel's own **publication package/target** state (for example an unusable
+  Wix site/member identity or an unusable LinkedIn account identity), which is
+  exactly what the strict #100 target models reject at construction.
 - **"Preflight does not deterministically verify same-run ownership"** —
   re-evaluated after Story #16 rather than re-implemented: ownership is proven
   by `verify_run_provenance` (#98), which #101 now invokes at the publication
