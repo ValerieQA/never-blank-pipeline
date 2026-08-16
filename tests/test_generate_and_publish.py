@@ -177,6 +177,7 @@ def _fake_wix_package(**kwargs):
     return SimpleNamespace(
         run_id=kwargs["run_id"],
         signal_id=kwargs["signal_id"],
+        source_article_digest="sha256:" + "a" * 64,
         title=title,
         slug=canonical_slug(title),
         body_markdown=generated.get("blog_article", ""),
@@ -200,6 +201,13 @@ def _fake_linkedin_package(**kwargs):
         target=SimpleNamespace(account_id="stand-in-account"),
         package_digest=lambda: "sha256:" + "1" * 64,
     )
+
+
+# No-prior-publication stand-in for the Wix idempotency scan (Issue #105): the
+# entrypoint reads .match and .evidence_note(). The real scan is covered by
+# tests/test_wix_idempotency.py.
+def _fake_no_prior_publication(*args, **kwargs):
+    return SimpleNamespace(match=None, evidence_note=lambda: None)
 
 
 # ALLOW-shaped stand-in for the publication preflight gate (Issue #101): the
@@ -375,6 +383,9 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         # harness needs no NB_* target environment.
         # Publication preflight gate (Issue #101): ALLOW-shaped stand-in; the
         # real gate is covered by tests/test_publication_preflight.py.
+        "find_prior_wix_publication": mock.MagicMock(
+            side_effect=_fake_no_prior_publication
+        ),
         "evaluate_publication_preflight": mock.MagicMock(side_effect=_fake_preflight),
         "write_preflight_result_json": mock.MagicMock(),
         "build_wix_publication_package": mock.MagicMock(side_effect=_fake_wix_package),
