@@ -46,6 +46,7 @@ from src.publishing.wix_media import (
 from src.publishing.wix import (
     WixDraftCreationError,
     WixDraftMediaVerificationError,
+    _verify_draft,
     WixPublisher,
 )
 
@@ -108,36 +109,110 @@ def _fetch_sequence(*responses):
 
 # ── wix_media.import_image ─────────────────────────────────────────────────────
 
+@pytest.fixture
+def no_sleep(monkeypatch):
+    """Readiness polling is exercised deterministically, never in real time.
+
+    Production polling timing is deliberately left untouched (Issue #104 is a
+    test-contract task); only the test's clock is collapsed.
+    """
+    slept: list[float] = []
+    monkeypatch.setattr(
+        "src.publishing.wix_media.time.sleep", lambda seconds: slept.append(seconds)
+    )
+    return slept
+
+
+def _media_responses(*states, file_obj=None, wrapper=True):
+    """Build an import response followed by one poll response per state.
+
+    The import call itself never carries a usable state, which is exactly the
+    production case that requires readiness polling: an upload is not success
+    until Wix confirms it.
+    """
+    body = dict(file_obj or {"id": "wix-file-abc"})
+
+    def wrap(payload):
+        return {"file": payload} if wrapper else payload
+
+    responses = [(200, wrap(body), "")]
+    for state in states:
+        polled = dict(body)
+        polled["state"] = state
+        responses.append((200, wrap(polled), ""))
+    return responses
+
+
 class TestWixMediaImport:
-    def test_success_returns_asset_with_file_id(self):
-        with patch("src.publishing.wix_media._fetch", return_value=(
-            200, {"file": {"id": "wix-file-abc", "url": "https://wixmp.com/abc.jpg"}}, ""
-        )):
+    """Issue #104: these exercise the current contract — a Wix Media upload is
+    successful only once Wix confirms readiness. The provider-compatibility
+    coverage of the original tests (``fileId``, ``fileUrl``, and the
+    un-wrapped top-level response) is preserved; what changed is that success
+    now requires a READY state rather than the first response."""
+
+    def test_success_returns_asset_with_file_id(self, no_sleep):
+        responses = _media_responses(
+            "PENDING", "READY",
+            file_obj={"id": "wix-file-abc", "url": "https://wixmp.com/abc.jpg"},
+        )
+        with patch("src.publishing.wix_media._fetch", side_effect=responses) as fetch:
             asset = import_image("https://cloudinary.com/img.jpg", "NB_cover", "key", "site")
         assert asset.file_id == "wix-file-abc"
         assert asset.url == "https://wixmp.com/abc.jpg"
+        # readiness was actually polled, and only READY produced the asset
+        assert fetch.call_count == len(responses)
+        assert no_sleep, "polling must go through the sleep seam"
 
-    def test_accepts_fileid_field_name(self):
-        with patch("src.publishing.wix_media._fetch", return_value=(
-            200, {"file": {"fileId": "wix-file-xyz"}}, ""
-        )):
+    def test_accepts_fileid_field_name(self, no_sleep):
+        responses = _media_responses("READY", file_obj={"fileId": "wix-file-xyz"})
+        with patch("src.publishing.wix_media._fetch", side_effect=responses):
             asset = import_image("https://cloudinary.com/img.jpg", "NB_cover", "key", "site")
         assert asset.file_id == "wix-file-xyz"
 
-    def test_accepts_fileurl_field_name(self):
-        with patch("src.publishing.wix_media._fetch", return_value=(
-            200, {"file": {"id": "wix-file-abc", "fileUrl": "https://wixmp.com/abc.jpg"}}, ""
-        )):
+    def test_accepts_fileurl_field_name(self, no_sleep):
+        responses = _media_responses(
+            "READY",
+            file_obj={"id": "wix-file-abc", "fileUrl": "https://wixmp.com/abc.jpg"},
+        )
+        with patch("src.publishing.wix_media._fetch", side_effect=responses):
             asset = import_image("https://cloudinary.com/img.jpg", "NB_cover", "key", "site")
         assert asset.url == "https://wixmp.com/abc.jpg"
 
-    def test_response_without_file_wrapper(self):
+    def test_response_without_file_wrapper(self, no_sleep):
         # Wix sometimes returns the object at the top level
-        with patch("src.publishing.wix_media._fetch", return_value=(
-            200, {"id": "wix-flat-id"}, ""
-        )):
+        responses = _media_responses(
+            "READY", file_obj={"id": "wix-flat-id"}, wrapper=False
+        )
+        with patch("src.publishing.wix_media._fetch", side_effect=responses):
             asset = import_image("https://cloudinary.com/img.jpg", "NB_cover", "key", "site")
         assert asset.file_id == "wix-flat-id"
+
+    def test_immediate_ready_state_skips_polling(self, no_sleep):
+        """A first response that already confirms readiness needs no polling."""
+        with patch("src.publishing.wix_media._fetch", return_value=(
+            200, {"file": {"id": "wix-ready-now", "url": "https://wixmp.com/n.jpg",
+                           "state": "READY"}}, ""
+        )) as fetch:
+            asset = import_image("https://cloudinary.com/img.jpg", "NB_cover", "key", "site")
+        assert asset.file_id == "wix-ready-now"
+        assert fetch.call_count == 1
+        assert no_sleep == []
+
+    def test_terminal_failure_state_fails_closed(self, no_sleep):
+        """A background import failure is never treated as a usable asset."""
+        responses = _media_responses("PENDING", "FAILED")
+        with patch("src.publishing.wix_media._fetch", side_effect=responses):
+            with pytest.raises(WixMediaImportError):
+                import_image("https://cloudinary.com/img.jpg", "NB_cover", "key", "site")
+
+    def test_unconfirmed_readiness_fails_closed(self, no_sleep):
+        """Readiness that never arrives fails closed — no publishable asset."""
+        responses = _media_responses(*(["PENDING"] * 5))
+        with patch("src.publishing.wix_media._fetch", side_effect=responses) as fetch:
+            with pytest.raises(WixMediaImportError):
+                import_image("https://cloudinary.com/img.jpg", "NB_cover", "key", "site")
+        assert fetch.call_count == len(responses)   # the full poll budget was used
+        assert len(no_sleep) == 5                    # …deterministically, not in real time
 
     def test_2xx_without_file_id_raises(self):
         with patch("src.publishing.wix_media._fetch", return_value=(
@@ -298,14 +373,23 @@ class TestWixPublisherDraftVerification:
         return fake_fetch
 
     def test_draft_media_missing_blocks_publish(self, monkeypatch):
+        """A draft whose cover-image identity cannot be confirmed is never published.
+
+        Asserted behaviorally (Issue #104): the failure status, the typed
+        verification error, and the fact that the publish endpoint is never
+        reached — not the exact English sentence, which is not a contract.
+        """
         _wix_env(monkeypatch)
         asset = WixMediaAsset(file_id="wix-abc-123")
+        publish_calls: list[str] = []
 
         def fake_fetch(url, *, method="GET", headers=None, body=None, timeout=20):
             if method == "POST" and "draft-posts" in url and "publish" not in url:
                 return 201, {"draftPost": {"id": "draft-001"}}, ""
             if method == "GET" and "draft-posts" in url:
-                return 200, {"draftPost": {}}, ""   # no media
+                return 200, {"draftPost": {}}, ""   # draft exists, media identity absent
+            if "publish" in url:
+                publish_calls.append(url)
             return 200, {}, ""
 
         with patch("src.publishing.wix.import_image", return_value=asset):
@@ -313,7 +397,13 @@ class TestWixPublisherDraftVerification:
                 result = WixPublisher().publish(_draft_package(), "live")
 
         assert result.status == PublishStatus.FAILED
-        assert "media is missing" in result.error_message
+        assert result.external_id is None
+        assert publish_calls == []          # the post was never published
+
+        # …and the cause is the missing media identity, raised as its own type.
+        with patch("src.publishing.wix._fetch", side_effect=fake_fetch):
+            with pytest.raises(WixDraftMediaVerificationError):
+                _verify_draft("draft-001", asset, {})
 
     def test_draft_media_id_mismatch_blocks_publish(self, monkeypatch):
         _wix_env(monkeypatch)
