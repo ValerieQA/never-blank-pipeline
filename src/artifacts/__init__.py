@@ -210,6 +210,28 @@ def write_editorial_acceptance_json(run_dir: Path, data: dict) -> None:
     atomic_write_json(run_dir / "editorial_acceptance.json", data)
 
 
+def write_assignment_json(run_dir: Path, data: dict) -> None:
+    """Commit the run's canonical intake assignment record exactly once."""
+    atomic_write_json(run_dir / "assignment.json", data)
+
+
+def load_assignment_json(packages_dir: Path, signal_id: str, source_run_id: str) -> dict:
+    """Load the exact immutable run-scoped assignment record."""
+    path = resolve_run_dir(packages_dir, signal_id, source_run_id) / "assignment.json"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"No assignment.json at {path}. The intake assignment anchors the "
+            "run provenance chain."
+        )
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise ValueError(f"Could not parse {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"Assignment record at {path} is not a JSON object")
+    return data
+
+
 def write_visual_assets_json(run_dir: Path, data: dict) -> None:
     """Commit the run's visual assets passport exactly once."""
     atomic_write_json(run_dir / "visual_assets.json", data)
