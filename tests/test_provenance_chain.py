@@ -72,6 +72,12 @@ def _verify(tmp_path, run_id):
     return verify_run_provenance(tmp_path, SIG, run_id)
 
 
+
+def _config_of(tmp_path, run_id) -> dict:
+    return json.loads(
+        (_run_dir(tmp_path, run_id) / "assignment.json").read_text()
+    )["configuration_identity"]
+
 def _new_run_ids(before: set, tmp_path) -> list[str]:
     now = {p.parent.name for p in tmp_path.glob(f"{SIG}/runs/*/assignment.json")}
     return sorted(now - before)
@@ -231,6 +237,7 @@ def test_publication_result_from_another_run_fails(two_runs):
         "run_id": run_b, "signal_id": SIG,
         "source_run_id": run_b, "generation_run_id": run_b,
         "execution_mode": "dry_run", "results": {}, "completed": True,
+        "configuration_identity": _config_of(tmp_path, run_b),
     }
     (_run_dir(tmp_path, run_a) / "publication_results.json").write_text(json.dumps(pub))
     with pytest.raises(ProvenanceError, match="different run"):
@@ -243,6 +250,7 @@ def test_generation_publication_must_reference_itself(two_runs):
         "run_id": run_a, "signal_id": SIG,
         "source_run_id": run_b, "generation_run_id": run_b,
         "execution_mode": "controlled_live", "results": {}, "completed": True,
+        "configuration_identity": _config_of(tmp_path, run_a),
     }
     (_run_dir(tmp_path, run_a) / "publication_results.json").write_text(json.dumps(pub))
     # a publication referencing another source flips the run to reuse-kind and
@@ -347,6 +355,7 @@ def test_reused_visual_with_false_origin_fails(two_runs):
         "run_id": pub_run, "signal_id": SIG,
         "source_run_id": run_b, "generation_run_id": run_b,
         "execution_mode": "controlled_live", "results": {}, "completed": True,
+        "configuration_identity": _config_of(tmp_path, pub_run),
     }
     (_run_dir(tmp_path, pub_run) / "publication_results.json").write_text(json.dumps(pub))
     with pytest.raises(ProvenanceError, match="does not match the visual origin run"):
@@ -451,5 +460,75 @@ def test_publication_configuration_laundering_fails_closed(reuse_pair):
     with pytest.raises(
         ProvenanceError,
         match="does not match the source generation configuration",
+    ):
+        _verify(tmp_path, run_b)
+
+
+# ===========================================================================
+# Review follow-up 2: publication configuration identity is part of the chain
+# ===========================================================================
+
+
+def _write_pub(tmp_path, run_id, *, source, generation, config):
+    pub = {
+        "run_id": run_id, "signal_id": SIG,
+        "source_run_id": source, "generation_run_id": generation,
+        "execution_mode": "controlled_live", "results": {}, "completed": True,
+        "configuration_identity": config,
+    }
+    (_run_dir(tmp_path, run_id) / "publication_results.json").write_text(
+        json.dumps(pub)
+    )
+
+
+def test_valid_generation_publication_result_verifies(two_runs):
+    tmp_path, run_a, _ = two_runs
+    _write_pub(tmp_path, run_a, source=run_a, generation=run_a,
+               config=_config_of(tmp_path, run_a))
+    report = _verify(tmp_path, run_a)
+    assert report.stopped_after == "publication_results"
+
+
+def test_generation_publication_with_foreign_configuration_fails(two_runs):
+    tmp_path, run_a, _ = two_runs
+    foreign = dict(_config_of(tmp_path, run_a))
+    foreign["configuration_hash"] = "sha256:" + "d" * 64
+    _write_pub(tmp_path, run_a, source=run_a, generation=run_a, config=foreign)
+    with pytest.raises(
+        ProvenanceError,
+        match="configuration different from the run's authoritative",
+    ):
+        _verify(tmp_path, run_a)
+
+
+def test_publication_without_configuration_identity_fails(two_runs):
+    tmp_path, run_a, _ = two_runs
+    pub = {
+        "run_id": run_a, "signal_id": SIG,
+        "source_run_id": run_a, "generation_run_id": run_a,
+        "execution_mode": "controlled_live", "results": {}, "completed": True,
+    }
+    (_run_dir(tmp_path, run_a) / "publication_results.json").write_text(json.dumps(pub))
+    with pytest.raises(ProvenanceError, match="no valid configuration identity"):
+        _verify(tmp_path, run_a)
+
+
+def test_valid_reuse_publication_result_verifies(reuse_pair):
+    tmp_path, run_a, run_b = reuse_pair
+    _write_pub(tmp_path, run_b, source=run_a, generation=run_a,
+               config=_config_of(tmp_path, run_b))
+    report = _verify(tmp_path, run_b)
+    assert report.run_kind == "reuse-publication"
+    assert "publication_results" in report.verified_artifacts
+
+
+def test_reuse_publication_with_foreign_configuration_fails(reuse_pair):
+    tmp_path, run_a, run_b = reuse_pair
+    foreign = dict(_config_of(tmp_path, run_b))
+    foreign["configuration_hash"] = "sha256:" + "e" * 64
+    _write_pub(tmp_path, run_b, source=run_a, generation=run_a, config=foreign)
+    with pytest.raises(
+        ProvenanceError,
+        match="configuration different from the run's authoritative",
     ):
         _verify(tmp_path, run_b)

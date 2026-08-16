@@ -130,6 +130,22 @@ def verify_run_provenance(
             "publication_results.json belongs to a different run "
             f"(record={publication.get('run_id')!r}, expected={run_id!r})",
         )
+        # publication evidence declares which configuration produced it; a
+        # declared configuration is part of the proven chain, never ignored
+        # metadata (applies to generation AND reuse publication runs)
+        try:
+            publication_config = ConfigurationIdentity.model_validate(
+                publication.get("configuration_identity")
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise ProvenanceError(
+                "publication_results.json carries no valid configuration identity"
+            ) from exc
+        _require(
+            publication_config == config,
+            "publication result claims a configuration different from the "
+            "run's authoritative configuration identity",
+        )
     visual_raw = _load(run_dir, "visual_assets.json")
     visual: VisualAssetsRecord | None = None
     if visual_raw is not None:
