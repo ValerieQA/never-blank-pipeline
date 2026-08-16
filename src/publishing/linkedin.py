@@ -14,10 +14,12 @@ Setup (one-time, done in the Zernio dashboard, not in code):
   3. Copy the connection's Account ID (Connections page, copy icon)
   4. Copy an API key from API Keys page
 
-Required env vars:
+Required env vars (credential secret only — Issue #100):
   NB_ZERNIO_API_KEY            — Zernio API key (Bearer token)
-  NB_ZERNIO_LINKEDIN_ACCOUNT_ID — Zernio accountId for the connected
-                                  "Never Blank" LinkedIn organization
+
+The Zernio accountId is NOT read here: it comes from the canonical LinkedIn
+publication package via the draft package, so the target recorded by the
+package is exactly the account the external call posts to.
 
 dry_run    — validate payload, no API call
 draft_only — SKIPPED (LinkedIn has no draft concept)
@@ -53,15 +55,21 @@ class LinkedInPublisher(BasePublisher):
             )
         import os
 
+        # Credential secret — environment-only (readiness gate is Issue #101).
         api_key    = os.getenv("NB_ZERNIO_API_KEY", "")
-        account_id = os.getenv("NB_ZERNIO_LINKEDIN_ACCOUNT_ID", "")
+        # Target identity — package-derived (Issue #100): never re-read from
+        # the environment after canonical package construction.
+        account_id = draft.linkedin_account_id
 
         missing = [k for k, v in {
             "NB_ZERNIO_API_KEY":             api_key,
-            "NB_ZERNIO_LINKEDIN_ACCOUNT_ID":  account_id,
         }.items() if not v]
         if missing:
             return self._fail(f"Missing env vars: {missing}")
+        if not account_id:
+            return self._fail(
+                "Missing package target identity: ['linkedin_account_id']"
+            )
 
         if mode == "draft_only":
             return self._skip("LinkedIn does not support draft posts — skipped in draft_only mode")

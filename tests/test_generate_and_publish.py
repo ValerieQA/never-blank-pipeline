@@ -179,7 +179,10 @@ def _fake_wix_package(**kwargs):
         slug=canonical_slug(title),
         body_markdown=generated.get("blog_article", ""),
         cover_image_url=getattr(visual, "wix_url", None),
-        target=SimpleNamespace(category_ids=(), tag_ids=()),
+        target=SimpleNamespace(
+            category_ids=(), tag_ids=(),
+            site_id="stand-in-site", owner_member_id="stand-in-member",
+        ),
         package_digest=lambda: "sha256:" + "0" * 64,
     )
 
@@ -190,6 +193,7 @@ def _fake_linkedin_package(**kwargs):
     return SimpleNamespace(
         linkedin_body=generated.get("linkedin_post", ""),
         linkedin_image_url=getattr(visual, "linkedin_url", None),
+        target=SimpleNamespace(account_id="stand-in-account"),
         package_digest=lambda: "sha256:" + "1" * 64,
     )
 

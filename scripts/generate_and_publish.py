@@ -1438,6 +1438,9 @@ def main(
         wix_slug=wix_package.slug,
         wix_category_id=wix_package.target.category_ids[0] if wix_package.target.category_ids else "",
         wix_tags=list(wix_package.target.tag_ids),
+        wix_site_id=wix_package.target.site_id,
+        wix_owner_member_id=wix_package.target.owner_member_id,
+        linkedin_account_id=linkedin_package.target.account_id,
         run_id=run_ctx.run_id,
         metadata={
             "signal_id": signal_id,
