@@ -277,6 +277,106 @@ def test_a_corrupt_candidate_does_not_hide_a_valid_one(tmp_path, monkeypatch):
     assert corrupt.name != valid.name
 
 
+# ── The target evidence must belong to the candidate ─────────────────────────
+#
+# Story #16 verification covers the generation/publication chain but not the
+# Story #17 verdict, so the verdict that names the destination has to be proven
+# to be the candidate's own. These cover the relabel/swap surface directly.
+
+
+def _tamper_preflight(run_dir: Path, mutate):
+    verdict = json.loads((run_dir / "preflight_result.json").read_text())
+    mutate(verdict)
+    (run_dir / "preflight_result.json").write_text(json.dumps(verdict))
+
+
+def test_relabelled_target_in_prior_preflight_is_unusable(tmp_path, monkeypatch):
+    """A valid publication to site B cannot be relabelled as site A."""
+
+    run_dir = _seed_prior_run(tmp_path, monkeypatch, site_id=SITE_B)
+
+    def relabel(verdict):
+        for channel in verdict["channels"]:
+            if channel["channel"] == "wix":
+                channel["target"]["site_id"] = SITE_A
+
+    _tamper_preflight(run_dir, relabel)
+
+    scan = _scan_for(tmp_path, _live_identity(tmp_path, site_id=SITE_A))
+    assert scan.match is None, "a relabelled target must never suppress a publication"
+    assert scan.unusable_count == 1
+    assert UNUSABLE_INCONSISTENT in scan.unusable_reasons
+
+
+def test_foreign_preflight_copied_into_another_run_is_rejected(tmp_path, monkeypatch):
+    """A structurally valid verdict from another run proves nothing here."""
+
+    first = _seed_prior_run(tmp_path, monkeypatch)
+    second = _seed_prior_run(tmp_path, monkeypatch)
+    (second / "preflight_result.json").write_text(
+        (first / "preflight_result.json").read_text(), encoding="utf-8"
+    )
+    # the donor is removed so only the run carrying the foreign verdict remains
+    (first / "publication_results.json").unlink()
+
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
+    assert scan.match is None
+    assert UNUSABLE_INCONSISTENT in scan.unusable_reasons
+
+
+def test_prior_preflight_with_tampered_configuration_is_unusable(tmp_path, monkeypatch):
+    """The verdict must carry the candidate run's authoritative configuration."""
+
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    _tamper_preflight(
+        run_dir,
+        lambda verdict: verdict.update(
+            configuration_identity=FOREIGN_CONFIG.model_dump()
+        ),
+    )
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
+    assert scan.match is None
+    assert UNUSABLE_INCONSISTENT in scan.unusable_reasons
+
+
+def test_prior_preflight_claiming_another_run_is_unusable(tmp_path, monkeypatch):
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    _tamper_preflight(
+        run_dir, lambda verdict: verdict.update(run_id="run-claimed-elsewhere")
+    )
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
+    assert scan.match is None
+    assert UNUSABLE_INCONSISTENT in scan.unusable_reasons
+
+
+def test_valid_prior_verdict_reconstructs_its_authorized_package(tmp_path, monkeypatch):
+    """The binding is real: the recorded digest is reproducible from evidence.
+
+    A valid candidate matches, which is only possible because its verdict's
+    ``package_digest`` was successfully rebuilt from the accepted article, the
+    run's own visual passport, its configuration and the verdict's target.
+    """
+
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    verdict = json.loads((run_dir / "preflight_result.json").read_text())
+    wix_channel = next(c for c in verdict["channels"] if c["channel"] == "wix")
+    assert wix_channel["package_digest"].startswith("sha256:")
+
+    assert _scan_for(tmp_path, _live_identity(tmp_path)).match is not None
+
+    # …and a digest that no longer describes its own contents is rejected
+    _tamper_preflight(
+        run_dir,
+        lambda v: [
+            c.update(package_digest="sha256:" + "e" * 64)
+            for c in v["channels"] if c["channel"] == "wix"
+        ],
+    )
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
+    assert scan.match is None
+    assert UNUSABLE_INCONSISTENT in scan.unusable_reasons
+
+
 # ── Ambiguity never manufactures idempotency ─────────────────────────────────
 
 

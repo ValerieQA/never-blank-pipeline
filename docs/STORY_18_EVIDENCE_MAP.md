@@ -69,9 +69,24 @@ lineage whose referenced article digest happens to match — is classified
 `prior_run_provenance_invalid` and never produces `REUSED`. No second
 provenance engine was written.
 
-Note the deliberate asymmetry: *is the old run internally honest?* is
-mandatory, while *does the old configuration equal the current one?* is not
-part of the duplicate key and was not reintroduced. On a proven match the run performs no
+**The target evidence must belong to the candidate.** Story #16 verification
+covers the generation/publication chain but not the Story #17
+`preflight_result.json`, so the verdict that names the Wix destination is
+independently validated against the candidate before it can decide where the
+prior publication went: it must carry that run's own `run_id`, its
+`signal_id`, and the run's authoritative `ConfigurationIdentity` (already
+proven consistent with the chain), with an `ALLOW` Wix channel and a valid
+target. In addition the verdict's recorded `package_digest` is **rebuilt** from
+persisted canonical evidence — the accepted article from the generation run,
+the run's own visual passport, its configuration and the verdict's target,
+using the existing #100 builder — and must match. A relabelled or swapped
+verdict therefore cannot pass a publication to one Wix site off as a
+publication to another. Reconstruction that cannot be performed answers
+"no match", so uncertainty never suppresses a publication.
+
+Note the deliberate asymmetry: *is the old run and its verdict internally
+honest?* is mandatory, while *does the old configuration equal the current
+one?* is not part of the duplicate key and was not reintroduced. On a proven match the run performs no
 media import, no draft creation and no publish call, and records a typed
 `REUSED` result preserving the prior run ID, content ID, URL and URL
 provenance, without appending a second publication-history entry.

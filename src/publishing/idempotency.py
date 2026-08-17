@@ -141,13 +141,19 @@ def _candidate_provenance_is_canonical(
     return "publication_results" in report.verified_artifacts
 
 
-def _prior_site_id(run_dir: Path) -> tuple[Optional[str], Optional[str]]:
-    """Read the candidate's own preflight verdict for its Wix destination.
+def _validated_prior_target(
+    run_dir: Path, *, signal_id: str, configuration_identity: dict
+):
+    """Read the candidate's Wix destination from a verdict proven to be its own.
 
-    Returns ``(site_id, unusable_reason)``. The verdict is strict-validated
-    rather than string-scanned, and its Wix channel must actually have been
-    allowed to publish — a run whose preflight blocked Wix while its results
-    claim a publication is internally inconsistent evidence.
+    Story #16 verification covers the generation/publication chain but not the
+    Story #17 preflight artifact, so a structurally valid verdict from another
+    run — or one whose target was relabelled — could otherwise pass off a
+    publication to site B as a publication to site A. Strict-loading the
+    schema is therefore not enough: the verdict must also *belong* to this
+    candidate.
+
+    Returns ``(target, unusable_reason)``.
     """
 
     from src.publishing.preflight import PreflightDisposition, PreflightResult
@@ -159,6 +165,19 @@ def _prior_site_id(run_dir: Path) -> tuple[Optional[str], Optional[str]]:
         verdict = PreflightResult.model_validate_json(path.read_bytes())
     except Exception:  # noqa: BLE001 — unparseable verdict is unusable evidence
         return None, UNUSABLE_INVALID_PREFLIGHT
+
+    # …belongs to this run directory, this signal, and this run's authoritative
+    # configuration (which Story #16 already proved consistent with the chain).
+    if verdict.run_id != run_dir.name:
+        return None, UNUSABLE_INCONSISTENT
+    if verdict.signal_id != signal_id:
+        return None, UNUSABLE_INCONSISTENT
+    try:
+        if verdict.configuration_identity.model_dump() != dict(configuration_identity):
+            return None, UNUSABLE_INCONSISTENT
+    except (TypeError, ValueError):
+        return None, UNUSABLE_INCONSISTENT
+
     channel = verdict.verdict_for("wix")
     if channel is None or channel.target is None:
         return None, UNUSABLE_INVALID_PREFLIGHT
@@ -167,7 +186,57 @@ def _prior_site_id(run_dir: Path) -> tuple[Optional[str], Optional[str]]:
     site_id = getattr(channel.target, "site_id", None)
     if not site_id:
         return None, UNUSABLE_INVALID_PREFLIGHT
-    return site_id, None
+    return channel, None
+
+
+def _authorized_package_digest_matches(
+    packages_dir: Path,
+    run_dir: Path,
+    *,
+    signal_id: str,
+    generation_run_id: str,
+    configuration_identity: dict,
+    channel,
+) -> bool:
+    """Rebuild the candidate's canonical Wix package and compare its digest.
+
+    The strongest binding available from persisted evidence: the accepted
+    article (generation run), the run's own visual passport, its authoritative
+    configuration and the verdict's target are enough to reconstruct the exact
+    #100 package the verdict claims to have authorized. A relabelled target
+    changes that digest, so a verdict whose recorded ``package_digest`` no
+    longer matches its own contents cannot be the one that authorized this
+    publication.
+
+    Reuses the #100 builder — no second package system — and answers ``False``
+    whenever the reconstruction cannot be performed, so uncertainty never
+    suppresses a publication.
+    """
+
+    from src.artifacts import load_run_generated
+    from src.publishing.package import build_wix_publication_package
+    from src.strategy.execution_context import ConfigurationIdentity
+    from src.visual.contract import VisualAssetsRecord
+
+    if channel.package_digest is None:
+        return False
+    try:
+        generated = load_run_generated(packages_dir, signal_id, generation_run_id)
+        visual = VisualAssetsRecord.model_validate_json(
+            (run_dir / "visual_assets.json").read_bytes()
+        )
+        identity = ConfigurationIdentity.model_validate(configuration_identity)
+        package = build_wix_publication_package(
+            run_id=run_dir.name,
+            signal_id=signal_id,
+            configuration_identity=identity,
+            generated=generated,
+            visual_record=visual,
+            target=channel.target,
+        )
+    except Exception:  # noqa: BLE001 — unreconstructable evidence never suppresses
+        return False
+    return package.package_digest() == channel.package_digest
 
 
 def _prior_article_digest(
@@ -238,13 +307,6 @@ def find_prior_wix_publication(
             unusable.append(UNUSABLE_MISSING_CONTENT_ID)
             continue
 
-        site_id, reason = _prior_site_id(run_dir)
-        if reason is not None:
-            unusable.append(reason)
-            continue
-        if site_id != identity.wix_site_id:
-            continue                      # a different destination entirely
-
         # The candidate must be a proven canonical chain in its own right,
         # verified by Story #16 — a syntactically plausible but internally
         # contradictory run can never manufacture a reuse match.
@@ -253,6 +315,30 @@ def find_prior_wix_publication(
         ):
             unusable.append(UNUSABLE_PROVENANCE_INVALID)
             continue
+
+        # Story #16 does not cover the Story #17 verdict, so the target
+        # evidence must be proven to belong to this candidate before it can
+        # decide where the prior publication went.
+        channel, reason = _validated_prior_target(
+            run_dir,
+            signal_id=identity.signal_id,
+            configuration_identity=data.get("configuration_identity") or {},
+        )
+        if reason is not None:
+            unusable.append(reason)
+            continue
+        if not _authorized_package_digest_matches(
+            Path(packages_dir),
+            run_dir,
+            signal_id=identity.signal_id,
+            generation_run_id=data.get("generation_run_id") or "",
+            configuration_identity=data.get("configuration_identity") or {},
+            channel=channel,
+        ):
+            unusable.append(UNUSABLE_INCONSISTENT)
+            continue
+        if channel.target.site_id != identity.wix_site_id:
+            continue                      # a different destination entirely
 
         digest, reason = _prior_article_digest(
             Path(packages_dir), identity.signal_id, data.get("generation_run_id") or ""
