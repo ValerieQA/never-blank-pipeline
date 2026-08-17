@@ -56,7 +56,22 @@ channel (it remains mandatory provenance in #100/#101/#16);
 `owner_member_id` is excluded because author metadata must not unlock a
 duplicate. Only a prior `PUBLISHED` result with a real content ID suppresses a
 publication — `DRAFT_CREATED`, `FAILED`, `BLOCKED` and `SKIPPED` never do, and
-no draft-resume behavior was added. On a proven match the run performs no
+no draft-resume behavior was added.
+
+**A candidate must also be a proven canonical chain of its own.** Duplicate
+suppression is an authorization-affecting decision, so before any candidate
+can become a reuse match it is verified with the existing Story #16
+`verify_run_provenance` and must have reached the publication-results stage.
+A syntactically plausible but internally contradictory prior run — its
+publication record claiming another run than its own directory, a publication
+configuration inconsistent with its own chain, or forged generation/source
+lineage whose referenced article digest happens to match — is classified
+`prior_run_provenance_invalid` and never produces `REUSED`. No second
+provenance engine was written.
+
+Note the deliberate asymmetry: *is the old run internally honest?* is
+mandatory, while *does the old configuration equal the current one?* is not
+part of the duplicate key and was not reintroduced. On a proven match the run performs no
 media import, no draft creation and no publish call, and records a typed
 `REUSED` result preserving the prior run ID, content ID, URL and URL
 provenance, without appending a second publication-history entry.

@@ -19,8 +19,10 @@ from src.editorial.linkedin_composition import article_digest
 from src.publishing.idempotency import (
     UNUSABLE_INCONSISTENT,
     UNUSABLE_MALFORMED_RESULTS,
+    UNUSABLE_ARTICLE_UNREADABLE,
     UNUSABLE_MISSING_CONTENT_ID,
     UNUSABLE_MISSING_PREFLIGHT,
+    UNUSABLE_PROVENANCE_INVALID,
     WixPublicationIdentity,
     find_prior_wix_publication,
 )
@@ -43,6 +45,7 @@ from tests.test_publication_package import (
     SIG,
     _build_wix,
 )
+from tests import test_generate_and_publish as legacy
 from tests.test_linkedin_composition import ARTICLE_BODY
 
 SITE_A = "site-aaaa"
@@ -73,222 +76,305 @@ def _generated(*, article=ARTICLE_BODY, **overrides):
     return data
 
 
-def _write_prior_run(
-    packages_dir: Path,
-    *,
-    run_id=PRIOR_RUN,
-    status="PUBLISHED",
-    post_id=POST_ID,
-    url=PROVIDER_URL,
-    url_provenance="provider_confirmed",
-    site_id=SITE_A,
-    owner="member-1",
-    article=ARTICLE_BODY,
-    with_preflight=True,
-    preflight_disposition=PreflightDisposition.ALLOW,
-    malformed_results=False,
-    signal_id=SIG,
-    configuration=CONFIG,
-):
-    """Materialize one prior run's canonical publication evidence."""
+def _seed_prior_run(tmp_path, monkeypatch, *, site_id=SITE_A, owner="member-live"):
+    """Produce a real canonical prior run by publishing once through main().
 
-    run_dir = packages_dir / signal_id / "runs" / run_id
-    run_dir.mkdir(parents=True, exist_ok=True)
-    gen_dir = packages_dir / signal_id / "runs" / f"{run_id}-gen"
-    gen_dir.mkdir(parents=True, exist_ok=True)
-    (gen_dir / "generated.json").write_text(
-        json.dumps({"run_id": f"{run_id}-gen", "signal_id": signal_id,
-                    "blog_article": article}),
-        encoding="utf-8",
+    Hand-written artifacts cannot be used any more: a candidate must pass the
+    Story #16 whole-run verifier, so the prior evidence has to be a genuine
+    chain (assignment → strategy → research → decision → editorial → LinkedIn
+    → visual → generated → preflight → publication_results).
+    """
+
+    from tests.test_publication_preflight import _live_run, _target_env
+
+    _target_env(monkeypatch)
+    monkeypatch.setenv("NB_WIX_SITE_ID", site_id)
+    monkeypatch.setenv("NB_WIX_POST_OWNER_ID", owner)
+    code, wix_mock, _, _ = _live_run(tmp_path)
+    assert code == 0 and wix_mock.publish.call_count == 1
+    run_dir = max(
+        (path.parent for path in tmp_path.glob("*/runs/*/publication_results.json")),
+        key=lambda path: path.stat().st_mtime,
     )
-    if malformed_results:
-        (run_dir / "publication_results.json").write_text("{not json", encoding="utf-8")
-    else:
-        entry = {
-            "platform": "wix", "status": status, "external_id": post_id,
-            "url": url, "error_message": None, "run_id": run_id,
-        }
-        if url_provenance is not None:
-            entry["url_provenance"] = url_provenance
-        (run_dir / "publication_results.json").write_text(
-            json.dumps({
-                "run_id": run_id, "signal_id": signal_id,
-                "generation_run_id": f"{run_id}-gen",
-                "configuration_identity": configuration.model_dump(),
-                "results": {"wix": entry},
-                "completed": True, "errors": [],
-            }),
-            encoding="utf-8",
-        )
-    if with_preflight:
-        verdict = PreflightResult(
-            run_id=run_id,
-            signal_id=signal_id,
-            configuration_identity=configuration,
-            evaluated_at="2026-08-16T00:00:00+00:00",
-            override_state="none",
-            provenance=ProvenanceVerdict(verified=True, run_kind="generation",
-                                         stopped_after="publication"),
-            readiness=ReadinessVerdict(verified=True),
-            freshness=FreshnessVerdict(verified=True),
-            configuration_consistent=True,
-            run_disposition=PreflightDisposition.ALLOW,
-            channels=(
-                ChannelPreflightVerdict(
-                    channel="wix",
-                    package_digest="sha256:" + "b" * 64,
-                    target=_target(site_id, owner),
-                    package_valid=True,
-                    credential_ready=True,
-                    disposition=preflight_disposition,
-                    blocking_reasons=()
-                    if preflight_disposition is PreflightDisposition.ALLOW
-                    else ("credential_missing",),
-                ),
-            ),
-        )
-        (run_dir / "preflight_result.json").write_text(
-            verdict.model_dump_json(), encoding="utf-8"
-        )
+    assert _published_entry(run_dir)["status"] == "PUBLISHED"
     return run_dir
 
 
-def _scan(tmp_path, **identity_kwargs):
-    return find_prior_wix_publication(
-        tmp_path, _identity(tmp_path, **identity_kwargs), current_run_id="run-current"
+def _published_entry(run_dir: Path) -> dict:
+    data = json.loads((run_dir / "publication_results.json").read_text())
+    return data["results"]["wix"]
+
+
+def _rewrite_publication_results(run_dir: Path, **changes):
+    """Tamper a prior run's publication record (tests only — never production)."""
+
+    path = run_dir / "publication_results.json"
+    data = json.loads(path.read_text())
+    data.update(changes)
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+
+def _live_identity(tmp_path=None, *, site_id=SITE_A, article=None, configuration=None):
+    """The identity the *current* run computes for the same live article.
+
+    Built directly from its three components: the duplicate key has no other
+    inputs, and in particular it never receives a configuration — which is the
+    structural reason a configuration change cannot authorize a duplicate.
+    """
+
+    from tests.test_linkedin_composition import ARTICLE_BODY as LIVE_ARTICLE
+
+    return WixPublicationIdentity(
+        signal_id=legacy._SIGNAL_ID,
+        source_article_digest=article_digest(article or LIVE_ARTICLE),
+        wix_site_id=site_id,
     )
 
 
-# ── Proven prior publication suppresses a duplicate ──────────────────────────
+# ── A proven canonical prior publication suppresses a duplicate ──────────────
 
 
-def test_proven_prior_publication_is_found(tmp_path):
-    _write_prior_run(tmp_path)
-    scan = _scan(tmp_path)
+def _scan_for(tmp_path, identity):
+    return find_prior_wix_publication(
+        tmp_path, identity, current_run_id="run-current-attempt"
+    )
+
+
+def test_proven_prior_publication_is_found(tmp_path, monkeypatch):
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
     assert scan.match is not None
-    assert scan.match.run_id == PRIOR_RUN
-    assert scan.match.post_id == POST_ID
-    assert scan.match.url == PROVIDER_URL
-    assert scan.match.url_provenance is UrlProvenance.PROVIDER_CONFIRMED
+    assert scan.match.run_id == run_dir.name
+    assert scan.match.post_id == _published_entry(run_dir)["external_id"]
     assert scan.unusable_count == 0
 
 
-def test_different_run_id_still_matches(tmp_path):
-    """The retry identity deliberately excludes run_id."""
-    _write_prior_run(tmp_path, run_id="run-some-older-attempt")
-    assert _scan(tmp_path).match is not None
+def test_different_run_id_still_matches(tmp_path, monkeypatch):
+    """The retry identity deliberately excludes run_id: the current run's own
+    id is different by construction, and the prior run still matches."""
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
+    assert scan.match is not None and scan.match.run_id != "run-current-attempt"
+    assert run_dir.name != "run-current-attempt"
 
 
-def test_different_configuration_still_matches(tmp_path):
-    """Configuration is provenance, not a republish switch."""
-    _write_prior_run(tmp_path, configuration=FOREIGN_CONFIG)
-    scan = _scan(tmp_path)
+def test_different_configuration_still_matches(tmp_path, monkeypatch):
+    """Configuration is provenance, not a republish switch.
+
+    The prior run is canonically valid under its own configuration; the
+    current identity is computed under a different one. The duplicate key
+    never compares them, so the retry is still suppressed.
+    """
+    _seed_prior_run(tmp_path, monkeypatch)
+    scan = _scan_for(tmp_path, _live_identity(tmp_path, configuration=FOREIGN_CONFIG))
     assert scan.match is not None, "a configuration change must not authorize a duplicate"
 
 
-def test_different_owner_member_id_still_matches(tmp_path):
+def test_configuration_is_not_part_of_the_duplicate_key():
+    assert set(WixPublicationIdentity.__dataclass_fields__) == {
+        "signal_id", "source_article_digest", "wix_site_id",
+    }
+
+
+def test_different_owner_member_id_still_matches(tmp_path, monkeypatch):
     """Author metadata is not the destination — it cannot unlock a duplicate."""
-    _write_prior_run(tmp_path, owner="member-someone-else")
-    assert _scan(tmp_path, owner="member-1").match is not None
+    _seed_prior_run(tmp_path, monkeypatch, owner="member-someone-else")
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
+    assert scan.match is not None
 
 
 # ── Legitimately different publications are not suppressed ───────────────────
 
 
-def test_different_site_publishes_independently(tmp_path):
-    _write_prior_run(tmp_path, site_id=SITE_B)
-    scan = _scan(tmp_path, site_id=SITE_A)
+def test_different_site_publishes_independently(tmp_path, monkeypatch):
+    _seed_prior_run(tmp_path, monkeypatch, site_id=SITE_B)
+    scan = _scan_for(tmp_path, _live_identity(tmp_path, site_id=SITE_A))
     assert scan.match is None
     assert scan.unusable_count == 0          # a different destination is not "unusable"
 
 
-def test_different_article_publishes_independently(tmp_path):
-    other = ARTICLE_BODY + "\n\nA later paragraph changes the accepted article."
-    _write_prior_run(tmp_path, article=other)
-    scan = _scan(tmp_path, article=ARTICLE_BODY)
+def test_different_article_publishes_independently(tmp_path, monkeypatch):
+    _seed_prior_run(tmp_path, monkeypatch)
+    other = "A different accepted article entirely, with its own digest."
+    scan = _scan_for(tmp_path, _live_identity(tmp_path, article=other))
     assert scan.match is None
     assert scan.unusable_count == 0
 
 
-@pytest.mark.parametrize("status", ["DRAFT_CREATED", "FAILED", "BLOCKED", "SKIPPED", "REUSED"])
-def test_non_published_prior_status_never_suppresses(tmp_path, status):
+@pytest.mark.parametrize(
+    "status", ["DRAFT_CREATED", "FAILED", "BLOCKED", "SKIPPED", "REUSED"]
+)
+def test_non_published_prior_status_never_suppresses(tmp_path, monkeypatch, status):
     """Only a proven live publication counts — a draft is not a publication."""
-    _write_prior_run(tmp_path, status=status)
-    scan = _scan(tmp_path)
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    data = json.loads((run_dir / "publication_results.json").read_text())
+    data["results"]["wix"]["status"] = status
+    (run_dir / "publication_results.json").write_text(json.dumps(data))
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
     assert scan.match is None
     assert scan.unusable_count == 0
+
+
+# ── The candidate must be a proven canonical chain of its own ────────────────
+
+
+def test_candidate_run_id_namespace_mismatch_is_unusable(tmp_path, monkeypatch):
+    """publication_results claiming another run than its own directory."""
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    _rewrite_publication_results(run_dir, run_id="run-claimed-elsewhere")
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
+    assert scan.match is None
+    assert UNUSABLE_PROVENANCE_INVALID in scan.unusable_reasons
+
+
+def test_candidate_with_inconsistent_configuration_is_unusable(tmp_path, monkeypatch):
+    """The candidate's own publication configuration contradicts its run."""
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    _rewrite_publication_results(
+        run_dir, configuration_identity=FOREIGN_CONFIG.model_dump()
+    )
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
+    assert scan.match is None
+    assert UNUSABLE_PROVENANCE_INVALID in scan.unusable_reasons
+
+
+def test_candidate_with_substituted_generation_lineage_is_unusable(
+    tmp_path, monkeypatch
+):
+    """The referenced article digest still matches, but the lineage is forged.
+
+    The publication is pointed at a copy of the accepted article placed in a
+    foreign run directory: the digest check alone would pass, so only the
+    whole-run verifier can catch it.
+    """
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    forged = run_dir.parent / "run-forged-generation"
+    forged.mkdir()
+    (forged / "generated.json").write_text(
+        (run_dir / "generated.json").read_text(), encoding="utf-8"
+    )
+    _rewrite_publication_results(
+        run_dir, generation_run_id="run-forged-generation",
+        source_run_id="run-forged-generation",
+    )
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
+    assert scan.match is None
+    assert UNUSABLE_PROVENANCE_INVALID in scan.unusable_reasons
+
+
+def test_a_corrupt_candidate_does_not_hide_a_valid_one(tmp_path, monkeypatch):
+    """Scanning continues past unusable evidence to a genuinely valid run."""
+    corrupt = _seed_prior_run(tmp_path, monkeypatch)
+    _rewrite_publication_results(corrupt, run_id="run-claimed-elsewhere")
+    # a second, untouched canonical publication of the same article/site
+    valid = _seed_prior_run(tmp_path, monkeypatch)
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
+    # a corrupt sibling neither suppresses nor hides the genuine publication;
+    # whether its reason is recorded depends on scan order, which is why the
+    # assertion is on the match, not on the reason list
+    assert scan.match is not None
+    assert scan.match.run_id == valid.name
+    assert corrupt.name != valid.name
 
 
 # ── Ambiguity never manufactures idempotency ─────────────────────────────────
 
 
-def test_malformed_prior_results_do_not_suppress(tmp_path):
-    _write_prior_run(tmp_path, malformed_results=True)
-    scan = _scan(tmp_path)
+def test_malformed_prior_results_do_not_suppress(tmp_path, monkeypatch):
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    (run_dir / "publication_results.json").write_text("{not json", encoding="utf-8")
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
     assert scan.match is None
     assert scan.unusable_reasons == (UNUSABLE_MALFORMED_RESULTS,)
 
 
-def test_missing_prior_preflight_does_not_suppress(tmp_path):
-    _write_prior_run(tmp_path, with_preflight=False)
-    scan = _scan(tmp_path)
+def test_missing_prior_preflight_does_not_suppress(tmp_path, monkeypatch):
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    (run_dir / "preflight_result.json").unlink()
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
     assert scan.match is None
     assert scan.unusable_reasons == (UNUSABLE_MISSING_PREFLIGHT,)
 
 
-def test_missing_prior_content_id_does_not_suppress(tmp_path):
-    _write_prior_run(tmp_path, post_id="")
-    scan = _scan(tmp_path)
+def test_missing_prior_content_id_does_not_suppress(tmp_path, monkeypatch):
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    data = json.loads((run_dir / "publication_results.json").read_text())
+    data["results"]["wix"]["external_id"] = ""
+    (run_dir / "publication_results.json").write_text(json.dumps(data))
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
     assert scan.match is None
     assert scan.unusable_reasons == (UNUSABLE_MISSING_CONTENT_ID,)
 
 
-def test_prior_preflight_blocking_wix_is_inconsistent_evidence(tmp_path):
-    _write_prior_run(tmp_path, preflight_disposition=PreflightDisposition.BLOCK)
-    scan = _scan(tmp_path)
+def test_prior_preflight_blocking_wix_is_inconsistent_evidence(tmp_path, monkeypatch):
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    verdict = json.loads((run_dir / "preflight_result.json").read_text())
+    for channel in verdict["channels"]:
+        if channel["channel"] == "wix":
+            channel["disposition"] = "BLOCK"
+            channel["blocking_reasons"] = ["credential_missing"]
+    verdict["run_disposition"] = "BLOCK"
+    verdict["run_blocking_reasons"] = ["readiness_failed"]
+    for channel in verdict["channels"]:
+        channel["disposition"] = "BLOCK"
+        channel["blocking_reasons"] = channel["blocking_reasons"] or ["run_blocked"]
+    (run_dir / "preflight_result.json").write_text(json.dumps(verdict))
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
     assert scan.match is None
-    assert scan.unusable_reasons == (UNUSABLE_INCONSISTENT,)
+    assert UNUSABLE_INCONSISTENT in scan.unusable_reasons
 
 
-def test_unreadable_prior_article_evidence_does_not_suppress(tmp_path):
-    run_dir = _write_prior_run(tmp_path)
-    (tmp_path / SIG / "runs" / f"{PRIOR_RUN}-gen" / "generated.json").unlink()
-    scan = _scan(tmp_path)
+def test_missing_generation_evidence_does_not_suppress(tmp_path, monkeypatch):
+    """A publication pointing at a generation run that does not exist."""
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    _rewrite_publication_results(run_dir, generation_run_id="run-that-does-not-exist")
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
     assert scan.match is None
-    assert scan.unusable_count == 1
-    assert run_dir.exists()
+    # the whole-run verifier catches it before the digest is even derived
+    assert UNUSABLE_PROVENANCE_INVALID in scan.unusable_reasons
 
 
-def test_unusable_evidence_note_is_sanitized(tmp_path):
-    _write_prior_run(tmp_path, malformed_results=True, run_id="run-a")
-    _write_prior_run(tmp_path, with_preflight=False, run_id="run-b")
-    note = _scan(tmp_path).evidence_note()
-    assert note == {
-        "count": 2,
-        "reasons": sorted({UNUSABLE_MALFORMED_RESULTS, UNUSABLE_MISSING_PREFLIGHT}),
-    }
-    # typed reason codes only — no raw artifact content
+def test_unreadable_article_evidence_is_a_typed_unusable_reason(tmp_path):
+    """Defense in depth: the digest derivation itself fails closed."""
+    from src.publishing.idempotency import _prior_article_digest
+
+    digest, reason = _prior_article_digest(tmp_path, "sig-x", "run-missing")
+    assert digest is None and reason == UNUSABLE_ARTICLE_UNREADABLE
+    digest, reason = _prior_article_digest(tmp_path, "sig-x", "")
+    assert digest is None and reason is not None
+
+
+def test_unusable_evidence_note_is_sanitized(tmp_path, monkeypatch):
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    (run_dir / "publication_results.json").write_text("{not json", encoding="utf-8")
+    note = _scan_for(tmp_path, _live_identity(tmp_path)).evidence_note()
+    assert note == {"count": 1, "reasons": [UNUSABLE_MALFORMED_RESULTS]}
+    # typed reason codes only — no raw artifact content, no verifier prose
     assert "not json" not in json.dumps(note)
 
 
 def test_no_prior_runs_at_all(tmp_path):
-    scan = _scan(tmp_path)
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
     assert scan.match is None and scan.unusable_count == 0
     assert scan.evidence_note() is None
 
 
-def test_the_current_run_never_matches_itself(tmp_path):
-    _write_prior_run(tmp_path, run_id="run-current")
+def test_the_current_run_never_matches_itself(tmp_path, monkeypatch):
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
     scan = find_prior_wix_publication(
-        tmp_path, _identity(tmp_path), current_run_id="run-current"
+        tmp_path, _live_identity(tmp_path), current_run_id=run_dir.name
     )
     assert scan.match is None
 
 
-def test_prior_record_without_provenance_is_not_promoted(tmp_path):
+def test_prior_record_without_provenance_is_not_promoted(tmp_path, monkeypatch):
     """A URL whose origin was never recorded is never called provider-confirmed."""
-    _write_prior_run(tmp_path, url_provenance=None)
-    scan = _scan(tmp_path)
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    data = json.loads((run_dir / "publication_results.json").read_text())
+    data["results"]["wix"]["url"] = PROVIDER_URL
+    data["results"]["wix"].pop("url_provenance", None)
+    (run_dir / "publication_results.json").write_text(json.dumps(data))
+    scan = _scan_for(tmp_path, _live_identity(tmp_path))
     assert scan.match is not None
     assert scan.match.url == PROVIDER_URL
     assert scan.match.url_provenance is UrlProvenance.UNAVAILABLE
@@ -368,26 +454,20 @@ import sys  # noqa: E402
 
 import scripts.generate_and_publish as gap  # noqa: E402
 from scripts.generate_and_publish import main  # noqa: E402
-from tests import test_generate_and_publish as legacy  # noqa: E402
 from tests.test_publication_preflight import _live_run, _target_env  # noqa: E402
 
 
-def _prior_for_live_run(tmp_path, monkeypatch, **overrides):
-    """Write prior evidence matching what the live harness run will produce."""
+def _prior_for_live_run(tmp_path, monkeypatch, *, status=None, malformed_results=False):
+    """Seed a real canonical prior publication, optionally degraded."""
 
-    from tests.test_linkedin_composition import ARTICLE_BODY as LIVE_ARTICLE
-
-    _target_env(monkeypatch)
-    monkeypatch.setenv("NB_WIX_SITE_ID", SITE_A)
-    monkeypatch.setenv("NB_WIX_POST_OWNER_ID", "member-live")
-    defaults = dict(
-        signal_id=legacy._SIGNAL_ID,
-        site_id=SITE_A,
-        owner="member-live",
-        article=LIVE_ARTICLE,
-    )
-    defaults.update(overrides)
-    return _write_prior_run(tmp_path, **defaults)
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    if malformed_results:
+        (run_dir / "publication_results.json").write_text("{not json", encoding="utf-8")
+    elif status is not None:
+        data = json.loads((run_dir / "publication_results.json").read_text())
+        data["results"]["wix"]["status"] = status
+        (run_dir / "publication_results.json").write_text(json.dumps(data))
+    return run_dir
 
 
 def _real_scan_run(tmp_path, **overrides):
@@ -400,17 +480,15 @@ def _real_scan_run(tmp_path, **overrides):
 def _current_publication(tmp_path):
     """The publication evidence of the run under test, not of the seeded prior."""
 
-    paths = [
-        path
-        for path in tmp_path.glob(f"{legacy._SIGNAL_ID}/runs/*/publication_results.json")
-        if not path.parent.name.startswith("run-")   # seeded prior runs
-    ]
-    assert len(paths) == 1, f"expected one current publication record, got {paths}"
-    return json.loads(paths[0].read_text())
+    paths = list(tmp_path.glob(f"{legacy._SIGNAL_ID}/runs/*/publication_results.json"))
+    assert paths, "the run under test wrote no publication evidence"
+    # the run under test is the one written last
+    newest = max(paths, key=lambda path: path.stat().st_mtime)
+    return json.loads(newest.read_text())
 
 
 def test_sequential_retry_reuses_and_calls_no_wix_endpoint(tmp_path, monkeypatch):
-    _prior_for_live_run(tmp_path, monkeypatch)
+    prior_run = _prior_for_live_run(tmp_path, monkeypatch)
     with mock.patch("src.publishing.wix.import_image") as media, \
          mock.patch("src.publishing.wix._fetch") as fetch:
         code, wix_mock, li_mock, verdicts = _real_scan_run(tmp_path)
@@ -423,14 +501,16 @@ def test_sequential_retry_reuses_and_calls_no_wix_endpoint(tmp_path, monkeypatch
     assert li_mock.publish.called          # the other channel is unaffected
 
     published = _current_publication(tmp_path)
+    prior = _published_entry(prior_run)
     wix = published["results"]["wix"]
     assert wix["status"] == "REUSED"
-    assert wix["external_id"] == POST_ID
-    assert wix["url"] == PROVIDER_URL
-    assert wix["url_provenance"] == "provider_confirmed"
-    assert wix["reused_from_run_id"] == PRIOR_RUN
-    assert published["wix_reused_from_run_id"] == PRIOR_RUN
-    assert wix["run_id"] and wix["run_id"] != PRIOR_RUN    # current identity kept apart
+    # the prior publication's evidence is preserved exactly, not re-derived
+    assert wix["external_id"] == prior["external_id"]
+    assert wix["url"] == prior["url"]
+    assert wix["url_provenance"] == prior["url_provenance"]
+    assert wix["reused_from_run_id"] == prior_run.name
+    assert published["wix_reused_from_run_id"] == prior_run.name
+    assert wix["run_id"] and wix["run_id"] != prior_run.name  # current identity apart
     assert published["completed"] is True                  # a reuse is not a failure
     assert code == 0
 

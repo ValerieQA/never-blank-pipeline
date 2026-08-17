@@ -52,6 +52,7 @@ UNUSABLE_MISSING_PREFLIGHT = "missing_preflight_verdict"
 UNUSABLE_INVALID_PREFLIGHT = "invalid_preflight_verdict"
 UNUSABLE_INCONSISTENT = "inconsistent_prior_evidence"
 UNUSABLE_ARTICLE_UNREADABLE = "prior_article_evidence_unreadable"
+UNUSABLE_PROVENANCE_INVALID = "prior_run_provenance_invalid"
 
 
 @dataclass(frozen=True)
@@ -109,6 +110,35 @@ def _load_json(path: Path) -> Optional[dict]:
     except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         return None
     return data if isinstance(data, dict) else None
+
+
+def _candidate_provenance_is_canonical(
+    packages_dir: Path, signal_id: str, run_id: str
+) -> bool:
+    """Prove the candidate run is itself a valid canonical chain.
+
+    Duplicate suppression is an authorization-affecting decision, so a prior
+    publication may only suppress a new one when that prior run is internally
+    honest: its own identity, configuration, source/generation relationships
+    and artifact lineage must hold together. That is exactly what the Story
+    #16 verifier already proves, so it is reused rather than reimplemented —
+    and the candidate must have reached the publication-results stage, since
+    a run that never got there cannot evidence a publication.
+
+    Note the deliberate distinction: this asks *is the old run internally
+    honest*, never *does its configuration equal the current run's*. The
+    latter is not part of the duplicate key.
+    """
+
+    from src.artifacts.provenance import ProvenanceError, verify_run_provenance
+
+    try:
+        report = verify_run_provenance(packages_dir, signal_id, run_id)
+    except (ProvenanceError, FileNotFoundError, ValueError, OSError):
+        # Raw verifier text never reaches persisted evidence — only the
+        # typed reason code recorded by the caller.
+        return False
+    return "publication_results" in report.verified_artifacts
 
 
 def _prior_site_id(run_dir: Path) -> tuple[Optional[str], Optional[str]]:
@@ -214,6 +244,15 @@ def find_prior_wix_publication(
             continue
         if site_id != identity.wix_site_id:
             continue                      # a different destination entirely
+
+        # The candidate must be a proven canonical chain in its own right,
+        # verified by Story #16 — a syntactically plausible but internally
+        # contradictory run can never manufacture a reuse match.
+        if not _candidate_provenance_is_canonical(
+            Path(packages_dir), identity.signal_id, run_dir.name
+        ):
+            unusable.append(UNUSABLE_PROVENANCE_INVALID)
+            continue
 
         digest, reason = _prior_article_digest(
             Path(packages_dir), identity.signal_id, data.get("generation_run_id") or ""
