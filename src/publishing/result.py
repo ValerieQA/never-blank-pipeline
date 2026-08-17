@@ -13,6 +13,11 @@ class PublishStatus(str, Enum):
     # publication already exists, so the prior evidence is reused. Never a
     # fresh provider success for the current run.
     REUSED        = "REUSED"
+    # Issue #108: the provider reported the content as a duplicate (Zernio 409).
+    # That proves *a* duplicate exists but never *which post*, so it is neither
+    # a proven publication nor a proven reuse: the channel is deliberately
+    # neither successful nor complete, and it can never suppress a later run.
+    PROVIDER_DUPLICATE = "PROVIDER_DUPLICATE"
 
 
 class UrlProvenance(str, Enum):

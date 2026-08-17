@@ -31,7 +31,7 @@ import json
 from typing import TYPE_CHECKING
 
 from src.publishing.base import BasePublisher, DraftPackage, _fetch
-from src.publishing.result import PublishResult, PublishStatus
+from src.publishing.result import PublishResult, PublishStatus, UrlProvenance
 
 if TYPE_CHECKING:
     from src.publishing.package import LinkedInPublicationPackage
@@ -135,17 +135,47 @@ class LinkedInPublisher(BasePublisher):
                         break
 
             note = "(with image, via Zernio)" if has_image else "(text-only, via Zernio)"
-            return self._published(
-                external_id=str(post_id) or "unknown",
-                url=post_url or "https://www.linkedin.com/feed/",
+
+            # Issue #108: a 2xx without a real publication ID is not a
+            # publication. No identifier is invented, exactly as the Wix
+            # contract requires — the run stays honest about having no proof.
+            if not str(post_id).strip():
+                return self._fail(
+                    "Zernio returned success but no publication ID — "
+                    "the post cannot be identified and is not recorded as published"
+                )
+
+            # The generic LinkedIn feed is not the created post's URL. When
+            # Zernio returns no per-platform URL the publication is still real,
+            # but its URL is truthfully unavailable rather than substituted.
+            # LinkedIn has no legitimate locally-derived form (unlike the
+            # accepted Wix base+slug fallback), so only two states apply.
+            result = self._published(
+                external_id=str(post_id).strip(),
+                url=post_url or None,
                 raw_path=note,
             )
+            result.url_provenance = (
+                UrlProvenance.PROVIDER_CONFIRMED if post_url
+                else UrlProvenance.UNAVAILABLE
+            )
+            return result
 
         err_msg = resp.get("message", resp.get("error", resp.get("_raw", "")))[:200] if isinstance(resp, dict) else str(resp)[:200]
 
-        # 409 = duplicate content within 24h — content was already posted successfully.
-        # Treat as SKIPPED rather than FAILED so the pipeline doesn't halt on re-runs.
+        # 409 = Zernio's own duplicate-content window (24h). It proves that a
+        # duplicate exists, but never which post — so it is neither a proven
+        # publication nor a proven reuse (Issue #108). It is recorded as its
+        # own state: not successful, not complete, and never able to suppress
+        # a later publication.
         if code == 409:
-            return self._skip(f"Zernio 409: duplicate content — post already exists ({err_msg[:120]})")
+            return PublishResult(
+                platform=self.name,
+                status=PublishStatus.PROVIDER_DUPLICATE,
+                error_message=(
+                    "Zernio 409: provider reported duplicate content — "
+                    f"no publication is proven by this response ({err_msg[:120]})"
+                ),
+            )
 
         return self._fail(f"Zernio HTTP {code}: {err_msg}")
