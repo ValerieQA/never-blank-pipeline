@@ -85,6 +85,19 @@ Unusable evidence — malformed, missing, foreign, corrupted or unverifiable —
 yields sanitized typed reason codes and a count, never suppression, never a
 failed current run, and scanning continues.
 
+**Reusable URL evidence is validated, never coerced.** Because `REUSED`
+preserves the prior URL and provenance verbatim, evidence that cannot be read
+exactly is not reusable: a missing, misspelled or foreign `url_provenance`, a
+non-string `url`, or a provenance that contradicts its URL (claiming
+provider-confirmed with no URL, claiming unavailable while carrying one, or
+claiming a `locally_derived` form LinkedIn has no legitimate construction for)
+is recorded as `prior_url_evidence_invalid` and never becomes a match. The
+legitimate URL-less shape is preserved: a real publication ID with
+`url = null` and `url_provenance = unavailable` **is** proven evidence and may
+be reused, since URL availability is not part of the duplicate identity — and
+on reuse the unavailable provenance is preserved exactly, never upgraded and
+never replaced by a constructed link.
+
 **Concurrency limitation, stated plainly**: this is deterministic *sequential*
 retry idempotency. Two runs started concurrently can both observe "no prior
 success" and both publish. Zernio's 24-hour duplicate window is **secondary

@@ -21,6 +21,7 @@ import pytest
 from src.editorial.linkedin_composition import article_digest
 from src.publishing.idempotency import (
     UNUSABLE_COMPOSITION_UNREADABLE,
+    UNUSABLE_URL_EVIDENCE_INVALID,
     UNUSABLE_INCONSISTENT,
     UNUSABLE_MALFORMED_RESULTS,
     UNUSABLE_MISSING_CONTENT_ID,
@@ -214,6 +215,106 @@ def test_published_without_real_publication_id_does_not_suppress(
     scan = _scan(tmp_path, _identity(run_dir))
     assert scan.match is None
     assert scan.unusable_reasons == (UNUSABLE_MISSING_CONTENT_ID,)
+
+
+# ── Reusable URL evidence must be readable exactly ───────────────────────────
+#
+# REUSED preserves the prior URL and provenance verbatim, so evidence that
+# cannot be read exactly is not reusable. Corrupted values are never coerced
+# into a match — that would turn broken history into a suppression decision.
+
+
+def test_invalid_url_provenance_does_not_suppress(tmp_path, monkeypatch):
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    identity = _identity(run_dir)
+    _set_linkedin_status(run_dir, "PUBLISHED", url_provenance="totally-bogus")
+    scan = _scan(tmp_path, identity)
+    assert scan.match is None
+    assert scan.unusable_reasons == (UNUSABLE_URL_EVIDENCE_INVALID,)
+
+
+def test_missing_url_provenance_does_not_suppress(tmp_path, monkeypatch):
+    """An absent provenance cannot be silently read as `unavailable`."""
+
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    identity = _identity(run_dir)
+    path = run_dir / "publication_results.json"
+    data = json.loads(path.read_text())
+    data["results"]["linkedin"].pop("url_provenance")
+    path.write_text(json.dumps(data), encoding="utf-8")
+    scan = _scan(tmp_path, identity)
+    assert scan.match is None
+    assert scan.unusable_reasons == (UNUSABLE_URL_EVIDENCE_INVALID,)
+
+
+@pytest.mark.parametrize("malformed_url", [42, {"href": POST_URL}, [POST_URL], True])
+def test_malformed_url_does_not_suppress(tmp_path, monkeypatch, malformed_url):
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    identity = _identity(run_dir)
+    _set_linkedin_status(run_dir, "PUBLISHED", url=malformed_url)
+    scan = _scan(tmp_path, identity)
+    assert scan.match is None
+    assert scan.unusable_reasons == (UNUSABLE_URL_EVIDENCE_INVALID,)
+
+
+def test_contradictory_url_evidence_does_not_suppress(tmp_path, monkeypatch):
+    """Provenance and URL must agree with each other."""
+
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    identity = _identity(run_dir)
+
+    # claims the provider returned a URL while carrying none
+    _set_linkedin_status(
+        run_dir, "PUBLISHED", url=None, url_provenance="provider_confirmed"
+    )
+    assert _scan(tmp_path, identity).unusable_reasons == (
+        UNUSABLE_URL_EVIDENCE_INVALID,
+    )
+
+    # claims no provenance-confirmed URL while carrying one
+    _set_linkedin_status(
+        run_dir, "PUBLISHED", url=POST_URL, url_provenance="unavailable"
+    )
+    assert _scan(tmp_path, identity).unusable_reasons == (
+        UNUSABLE_URL_EVIDENCE_INVALID,
+    )
+
+    # LinkedIn has no legitimate locally-derived URL (Issue #108)
+    _set_linkedin_status(
+        run_dir, "PUBLISHED", url=POST_URL, url_provenance="locally_derived"
+    )
+    assert _scan(tmp_path, identity).unusable_reasons == (
+        UNUSABLE_URL_EVIDENCE_INVALID,
+    )
+
+
+def test_publication_without_a_url_is_still_reusable(tmp_path, monkeypatch):
+    """Issue #108: a real ID with no URL is proven evidence.
+
+    URL availability is not part of the duplicate identity, so this must
+    still suppress — and the unavailable provenance is preserved exactly,
+    never upgraded.
+    """
+
+    run_dir = _seed_prior_run(
+        tmp_path, monkeypatch, payload={"post": {"_id": POST_ID}}
+    )
+    entry = _entry(run_dir)
+    assert entry["url"] is None and entry["url_provenance"] == "unavailable"
+
+    scan = _scan(tmp_path, _identity(run_dir))
+    assert scan.match is not None
+    assert scan.match.post_id == POST_ID
+    assert scan.match.url == ""
+    assert scan.match.url_provenance is UrlProvenance.UNAVAILABLE
+
+
+def test_provider_confirmed_url_is_preserved_exactly(tmp_path, monkeypatch):
+    run_dir = _seed_prior_run(tmp_path, monkeypatch)
+    scan = _scan(tmp_path, _identity(run_dir))
+    assert scan.match is not None
+    assert scan.match.url == POST_URL
+    assert scan.match.url_provenance is UrlProvenance.PROVIDER_CONFIRMED
 
 
 # ── The candidate and its verdict must be honest ─────────────────────────────
@@ -535,3 +636,24 @@ def test_preflight_block_is_never_bypassed_by_idempotency(tmp_path, monkeypatch)
     assert entry["status"] == "BLOCKED"
     assert entry["status"] != "REUSED"
     assert entry.get("reused_from_run_id") is None
+
+
+def test_reuse_of_a_url_less_publication_preserves_unavailable_end_to_end(
+    tmp_path, monkeypatch
+):
+    """The whole loop for the shape most likely to be coerced by accident."""
+
+    prior = _seed_prior_run(
+        tmp_path, monkeypatch, payload={"post": {"_id": POST_ID}}
+    )
+    assert _entry(prior)["url_provenance"] == "unavailable"
+
+    (code, _, _, _), calls = _live(tmp_path, monkeypatch)
+
+    assert calls == []
+    entry = _current_publication(tmp_path)["results"]["linkedin"]
+    assert entry["status"] == "REUSED"
+    assert entry["external_id"] == POST_ID
+    assert entry["url"] is None                    # never invented
+    assert entry["url_provenance"] == "unavailable"  # never upgraded
+    assert entry["reused_from_run_id"] == prior.name

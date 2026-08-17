@@ -55,6 +55,7 @@ UNUSABLE_INCONSISTENT = "inconsistent_prior_evidence"
 UNUSABLE_ARTICLE_UNREADABLE = "prior_article_evidence_unreadable"
 UNUSABLE_PROVENANCE_INVALID = "prior_run_provenance_invalid"
 UNUSABLE_COMPOSITION_UNREADABLE = "prior_composition_evidence_unreadable"
+UNUSABLE_URL_EVIDENCE_INVALID = "prior_url_evidence_invalid"
 
 
 @dataclass(frozen=True)
@@ -361,6 +362,46 @@ def _prior_linkedin_body_digest(
     return article_digest(record.linkedin_body), None
 
 
+def _validated_reuse_url(entry: dict) -> tuple[Optional[str], object, Optional[str]]:
+    """Validate the prior result's URL evidence before it can be reused.
+
+    ``REUSED`` preserves the prior URL and provenance *exactly*, so evidence
+    that cannot be read exactly is not reusable. Silently coercing a malformed
+    provenance to ``unavailable`` or a non-string URL to ``""`` would turn
+    corrupted history into a suppression decision — precisely what the
+    accepted ambiguity policy forbids.
+
+    Two shapes are legitimate for LinkedIn (Issue #108): a provider-confirmed
+    URL, or an explicitly unavailable one — a real publication ID with no URL
+    is still proven evidence, since URL availability is not part of the
+    duplicate identity. LinkedIn has no legitimate ``locally_derived`` form,
+    so a record claiming one is inconsistent evidence.
+
+    Returns ``(url, provenance, unusable_reason)``.
+    """
+
+    raw_url = entry.get("url")
+    if raw_url is not None and not isinstance(raw_url, str):
+        return None, None, UNUSABLE_URL_EVIDENCE_INVALID
+    try:
+        provenance = UrlProvenance(entry.get("url_provenance"))
+    except ValueError:
+        # missing, misspelled or foreign value — never normalized into a match
+        return None, None, UNUSABLE_URL_EVIDENCE_INVALID
+
+    url = raw_url or ""
+    if provenance is UrlProvenance.PROVIDER_CONFIRMED and not url:
+        # claims the provider returned a URL while carrying none
+        return None, None, UNUSABLE_URL_EVIDENCE_INVALID
+    if provenance is UrlProvenance.UNAVAILABLE and url:
+        # claims no provenance-confirmed URL while carrying one
+        return None, None, UNUSABLE_URL_EVIDENCE_INVALID
+    if provenance is UrlProvenance.LOCALLY_DERIVED:
+        # no legitimate LinkedIn construction exists (Issue #108)
+        return None, None, UNUSABLE_URL_EVIDENCE_INVALID
+    return url, provenance, None
+
+
 def find_prior_linkedin_publication(
     packages_dir: Path,
     identity: LinkedInPublicationIdentity,
@@ -450,16 +491,15 @@ def find_prior_linkedin_publication(
         if digest != identity.accepted_linkedin_body_digest:
             continue                      # a different accepted LinkedIn body
 
-        url = entry.get("url") or ""
-        try:
-            provenance = UrlProvenance(entry.get("url_provenance"))
-        except ValueError:
-            provenance = UrlProvenance.UNAVAILABLE
+        url, provenance, reason = _validated_reuse_url(entry)
+        if reason is not None:
+            unusable.append(reason)
+            continue
         return PriorEvidenceScan(
             match=PriorLinkedInPublication(
                 run_id=str(data.get("run_id") or run_dir.name),
                 post_id=post_id,
-                url=url if isinstance(url, str) else "",
+                url=url,
                 url_provenance=provenance,
             ),
             unusable_reasons=tuple(unusable),
