@@ -202,6 +202,9 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "accept_linkedin_composition": mock.MagicMock(side_effect=legacy._fake_linkedin_composition),
         "write_linkedin_composition_json": mock.MagicMock(),
         "build_visual_assets_record": mock.MagicMock(side_effect=legacy._fake_visual_record),
+        "find_prior_wix_publication": mock.MagicMock(
+            side_effect=legacy._fake_no_prior_publication
+        ),
         "evaluate_publication_preflight": mock.MagicMock(side_effect=legacy._fake_preflight),
         "write_preflight_result_json": mock.MagicMock(),
         "build_wix_publication_package": mock.MagicMock(side_effect=legacy._fake_wix_package),

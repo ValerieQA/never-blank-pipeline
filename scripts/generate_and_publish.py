@@ -174,6 +174,10 @@ from src.publishing.instagram import InstagramPublisher
 from src.publishing.linkedin import LinkedInPublisher
 from pydantic import ValidationError as PydanticValidationError
 
+from src.publishing.idempotency import (
+    WixPublicationIdentity,
+    find_prior_wix_publication,
+)
 from src.publishing.preflight import (
     ChannelPackageOutcome,
     FreshnessVerdict,
@@ -243,6 +247,10 @@ SIGNALS_FILES  = [
 HISTORY_FILE   = Path("strategy/published_content_index.jsonl")
 SEP            = "─" * 64
 _OK_STATUSES   = {"PUBLISHED", "DRAFT_CREATED", "published_url_unavailable"}
+# Issue #105: a REUSED channel is not a failure — the article is live from the
+# earlier publication — but it is deliberately NOT an OK status, so a retry can
+# never be recorded as a second fresh publication in the history index.
+_COMPLETED_STATUSES = _OK_STATUSES | {"REUSED"}
 DEFAULT_INTAKE_ADAPTER: IntakeAdapter = JsonlIntakeAdapter()
 
 
@@ -1590,6 +1598,9 @@ def main(
     results: dict = {}
     wix_post_id: Optional[str] = None
     wix_url = ""
+    # Issue #105: typed, sanitized note when prior publication evidence could
+    # not be interpreted — it never suppresses publication, but the run says so.
+    _unusable_prior_evidence: Optional[dict] = None
 
     _r1_cls = {"wix": WixPublisher, "linkedin": LinkedInPublisher}
     _r1_packages = {
@@ -1629,6 +1640,43 @@ def main(
                 raise ValueError(
                     f"{name} package digest does not match the preflight verdict"
                 )
+
+            # ── Wix retry idempotency (Issue #105 / Story #18) ───────────────
+            # Runs only after this channel received preflight ALLOW and only on
+            # the exact authorized package, so it can suppress an authorized
+            # call but never bypass any gate. A proven earlier PUBLISHED result
+            # for the same (signal, accepted article, Wix site) means this run
+            # creates no second post: no media import, no draft, no publish.
+            if name == "wix":
+                _scan = find_prior_wix_publication(
+                    PACKAGES_DIR,
+                    WixPublicationIdentity.from_package(_package),
+                    current_run_id=run_ctx.run_id,
+                )
+                _unusable_prior_evidence = _scan.evidence_note()
+                if _scan.match is not None:
+                    print(
+                        f"  ↺  {name:<12} REUSED — already published by run "
+                        f"{_scan.match.run_id} (post {_scan.match.post_id}); "
+                        "no duplicate created"
+                    )
+                    result = _normalize_publish_result(
+                        PublishResult(
+                            platform=name,
+                            status=PublishStatus.REUSED,
+                            external_id=_scan.match.post_id,
+                            url=_scan.match.url or None,
+                            url_provenance=_scan.match.url_provenance,
+                            reused_from_run_id=_scan.match.run_id,
+                        ),
+                        run_ctx.run_id,
+                        name,
+                    )
+                    results[name] = result.to_dict()
+                    wix_post_id = result.external_id
+                    wix_url = result.url or ""
+                    continue
+
             result = _r1_cls[name]().publish(
                 _package, "live", strategy_view=channel_view
             )
@@ -1648,7 +1696,7 @@ def main(
     print()
     for platform, res in results.items():
         status = res.get("status", "?")
-        icon   = "✓" if status in _OK_STATUSES else "✗"
+        icon = "↺" if status == "REUSED" else ("✓" if status in _OK_STATUSES else "✗")
         print(f"  {icon}  {platform:<12} status={status}")
         print(f"           id={res.get('external_id') or '—'}")
         print(f"           url={(res.get('url') or '—')[:80]}")
@@ -1658,7 +1706,10 @@ def main(
 
     # ── Write publication_results.json (immutable, once per run) ─────────────
     published_at = datetime.now(timezone.utc)
-    failed = [p for p, r in results.items() if r.get("status") not in _OK_STATUSES]
+    failed = [
+        p for p, r in results.items()
+        if r.get("status") not in _COMPLETED_STATUSES
+    ]
     _run_errors = [
         results[p].get("error_message") or f"{p} failed"
         for p in failed
@@ -1676,6 +1727,11 @@ def main(
         "errors":             _run_errors,
         "wix_url":            wix_url,
         "wix_post_id":        wix_post_id,
+        # Issue #105 — smallest truthful reuse provenance for this run.
+        "wix_reused_from_run_id": (
+            results.get("wix", {}).get("reused_from_run_id")
+        ),
+        "unusable_prior_publication_evidence": _unusable_prior_evidence,
     }
     try:
         write_publication_results_json(run_dir, _pub_results_data)

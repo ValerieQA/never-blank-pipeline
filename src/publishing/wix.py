@@ -43,7 +43,7 @@ import re
 from typing import Optional, TYPE_CHECKING
 
 from src.publishing.base import BasePublisher, DraftPackage, _fetch
-from src.publishing.result import PublishResult, PublishStatus
+from src.publishing.result import PublishResult, PublishStatus, UrlProvenance
 from src.publishing.wix_media import WixMediaAsset, WixMediaImportError, import_image
 from src.utils.logger import get_logger
 
@@ -276,6 +276,10 @@ class WixPublisher(BasePublisher):
             post     = resp2.get("post", {})
             post_id  = post.get("id", "") or resp2.get("postId", "")
             post_url = post.get("url", "")
+            url_provenance = (
+                UrlProvenance.PROVIDER_CONFIRMED if post_url
+                else UrlProvenance.UNAVAILABLE
+            )
 
             if not post_id:
                 raise WixPublishError(
@@ -285,9 +289,11 @@ class WixPublisher(BasePublisher):
 
             # ── Step 6: Resolve URL if not in publish response ────────────────
             if not post_url:
-                post_url = _resolve_post_url(post_id, headers)
+                post_url, url_provenance = _resolve_post_url(post_id, headers)
 
-            return self._published(external_id=post_id, url=post_url)
+            result = self._published(external_id=post_id, url=post_url)
+            result.url_provenance = url_provenance
+            return result
 
         except WixPublisherError as exc:
             return self._fail(str(exc))
@@ -345,10 +351,12 @@ def _verify_draft(
         )
 
 
-def _resolve_post_url(post_id: str, headers: dict) -> str:
+def _resolve_post_url(post_id: str, headers: dict) -> tuple[str, UrlProvenance]:
     """
     GET /blog/v3/posts/{post_id} to find the actual published URL.
-    Returns empty string on failure (URL is non-critical — post is published).
+    Returns the URL together with its truthful origin (Issue #105): a URL
+    Never Blank constructed locally is never reported as provider-confirmed.
+    An absent URL is non-critical — the post is published either way.
 
     Fallback: if Wix confirms the post exists (HTTP 200) but post.url is absent,
     and both slug and NB_WIX_SITE_BASE_URL are available, constructs the canonical
@@ -370,12 +378,12 @@ def _resolve_post_url(post_id: str, headers: dict) -> str:
     )
 
     if code not in (200, 201):
-        return ""
+        return "", UrlProvenance.UNAVAILABLE
 
     # URL came directly from Wix API — preferred path
     if api_url:
         _log.info("wix URL source: api | url=%s", api_url)
-        return api_url
+        return api_url, UrlProvenance.PROVIDER_CONFIRMED
 
     # Fallback: Wix confirmed the post exists (HTTP 200) but returned no url.
     # Construct from base + slug only when all conditions are met:
@@ -387,11 +395,11 @@ def _resolve_post_url(post_id: str, headers: dict) -> str:
         if base:
             url = f"{base}/blog/{slug}"
             _log.info("wix URL source: fallback_base_plus_slug | base=%s | url=%s", base, url)
-            return url
+            return url, UrlProvenance.LOCALLY_DERIVED
         else:
             _log.warning(
                 "wix URL source: fallback skipped — slug=%s but NB_WIX_SITE_BASE_URL is empty",
                 slug,
             )
 
-    return ""
+    return "", UrlProvenance.UNAVAILABLE
