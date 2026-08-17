@@ -175,7 +175,9 @@ from src.publishing.linkedin import LinkedInPublisher
 from pydantic import ValidationError as PydanticValidationError
 
 from src.publishing.idempotency import (
+    LinkedInPublicationIdentity,
     WixPublicationIdentity,
+    find_prior_linkedin_publication,
     find_prior_wix_publication,
 )
 from src.publishing.preflight import (
@@ -1651,13 +1653,26 @@ def main(
             # call but never bypass any gate. A proven earlier PUBLISHED result
             # for the same (signal, accepted article, Wix site) means this run
             # creates no second post: no media import, no draft, no publish.
+            _scan = None
             if name == "wix":
                 _scan = find_prior_wix_publication(
                     PACKAGES_DIR,
                     WixPublicationIdentity.from_package(_package),
                     current_run_id=run_ctx.run_id,
                 )
-                _unusable_prior_evidence = _scan.evidence_note()
+            elif name == "linkedin":
+                # Issue #109: the same discipline for LinkedIn — the duplicate
+                # identity is the accepted LinkedIn body, not the article, so a
+                # different composition of the same article publishes normally.
+                _scan = find_prior_linkedin_publication(
+                    PACKAGES_DIR,
+                    LinkedInPublicationIdentity.from_package(_package),
+                    current_run_id=run_ctx.run_id,
+                )
+            if _scan is not None:
+                _note = _scan.evidence_note()
+                if _note is not None:
+                    _unusable_prior_evidence = _note
                 if _scan.match is not None:
                     print(
                         f"  ↺  {name:<12} REUSED — already published by run "
@@ -1677,8 +1692,9 @@ def main(
                         name,
                     )
                     results[name] = result.to_dict()
-                    wix_post_id = result.external_id
-                    wix_url = result.url or ""
+                    if name == "wix":
+                        wix_post_id = result.external_id
+                        wix_url = result.url or ""
                     continue
 
             result = _r1_cls[name]().publish(

@@ -205,6 +205,9 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "find_prior_wix_publication": mock.MagicMock(
             side_effect=legacy._fake_no_prior_publication
         ),
+        "find_prior_linkedin_publication": mock.MagicMock(
+            side_effect=legacy._fake_no_prior_publication
+        ),
         "evaluate_publication_preflight": mock.MagicMock(side_effect=legacy._fake_preflight),
         "write_preflight_result_json": mock.MagicMock(),
         "build_wix_publication_package": mock.MagicMock(side_effect=legacy._fake_wix_package),
