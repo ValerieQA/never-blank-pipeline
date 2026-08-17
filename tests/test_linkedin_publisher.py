@@ -141,14 +141,36 @@ def test_provider_duplicate_is_its_own_state(tmp_path, credentials):
     assert result.status is not PublishStatus.REUSED
 
 
-def test_provider_duplicate_cannot_suppress_a_later_publication(tmp_path, credentials):
-    """Only a proven PUBLISHED result may suppress (Issue #105)."""
+def test_provider_duplicate_carries_no_proof_of_a_publication(tmp_path, credentials):
+    """The state a future reuse check would have to read carries no proof.
 
-    from src.publishing.idempotency import find_prior_wix_publication  # noqa: F401
+    Issue #108 can assert the *contract* of the persisted evidence: a
+    provider-duplicate result is neither a publication nor a reuse, and it
+    carries no external ID and no URL — the two things any suppression
+    decision would need. It deliberately does **not** assert behavioral
+    non-suppression, because no LinkedIn idempotency scan exists yet:
+    Issue #109 owns that machinery and will prove non-suppression against
+    the real LinkedIn scan when it is built. Reaching for the Wix scan here
+    would prove something about Wix, not about LinkedIn.
+    """
 
     result = _publish(tmp_path, 409, {"message": "duplicate content"})
-    # the idempotency scan only ever accepts the literal PUBLISHED status
-    assert result.status.value != "PUBLISHED"
+
+    assert result.status is PublishStatus.PROVIDER_DUPLICATE
+    assert result.status is not PublishStatus.PUBLISHED
+    assert result.status is not PublishStatus.REUSED
+    assert result.ok() is False
+    assert result.completed() is False
+    # nothing a suppression decision could ever key on
+    assert result.external_id is None
+    assert result.url is None
+    assert result.url_provenance is UrlProvenance.UNAVAILABLE
+    assert result.reused_from_run_id is None
+
+    persisted = result.to_dict()
+    assert persisted["status"] == "PROVIDER_DUPLICATE"
+    assert persisted["external_id"] is None
+    assert persisted["url"] is None
 
 
 def test_provider_duplicate_is_excluded_from_run_status_sets():
@@ -158,6 +180,56 @@ def test_provider_duplicate_is_excluded_from_run_status_sets():
 
     assert PublishStatus.PROVIDER_DUPLICATE.value not in gap._OK_STATUSES
     assert PublishStatus.PROVIDER_DUPLICATE.value not in gap._COMPLETED_STATUSES
+
+
+def test_provider_duplicate_is_persisted_truthfully_by_a_real_run(
+    tmp_path, monkeypatch
+):
+    """Behavioral proof at the persisted-evidence boundary (Issue #108 scope).
+
+    A real canonical run whose Zernio call answers 409 must record the
+    provider-duplicate state in its own ``publication_results.json`` — never
+    as a success — leave the run incomplete, and append no LinkedIn
+    publication-history entry. This is the evidence a future LinkedIn
+    idempotency scan (#109) will read, so recording it truthfully is what
+    #108 can and does guarantee.
+    """
+
+    from tests.test_publication_preflight import _live_run, _target_env
+    from tests import test_generate_and_publish as legacy
+
+    _target_env(monkeypatch)
+    monkeypatch.setenv("NB_ZERNIO_LINKEDIN_ACCOUNT_ID", ACCOUNT)
+    history = mock.MagicMock()
+
+    # the real adapter, with the provider answering 409
+    with mock.patch("src.publishing.linkedin._fetch",
+                    side_effect=_transport(409, {"message": "duplicate content"})):
+        code, wix_mock, _, _ = _live_run(
+            tmp_path,
+            LinkedInPublisher=LinkedInPublisher,
+            append_published_entry=history,
+        )
+
+    published = json.loads(
+        max(
+            tmp_path.glob(f"{legacy._SIGNAL_ID}/runs/*/publication_results.json"),
+            key=lambda path: path.stat().st_mtime,
+        ).read_text()
+    )
+    linkedin = published["results"]["linkedin"]
+    assert linkedin["status"] == "PROVIDER_DUPLICATE"
+    assert linkedin["external_id"] is None
+    assert linkedin["url"] is None
+    assert linkedin["url_provenance"] == "unavailable"
+
+    # the run is not complete, and the channel is not history-recorded
+    assert published["completed"] is False
+    assert code == 1
+    assert "linkedin" not in history.call_args.args[0].publications
+    # the other channel is unaffected
+    assert wix_mock.publish.called
+    assert published["results"]["wix"]["status"] == "PUBLISHED"
 
 
 # ── Error normalization and the credential boundary ──────────────────────────
