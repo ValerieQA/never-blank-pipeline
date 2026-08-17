@@ -250,6 +250,10 @@ _OK_STATUSES   = {"PUBLISHED", "DRAFT_CREATED", "published_url_unavailable"}
 # Issue #105: a REUSED channel is not a failure — the article is live from the
 # earlier publication — but it is deliberately NOT an OK status, so a retry can
 # never be recorded as a second fresh publication in the history index.
+#
+# Issue #108: PROVIDER_DUPLICATE belongs to NEITHER set. A provider duplicate
+# response proves a duplicate exists but never which post, so the channel is
+# neither a successful publication nor a completed one.
 _COMPLETED_STATUSES = _OK_STATUSES | {"REUSED"}
 DEFAULT_INTAKE_ADAPTER: IntakeAdapter = JsonlIntakeAdapter()
 
