@@ -100,7 +100,7 @@ def test_assignment_record_is_persisted_strict_and_run_bound(tmp_path):
     # no unrestricted content in the envelope
     assert set(raw) == {
         "schema_version", "run_id", "execution_mode",
-        "configuration_identity", "assignment",
+        "configuration_identity", "assignment", "code_identity",
     }
 
 

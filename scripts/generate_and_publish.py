@@ -121,6 +121,7 @@ from src.intake import (
     JsonlIntakeAdapter,
 )
 from src.intake.assignment_record import AssignmentRecord
+from src.run.code_identity import resolve_code_identity
 from src.lifecycle.signal_lifecycle import ResearchContext
 from src.research.provider import ResearchProvider
 from src.research.adapters.exa import ExaResearchAdapter
@@ -801,11 +802,16 @@ def _run(
         # Canonical intake evidence (Issue #98 / Story #16): the immutable
         # record of what this run was asked to process — the anchor of the
         # run's provenance chain. Written for every run, both branches.
+        # Which code is executing this run (Issue #114 / Story #21), read
+        # from the local checkout before the run writes anything. Resolved
+        # here rather than at report time because the report must describe the
+        # code that ran, not whatever is checked out when the run ends.
         _assignment_record = AssignmentRecord(
             run_id=run_ctx.run_id,
             execution_mode=run_ctx.execution_mode.value,
             configuration_identity=strategy_execution.identity,
             assignment=assignment,
+            code_identity=resolve_code_identity(),
         )
         write_assignment_json(
             run_dir, json.loads(_assignment_record.model_dump_json())

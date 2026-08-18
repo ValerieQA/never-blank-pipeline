@@ -1024,3 +1024,50 @@ def test_completion_cannot_be_claimed_over_an_incomplete_channel(
     with pytest.raises(RunReportError):
         _rebuild(tmp_path, run_dir)          # completed is still true
     assert not (run_dir / "run_report.json").exists()
+
+
+# ── Code identity is read from the anchor, never re-derived (Issue #114) ─────
+
+
+def test_report_carries_the_code_identity_written_at_run_start(
+    tmp_path, monkeypatch
+):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    anchor = json.loads((run_dir / "assignment.json").read_text())["code_identity"]
+    assert anchor is not None                       # the suite runs in a checkout
+    assert len(anchor["commit_sha"]) == 40
+
+    report = _rebuild(tmp_path, run_dir)
+    assert report.code_identity is not None
+    assert report.code_identity.model_dump(mode="json") == anchor
+
+
+def test_report_does_not_invent_a_code_identity_the_run_never_had(
+    tmp_path, monkeypatch
+):
+    """A run recorded before this contract cannot acquire an identity later.
+
+    Re-deriving it at report time would describe whatever is checked out when
+    the report is written, which is not what executed.
+    """
+
+    run_dir = _published_run(tmp_path, monkeypatch)
+    anchor_path = run_dir / "assignment.json"
+    anchor = json.loads(anchor_path.read_text())
+    anchor["schema_version"] = "1.0"
+    anchor.pop("code_identity")
+    anchor_path.write_text(json.dumps(anchor), encoding="utf-8")
+
+    report = _rebuild(tmp_path, run_dir)
+    assert report.code_identity is None
+
+
+def test_a_malformed_code_identity_fails_the_anchor_closed(tmp_path, monkeypatch):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    anchor_path = run_dir / "assignment.json"
+    anchor = json.loads(anchor_path.read_text())
+    anchor["code_identity"]["commit_sha"] = "not-a-sha"
+    anchor_path.write_text(json.dumps(anchor), encoding="utf-8")
+
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
