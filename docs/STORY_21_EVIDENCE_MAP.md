@@ -1,7 +1,15 @@
-# Story #21 evidence map — two consecutive live runs without code repair
+# Story #21 evidence map — one live acceptance run without code repair
 
 Issue #114 is the deterministic half of this Story. Each criterion below is
-exactly one of `SATISFIED-DETERMINISTIC` / `PENDING-LIVE` / `NOT-APPLICABLE`.
+exactly one of `SATISFIED-DETERMINISTIC` / `PENDING-LIVE` / `NOT-APPLICABLE` /
+`WITHDRAWN`.
+
+> **Superseding product decision (2026-08-18).** The two-run criterion (Run A
+> and Run B on a frozen commit) was **withdrawn by the product owner**. It was
+> *not* satisfied, and no second run occurred or is claimed. Release 1
+> acceptance is now **one** successful canonical `CONTROLLED_LIVE` end-to-end
+> run. Criteria that existed only to serve the second run are marked
+> `WITHDRAWN` below; every other guarantee is unchanged.
 
 **Story #21 is not complete, and deterministic tests cannot complete it.** This
 document exists so that when the live sequence is run, the only open questions
@@ -19,24 +27,28 @@ establishes.
 
 **2. "Run B starts from a different current signal and completes the same
 lifecycle."**
-`PENDING-LIVE`. Same as criterion 1. Run isolation is deterministic — every run
-has its own namespace and its own create-once artifacts — so two runs cannot
-contaminate each other's evidence.
+`WITHDRAWN`. Removed as an acceptance requirement by the product decision above.
+No second run occurred, and none is claimed. Run isolation remains
+deterministic — every run has its own namespace and its own create-once
+artifacts — so later operational runs cannot contaminate the accepted run's
+evidence.
 
 **3. "No source-code or architecture change occurs between Run A and Run B."**
-`SATISFIED-DETERMINISTIC` **as a proof mechanism**; the claim itself is
-`PENDING-LIVE`. Before Issue #114 this rested on operator testimony: no
+`WITHDRAWN` **as a cross-run requirement** — there is no second run to compare
+against. What survives, and remains `SATISFIED-DETERMINISTIC`, is the
+single-run form: the run names the code that produced it. Before Issue #114 this rested on operator testimony: no
 artifact recorded which code ran. Each run now captures a `CodeIdentity` at run
 start — the exact 40-character `HEAD` commit SHA and whether the tracked source
 was clean — and persists it on `assignment.json`, the anchor Story #16 already
 verifies the chain against. `run_report.json` carries it **read from that
 verified anchor**, never re-derived at terminalization, so the report describes
 the code that ran rather than the checkout as it stands when the report is
-written. Comparing the two runs is then a comparison of two recorded values —
-performed by the operator against the frozen acceptance SHA, not by production
-code:
-Story #21 remains an acceptance procedure, and the deterministic code only
-records trustworthy evidence.
+written. The closure evidence therefore names the exact commit that produced
+the accepted run, checked against the commit recorded before execution. The
+frozen-SHA discipline and the between-runs commit freeze are withdrawn together
+with the second run; they existed only to make two runs comparable. Story #21
+remains an acceptance procedure — the deterministic code records trustworthy
+evidence, it does not judge acceptance.
 
 **4. "No research, article, visual, decision, readiness, provenance, or report
 artifact is manually substituted."**
@@ -52,8 +64,7 @@ canonical model-based editorial acceptance (Story #13, Issue #89) remains the
 Release 1 behavior, and no approval workflow was built. The criterion is
 conditional and its condition is not met.
 
-**6. "Both Wix and LinkedIn publications are publicly verifiable for both
-runs."**
+**6. "Both Wix and LinkedIn publications are publicly verifiable."**
 `PENDING-LIVE`. Deterministically, the results are already truthful rather than
 merely present: a publication is recorded only with a real provider identifier,
 URLs carry an explicit `UrlProvenance`, and LinkedIn has no locally-derived URL
@@ -72,15 +83,13 @@ were verified before this Story and are unchanged by Issue #114 apart from the
 authorized identity addition.
 
 **8. "Failures are fixed before restarting the two-run acceptance sequence."**
-`PENDING-LIVE` **as a process**, with its semantics now written down rather
-than improvised: `docs/STORY_21_LIVE_ACCEPTANCE_RUNBOOK.md` freezes the exact
-acceptance SHA before Run A, forbids any commit or other `HEAD` movement until
-both runs are verified, and states what forces a full reset (any source,
-architecture, configuration or artifact repair — and any commit at all,
-including an automated artifact-only one). The single narrow exception is a
-transient provider failure retried through the canonical entrypoint, where the
-accepted #105/#109 idempotency contract makes the retry truthful and `HEAD` has
-not moved.
+`PENDING-LIVE` **as a process**, in its single-run form: a run that required a
+source, architecture, configuration or artifact repair to complete is not
+acceptance evidence — the fix lands under its own task and a fresh run follows
+on the merged code. *"No code repair"* is the claim, so patch-and-continue
+would defeat it. The single narrow exception is a transient provider failure
+retried through the canonical entrypoint, where the accepted #105/#109
+idempotency contract makes the retry truthful.
 
 ## The code-identity contract
 
@@ -105,28 +114,18 @@ change to the exclusion set cannot silently rewrite the meaning of an
 already-persisted `true`.
 
 **Why output roots are excluded at all.** A run writes into tracked files under
-`reports/`, and so does the test suite. A rule covering them would make the
-two-run sequence impossible to execute: Run A dirties the checkout simply by
-finishing, so Run B could never start from a qualifying checkout. The exclusion
-lets Run A's output **remain as uncommitted working-tree changes** while Run B
-starts from the same commit. What must not differ between the runs is the code
-and configuration that decide behavior.
+`reports/`, and so does the test suite. Those writes are the pipeline's own
+output, not a modification of the code that produced them, so counting them as
+"dirty" would misreport every completed run as non-qualifying. What must not
+differ from `HEAD` is the code and configuration that decide behavior.
 
-**The exclusion is about working-tree changes, never about commits.** These are
-two separate guarantees and conflating them was the defect corrected in this
-task's review:
-
-| question | answered by |
-|---|---|
-| Were tracked behavioral source/configuration files modified in the checkout? | `tracked_worktree_clean` under `tracked-source-v1` |
-| Did both runs start from the exact same repository commit? | equality of `commit_sha` |
-
-Acceptance requires both. Because `commit_sha` is the exact `git rev-parse
-HEAD`, **any** commit between the runs — including an artifact-only or
-automated one under `reports/` or `data/` — changes the identity the second run
-records and invalidates the sequence. The runbook therefore freezes the
-acceptance SHA before Run A, forbids every commit until both runs are verified,
-and defers committing the runs' artifacts until after the acceptance decision.
+**The exclusion is about working-tree changes, never about commits.** Because
+`commit_sha` is the exact `git rev-parse HEAD`, any commit — including an
+artifact-only or automated one under `reports/` or `data/` — produces a
+different identity. That distinction drove the frozen-SHA discipline while two
+comparable runs were required. With the second run withdrawn there is no
+cross-run comparison to protect, and the freeze is withdrawn with it; the
+cleanliness rule itself is unchanged.
 
 **What is deliberately not captured**: no branch, remote, author, message or
 diff; no environment values; no build, deployment or platform metadata. This is
@@ -141,7 +140,8 @@ not a build-metadata system, and Issue #114 did not introduce one.
 | Modified tracked source disqualifies; untracked files do not | deterministic (#114) |
 | Unresolvable repository yields absence, never a fabricated SHA | deterministic (#114) |
 | Identity persisted on the verified anchor and propagated to the report | deterministic (#114) |
-| An artifact-only commit changes `commit_sha`, so it cannot satisfy the same-SHA condition | deterministic (#114) |
-| Two live runs from two current signals completing the lifecycle | **live, pending** |
-| Four publicly verifiable publications | **live, pending** |
-| Run A SHA == Run B SHA == frozen acceptance SHA, from the runs' own evidence | **live, pending** |
+| An artifact-only commit changes `commit_sha` (why identity is recorded, not inferred) | deterministic (#114) |
+| One live run from a fresh current signal completing the lifecycle | **live, pending** |
+| Two publicly verifiable publications (Wix + LinkedIn) from that run | **live, pending** |
+| The run's own `code_identity.commit_sha` matching the commit it executed | **live, pending** |
+| A second consecutive run on the same commit | **withdrawn** |
