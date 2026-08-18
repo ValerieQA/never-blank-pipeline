@@ -413,3 +413,165 @@ def test_unusable_evidence_note_must_be_the_sanitized_shape(tmp_path, monkeypatc
             **{**report.model_dump(),
                "unusable_prior_evidence": {"raw": "traceback ..."}}
         )
+
+
+# ── The authorization behind each channel must be proven ─────────────────────
+#
+# Story #16 verifies the generation/publication chain but not the Story #17
+# verdict, so copying the verdict's digest beside the provider's output would
+# prove nothing. These prove the report refuses to describe a publication whose
+# authorization cannot be tied to this run and reconstructed from its evidence.
+
+
+def _tamper_preflight(run_dir: Path, mutate):
+    path = run_dir / "preflight_result.json"
+    verdict = json.loads(path.read_text())
+    mutate(verdict)
+    path.write_text(json.dumps(verdict), encoding="utf-8")
+
+
+def _rebuild(tmp_path, run_dir: Path):
+    return build_run_report(
+        tmp_path,
+        run_id=run_dir.name,
+        signal_id=SIG,
+        execution_mode="controlled-live",
+        terminal_stage=TerminalStage.PUBLICATION,
+        terminal_disposition=TerminalDisposition.COMPLETED,
+    )
+
+
+def _published_run(tmp_path, monkeypatch) -> Path:
+    """One real published run, with its report removed so it can be rebuilt."""
+
+    _live(tmp_path, monkeypatch)
+    run_dir = _newest_run(tmp_path)
+    (run_dir / "run_report.json").unlink()
+    return run_dir
+
+
+def test_valid_publication_reconstructs_and_reports(tmp_path, monkeypatch):
+    """The binding is real, not a no-op: a valid run still reports."""
+
+    run_dir = _published_run(tmp_path, monkeypatch)
+    report = _rebuild(tmp_path, run_dir)
+    verdicts = {
+        c["channel"]: c["package_digest"]
+        for c in json.loads((run_dir / "preflight_result.json").read_text())["channels"]
+    }
+    assert report.channels
+    for channel in report.channels:
+        assert channel.authorized_package_digest == verdicts[channel.channel]
+
+
+def test_foreign_preflight_from_another_run_produces_no_report(
+    tmp_path, monkeypatch
+):
+    first = _published_run(tmp_path, monkeypatch)
+    second = _published_run(tmp_path, monkeypatch)
+    (second / "preflight_result.json").write_text(
+        (first / "preflight_result.json").read_text(), encoding="utf-8"
+    )
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, second)
+    assert not (second / "run_report.json").exists()
+
+
+def test_relabelled_wix_target_produces_no_report(tmp_path, monkeypatch):
+    run_dir = _published_run(tmp_path, monkeypatch)
+
+    def relabel(verdict):
+        for channel in verdict["channels"]:
+            if channel["channel"] == "wix":
+                channel["target"]["site_id"] = "site-somewhere-else"
+
+    _tamper_preflight(run_dir, relabel)
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+    assert not (run_dir / "run_report.json").exists()
+
+
+def test_relabelled_linkedin_account_produces_no_report(tmp_path, monkeypatch):
+    run_dir = _published_run(tmp_path, monkeypatch)
+
+    def relabel(verdict):
+        for channel in verdict["channels"]:
+            if channel["channel"] == "linkedin":
+                channel["target"]["account_id"] = "acct-somewhere-else"
+
+    _tamper_preflight(run_dir, relabel)
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_tampered_package_digest_produces_no_report(tmp_path, monkeypatch):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_preflight(
+        run_dir,
+        lambda v: [c.update(package_digest="sha256:" + "e" * 64)
+                   for c in v["channels"]],
+    )
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_tampered_preflight_configuration_produces_no_report(tmp_path, monkeypatch):
+    from tests.test_publication_package import FOREIGN_CONFIG
+
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_preflight(
+        run_dir,
+        lambda v: v.update(configuration_identity=FOREIGN_CONFIG.model_dump()),
+    )
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_publication_without_its_authorization_produces_no_report(
+    tmp_path, monkeypatch
+):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    (run_dir / "preflight_result.json").unlink()
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_reused_publication_reconstructs_through_generation_evidence(
+    tmp_path, monkeypatch
+):
+    """A reuse run's package is rebuilt from the generation run's evidence."""
+
+    from tests.test_linkedin_idempotency import _seed_prior_run
+    from src.publishing.idempotency import find_prior_linkedin_publication
+
+    _seed_prior_run(tmp_path, monkeypatch)
+    with mock.patch("src.publishing.linkedin._fetch"):
+        _live_run(
+            tmp_path,
+            LinkedInPublisher=LinkedInPublisher,
+            find_prior_linkedin_publication=find_prior_linkedin_publication,
+        )
+    report = RunReport.model_validate_json(
+        (_newest_run(tmp_path) / "run_report.json").read_bytes()
+    )
+    linkedin = report.channel("linkedin")
+    assert linkedin.status == "REUSED"
+    # a reuse was authorized before idempotency suppressed the call, so its
+    # binding is proven exactly like a fresh publication's
+    assert linkedin.authorized_package_digest.startswith("sha256:")
+
+
+def test_blocked_channel_needs_no_package_binding(tmp_path, monkeypatch):
+    """A channel that never reached the publisher claims no authorization."""
+
+    _target_env(monkeypatch)
+    monkeypatch.delenv("NB_ZERNIO_API_KEY", raising=False)
+    _live_run(tmp_path)
+
+    report = RunReport.model_validate_json(_reports(tmp_path)[0].read_bytes())
+    linkedin = report.channel("linkedin")
+    assert linkedin.status == "BLOCKED"
+    assert linkedin.authorized_package_digest is None      # never fabricated
+    assert linkedin.blocking_reasons                        # the reason is kept
+    # …while the channel that did publish carries its proven binding
+    assert report.channel("wix").authorized_package_digest.startswith("sha256:")

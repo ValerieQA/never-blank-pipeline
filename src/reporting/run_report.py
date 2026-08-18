@@ -227,41 +227,119 @@ def _artifact_references(run_dir: Path) -> tuple[ArtifactReference, ...]:
     )
 
 
-def _channel_reports(
-    publication: Optional[dict], preflight: Optional[dict]
-) -> tuple[ChannelReport, ...]:
-    """Independent per-channel outcomes bound to the authorized package.
+#: Which channel statuses assert that an authorized publication package
+#: existed for that channel, and therefore require the full verdict + package
+#: binding before the report may describe them.
+#:
+#: The truthful matrix, derived from how the entrypoint actually records
+#: outcomes: a channel only enters the publish path after Story #17 returns
+#: ``ALLOW``, so every status produced there — a fresh publication, an
+#: idempotent reuse that suppressed the provider call, a provider duplicate
+#: after a real attempt, or a failure during the attempt — implies an
+#: authorized package. ``BLOCKED`` is the opposite case: the channel never
+#: reached the publisher, so demanding a package binding for it would be
+#: demanding proof of something that legitimately never happened.
+BINDING_REQUIRED_STATUSES = frozenset(
+    {"PUBLISHED", "REUSED", "PROVIDER_DUPLICATE", "FAILED"}
+)
+NO_BINDING_STATUSES = frozenset({"BLOCKED", "SKIPPED"})
 
-    The recorded result is proven to belong to the package Story #17
-    authorized for that channel: the digest carried here is the verdict's
-    own ``package_digest``, never a digest reverse-derived from a
-    provider-generated identifier — a pre-publication package cannot know
-    one, and pretending otherwise would be a fabricated guarantee.
+
+def _channel_reports(
+    packages_dir: Path,
+    run_dir: Path,
+    *,
+    run_id: str,
+    signal_id: str,
+    publication: Optional[dict],
+    preflight: Optional[dict],
+    configuration_identity: dict,
+) -> tuple[ChannelReport, ...]:
+    """Independent per-channel outcomes, each proven against its authorization.
+
+    Copying the verdict's digest beside the provider's output would prove
+    nothing: Story #16 verifies the generation/publication chain but not the
+    Story #17 artifact, so a swapped or relabelled verdict could otherwise
+    make an authoritative-looking report. For every status that asserts an
+    authorized publication existed, this therefore proves — with the same
+    helpers the Wix and LinkedIn idempotency scans use, never a second
+    implementation — that the verdict belongs to this run, signal and
+    configuration, that its channel was allowed with a valid target, and that
+    the exact canonical package reconstructs from persisted evidence to the
+    digest the verdict recorded.
+
+    The provider's own output is then preserved verbatim. No digest is ever
+    reverse-derived from a provider-generated identifier — a pre-publication
+    package cannot know one.
     """
+
+    from src.publishing.idempotency import (
+        authorized_package_digest_matches,
+        validated_channel_verdict,
+    )
 
     if not publication:
         return ()
-    verdicts = {
-        item.get("channel"): item
-        for item in (preflight or {}).get("channels", [])
-        if isinstance(item, dict)
-    }
+
+    generation_run_id = publication.get("generation_run_id") or ""
     reports: list[ChannelReport] = []
     for channel in ("wix", "linkedin"):
         entry = (publication.get("results") or {}).get(channel)
         if not isinstance(entry, dict):
             continue
-        verdict = verdicts.get(channel) or {}
+        status = str(entry.get("status") or "UNKNOWN")
+
+        digest: Optional[str] = None
+        blocking: tuple[str, ...] = ()
+        if status in BINDING_REQUIRED_STATUSES:
+            verdict, reason = validated_channel_verdict(
+                run_dir,
+                channel_name=channel,
+                signal_id=signal_id,
+                configuration_identity=configuration_identity,
+            )
+            if reason is not None:
+                raise RunReportError(
+                    f"{channel} publication is not backed by an authorization "
+                    "verdict that belongs to this run"
+                )
+            if not authorized_package_digest_matches(
+                Path(packages_dir),
+                run_dir,
+                signal_id=signal_id,
+                generation_run_id=generation_run_id,
+                configuration_identity=configuration_identity,
+                channel=verdict,
+                channel_name=channel,
+            ):
+                raise RunReportError(
+                    f"{channel} authorization verdict does not describe a "
+                    "package reconstructable from this run's evidence"
+                )
+            digest = verdict.package_digest
+            blocking = tuple(reason.value for reason in verdict.blocking_reasons)
+        elif status in NO_BINDING_STATUSES:
+            # The channel never reached the publisher; its verdict is read for
+            # the blocking reasons only, and no package binding is claimed.
+            for item in (preflight or {}).get("channels", []):
+                if isinstance(item, dict) and item.get("channel") == channel:
+                    blocking = tuple(item.get("blocking_reasons") or ())
+                    break
+        else:
+            raise RunReportError(
+                f"{channel} carries an unrecognized publication status"
+            )
+
         reports.append(
             ChannelReport(
                 channel=channel,
-                status=str(entry.get("status") or "UNKNOWN"),
+                status=status,
                 external_id=entry.get("external_id") or None,
                 url=entry.get("url") or None,
                 url_provenance=entry.get("url_provenance") or None,
                 reused_from_run_id=entry.get("reused_from_run_id") or None,
-                authorized_package_digest=verdict.get("package_digest"),
-                blocking_reasons=tuple(verdict.get("blocking_reasons") or ()),
+                authorized_package_digest=digest,
+                blocking_reasons=blocking,
             )
         )
     return tuple(reports)
@@ -353,7 +431,21 @@ def build_run_report(
         except Exception:  # noqa: BLE001 — an unreadable identity is simply absent
             configuration = None
 
-    channels = _channel_reports(publication, preflight)
+    if publication and not preflight:
+        # A publication cannot be authoritative without the authorization that
+        # permitted it.
+        raise RunReportError(
+            "publication evidence exists without its authorization verdict"
+        )
+    channels = _channel_reports(
+        Path(packages_dir),
+        run_dir,
+        run_id=run_id,
+        signal_id=signal_id,
+        publication=publication,
+        preflight=preflight,
+        configuration_identity=(publication or {}).get("configuration_identity") or {},
+    )
     completed = bool(publication.get("completed")) if publication else (
         terminal_disposition is TerminalDisposition.COMPLETED
     )

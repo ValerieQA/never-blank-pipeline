@@ -53,17 +53,44 @@ promoted.
 
 **5. "Published identifiers and URLs are verified against the corresponding
 artifact package."**
-`SATISFIED` **in its truthful form**. A pre-publication package cannot know a
-provider-generated identifier in advance, so the report does not pretend
-otherwise and never reverse-derives a digest from a provider ID. What it
-proves is the binding that actually exists: each channel outcome carries the
-`package_digest` from that channel's Story #17 preflight verdict — the exact
-canonical package that received `ALLOW` — alongside the provider's own output
-preserved exactly (`external_id`, `url`, `UrlProvenance`, `reused_from_run_id`).
-Together with Story #16 verification of the run, this establishes that the
-recorded publication belongs to this run, this channel, and the authorized
-package and target. Live confirmation that the provider's post matches is
-`DEFERRED-LIVE`.
+`SATISFIED` **in its truthful form, and proven rather than copied**. A
+pre-publication package cannot know a provider-generated identifier in
+advance, so the report never reverse-derives a digest from a provider ID.
+What it proves is the binding that actually exists — and it proves it rather
+than restating the verdict's own claim, because Story #16 verifies the
+generation/publication chain but **not** the Story #17 artifact, so a swapped
+or relabelled verdict would otherwise pass.
+
+For every channel status that asserts an authorized publication existed, the
+report requires the full chain:
+
+> publication result → this run → this signal → this channel → this run's
+> authoritative configuration → this authorized target → the exact canonical
+> package reconstructed from persisted evidence → whose `package_digest`
+> equals the digest recorded in the Story #17 verdict.
+
+This reuses the same two checks the Wix and LinkedIn idempotency scans
+already apply (`validated_channel_verdict`, `authorized_package_digest_matches`),
+exposed under public names rather than duplicated, so a report and a
+suppression decision can never disagree about what "the verdict authorized
+this package" means. Reuse-publication runs resolve their generation evidence
+exactly as #105/#109 do. Reconstruction or digest failure raises
+`RunReportError` and **no report is persisted**.
+
+The minimum truthful matrix, derived from how the entrypoint records
+outcomes — a channel only enters the publish path after `ALLOW`:
+
+| channel status | ALLOW verdict + package binding required? |
+|---|---|
+| `PUBLISHED` | **yes** — a fresh publication was authorized |
+| `REUSED` | **yes** — authorized, then suppressed by idempotency |
+| `PROVIDER_DUPLICATE` | **yes** — a real attempt followed authorization |
+| `FAILED` | **yes** — the failure happened during an authorized attempt |
+| `BLOCKED` | **no** — the channel never reached the publisher; its verdict is read for blocking reasons only and no digest is claimed |
+
+The provider's own output is then preserved exactly (`external_id`, `url`,
+`UrlProvenance`, `reused_from_run_id`). Live confirmation that the provider's
+post matches is `DEFERRED-LIVE`.
 
 **6. "Warnings, failures and overrides are preserved."**
 `SATISFIED`. The preflight override state (`none` / `attempted_rejected`),
@@ -130,7 +157,7 @@ untouched. The absence of a report is itself visible in the run namespace.
 | One create-once report per terminal run, from a single seam | deterministic (#112) |
 | Truthful terminal stage/disposition for partial and full runs | deterministic (#112) |
 | Independent channel outcomes with accepted meanings preserved | deterministic (#112) |
-| Publication bound to the preflight-authorized package digest | deterministic (#112) |
+| Publication bound to the preflight-authorized package, reconstructed and digest-matched | deterministic (#112) |
 | Fail-closed over corrupt/tampered lineage | deterministic (#112) |
 | A real Wix/LinkedIn post matching the reported identifiers | **live, deferred** |
 | Two consecutive live runs without code repair | **live, deferred (Story #21)** |
