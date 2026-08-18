@@ -147,6 +147,13 @@ jobs:
           NB_CLOUDINARY_CLOUD_NAME:       ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
           NB_CLOUDINARY_API_KEY:          ${{ secrets.NB_CLOUDINARY_API_KEY }}
           NB_CLOUDINARY_API_SECRET:       ${{ secrets.NB_CLOUDINARY_API_SECRET }}
+          # Story #21 acceptance-execution setting, not production semantics.
+          # The canonical visual path reuses an image_library entry when the
+          # signal and design version match — which for an acceptance run
+          # would mean reviewing an asset generated minutes earlier by the
+          # research run rather than one produced by this publish run. With
+          # the secret unset or false the existing reuse contract is untouched.
+          NB_FORCE_REGENERATE_RESEARCH_IMAGES: ${{ secrets.NB_FORCE_REGENERATE_RESEARCH_IMAGES }}
         run: |
           FLAGS=""
           [ "${{ inputs.dry_run }}"       = "true" ] && FLAGS="$FLAGS --dry-run"
