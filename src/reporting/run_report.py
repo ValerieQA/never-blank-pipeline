@@ -39,6 +39,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from src.run.code_identity import CodeIdentity
 from src.strategy.execution_context import ConfigurationIdentity
 
 RUN_REPORT_SCHEMA_VERSION = "1.0"
@@ -150,6 +151,11 @@ class RunReport(_ReportModel):
     signal_id: str = Field(min_length=1, max_length=200)
     execution_mode: str = Field(min_length=1, max_length=40)
     configuration_identity: Optional[ConfigurationIdentity] = None
+    #: Which code executed the run (Issue #114), read from the verified
+    #: assignment anchor rather than re-derived here — the report must
+    #: describe the code that ran, not the checkout as it stands when the
+    #: report is written. Absent for runs that could not prove it.
+    code_identity: Optional[CodeIdentity] = None
     reported_at: datetime
     terminal_stage: TerminalStage
     terminal_disposition: TerminalDisposition
@@ -503,14 +509,15 @@ def _channel_reports(
     return tuple(reports)
 
 
-def _authoritative_configuration(run_dir: Path) -> ConfigurationIdentity:
-    """The run's proven configuration anchor, from its intake assignment.
+def _authoritative_anchor(run_dir: Path) -> "AssignmentRecord":
+    """The run's proven intake anchor.
 
     ``assignment.json`` is the anchor Story #16 already verifies the whole
     chain against, so it — not whichever artifact happens to be present — is
-    what the report treats as authoritative. A malformed anchor is a hard
-    failure: silently reporting "configuration unavailable" would let broken
-    evidence pass as an authoritative account.
+    what the report treats as authoritative, both for the run's configuration
+    and for the code identity written at run start. A malformed anchor is a
+    hard failure: silently reporting "configuration unavailable" would let
+    broken evidence pass as an authoritative account.
     """
 
     from src.intake.assignment_record import AssignmentRecord
@@ -519,7 +526,7 @@ def _authoritative_configuration(run_dir: Path) -> ConfigurationIdentity:
     if raw is None:
         raise RunReportError("the run has no intake assignment to anchor its identity")
     try:
-        return AssignmentRecord.model_validate(raw).configuration_identity
+        return AssignmentRecord.model_validate(raw)
     except RunReportError:
         raise
     except Exception:  # noqa: BLE001 — an unreadable anchor fails closed
@@ -650,7 +657,8 @@ def build_run_report(
 
     # The anchor is the run's own assignment; a malformed one fails closed
     # rather than degrading into "configuration unavailable".
-    configuration = _authoritative_configuration(run_dir)
+    anchor = _authoritative_anchor(run_dir)
+    configuration = anchor.configuration_identity
 
     # Whenever the Story #17 artifact exists it must be proven to be this
     # run's own — before any of its content is consumed, and regardless of
@@ -705,6 +713,7 @@ def build_run_report(
             signal_id=signal_id,
             execution_mode=execution_mode,
             configuration_identity=configuration,
+            code_identity=anchor.code_identity,
             reported_at=now or datetime.now(timezone.utc),
             terminal_stage=terminal_stage,
             terminal_disposition=terminal_disposition,
