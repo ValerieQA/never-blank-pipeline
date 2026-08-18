@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "run_id": "9b8deb82-e585-4e7a-97d7-1b233b228a50",
+  "signal_id": "sig-test-001",
+  "execution_mode": "controlled-live",
+  "configuration_identity": {
+    "schema_version": "1",
+    "configuration_id": "never-blank",
+    "configuration_version": "1",
+    "configuration_hash": "sha256:ab9a8492dca22221d1be0adac3e151d7d89b0476e83dded419490f17a08c00d1"
+  },
+  "reported_at": "2026-08-17T23:50:08.299903Z",
+  "terminal_stage": "intake",
+  "terminal_disposition": "failed",
+  "completed": false,
+  "provenance": {
+    "verified": true,
+    "run_kind": "generation",
+    "stopped_after": "business_strategy"
+  },
+  "channels": [],
+  "override_state": null,
+  "unusable_prior_evidence": null,
+  "errors": [],
+  "artifacts": [
+    {
+      "name": "assignment.json",
+      "digest": null
+    },
+    {
+      "name": "business_strategy.json",
+      "digest": null
+    }
+  ]
+}

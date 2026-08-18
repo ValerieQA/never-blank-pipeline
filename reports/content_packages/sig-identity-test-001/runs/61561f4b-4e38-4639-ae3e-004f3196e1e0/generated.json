@@ -1,0 +1,21 @@
+{
+  "run_id": "61561f4b-4e38-4639-ae3e-004f3196e1e0",
+  "signal_id": "sig-identity-test-001",
+  "headline": "Run identity propagation test signal",
+  "generated_at": "2026-08-13T19:03:03.556955+00:00",
+  "strategy_id": "2026-07-presence-debt-campaign-1",
+  "strategy_version": "1",
+  "strategy_started_at": "2026-07-22",
+  "blog_article": "Blog body text for identity test. presence consistent trust",
+  "linkedin_post": "LinkedIn post for identity test. presence compound",
+  "facebook_post": "Facebook post for identity test.",
+  "instagram_caption": "Instagram caption for identity test.",
+  "threads_sequence": [
+    "Identity is propagated.",
+    "run_id was missing everywhere.",
+    "The run_id flows through every boundary.",
+    "This is provenance.",
+    "Trace it."
+  ],
+  "telegram_text": "run_id was missing everywhere.\nThis is provenance."
+}

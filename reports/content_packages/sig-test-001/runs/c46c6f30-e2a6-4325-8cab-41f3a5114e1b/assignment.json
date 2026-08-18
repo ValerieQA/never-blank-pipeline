@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "run_id": "c46c6f30-e2a6-4325-8cab-41f3a5114e1b",
+  "execution_mode": "dry-run",
+  "configuration_identity": {
+    "schema_version": "1",
+    "configuration_id": "never-blank",
+    "configuration_version": "1",
+    "configuration_hash": "sha256:ab9a8492dca22221d1be0adac3e151d7d89b0476e83dded419490f17a08c00d1"
+  },
+  "assignment": {
+    "assignment_id": "sig-test-001",
+    "origin": "jsonl",
+    "topic": "AI adoption accelerates in SMBs",
+    "source_material": "According to Gartner, 60 percent of SMBs will adopt AI by 2027.",
+    "submitted_at": "2026-08-18T01:45:29.027248Z",
+    "user_instruction": null,
+    "target_audience": "agencies",
+    "publishing_constraints": {},
+    "references": [],
+    "strategy_ref": "2026-07-presence-debt-campaign-1",
+    "strategy_version": "1",
+    "correlation": null
+  }
+}

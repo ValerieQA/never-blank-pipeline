@@ -342,6 +342,27 @@ def load_preflight_result_json(
     return data
 
 
+def write_run_report_json(run_dir: Path, data: dict) -> None:
+    """Commit the run's authoritative report exactly once (Issue #112)."""
+    atomic_write_json(run_dir / "run_report.json", data)
+
+
+def load_run_report_json(
+    packages_dir: Path, signal_id: str, source_run_id: str
+) -> dict:
+    """Load the exact immutable run report of one run."""
+    path = resolve_run_dir(packages_dir, signal_id, source_run_id) / "run_report.json"
+    if not path.exists():
+        raise FileNotFoundError(f"No run_report.json at {path}")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise ValueError(f"Could not parse {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"Run report at {path} is not a JSON object")
+    return data
+
+
 def write_publication_results_json(run_dir: Path, data: dict) -> None:
     """
     Write publication_results.json under run_dir exactly once.

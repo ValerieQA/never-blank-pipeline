@@ -215,8 +215,15 @@ from src.artifacts import (
     write_business_strategy_snapshot,
     write_preflight_result_json,
     write_publication_results_json,
+    write_run_report_json,
 )
 from src.reporting import R1RunReport
+from src.reporting.run_report import (
+    RunReportError,
+    TerminalDisposition,
+    TerminalStage,
+    build_run_report,
+)
 from src.strategy.history import append_published_entry
 from src.strategy.business_config import (
     BusinessStrategyConfiguration,
@@ -488,6 +495,101 @@ def _normalize_publish_result(
     return result
 
 
+class _TerminalState:
+    """What the run has proven so far, for the single terminalization seam.
+
+    The business body advances this as it goes, so no return path has to
+    build a report itself and none can be forgotten. A run that never
+    receives a run identity — argument or configuration failures, before the
+    run namespace exists — leaves the state empty and is not reportable:
+    there is no run to account for.
+    """
+
+    __slots__ = ("run_id", "signal_id", "execution_mode", "packages_dir",
+                 "stage", "disposition", "errors")
+
+    def __init__(self) -> None:
+        self.run_id: Optional[str] = None
+        self.signal_id: Optional[str] = None
+        self.execution_mode: str = "unknown"
+        self.packages_dir: Optional[Path] = None
+        self.stage: TerminalStage = TerminalStage.INTAKE
+        self.disposition: TerminalDisposition = TerminalDisposition.FAILED
+        self.errors: list = []
+
+    def begin(self, *, run_id: str, signal_id: str, execution_mode: str,
+              packages_dir: Path) -> None:
+        self.run_id = run_id
+        self.signal_id = signal_id
+        self.execution_mode = execution_mode
+        self.packages_dir = packages_dir
+
+    def reached(self, stage: TerminalStage) -> None:
+        """Record the last lifecycle stage the run actually reached."""
+        self.stage = stage
+
+    def ended(self, stage: TerminalStage, disposition: TerminalDisposition,
+              *errors: str) -> None:
+        self.stage = stage
+        self.disposition = disposition
+        self.errors.extend(str(item) for item in errors if item)
+
+    @property
+    def reportable(self) -> bool:
+        return bool(self.run_id and self.signal_id and self.packages_dir)
+
+
+def _emit_terminal_report(state: "_TerminalState", exit_code: int) -> None:
+    """Persist the authoritative account of one terminal run (Issue #112).
+
+    Called exactly once, after the business run has fully returned, so every
+    canonical artifact it references is already committed. A failure here is
+    logged and never rewrites the business outcome: a run that failed for a
+    reason still fails for that reason, and a successful run is never turned
+    into a failure because its account could not be written.
+    """
+
+    if not state.reportable:
+        return                       # no run namespace — nothing to account for
+
+    disposition = state.disposition
+    if exit_code == 0 and disposition is TerminalDisposition.FAILED:
+        disposition = TerminalDisposition.COMPLETED
+
+    try:
+        report = build_run_report(
+            state.packages_dir,
+            run_id=state.run_id,
+            signal_id=state.signal_id,
+            execution_mode=state.execution_mode,
+            terminal_stage=state.stage,
+            terminal_disposition=disposition,
+            errors=tuple(state.errors),
+        )
+        write_run_report_json(
+            resolve_run_dir(state.packages_dir, state.signal_id, state.run_id),
+            json.loads(report.model_dump_json()),
+        )
+        log.info(
+            "run_report: run_id=%s stage=%s disposition=%s completed=%s",
+            report.run_id, report.terminal_stage.value,
+            report.terminal_disposition.value, report.completed,
+        )
+    except ArtifactCollisionError:
+        # An existing report is never overwritten and never silently updated.
+        log.warning(
+            "run_report already exists for run_id=%s — the existing report stands",
+            state.run_id,
+        )
+    except (RunReportError, OSError, TypeError, ValueError) as exc:
+        # Never let the account rewrite the outcome it describes.
+        log.warning(
+            "run_report could not be written for run_id=%s (%s) — "
+            "the run outcome is unchanged",
+            state.run_id, type(exc).__name__,
+        )
+
+
 def _emit_run_report(report: R1RunReport) -> None:
     """
     Emit the final run report.  Release 1: log only.
@@ -533,6 +635,35 @@ def _build_legacy_research_context(
 
 
 def main(
+    *,
+    research_provider: ResearchProvider | None = None,
+    decision_evaluator: DecisionLensEvaluator | None = None,
+    editorial_reviewer: EditorialReviewTransport | None = None,
+    article_revisor: ArticleRevisionTransport | None = None,
+) -> int:
+    """Run one signal end to end and account for it exactly once.
+
+    Issue #112: the business run lives in ``_run``; this wrapper is the single
+    terminalization seam that persists the authoritative ``run_report.json``
+    after the run has fully finished — so the report is never written before
+    the terminal evidence is stable, never written twice, and never able to
+    rewrite the business outcome it describes.
+    """
+
+    state = _TerminalState()
+    exit_code = _run(
+        state,
+        research_provider=research_provider,
+        decision_evaluator=decision_evaluator,
+        editorial_reviewer=editorial_reviewer,
+        article_revisor=article_revisor,
+    )
+    _emit_terminal_report(state, exit_code)
+    return exit_code
+
+
+def _run(
+    state: "_TerminalState",
     *,
     research_provider: ResearchProvider | None = None,
     decision_evaluator: DecisionLensEvaluator | None = None,
@@ -656,6 +787,13 @@ def main(
         "run-context",
     )
     run_dir = resolve_run_dir(PACKAGES_DIR, signal_id, run_ctx.run_id)
+    # From here the run has a namespace and is reportable (Issue #112).
+    state.begin(
+        run_id=run_ctx.run_id,
+        signal_id=signal_id,
+        execution_mode=run_ctx.execution_mode.value,
+        packages_dir=PACKAGES_DIR,
+    )
     try:
         write_business_strategy_snapshot(
             run_dir, business_configuration.model_dump(mode="json")
@@ -739,6 +877,7 @@ def main(
         # No canonical package can exist for an unready signal: every channel
         # is recorded as an explicit fail-closed "package not constructed"
         # state, and the verdict is persisted before the run stops.
+        state.ended(TerminalStage.READINESS, TerminalDisposition.BLOCKED, field_note)
         return _stop_with_preflight(
             run_dir=run_dir,
             run_id=run_ctx.run_id,
@@ -774,8 +913,11 @@ def main(
             )
         except (ResearchGateError, ArtifactCollisionError, OSError, ValueError, EnvironmentError) as exc:
             print(f"  ERROR: research gate blocked generation: {exc}")
+            state.ended(TerminalStage.RESEARCH, TerminalDisposition.FAILED,
+                        f"research gate: {type(exc).__name__}")
             return 1
         print(f"  ✓  research: READY ({run_dir / 'research.json'})")
+        state.reached(TerminalStage.RESEARCH)
 
         # ── Decision Lens gate (Issue #60) ────────────────────────────────────
         # The Decision Lens verdict is the mandatory business gate between
@@ -807,7 +949,10 @@ def main(
             require_proceed(decision_artifact)
         except (DecisionGateError, ArtifactCollisionError, OSError, ValueError) as exc:
             print(f"  ERROR: decision gate blocked generation: {exc}")
+            state.ended(TerminalStage.DECISION, TerminalDisposition.STOPPED,
+                        f"decision gate: {type(exc).__name__}")
             return 1
+        state.reached(TerminalStage.DECISION)
         print(
             f"  ✓  decision: PROCEED ({run_dir / 'decision.json'}) "
             f"[{decision_artifact.decision_lens_version}]"
@@ -1110,6 +1255,8 @@ def main(
         except (VisualGateError, FileNotFoundError, ValueError,
                 ArtifactCollisionError, OSError) as exc:
             print(f"  ERROR: visual gate blocked publication: {exc}")
+            state.ended(TerminalStage.VISUAL, TerminalDisposition.BLOCKED,
+                        f"visual gate: {type(exc).__name__}")
             return 1
         print(
             f"  ✓  visuals: {_visual_record.status} reused "
@@ -1236,6 +1383,8 @@ def main(
             )
         except (EditorialAcceptanceError, ValueError, OSError) as exc:
             print(f"  ERROR: editorial acceptance blocked publication: {exc}")
+            state.ended(TerminalStage.EDITORIAL, TerminalDisposition.BLOCKED,
+                        f"editorial acceptance: {type(exc).__name__}")
             return 1
         # The editorial verdict is persisted for every run that reaches
         # acceptance — accepted or blocked — so the decision history stays
@@ -1257,6 +1406,8 @@ def main(
         print(f"  ✓  editorial audit: {run_dir / 'editorial_acceptance.json'}")
         if not _acceptance.accepted:
             _final = _acceptance.final_review or _acceptance.initial_review
+            state.ended(TerminalStage.EDITORIAL, TerminalDisposition.BLOCKED,
+                        f"editorial disposition={_final.disposition.value}")
             print(
                 "  ERROR: editorial acceptance blocked publication: "
                 f"disposition={_final.disposition.value!r} "
@@ -1265,6 +1416,7 @@ def main(
                 "continue toward packaging or publication"
             )
             return 1
+        state.reached(TerminalStage.EDITORIAL)
         blog_body = _acceptance.final_article_body
         print(
             f"  ✓  editorial acceptance: ACCEPT "
@@ -1342,7 +1494,11 @@ def main(
             )
         except (LinkedInCompositionError, ArtifactCollisionError, OSError) as exc:
             print(f"  ERROR: LinkedIn composition blocked publication: {exc}")
+            state.ended(TerminalStage.LINKEDIN_COMPOSITION,
+                        TerminalDisposition.BLOCKED,
+                        f"linkedin composition: {type(exc).__name__}")
             return 1
+        state.reached(TerminalStage.LINKEDIN_COMPOSITION)
         print(
             f"  ✓  linkedin composition: ACCEPTED "
             f"({_li_record.word_count} words) "
@@ -1370,6 +1526,8 @@ def main(
             )
         except (VisualGateError, ArtifactCollisionError, OSError) as exc:
             print(f"  ERROR: visual gate blocked publication: {exc}")
+            state.ended(TerminalStage.VISUAL, TerminalDisposition.BLOCKED,
+                        f"visual gate: {type(exc).__name__}")
             return 1
         print(
             f"  ✓  visuals: {_visual_record.status} "
@@ -1404,6 +1562,7 @@ def main(
         print(f"       run_id={run_ctx.run_id}  strategy_id={strategy_id}  strategy_version={strategy_version}  generated_at={_generated_at[:19]}")
 
     if args.dry_run:
+        state.ended(TerminalStage.DRY_RUN, TerminalDisposition.COMPLETED)
         report = R1RunReport(
             run_id=run_ctx.run_id,
             signal_id=signal_id,
@@ -1581,6 +1740,7 @@ def main(
     except (ArtifactCollisionError, OSError, ValueError) as exc:
         print(f"\n  ERROR: publication preflight could not be committed: {exc}")
         return 1
+    state.reached(TerminalStage.PREFLIGHT)
     print(f"\n  preflight: run={preflight.run_disposition.value} "
           f"({run_dir / 'preflight_result.json'})")
     for _verdict in preflight.channels:
@@ -1591,6 +1751,10 @@ def main(
         print(f"    {_verdict.channel:<9} {_verdict.disposition.value:<5} {_detail}")
     if preflight.run_disposition is PreflightDisposition.BLOCK:
         print("  ERROR: publication preflight blocked this run — no channel published.")
+        state.ended(
+            TerminalStage.PREFLIGHT, TerminalDisposition.BLOCKED,
+            *[reason.value for reason in preflight.run_blocking_reasons],
+        )
         _emit_run_report(R1RunReport(
             run_id=run_ctx.run_id,
             signal_id=signal_id,
@@ -1760,6 +1924,8 @@ def main(
         # immutable result artifact is committed.  Do not write history, run
         # analytics, or emit a success report for an unrecorded publication.
         print(f"\n  ERROR: publication results could not be committed: {exc}")
+        state.ended(TerminalStage.PUBLICATION, TerminalDisposition.FAILED,
+                    f"publication results not committed: {type(exc).__name__}")
         report = R1RunReport(
             run_id=run_ctx.run_id,
             signal_id=signal_id,
@@ -1823,6 +1989,11 @@ def main(
 
     # ── Summary ───────────────────────────────────────────────────────────────
     print(f"\n{SEP}")
+    state.ended(
+        TerminalStage.PUBLICATION,
+        TerminalDisposition.FAILED if failed else TerminalDisposition.COMPLETED,
+        *_run_errors,
+    )
     if failed:
         print(f"  PARTIAL — failed R1 channels: {failed}")
         print(f"  run_id: {run_ctx.run_id}  [FAILED]")

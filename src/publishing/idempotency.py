@@ -307,6 +307,15 @@ def _authorized_package_digest_matches(
     return package.package_digest() == channel.package_digest
 
 
+#: Public names for the two channel-verdict checks the Story #20 run report
+#: reuses (Issue #112). They are the same functions the Wix and LinkedIn scans
+#: already use — exposed rather than duplicated, so a report and a suppression
+#: decision can never disagree about what "the verdict authorized this package"
+#: means. Behavior is unchanged.
+validated_channel_verdict = _validated_prior_target
+authorized_package_digest_matches = _authorized_package_digest_matches
+
+
 def _prior_article_digest(
     packages_dir: Path, signal_id: str, generation_run_id: str
 ) -> tuple[Optional[str], Optional[str]]:

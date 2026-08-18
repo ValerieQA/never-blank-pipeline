@@ -1,0 +1,12 @@
+{
+  "run_id": "15a5f4c5-73a9-4656-9cf4-4bd795363729",
+  "signal_id": "sig-test-001",
+  "rubric": "never-blank-editorial-acceptance/1.0",
+  "accepted": true,
+  "revised": false,
+  "final_disposition": "accept",
+  "initial_review": {
+    "disposition": "accept"
+  },
+  "final_review": null
+}

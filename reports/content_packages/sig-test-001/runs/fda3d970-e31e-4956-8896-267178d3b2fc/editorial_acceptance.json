@@ -1,0 +1,10 @@
+{
+  "run_id": "fda3d970-e31e-4956-8896-267178d3b2fc",
+  "signal_id": "sig-test-001",
+  "rubric": "never-blank-editorial-acceptance/1.0",
+  "revised": false,
+  "initial_review": {
+    "disposition": "accept"
+  },
+  "final_review": null
+}

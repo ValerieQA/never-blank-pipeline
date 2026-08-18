@@ -1,0 +1,36 @@
+{
+  "run_id": "f74e5bf4-bc5e-4d75-a93c-01de30e2f1ff",
+  "signal_id": "sig-test-001",
+  "source_run_id": "f74e5bf4-bc5e-4d75-a93c-01de30e2f1ff",
+  "generation_run_id": "f74e5bf4-bc5e-4d75-a93c-01de30e2f1ff",
+  "execution_mode": "controlled-live",
+  "configuration_identity": {
+    "schema_version": "1",
+    "configuration_id": "never-blank",
+    "configuration_version": "1",
+    "configuration_hash": "sha256:ab9a8492dca22221d1be0adac3e151d7d89b0476e83dded419490f17a08c00d1"
+  },
+  "published_at": "2026-08-15T21:26:34.455380+00:00",
+  "results": {
+    "wix": {
+      "platform": "wix",
+      "status": "PUBLISHED",
+      "external_id": "wix-post-id",
+      "url": "https://example.com/wix",
+      "error_message": null,
+      "run_id": ""
+    },
+    "linkedin": {
+      "platform": "linkedin",
+      "status": "PUBLISHED",
+      "external_id": "linkedin-post-id",
+      "url": "https://example.com/linkedin",
+      "error_message": null,
+      "run_id": ""
+    }
+  },
+  "completed": true,
+  "errors": [],
+  "wix_url": "https://example.com/wix",
+  "wix_post_id": "wix-post-id"
+}

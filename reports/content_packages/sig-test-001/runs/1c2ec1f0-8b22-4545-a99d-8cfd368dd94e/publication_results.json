@@ -1,0 +1,35 @@
+{
+  "run_id": "1c2ec1f0-8b22-4545-a99d-8cfd368dd94e",
+  "signal_id": "sig-test-001",
+  "source_run_id": "1c2ec1f0-8b22-4545-a99d-8cfd368dd94e",
+  "generation_run_id": "1c2ec1f0-8b22-4545-a99d-8cfd368dd94e",
+  "execution_mode": "controlled-live",
+  "configuration_identity": {
+    "schema_version": "1",
+    "configuration_id": "never-blank",
+    "configuration_version": "1"
+  },
+  "published_at": "2026-08-13T21:35:40.553802+00:00",
+  "results": {
+    "wix": {
+      "platform": "wix",
+      "status": "PUBLISHED",
+      "external_id": "wix-post-id",
+      "url": "https://example.com/wix",
+      "error_message": null,
+      "run_id": ""
+    },
+    "linkedin": {
+      "platform": "linkedin",
+      "status": "PUBLISHED",
+      "external_id": "linkedin-post-id",
+      "url": "https://example.com/linkedin",
+      "error_message": null,
+      "run_id": ""
+    }
+  },
+  "completed": true,
+  "errors": [],
+  "wix_url": "https://example.com/wix",
+  "wix_post_id": "wix-post-id"
+}

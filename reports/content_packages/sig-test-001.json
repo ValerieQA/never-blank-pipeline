@@ -1,0 +1,71 @@
+{
+  "SIGNAL_ID": "sig-test-001",
+  "HEADLINE": "AI adoption accelerates in SMBs",
+  "prepared_at": "2026-08-18 01:46 UTC",
+  "content": {},
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "reports/content_packages/images/sig-test-001_blog.png",
+        "path": "reports/content_packages/images/sig-test-001_blog.png",
+        "size": "1920x1080",
+        "reused": true
+      },
+      "linkedin": {
+        "url": "reports/content_packages/images/sig-test-001_blog.png",
+        "path": "reports/content_packages/images/sig-test-001_blog.png",
+        "size": "1200x628",
+        "reused": true
+      },
+      "facebook": {
+        "url": "reports/content_packages/images/sig-test-001_blog.png",
+        "path": "reports/content_packages/images/sig-test-001_blog.png",
+        "size": "1200x628",
+        "reused": true
+      },
+      "instagram": {
+        "url": "reports/content_packages/images/sig-test-001_blog.png",
+        "path": "reports/content_packages/images/sig-test-001_blog.png",
+        "size": "1080x1350",
+        "reused": true
+      },
+      "threads": {
+        "url": "reports/content_packages/images/sig-test-001_blog.png",
+        "path": "reports/content_packages/images/sig-test-001_blog.png",
+        "size": "1080x1080",
+        "reused": true
+      },
+      "stories": {
+        "url": "reports/content_packages/images/sig-test-001_blog.png",
+        "path": "reports/content_packages/images/sig-test-001_blog.png",
+        "size": "1080x1920",
+        "reused": true
+      }
+    },
+    "new_images": 0,
+    "reused_images": 6,
+    "reuse_rate": "100%",
+    "image_method": "reused",
+    "reuse_source": "same_signal (AI adoption accelerates in SMBs)",
+    "visual_family": "light_paths",
+    "hook_text": "According to Gartner, 60 percent of SMBs",
+    "design_version": "3"
+  },
+  "strategy_audience": {
+    "audience_id": "small-b2b-agencies",
+    "audience_name": "Founder-led digital, web, development, and creative agencies",
+    "selected_problem": "Client delivery displaces consistent market presence.",
+    "decision_factors": [
+      "The system must preserve the agency's actual expertise and voice.",
+      "Claims must remain traceable to current evidence and real work.",
+      "The process must reduce owner drafting effort without publishing generic filler.",
+      "Wix and LinkedIn output must be independently useful and platform-appropriate."
+    ],
+    "objections": [
+      "An automated system will sound generic or unlike the agency.",
+      "Maintaining the system may consume as much time as writing manually.",
+      "Content activity may not produce commercially meaningful conversations."
+    ],
+    "selection_source": "assignment"
+  }
+}

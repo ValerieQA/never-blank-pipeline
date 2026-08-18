@@ -1,0 +1,38 @@
+{
+  "run_id": "8a6b583c-5bbe-477d-8e0f-70c851d4d161",
+  "signal_id": "sig-test-001",
+  "source_run_id": "8a6b583c-5bbe-477d-8e0f-70c851d4d161",
+  "generation_run_id": "8a6b583c-5bbe-477d-8e0f-70c851d4d161",
+  "execution_mode": "controlled-live",
+  "configuration_identity": {
+    "schema_version": "1",
+    "configuration_id": "never-blank",
+    "configuration_version": "1",
+    "configuration_hash": "sha256:ab9a8492dca22221d1be0adac3e151d7d89b0476e83dded419490f17a08c00d1"
+  },
+  "published_at": "2026-08-17T22:00:49.658797+00:00",
+  "results": {
+    "wix": {
+      "platform": "wix",
+      "status": "PUBLISHED",
+      "external_id": "wix-post-id",
+      "url": "https://example.com/wix",
+      "error_message": null,
+      "run_id": ""
+    },
+    "linkedin": {
+      "platform": "linkedin",
+      "status": "PUBLISHED",
+      "external_id": "linkedin-post-id",
+      "url": "https://example.com/linkedin",
+      "error_message": null,
+      "run_id": ""
+    }
+  },
+  "completed": true,
+  "errors": [],
+  "wix_url": "https://example.com/wix",
+  "wix_post_id": "wix-post-id",
+  "wix_reused_from_run_id": null,
+  "unusable_prior_publication_evidence": null
+}
