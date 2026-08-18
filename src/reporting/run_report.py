@@ -319,12 +319,16 @@ def _channel_reports(
             digest = verdict.package_digest
             blocking = tuple(reason.value for reason in verdict.blocking_reasons)
         elif status in NO_BINDING_STATUSES:
-            # The channel never reached the publisher; its verdict is read for
-            # the blocking reasons only, and no package binding is claimed.
-            for item in (preflight or {}).get("channels", []):
-                if isinstance(item, dict) and item.get("channel") == channel:
-                    blocking = tuple(item.get("blocking_reasons") or ())
-                    break
+            # The channel never reached the publisher; the (already validated)
+            # verdict is read for its blocking reasons only, and no package
+            # binding is claimed or fabricated.
+            channel_verdict = (
+                preflight.verdict_for(channel) if preflight is not None else None
+            )
+            if channel_verdict is not None:
+                blocking = tuple(
+                    reason.value for reason in channel_verdict.blocking_reasons
+                )
         else:
             raise RunReportError(
                 f"{channel} carries an unrecognized publication status"
@@ -343,6 +347,74 @@ def _channel_reports(
             )
         )
     return tuple(reports)
+
+
+def _authoritative_configuration(run_dir: Path) -> ConfigurationIdentity:
+    """The run's proven configuration anchor, from its intake assignment.
+
+    ``assignment.json`` is the anchor Story #16 already verifies the whole
+    chain against, so it — not whichever artifact happens to be present — is
+    what the report treats as authoritative. A malformed anchor is a hard
+    failure: silently reporting "configuration unavailable" would let broken
+    evidence pass as an authoritative account.
+    """
+
+    from src.intake.assignment_record import AssignmentRecord
+
+    raw = _load(run_dir, "assignment.json")
+    if raw is None:
+        raise RunReportError("the run has no intake assignment to anchor its identity")
+    try:
+        return AssignmentRecord.model_validate(raw).configuration_identity
+    except RunReportError:
+        raise
+    except Exception:  # noqa: BLE001 — an unreadable anchor fails closed
+        raise RunReportError(
+            "the run's intake assignment does not carry a valid configuration identity"
+        ) from None
+
+
+def _validated_preflight(
+    run_dir: Path,
+    *,
+    run_id: str,
+    signal_id: str,
+    authoritative: ConfigurationIdentity,
+):
+    """Prove the Story #17 artifact is this run's own before consuming it.
+
+    Story #16 verifies the generation/publication chain but not the preflight
+    artifact, so a foreign or tampered verdict could otherwise supply the
+    override state and channel information of a run it does not belong to —
+    including on a legitimate preflight-BLOCK run, where no publication
+    evidence exists to trigger the per-channel binding checks.
+
+    This asks only whether the artifact is honest. Whether a *channel*
+    authorized a package that was actually published is a separate question,
+    answered per channel and only for publication-stage statuses.
+    """
+
+    from src.publishing.preflight import PreflightResult
+
+    path = run_dir / "preflight_result.json"
+    if not path.is_file():
+        return None
+    try:
+        verdict = PreflightResult.model_validate_json(path.read_bytes())
+    except Exception:  # noqa: BLE001 — a verdict that will not strict-load is not evidence
+        raise RunReportError(
+            "preflight_result.json does not satisfy its own strict contract"
+        ) from None
+    if verdict.run_id != run_id or verdict.signal_id != signal_id:
+        raise RunReportError(
+            "preflight_result.json belongs to a different run or signal"
+        )
+    if verdict.configuration_identity != authoritative:
+        raise RunReportError(
+            "preflight_result.json carries a configuration other than the "
+            "run's authoritative identity"
+        )
+    return verdict
 
 
 def _load(run_dir: Path, name: str) -> Optional[dict]:
@@ -422,14 +494,16 @@ def build_run_report(
                     "stored under"
                 )
 
-    configuration = None
-    source = publication or preflight or assignment or {}
-    raw_configuration = source.get("configuration_identity")
-    if isinstance(raw_configuration, dict):
-        try:
-            configuration = ConfigurationIdentity.model_validate(raw_configuration)
-        except Exception:  # noqa: BLE001 — an unreadable identity is simply absent
-            configuration = None
+    # The anchor is the run's own assignment; a malformed one fails closed
+    # rather than degrading into "configuration unavailable".
+    configuration = _authoritative_configuration(run_dir)
+
+    # Whenever the Story #17 artifact exists it must be proven to be this
+    # run's own — before any of its content is consumed, and regardless of
+    # whether the run ever reached publication.
+    verdict = _validated_preflight(
+        run_dir, run_id=run_id, signal_id=signal_id, authoritative=configuration
+    )
 
     if publication and not preflight:
         # A publication cannot be authoritative without the authorization that
@@ -443,8 +517,8 @@ def build_run_report(
         run_id=run_id,
         signal_id=signal_id,
         publication=publication,
-        preflight=preflight,
-        configuration_identity=(publication or {}).get("configuration_identity") or {},
+        preflight=verdict,
+        configuration_identity=configuration.model_dump(),
     )
     completed = bool(publication.get("completed")) if publication else (
         terminal_disposition is TerminalDisposition.COMPLETED
@@ -467,7 +541,9 @@ def build_run_report(
             completed=completed,
             provenance=provenance,
             channels=channels,
-            override_state=(preflight or {}).get("override_state"),
+            override_state=(
+                verdict.override_state.value if verdict is not None else None
+            ),
             unusable_prior_evidence=(
                 (publication or {}).get("unusable_prior_publication_evidence")
             ),

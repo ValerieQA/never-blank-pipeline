@@ -117,13 +117,32 @@ partial chain is reported normally with the last proven stage; an internally
 contradictory one produces **no authoritative report at all**, and the
 corruption is never normalized into a business stop.
 
-One consistency check belongs to the report itself rather than to provenance:
-the publication and preflight records being summarized must not claim a
-different `run_id` or `signal_id` than the namespace they are stored under.
-This is an input check on the report's own sources — Story #16 verifies the
-chain but does not currently compare the signal recorded inside those records
-against the run namespace, so without it a record claiming another signal
-could be summarized as though it belonged here.
+Two checks belong to the report itself rather than to provenance, because the
+report consumes sources Story #16 does not cover:
+
+- **The publication and preflight records must belong to their namespace** —
+  neither may claim a different `run_id` or `signal_id` than the run they are
+  stored under. Story #16 verifies the chain but does not compare the signal
+  recorded *inside* those records against the run namespace.
+- **The Story #17 artifact must be honest whenever it exists**, publication or
+  not. It is strict-loaded through `PreflightResult`, and must carry this
+  run's identity, this signal, and the run's authoritative configuration
+  before any of its content — override state, channel information, or its
+  reference as evidence — is believed. This matters most on a legitimate
+  run-level BLOCK: there is no publication evidence to trigger the per-channel
+  binding, so without this check a foreign or tampered verdict could supply
+  the override state of a run it does not belong to.
+
+These are separate questions, deliberately: *is the verdict artifact honest?*
+is always mandatory when it exists, while *did this channel authorize a
+package that was actually published?* is asked only for publication-stage
+statuses. A legitimate `BLOCK` is a business outcome, never corruption.
+
+**The authoritative configuration is anchored, not inferred.** It comes from
+the run's own `assignment.json` — the anchor Story #16 already verifies the
+chain against — and a malformed anchor is a hard failure. Reporting
+"configuration unavailable" because the evidence could not be parsed would let
+broken evidence pass as an authoritative account.
 
 ## Report-write failure never rewrites the outcome
 

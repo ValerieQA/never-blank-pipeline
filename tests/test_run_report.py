@@ -575,3 +575,154 @@ def test_blocked_channel_needs_no_package_binding(tmp_path, monkeypatch):
     assert linkedin.blocking_reasons                        # the reason is kept
     # …while the channel that did publish carries its proven binding
     assert report.channel("wix").authorized_package_digest.startswith("sha256:")
+
+
+# ── The preflight artifact itself must be honest, publication or not ─────────
+#
+# A run that legitimately stops at preflight has no publication evidence, so
+# the per-channel binding checks never run. The verdict is still consumed —
+# for the override state, the channel information and as referenced evidence —
+# so it must be proven to belong to this run before any of it is believed.
+
+
+def _blocked_run(tmp_path, monkeypatch) -> Path:
+    """A legitimate run-level BLOCK: a verdict exists, publication never does.
+
+    The readiness path is the real shape of this case — it persists the
+    Story #17 verdict and stops, so no publication evidence is ever written
+    and the per-channel binding checks never run. That is precisely the gap
+    these tests cover.
+    """
+
+    _target_env(monkeypatch)
+
+    def unready(assignment, raw_signal, run_ctx):
+        rc = legacy._make_rc_mock(run_ctx.run_id)
+        rc.article_ready = False
+        rc.force_override = False
+        return rc
+
+    _live_run(
+        tmp_path,
+        _build_legacy_research_context=mock.MagicMock(side_effect=unready),
+    )
+    run_dir = _newest_run(tmp_path)
+    assert (run_dir / "preflight_result.json").is_file()
+    assert not (run_dir / "publication_results.json").exists()
+    report = run_dir / "run_report.json"
+    if report.exists():
+        report.unlink()
+    return run_dir
+
+
+def _rebuild_at(tmp_path, run_dir: Path, stage: TerminalStage,
+                disposition: TerminalDisposition):
+    return build_run_report(
+        tmp_path,
+        run_id=run_dir.name,
+        signal_id=SIG,
+        execution_mode="controlled-live",
+        terminal_stage=stage,
+        terminal_disposition=disposition,
+    )
+
+
+def test_preflight_block_run_reports_without_publication_evidence(
+    tmp_path, monkeypatch
+):
+    """A valid BLOCK is a business outcome, not corruption."""
+
+    run_dir = _blocked_run(tmp_path, monkeypatch)
+    assert not (run_dir / "publication_results.json").exists()
+
+    report = _rebuild_at(
+        tmp_path, run_dir, TerminalStage.READINESS, TerminalDisposition.BLOCKED
+    )
+    assert report.terminal_stage is TerminalStage.READINESS
+    assert report.completed is False
+    assert report.channels == ()             # no channels invented
+    assert report.override_state is not None  # …but the verdict is consumed
+    names = {a.name for a in report.artifacts}
+    assert "preflight_result.json" in names
+    assert "publication_results.json" not in names
+
+
+def test_tampered_configuration_on_a_blocked_run_produces_no_report(
+    tmp_path, monkeypatch
+):
+    """The gap this correction closes: no publication evidence to trigger the
+    per-channel checks, so the artifact itself must be validated."""
+
+    from tests.test_publication_package import FOREIGN_CONFIG
+
+    run_dir = _blocked_run(tmp_path, monkeypatch)
+    _tamper_preflight(
+        run_dir,
+        lambda v: v.update(configuration_identity=FOREIGN_CONFIG.model_dump()),
+    )
+    with pytest.raises(RunReportError):
+        _rebuild_at(
+            tmp_path, run_dir, TerminalStage.READINESS, TerminalDisposition.BLOCKED
+        )
+    assert not (run_dir / "run_report.json").exists()
+
+
+def test_foreign_preflight_on_a_blocked_run_produces_no_report(
+    tmp_path, monkeypatch
+):
+    run_a = _blocked_run(tmp_path, monkeypatch)
+    run_b = _blocked_run(tmp_path, monkeypatch)
+    (run_a / "preflight_result.json").write_text(
+        (run_b / "preflight_result.json").read_text(), encoding="utf-8"
+    )
+    with pytest.raises(RunReportError):
+        _rebuild_at(
+            tmp_path, run_a, TerminalStage.READINESS, TerminalDisposition.BLOCKED
+        )
+
+
+def test_preflight_violating_its_own_contract_produces_no_report(
+    tmp_path, monkeypatch
+):
+    run_dir = _blocked_run(tmp_path, monkeypatch)
+    _tamper_preflight(run_dir, lambda v: v.update(override_state="totally-bogus"))
+    with pytest.raises(RunReportError):
+        _rebuild_at(
+            tmp_path, run_dir, TerminalStage.READINESS, TerminalDisposition.BLOCKED
+        )
+
+
+def test_preflight_claiming_another_run_produces_no_report(tmp_path, monkeypatch):
+    run_dir = _blocked_run(tmp_path, monkeypatch)
+    _tamper_preflight(run_dir, lambda v: v.update(run_id="run-claimed-elsewhere"))
+    with pytest.raises(RunReportError):
+        _rebuild_at(
+            tmp_path, run_dir, TerminalStage.READINESS, TerminalDisposition.BLOCKED
+        )
+
+
+def test_malformed_configuration_anchor_produces_no_report(tmp_path, monkeypatch):
+    """A broken anchor fails closed instead of degrading to "unavailable"."""
+
+    run_dir = _blocked_run(tmp_path, monkeypatch)
+    path = run_dir / "assignment.json"
+    data = json.loads(path.read_text())
+    data["configuration_identity"] = {"schema_version": "1.0"}   # incomplete
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(RunReportError):
+        _rebuild_at(
+            tmp_path, run_dir, TerminalStage.READINESS, TerminalDisposition.BLOCKED
+        )
+
+
+def test_reported_configuration_comes_from_the_assignment_anchor(
+    tmp_path, monkeypatch
+):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    anchor = json.loads((run_dir / "assignment.json").read_text())[
+        "configuration_identity"
+    ]
+    report = _rebuild(tmp_path, run_dir)
+    assert report.configuration_identity is not None
+    assert report.configuration_identity.model_dump() == anchor
