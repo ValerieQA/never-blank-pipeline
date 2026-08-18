@@ -244,6 +244,122 @@ BINDING_REQUIRED_STATUSES = frozenset(
 )
 NO_BINDING_STATUSES = frozenset({"BLOCKED", "SKIPPED"})
 
+#: The entrypoint's own status for a channel the preflight refused. It has no
+#: ``PublishStatus`` because no publisher was ever constructed for it.
+BLOCKED_STATUS = "BLOCKED"
+
+
+def _validated_channel_result(channel: str, entry: dict) -> dict:
+    """Check the stored provider result against its own accepted semantics.
+
+    A proven package authorization says the run was allowed to publish that
+    package; it says nothing about whether the recorded result is truthful.
+    Story #16 validates selected top-level publication relationships but not
+    per-channel result semantics, so without this a tampered result — a
+    publication with no identifier, a provenance contradicting its URL, a
+    provider duplicate dressed up with success evidence — could still be
+    summarized as an authoritative account.
+
+    The rules are the ones Stories #18/#19 already established, read through
+    the existing ``PublishStatus`` and ``UrlProvenance`` contracts. Nothing is
+    normalized: a violation raises rather than being coerced into a valid
+    neighbouring status.
+    """
+
+    from src.publishing.result import PublishStatus, UrlProvenance
+
+    def reject(reason: str):
+        raise RunReportError(f"{channel} publication result {reason}")
+
+    raw_status = entry.get("status")
+    if raw_status == BLOCKED_STATUS:
+        # The entrypoint's own status for a channel the preflight refused: it
+        # never reaches a publisher, so it has no PublishStatus of its own.
+        status = None
+    else:
+        try:
+            status = PublishStatus(raw_status)
+        except ValueError:
+            reject("carries an unrecognized status")
+
+    external_id = entry.get("external_id")
+    url = entry.get("url")
+    reused_from = entry.get("reused_from_run_id")
+    raw_provenance = entry.get("url_provenance")
+
+    for field, value in (("external_id", external_id), ("url", url),
+                         ("reused_from_run_id", reused_from)):
+        if value is not None and not isinstance(value, str):
+            reject(f"has a malformed {field}")
+
+    def provenance_or_reject():
+        try:
+            return UrlProvenance(raw_provenance)
+        except ValueError:
+            reject("carries an invalid url_provenance")
+
+    def check_url_consistency(provenance):
+        if provenance is UrlProvenance.PROVIDER_CONFIRMED and not (url or ""):
+            reject("claims a provider-confirmed URL while carrying none")
+        if provenance is UrlProvenance.UNAVAILABLE and (url or ""):
+            reject("claims no provenance-confirmed URL while carrying one")
+        if provenance is UrlProvenance.LOCALLY_DERIVED:
+            # Only Wix has an accepted locally-derived form (base + slug);
+            # LinkedIn has no legitimate construction (Issue #108).
+            if channel != "wix":
+                reject("claims a locally-derived URL the channel cannot produce")
+            if not (url or ""):
+                reject("claims a locally-derived URL while carrying none")
+
+    if status is None:
+        # BLOCKED — no provider interaction happened, so no provider evidence
+        # may be present.
+        if (external_id or "").strip() or reused_from:
+            reject("claims provider evidence for a channel that never published")
+        if (url or "").strip():
+            reject("claims a URL for a channel that never published")
+
+    elif status is PublishStatus.PUBLISHED:
+        if not (external_id or "").strip():
+            reject("claims a publication without a provider identifier")
+        if reused_from:
+            reject("claims a fresh publication while pointing at a reuse source")
+        check_url_consistency(provenance_or_reject())
+
+    elif status is PublishStatus.REUSED:
+        if not (external_id or "").strip():
+            reject("reuses a publication without its provider identifier")
+        if not (reused_from or "").strip():
+            reject("claims a reuse without naming the run it reuses")
+        check_url_consistency(provenance_or_reject())
+
+    elif status is PublishStatus.PROVIDER_DUPLICATE:
+        # A 409 proves a duplicate exists but never which post: it may carry
+        # no success evidence at all (Issue #108).
+        if (external_id or "").strip() or (url or "").strip() or reused_from:
+            reject("carries success evidence a provider duplicate cannot prove")
+        if raw_provenance is not None:
+            if provenance_or_reject() is not UrlProvenance.UNAVAILABLE:
+                reject("claims a URL provenance a provider duplicate cannot have")
+
+    else:
+        # BLOCKED / FAILED / SKIPPED / DRAFT_CREATED — no provider success is
+        # claimed, and none may be invented for them.
+        if status is not PublishStatus.DRAFT_CREATED and (external_id or "").strip():
+            reject("claims a provider identifier for a channel that did not publish")
+        if reused_from:
+            reject("claims a reuse source for a channel that did not publish")
+        if raw_provenance is not None:
+            check_url_consistency(provenance_or_reject())
+
+    return {
+        "status": status.value if status is not None else BLOCKED_STATUS,
+        "external_id": external_id or None,
+        "url": url or None,
+        "url_provenance": raw_provenance or None,
+        "reused_from_run_id": reused_from or None,
+    }
+
 
 def _channel_reports(
     packages_dir: Path,
@@ -287,7 +403,8 @@ def _channel_reports(
         entry = (publication.get("results") or {}).get(channel)
         if not isinstance(entry, dict):
             continue
-        status = str(entry.get("status") or "UNKNOWN")
+        validated = _validated_channel_result(channel, entry)
+        status = validated["status"]
 
         digest: Optional[str] = None
         blocking: tuple[str, ...] = ()
@@ -331,17 +448,17 @@ def _channel_reports(
                 )
         else:
             raise RunReportError(
-                f"{channel} carries an unrecognized publication status"
+                f"{channel} carries a status with no defined reporting rule"
             )
 
         reports.append(
             ChannelReport(
                 channel=channel,
                 status=status,
-                external_id=entry.get("external_id") or None,
-                url=entry.get("url") or None,
-                url_provenance=entry.get("url_provenance") or None,
-                reused_from_run_id=entry.get("reused_from_run_id") or None,
+                external_id=validated["external_id"],
+                url=validated["url"],
+                url_provenance=validated["url_provenance"],
+                reused_from_run_id=validated["reused_from_run_id"],
                 authorized_package_digest=digest,
                 blocking_reasons=blocking,
             )

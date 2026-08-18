@@ -726,3 +726,138 @@ def test_reported_configuration_comes_from_the_assignment_anchor(
     report = _rebuild(tmp_path, run_dir)
     assert report.configuration_identity is not None
     assert report.configuration_identity.model_dump() == anchor
+
+
+# ── The stored provider result must obey its own semantics ───────────────────
+#
+# A proven package authorization says the run was allowed to publish that
+# package. It says nothing about whether the recorded result is truthful, and
+# Story #16 does not validate per-channel result semantics — so these keep
+# provenance, preflight and package binding valid and tamper only with
+# publication_results.json.
+
+
+def _tamper_result(run_dir: Path, channel: str, **changes):
+    path = run_dir / "publication_results.json"
+    data = json.loads(path.read_text())
+    data["results"][channel].update(changes)
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+
+def test_published_without_a_provider_identifier_produces_no_report(
+    tmp_path, monkeypatch
+):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(run_dir, "wix", external_id="")
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+    assert not (run_dir / "run_report.json").exists()
+
+
+def test_invalid_url_provenance_produces_no_report(tmp_path, monkeypatch):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(run_dir, "wix", url_provenance="totally-bogus")
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_provider_confirmed_without_a_url_produces_no_report(tmp_path, monkeypatch):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(run_dir, "wix", url=None, url_provenance="provider_confirmed")
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_unavailable_with_a_url_produces_no_report(tmp_path, monkeypatch):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(run_dir, "wix", url_provenance="unavailable")
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_linkedin_cannot_claim_a_locally_derived_url(tmp_path, monkeypatch):
+    """Only Wix has an accepted locally-derived form (Issue #108)."""
+
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(run_dir, "linkedin", url_provenance="locally_derived")
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_reuse_without_its_source_run_produces_no_report(tmp_path, monkeypatch):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(
+        run_dir, "linkedin", status="REUSED", reused_from_run_id=None
+    )
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_provider_duplicate_with_fabricated_success_produces_no_report(
+    tmp_path, monkeypatch
+):
+    """A 409 proves a duplicate exists, never which post — it may carry none."""
+
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(
+        run_dir, "linkedin", status="PROVIDER_DUPLICATE",
+        external_id="fabricated-post-id", url="https://linkedin.com/x",
+    )
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_blocked_channel_cannot_claim_provider_evidence(tmp_path, monkeypatch):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(
+        run_dir, "linkedin", status="BLOCKED", external_id="invented-id"
+    )
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_valid_linkedin_publication_without_a_url_still_reports(
+    tmp_path, monkeypatch
+):
+    """The accepted #108 shape: a real ID with no URL is a real publication."""
+
+    _target_env(monkeypatch)
+    monkeypatch.setenv("NB_ZERNIO_LINKEDIN_ACCOUNT_ID", "acct-no-url")
+
+    def no_url(url, *, method="GET", headers=None, body=None, timeout=20):
+        return 201, {"post": {"_id": "zernio-post-nourl"}}, ""
+
+    with mock.patch("src.publishing.linkedin._fetch", side_effect=no_url):
+        _live_run(tmp_path, LinkedInPublisher=LinkedInPublisher)
+
+    report = RunReport.model_validate_json(
+        (_newest_run(tmp_path) / "run_report.json").read_bytes()
+    )
+    linkedin = report.channel("linkedin")
+    assert linkedin.status == "PUBLISHED"
+    assert linkedin.external_id == "zernio-post-nourl"
+    assert linkedin.url is None
+    assert linkedin.url_provenance == "unavailable"
+
+
+def test_valid_results_of_every_accepted_shape_still_report(
+    tmp_path, monkeypatch
+):
+    """Fresh Wix, fresh LinkedIn and a genuine reuse all remain reportable."""
+
+    from tests.test_linkedin_idempotency import _seed_prior_run
+    from src.publishing.idempotency import find_prior_linkedin_publication
+
+    _seed_prior_run(tmp_path, monkeypatch)          # fresh Wix + fresh LinkedIn
+    with mock.patch("src.publishing.linkedin._fetch"):
+        _live_run(                                   # …then a genuine reuse
+            tmp_path,
+            LinkedInPublisher=LinkedInPublisher,
+            find_prior_linkedin_publication=find_prior_linkedin_publication,
+        )
+    report = RunReport.model_validate_json(
+        (_newest_run(tmp_path) / "run_report.json").read_bytes()
+    )
+    assert report.channel("wix").status == "PUBLISHED"
+    assert report.channel("linkedin").status == "REUSED"
+    assert report.channel("linkedin").reused_from_run_id

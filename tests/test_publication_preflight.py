@@ -430,11 +430,18 @@ def _publish_result(platform, external_id, url):
 
     from src.publishing.result import PublishResult
 
+    from src.publishing.result import UrlProvenance
+
     return PublishResult(
         platform=platform,
         status=PublishStatus.PUBLISHED,
         external_id=external_id,
         url=url,
+        # A result carrying a URL must say where it came from — the real
+        # adapters always do, so the stand-in does too.
+        url_provenance=(
+            UrlProvenance.PROVIDER_CONFIRMED if url else UrlProvenance.UNAVAILABLE
+        ),
     )
 
 

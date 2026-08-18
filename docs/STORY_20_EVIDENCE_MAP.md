@@ -88,9 +88,31 @@ outcomes — a channel only enters the publish path after `ALLOW`:
 | `FAILED` | **yes** — the failure happened during an authorized attempt |
 | `BLOCKED` | **no** — the channel never reached the publisher; its verdict is read for blocking reasons only and no digest is claimed |
 
-The provider's own output is then preserved exactly (`external_id`, `url`,
-`UrlProvenance`, `reused_from_run_id`). Live confirmation that the provider's
-post matches is `DEFERRED-LIVE`.
+**The stored result must also obey its own semantics.** A proven authorization
+says the run was allowed to publish that package; it says nothing about
+whether the recorded result is truthful, and Story #16 validates selected
+top-level publication relationships but not per-channel result semantics. Each
+channel result is therefore checked against the rules Stories #18/#19 already
+established, read through the existing `PublishStatus` and `UrlProvenance`
+contracts:
+
+- `PUBLISHED` requires a real provider identifier, a valid provenance, and a
+  URL/provenance pair that agrees with itself — while the accepted LinkedIn
+  shape (real ID, `url = null`, provenance `unavailable`) stays valid, because
+  URL availability is not what makes a publication real;
+- `REUSED` requires the prior identifier *and* the run it reuses;
+- `PROVIDER_DUPLICATE` may carry no success evidence at all — an identifier or
+  URL there would be fabricated proof of a post a 409 never identified;
+- `BLOCKED` / `FAILED` / `SKIPPED` may not claim provider output that never
+  existed;
+- only Wix has an accepted `locally_derived` URL form; a LinkedIn result
+  claiming one is rejected (Issue #108).
+
+Violations raise `RunReportError` and **no report is persisted** — nothing is
+normalized into a neighbouring valid status and no URL evidence is coerced.
+The provider's own output is otherwise preserved exactly (`external_id`,
+`url`, `UrlProvenance`, `reused_from_run_id`). Live confirmation that the
+provider's post matches is `DEFERRED-LIVE`.
 
 **6. "Warnings, failures and overrides are preserved."**
 `SATISFIED`. The preflight override state (`none` / `attempted_rejected`),
