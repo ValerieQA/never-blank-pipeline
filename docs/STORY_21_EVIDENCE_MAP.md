@@ -91,6 +91,42 @@ would defeat it. The single narrow exception is a transient provider failure
 retried through the canonical entrypoint, where the accepted #105/#109
 idempotency contract makes the retry truthful.
 
+## How the hosted acceptance run preserves its evidence
+
+The live acceptance run executes on GitHub Actions, where the existing
+repository secrets are already available — production credentials are not
+copied to a local machine for it.
+
+A hosted runner is destroyed when the job ends, and with it the canonical run
+namespace `reports/content_packages/<signal_id>/runs/<run_id>/`. A real
+publication whose evidence is gone cannot be verified by Story #16 provenance,
+cannot be validated as a Story #20 report, and cannot close this Story — so the
+workflow uploads that namespace as a **GitHub Actions artifact**
+(`run-evidence-<signal_id>`) immediately after the canonical execution attempt
+and before any bookkeeping commit.
+
+Three properties make it evidence rather than a convenience:
+
+- **The path follows production, it does not restate it.** `run_id` is
+  generated inside the process and is never knowable in advance, so the upload
+  is scoped by the signal the run was launched with — `<signal_id>/runs/` —
+  and no marker file or log scraping introduces a second source of truth.
+- **Failed and blocked attempts are preserved too** (`if: always()`). A blocked
+  preflight or a failed publication is Story #21 evidence, and Story #20 writes
+  `run_report.json` on those paths; uploading only on success would discard
+  exactly the runs that matter most. A run that legitimately stopped early
+  keeps only the artifacts appropriate to its terminal stage — none are
+  manufactured.
+- **Secrets cannot enter it.** The step declares no environment and
+  interpolates no secret; the path cannot reach `.env` or the repository root;
+  and the canonical artifacts are already forbidden by the Stories #16–#20
+  trust boundary from carrying credentials, tokens, raw provider payloads,
+  prompts or exception dumps.
+
+Artifacts are **not** committed to `main` before verification. The closure
+record is the verified evidence published to Issue #21, not the artifact
+itself.
+
 ## The code-identity contract
 
 | field | meaning |
