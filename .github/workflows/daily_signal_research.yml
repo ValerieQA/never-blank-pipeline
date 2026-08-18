@@ -74,6 +74,7 @@ jobs:
           NB_THREADS_ACCESS_TOKEN:           ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
           NB_TELEGRAM_BOT_TOKEN:             ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
           NB_TELEGRAM_CHANNEL_ID:            ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
+        id: research
         run: python scripts/research/run_daily_research.py
 
       # Discovery results must survive a failure in the optional, explicitly
@@ -86,11 +87,12 @@ jobs:
       - name: Commit research data
         if: always()
         run: |
-          REPORT="reports/research_$(date -u +%Y-%m-%d).json"
-          if [ ! -f "$REPORT" ]; then
-            echo "No research summary at $REPORT — discovery did not complete; nothing to persist."
+          REPORT="${{ steps.research.outputs.research_summary }}"
+          if [ -z "$REPORT" ] || [ ! -f "$REPORT" ]; then
+            echo "This invocation produced no research summary — discovery did not complete; nothing to persist."
             exit 0
           fi
+          echo "Persisting research outputs recorded by this invocation: $REPORT"
           git config user.name  "never-blank-bot"
           git config user.email "bot@never-blank.com"
           # JSON packages are tracked; PNG images are gitignored (already on Cloudinary)

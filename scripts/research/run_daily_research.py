@@ -254,6 +254,17 @@ if __name__ == "__main__":
     with open(report_path, "w") as f:
         json.dump(result, f, indent=2)
 
+    # The producer owns the artifact's identity. A consumer that recomputed
+    # this path from its own wall clock would look for the wrong file whenever
+    # the run crosses midnight UTC, and would then mistake a completed
+    # discovery for a failed one. Emitted only once the summary is actually on
+    # disk, so its presence means "this invocation completed", never "some
+    # report exists".
+    _gh_output = os.environ.get("GITHUB_OUTPUT")
+    if _gh_output:
+        with open(_gh_output, "a") as f:
+            f.write(f"research_summary={report_path}\n")
+
     # Deferred, not hidden: discovery is preserved above, and the optional
     # non-canonical publishing stage still fails the run loudly.
     if result.get("publish_failures"):

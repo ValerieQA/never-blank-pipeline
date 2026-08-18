@@ -30,6 +30,24 @@ def source() -> str:
     return SCRIPT.read_text()
 
 
+def _guard_body(commit_step: dict) -> str:
+    """Everything the step decides with, before it stages anything.
+
+    Scoped deliberately: the staging and commit-message lines below legitimately
+    glob `reports/*.json` and stamp a date, and neither participates in deciding
+    whether this invocation completed.
+    """
+
+    run = commit_step["run"]
+    return run.split("git config", 1)[0]
+
+
+@pytest.fixture(scope="module")
+def steps() -> list[dict]:
+    spec = yaml.safe_load(WORKFLOW.read_text())
+    return list(spec["jobs"].values())[0]["steps"]
+
+
 @pytest.fixture(scope="module")
 def commit_step() -> dict:
     spec = yaml.safe_load(WORKFLOW.read_text())
@@ -77,17 +95,65 @@ def test_persistence_is_not_gated_on_step_success(commit_step: dict):
 def test_a_failed_discovery_commits_nothing(commit_step: dict):
     """always() is guarded, not bare — the distinction the fix rests on.
 
-    A discovery failure raises before the summary artifact is written, so the
-    guard finds no report and commits nothing. Without it, `always()` would
-    commit partial output from a run whose research stage had failed.
+    A discovery failure raises before the summary is written, so the producing
+    step emits no path and the guard commits nothing. Without it, `always()`
+    would commit partial output from a run whose research stage had failed.
     """
 
     run = commit_step["run"]
-    assert 'REPORT="reports/research_$(date -u +%Y-%m-%d).json"' in run
-    assert 'if [ ! -f "$REPORT" ]; then' in run
+    assert 'if [ -z "$REPORT" ] || [ ! -f "$REPORT" ]; then' in run
     guard_at = run.index("$REPORT")
     commit_at = run.index("git add")
     assert guard_at < commit_at, "the guard must precede any staging"
+
+
+# ── the summary's identity belongs to its producer ───────────────────────────
+
+def test_the_guard_never_recomputes_the_report_path_from_its_own_clock(
+    commit_step: dict,
+):
+    """The midnight defect, held closed.
+
+    A run whose research completes on 2026-08-18 writes
+    `research_2026-08-18.json`. If the commit step reaches `date -u` after
+    00:00 the next day it would look for `research_2026-08-19.json`, fail to
+    find it, and discard a successful discovery — the exact invariant this
+    change exists to protect.
+    """
+
+    guard = _guard_body(commit_step)
+    assert "date -u" not in guard
+    assert "$(date" not in guard
+    assert "research_$(" not in guard
+
+
+def test_the_guard_consumes_the_path_the_producing_step_emitted(commit_step: dict, steps):
+    run = commit_step["run"]
+    assert "${{ steps.research.outputs.research_summary }}" in run
+    producer = next(s for s in steps if s.get("id") == "research")
+    assert "run_daily_research.py" in producer["run"]
+
+
+def test_the_producer_emits_its_path_only_after_writing_the_summary(source: str):
+    """So the output means "this invocation completed", not "a file exists"."""
+
+    tail = source.split('if __name__ == "__main__":', 1)[1]
+    assert tail.index("json.dump(result, f, indent=2)") < tail.index("research_summary=")
+    assert 'os.environ.get("GITHUB_OUTPUT")' in tail
+
+
+def test_a_stale_report_cannot_satisfy_the_guard(source: str, commit_step: dict):
+    """An old research_*.json left in the checkout proves nothing.
+
+    Identity comes from the current invocation's own output, never from a
+    glob or an mtime ordering over whatever happens to be on disk.
+    """
+
+    guard = _guard_body(commit_step)
+    for smell in ("ls -t", "research_*.json", "find ", "sort -r"):
+        assert smell not in guard
+    # the path is written by this process, never discovered on disk
+    assert "research_summary={report_path}" in source
 
 
 def test_the_summary_artifact_is_written_only_after_run_returns(source: str):
