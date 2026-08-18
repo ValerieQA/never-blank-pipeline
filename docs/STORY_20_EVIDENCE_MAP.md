@@ -44,7 +44,11 @@ common "success". No status is manufactured for report symmetry.
 **4. "Partial completion cannot be reported as full success."**
 `SATISFIED`. `completed` is derived from canonical terminal evidence
 (`publication_results.completed`), never from the caller's view and never from
-the existence of the report. The model enforces the rule structurally: a
+the existence of the report — and the stored flag is **checked rather than
+repeated**: the entrypoint derives completion from the channel statuses, so a
+record claiming completion beside a failed or blocked channel contradicts
+itself, and produces no report at all. The report is the last place such a
+contradiction could be laundered into an authoritative account of success. The model enforces the rule structurally: a
 report claiming completion must carry the completed disposition, and a run
 whose terminal stage is earlier than publication cannot carry channel outcomes
 at all. `REUSED` is completed without a fresh provider publication;
@@ -86,6 +90,7 @@ outcomes — a channel only enters the publish path after `ALLOW`:
 | `REUSED` | **yes** — authorized, then suppressed by idempotency |
 | `PROVIDER_DUPLICATE` | **yes** — a real attempt followed authorization |
 | `FAILED` | **yes** — the failure happened during an authorized attempt |
+| `DRAFT_CREATED` | **yes** — the Wix draft was created by the provider during an authorized attempt |
 | `BLOCKED` | **no** — the channel never reached the publisher; its verdict is read for blocking reasons only and no digest is claimed |
 
 **The stored result must also obey its own semantics.** A proven authorization
@@ -103,8 +108,20 @@ contracts:
 - `REUSED` requires the prior identifier *and* the run it reuses;
 - `PROVIDER_DUPLICATE` may carry no success evidence at all — an identifier or
   URL there would be fabricated proof of a post a 409 never identified;
-- `BLOCKED` / `FAILED` / `SKIPPED` may not claim provider output that never
-  existed;
+- `FAILED` and `SKIPPED` are the narrow shapes `BasePublisher._fail` and
+  `._skip` actually write — an error message and nothing else — so they may
+  carry no identifier, **no URL**, and no reuse source. A URL is rejected even
+  when it agrees with its own provenance: internal consistency is not evidence
+  that a provider ever returned it;
+- `BLOCKED` never reached a publisher at all, so the same holds and its
+  provenance must be absent (the entrypoint writes no such key) or the exact
+  neutral value — a malformed or success-like provenance there is tampering,
+  not a publication;
+- `DRAFT_CREATED` is left intact: `._draft` legitimately carries the draft
+  identifier **and** a dashboard link while deliberately leaving provenance
+  `unavailable`, because a dashboard link is not a published post URL. The
+  rules above therefore never apply the "no URL" restriction to a draft; what
+  is required of it is its draft identifier;
 - only Wix has an accepted `locally_derived` URL form; a LinkedIn result
   claiming one is rejected (Issue #108).
 

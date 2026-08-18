@@ -1,0 +1,30 @@
+{
+  "run_id": "073fa1ae-a8d0-4eaf-88b7-7265b0f9566b",
+  "signal_id": "sig-test-001",
+  "source_run_id": "073fa1ae-a8d0-4eaf-88b7-7265b0f9566b",
+  "generation_run_id": "073fa1ae-a8d0-4eaf-88b7-7265b0f9566b",
+  "execution_mode": "controlled-live",
+  "published_at": "2026-08-13T19:07:32.579355+00:00",
+  "results": {
+    "wix": {
+      "platform": "wix",
+      "status": "PUBLISHED",
+      "external_id": "wix-post-id",
+      "url": "https://example.com/wix",
+      "error_message": null,
+      "run_id": ""
+    },
+    "linkedin": {
+      "platform": "linkedin",
+      "status": "PUBLISHED",
+      "external_id": "linkedin-post-id",
+      "url": "https://example.com/linkedin",
+      "error_message": null,
+      "run_id": ""
+    }
+  },
+  "completed": true,
+  "errors": [],
+  "wix_url": "https://example.com/wix",
+  "wix_post_id": "wix-post-id"
+}

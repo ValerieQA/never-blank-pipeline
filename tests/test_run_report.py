@@ -737,10 +737,30 @@ def test_reported_configuration_comes_from_the_assignment_anchor(
 # publication_results.json.
 
 
+def _blocked_channel_run(tmp_path, monkeypatch) -> Path:
+    """A per-channel BLOCK: publication evidence exists, LinkedIn is blocked."""
+
+    _target_env(monkeypatch)
+    monkeypatch.delenv("NB_ZERNIO_API_KEY", raising=False)
+    _live_run(tmp_path)
+    run_dir = _newest_run(tmp_path)
+    (run_dir / "run_report.json").unlink()
+    return run_dir
+
+
 def _tamper_result(run_dir: Path, channel: str, **changes):
     path = run_dir / "publication_results.json"
     data = json.loads(path.read_text())
     data["results"][channel].update(changes)
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+
+def _tamper_publication(run_dir: Path, **changes):
+    """Edit the publication record's own top-level fields."""
+
+    path = run_dir / "publication_results.json"
+    data = json.loads(path.read_text())
+    data.update(changes)
     path.write_text(json.dumps(data), encoding="utf-8")
 
 
@@ -861,3 +881,146 @@ def test_valid_results_of_every_accepted_shape_still_report(
     assert report.channel("wix").status == "PUBLISHED"
     assert report.channel("linkedin").status == "REUSED"
     assert report.channel("linkedin").reused_from_run_id
+
+
+# ── Non-publication statuses may not look like publications ──────────────────
+#
+# The canonical shapes are narrow: `BasePublisher._fail` and `._skip` carry an
+# error message and nothing else, the entrypoint's BLOCKED record carries no
+# provenance at all, and `._draft` carries a draft id plus a dashboard link
+# with the neutral provenance untouched. Success-like URL evidence on any of
+# them describes provider output that never existed — even when the URL and
+# provenance happen to agree with each other.
+
+
+def test_failed_channel_cannot_carry_a_provider_url(tmp_path, monkeypatch):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(
+        run_dir, "wix", status="FAILED", external_id=None,
+        url="https://neverblank.co/blog/x", url_provenance="provider_confirmed",
+    )
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+    assert not (run_dir / "run_report.json").exists()
+
+
+def test_skipped_channel_cannot_carry_provider_output(tmp_path, monkeypatch):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(
+        run_dir, "linkedin", status="SKIPPED", external_id=None,
+        url="https://www.linkedin.com/feed/update/urn:li:share:1",
+        url_provenance="provider_confirmed",
+    )
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_blocked_channel_cannot_carry_malformed_provenance(tmp_path, monkeypatch):
+    run_dir = _blocked_channel_run(tmp_path, monkeypatch)
+    _tamper_result(run_dir, "linkedin", url_provenance="totally-bogus")
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+@pytest.mark.parametrize("provenance", ["provider_confirmed", "locally_derived"])
+def test_blocked_channel_cannot_claim_a_success_like_provenance(
+    tmp_path, monkeypatch, provenance
+):
+    run_dir = _blocked_channel_run(tmp_path, monkeypatch)
+    _tamper_result(run_dir, "linkedin", url_provenance=provenance)
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_canonical_failed_shape_still_reports(tmp_path, monkeypatch):
+    """The real `_fail` shape: an error message and nothing else."""
+
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(
+        run_dir, "wix", status="FAILED", external_id=None, url=None,
+        url_provenance="unavailable", error_message="Wix HTTP 500: boom",
+    )
+    _tamper_publication(run_dir, completed=False, errors=["Wix HTTP 500: boom"])
+    report = _rebuild(tmp_path, run_dir)
+    wix = report.channel("wix")
+    assert wix.status == "FAILED"
+    assert wix.external_id is None and wix.url is None
+    assert report.completed is False
+
+
+def test_canonical_skipped_shape_still_reports(tmp_path, monkeypatch):
+    """The real `_skip` shape."""
+
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(
+        run_dir, "linkedin", status="SKIPPED", external_id=None, url=None,
+        url_provenance="unavailable",
+    )
+    _tamper_publication(run_dir, completed=False, errors=["linkedin skipped"])
+    report = _rebuild(tmp_path, run_dir)
+    assert report.channel("linkedin").status == "SKIPPED"
+
+
+def test_canonical_blocked_shape_still_reports(tmp_path, monkeypatch):
+    """The entrypoint's real BLOCKED record carries no provenance key."""
+
+    run_dir = _blocked_channel_run(tmp_path, monkeypatch)
+    entry = json.loads(
+        (run_dir / "publication_results.json").read_text()
+    )["results"]["linkedin"]
+    assert "url_provenance" not in entry          # the real shape
+    report = _rebuild(tmp_path, run_dir)
+    linkedin = report.channel("linkedin")
+    assert linkedin.status == "BLOCKED"
+    assert linkedin.authorized_package_digest is None
+    assert linkedin.blocking_reasons
+
+
+def test_canonical_draft_created_shape_still_reports(tmp_path, monkeypatch):
+    """A Wix draft legitimately carries its id and a dashboard link.
+
+    `BasePublisher._draft` never sets a provenance — a dashboard link is not
+    a published post URL, which is exactly why it stays `unavailable`. That
+    accepted contract must not be broken by the stricter rules above.
+    """
+
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(
+        run_dir, "wix", status="DRAFT_CREATED", external_id="draft-001",
+        url="https://manage.wix.com/dashboard/site/blog/draft-posts/draft-001",
+        url_provenance="unavailable",
+    )
+    report = _rebuild(tmp_path, run_dir)
+    wix = report.channel("wix")
+    assert wix.status == "DRAFT_CREATED"
+    assert wix.external_id == "draft-001"
+    assert wix.url and "dashboard" in wix.url
+    assert wix.url_provenance == "unavailable"
+
+
+def test_draft_without_its_identifier_produces_no_report(tmp_path, monkeypatch):
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(run_dir, "wix", status="DRAFT_CREATED", external_id="")
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)
+
+
+def test_completion_cannot_be_claimed_over_an_incomplete_channel(
+    tmp_path, monkeypatch
+):
+    """The stored completion flag is checked, not repeated.
+
+    The entrypoint derives completion from the channel statuses, so a record
+    claiming completion beside a failed channel contradicts itself — and the
+    report is the last place that could launder it into an authoritative
+    account of a successful run.
+    """
+
+    run_dir = _published_run(tmp_path, monkeypatch)
+    _tamper_result(
+        run_dir, "wix", status="FAILED", external_id=None, url=None,
+        error_message="Wix HTTP 500: boom",
+    )
+    with pytest.raises(RunReportError):
+        _rebuild(tmp_path, run_dir)          # completed is still true
+    assert not (run_dir / "run_report.json").exists()

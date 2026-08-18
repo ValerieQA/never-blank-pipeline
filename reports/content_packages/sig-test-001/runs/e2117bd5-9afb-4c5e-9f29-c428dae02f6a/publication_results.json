@@ -1,0 +1,40 @@
+{
+  "run_id": "e2117bd5-9afb-4c5e-9f29-c428dae02f6a",
+  "signal_id": "sig-test-001",
+  "source_run_id": "e2117bd5-9afb-4c5e-9f29-c428dae02f6a",
+  "generation_run_id": "e2117bd5-9afb-4c5e-9f29-c428dae02f6a",
+  "execution_mode": "controlled-live",
+  "configuration_identity": {
+    "schema_version": "1",
+    "configuration_id": "never-blank",
+    "configuration_version": "1",
+    "configuration_hash": "sha256:ab9a8492dca22221d1be0adac3e151d7d89b0476e83dded419490f17a08c00d1"
+  },
+  "published_at": "2026-08-16T22:10:30.023530+00:00",
+  "results": {
+    "wix": {
+      "platform": "wix",
+      "status": "FAILED",
+      "error_message": "'types.SimpleNamespace' object has no attribute 'source_article_digest'",
+      "external_id": null,
+      "url": null,
+      "run_id": "e2117bd5-9afb-4c5e-9f29-c428dae02f6a"
+    },
+    "linkedin": {
+      "platform": "linkedin",
+      "status": "PUBLISHED",
+      "external_id": "linkedin-post-id",
+      "url": "https://example.com/linkedin",
+      "error_message": null,
+      "run_id": ""
+    }
+  },
+  "completed": false,
+  "errors": [
+    "'types.SimpleNamespace' object has no attribute 'source_article_digest'"
+  ],
+  "wix_url": "",
+  "wix_post_id": null,
+  "wix_reused_from_run_id": null,
+  "unusable_prior_publication_evidence": null
+}

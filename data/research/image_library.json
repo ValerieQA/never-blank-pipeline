@@ -613,5 +613,25 @@
     "visual_family": "light_message_card",
     "design_version": "3",
     "hook_text": "A single croissant photo did what months of marketing couldn’t: it filled every seat, every day, for four months."
+  },
+  "sig-test-001": {
+    "url": "reports/content_packages/images/sig-test-001_blog.png",
+    "signal_type": "market_trend",
+    "headline": "AI adoption accelerates in SMBs",
+    "created_at": "2026-08-11",
+    "method": "programmatic",
+    "visual_family": "light_paths",
+    "design_version": "3",
+    "hook_text": "According to Gartner, 60 percent of SMBs"
+  },
+  "sig-identity-test-001": {
+    "url": "reports/content_packages/images/sig-identity-test-001_blog.png",
+    "signal_type": "market_trend",
+    "headline": "Run identity propagation test signal",
+    "created_at": "2026-08-12",
+    "method": "programmatic",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Synthetic fact for identity tracing."
   }
 }

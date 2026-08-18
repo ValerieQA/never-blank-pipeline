@@ -240,9 +240,17 @@ def _artifact_references(run_dir: Path) -> tuple[ArtifactReference, ...]:
 #: reached the publisher, so demanding a package binding for it would be
 #: demanding proof of something that legitimately never happened.
 BINDING_REQUIRED_STATUSES = frozenset(
-    {"PUBLISHED", "REUSED", "PROVIDER_DUPLICATE", "FAILED"}
+    {"PUBLISHED", "REUSED", "PROVIDER_DUPLICATE", "FAILED", "DRAFT_CREATED"}
 )
 NO_BINDING_STATUSES = frozenset({"BLOCKED", "SKIPPED"})
+
+#: The entrypoint's own completion rule, mirrored rather than imported so the
+#: report does not depend on the script it accounts for: a run is complete
+#: only when every channel ended in one of these. A stored ``completed: true``
+#: beside a channel outside this set is an artifact contradicting itself.
+COMPLETED_STATUSES = frozenset(
+    {"PUBLISHED", "DRAFT_CREATED", "published_url_unavailable", "REUSED"}
+)
 
 #: The entrypoint's own status for a channel the preflight refused. It has no
 #: ``PublishStatus`` because no publisher was ever constructed for it.
@@ -298,6 +306,18 @@ def _validated_channel_result(channel: str, entry: dict) -> dict:
         except ValueError:
             reject("carries an invalid url_provenance")
 
+    def require_neutral_provenance(subject: str):
+        """Absent, or exactly the untouched neutral value the code writes.
+
+        Only the two publish paths ever set a provenance; every other result
+        keeps the neutral default. A foreign, malformed or success-like value
+        on such a result is evidence of tampering, not of a publication.
+        """
+        if raw_provenance is None:
+            return
+        if provenance_or_reject() is not UrlProvenance.UNAVAILABLE:
+            reject(f"claims a URL provenance {subject} cannot have")
+
     def check_url_consistency(provenance):
         if provenance is UrlProvenance.PROVIDER_CONFIRMED and not (url or ""):
             reject("claims a provider-confirmed URL while carrying none")
@@ -312,12 +332,14 @@ def _validated_channel_result(channel: str, entry: dict) -> dict:
                 reject("claims a locally-derived URL while carrying none")
 
     if status is None:
-        # BLOCKED — no provider interaction happened, so no provider evidence
-        # may be present.
+        # BLOCKED — the preflight refused the channel, so no publisher was
+        # ever constructed and no provider evidence of any kind may appear.
+        # The entrypoint writes no provenance at all for these.
         if (external_id or "").strip() or reused_from:
             reject("claims provider evidence for a channel that never published")
         if (url or "").strip():
             reject("claims a URL for a channel that never published")
+        require_neutral_provenance("a channel that never reached the publisher")
 
     elif status is PublishStatus.PUBLISHED:
         if not (external_id or "").strip():
@@ -342,15 +364,30 @@ def _validated_channel_result(channel: str, entry: dict) -> dict:
             if provenance_or_reject() is not UrlProvenance.UNAVAILABLE:
                 reject("claims a URL provenance a provider duplicate cannot have")
 
+    elif status is PublishStatus.DRAFT_CREATED:
+        # The accepted Wix draft contract (`BasePublisher._draft`): a draft
+        # legitimately carries its draft identifier and a dashboard link, and
+        # deliberately never sets a URL provenance — a dashboard link is not a
+        # published post URL, which is exactly why it stays `unavailable`.
+        if not (external_id or "").strip():
+            reject("claims a created draft without its draft identifier")
+        if reused_from:
+            reject("claims a reuse source for a draft")
+        require_neutral_provenance("a draft")
+
     else:
-        # BLOCKED / FAILED / SKIPPED / DRAFT_CREATED — no provider success is
-        # claimed, and none may be invented for them.
-        if status is not PublishStatus.DRAFT_CREATED and (external_id or "").strip():
+        # FAILED / SKIPPED — the canonical shapes (`BasePublisher._fail` and
+        # `._skip`) carry an error message and nothing else: no identifier, no
+        # URL, and the untouched neutral provenance. Success-like URL evidence
+        # here would describe provider output that never existed, even when the
+        # URL and provenance happen to agree with each other.
+        if (external_id or "").strip():
             reject("claims a provider identifier for a channel that did not publish")
         if reused_from:
             reject("claims a reuse source for a channel that did not publish")
-        if raw_provenance is not None:
-            check_url_consistency(provenance_or_reject())
+        if (url or "").strip():
+            reject("claims a provider URL for a channel that did not publish")
+        require_neutral_provenance("a channel that did not publish")
 
     return {
         "status": status.value if status is not None else BLOCKED_STATUS,
@@ -640,6 +677,22 @@ def build_run_report(
     completed = bool(publication.get("completed")) if publication else (
         terminal_disposition is TerminalDisposition.COMPLETED
     )
+    if completed:
+        # "Partial completion cannot be reported as full success" has to hold
+        # against the stored flag too: the entrypoint derives completion from
+        # the channel statuses, so a run claiming completion while a channel
+        # failed or was blocked is contradicting itself, and the report is the
+        # last place that contradiction should be laundered into an
+        # authoritative account.
+        incomplete = [
+            channel.channel for channel in channels
+            if channel.status not in COMPLETED_STATUSES
+        ]
+        if incomplete:
+            raise RunReportError(
+                "publication evidence claims completion while "
+                f"{', '.join(sorted(incomplete))} did not complete"
+            )
     if completed and terminal_disposition is not TerminalDisposition.COMPLETED:
         # canonical evidence outranks the caller's view of the outcome
         terminal_disposition = TerminalDisposition.COMPLETED

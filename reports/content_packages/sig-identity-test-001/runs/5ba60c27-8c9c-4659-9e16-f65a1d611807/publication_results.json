@@ -1,0 +1,39 @@
+{
+  "run_id": "5ba60c27-8c9c-4659-9e16-f65a1d611807",
+  "signal_id": "sig-identity-test-001",
+  "source_run_id": "5ba60c27-8c9c-4659-9e16-f65a1d611807",
+  "generation_run_id": "5ba60c27-8c9c-4659-9e16-f65a1d611807",
+  "execution_mode": "controlled-live",
+  "configuration_identity": {
+    "schema_version": "1",
+    "configuration_id": "never-blank",
+    "configuration_version": "1",
+    "configuration_hash": "sha256:ab9a8492dca22221d1be0adac3e151d7d89b0476e83dded419490f17a08c00d1"
+  },
+  "published_at": "2026-08-16T18:35:56.660807+00:00",
+  "results": {
+    "wix": {
+      "platform": "wix",
+      "status": "FAILED",
+      "error_message": "'types.SimpleNamespace' object has no attribute 'configuration_identity'",
+      "external_id": null,
+      "url": null,
+      "run_id": "5ba60c27-8c9c-4659-9e16-f65a1d611807"
+    },
+    "linkedin": {
+      "platform": "linkedin",
+      "status": "FAILED",
+      "error_message": "'types.SimpleNamespace' object has no attribute 'configuration_identity'",
+      "external_id": null,
+      "url": null,
+      "run_id": "5ba60c27-8c9c-4659-9e16-f65a1d611807"
+    }
+  },
+  "completed": false,
+  "errors": [
+    "'types.SimpleNamespace' object has no attribute 'configuration_identity'",
+    "'types.SimpleNamespace' object has no attribute 'configuration_identity'"
+  ],
+  "wix_url": "",
+  "wix_post_id": null
+}
