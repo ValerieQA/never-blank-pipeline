@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "80725c18fd4ed61c",
+  "HEADLINE": "Running TikTok campaigns with impact — missed opportunities that make all the difference",
+  "prepared_at": "2026-08-18 23:26 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why Most TikTok Campaigns Fail to Convert (And How Invisalign Cracked the Code)",
+      "angle": "Brands struggle to balance engagement with measurable sales results on TikTok → This tension leads to wasted ad spend and missed leads → Invisalign’s interactive Smile Quiz shifted the campaign from passive views to active conversions → The lesson: campaign structure must prioritize direct qualification to drive ROI."
+    },
+    "linkedin": {
+      "headline": "Most TikTok campaigns end with a scroll. Invisalign’s ended with a sale.",
+      "angle": "TikTok’s engagement-driven format often leaves founders chasing vanity metrics, but integrating interactive elements like Invisalign’s Smile Quiz turns passive views into qualified leads, proving that campaign structure dictates commercial impact."
+    },
+    "facebook": {
+      "headline": "Why do so many TikTok ads leave money on the table? Invisalign’s Smile Quiz shows the difference.",
+      "angle": "TikTok campaigns often prioritize engagement over sales; Invisalign’s interactive ad boosted form completions by nearly 30%—are you structuring your campaigns to convert or just to be seen?"
+    },
+    "instagram": {
+      "headline": "From Scroll to Sale: TikTok Done Right",
+      "angle": "Interactive ad formats on TikTok, like Invisalign’s Smile Quiz, turn fleeting attention into qualified leads, proving that campaign design beats flashy content alone."
+    },
+    "threads": {
+      "thread_hook": "Most TikTok ads stop at a view. Invisalign’s Smile Quiz stopped the scroll and started the sale.",
+      "angle": "This thread breaks down how shifting from passive engagement to interactive qualification on TikTok transforms campaign ROI and why founders need to rethink ad structure if they want real results."
+    },
+    "stories": {
+      "story_question": "Are your TikTok ads just getting views or actually driving sales?",
+      "angle": "Exploring the tension between chasing engagement and demanding measurable sales outcomes in TikTok campaigns—and how interactive formats can close that gap."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095552/never-blank/posts/research/80725c18fd4ed61c/blog/1787095552.png",
+        "path": "reports/content_packages/images/80725c18fd4ed61c_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095556/never-blank/posts/research/80725c18fd4ed61c/linkedin/1787095555.png",
+        "path": "reports/content_packages/images/80725c18fd4ed61c_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095559/never-blank/posts/research/80725c18fd4ed61c/facebook/1787095559.png",
+        "path": "reports/content_packages/images/80725c18fd4ed61c_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095565/never-blank/posts/research/80725c18fd4ed61c/instagram/1787095565.png",
+        "path": "reports/content_packages/images/80725c18fd4ed61c_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095570/never-blank/posts/research/80725c18fd4ed61c/threads/1787095570.png",
+        "path": "reports/content_packages/images/80725c18fd4ed61c_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095578/never-blank/posts/research/80725c18fd4ed61c/stories/1787095577.png",
+        "path": "reports/content_packages/images/80725c18fd4ed61c_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "mountains_depth_layers",
+    "hook_text": "Interactive elements can boost engagement by nearly 30%."
+  }
+}

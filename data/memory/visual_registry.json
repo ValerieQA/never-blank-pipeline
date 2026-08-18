@@ -251,6 +251,26 @@
       "image_url": "reports/content_packages/images/sig-identity-test-001_blog.png",
       "source_topic": "Run identity propagation test signal",
       "reuse_count": 1
+    },
+    {
+      "published_date": "2026-08-18T23:26:18Z",
+      "content_slug": "research/80725c18fd4ed61c",
+      "visual_family": "mountains_depth_layers",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "Interactive elements can boost engagement by nearly 30%.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095552/never-blank/posts/research/80725c18fd4ed61c/blog/1787095552.png",
+      "source_topic": "Running TikTok campaigns with impact \u2014 missed opportunities that make all the difference",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-08-18T23:26:27Z",
+      "content_slug": "research/9edc711177c0fc6b",
+      "visual_family": "sand_pause_card",
+      "dominant_palette": "sand",
+      "hook_text": "Most people lose their job and panic. He lost his job and baked $85,000 worth of bagels in his kitchen.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095582/never-blank/posts/research/9edc711177c0fc6b/blog/1787095582.png",
+      "source_topic": "This Dad Lost His Job and Started Making a Breakfast Staple at Home. It Was So Good He Sold $85,000 Worth From His Kitchen.",
+      "reuse_count": 1
     }
   ]
 }

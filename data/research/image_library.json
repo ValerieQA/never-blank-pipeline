@@ -633,5 +633,25 @@
     "visual_family": "contrast_waves",
     "design_version": "3",
     "hook_text": "Synthetic fact for identity tracing."
+  },
+  "80725c18fd4ed61c": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095552/never-blank/posts/research/80725c18fd4ed61c/blog/1787095552.png",
+    "signal_type": "referral and word-of-mouth mechanism",
+    "headline": "Running TikTok campaigns with impact — missed opportunities that make all the difference",
+    "created_at": "2026-08-18",
+    "method": "gpt-image-1",
+    "visual_family": "mountains_depth_layers",
+    "design_version": "3",
+    "hook_text": "Interactive elements can boost engagement by nearly 30%."
+  },
+  "9edc711177c0fc6b": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095582/never-blank/posts/research/9edc711177c0fc6b/blog/1787095582.png",
+    "signal_type": "presence maintenance failure",
+    "headline": "This Dad Lost His Job and Started Making a Breakfast Staple at Home. It Was So Good He Sold $85,000 Worth From His Kitchen.",
+    "created_at": "2026-08-18",
+    "method": "quote_card",
+    "visual_family": "sand_pause_card",
+    "design_version": "3",
+    "hook_text": "Most people lose their job and panic. He lost his job and baked $85,000 worth of bagels in his kitchen."
   }
 }

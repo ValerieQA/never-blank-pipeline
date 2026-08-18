@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "9edc711177c0fc6b",
+  "HEADLINE": "This Dad Lost His Job and Started Making a Breakfast Staple at Home. It Was So Good He Sold $85,000 Worth From His Kitchen.",
+  "prepared_at": "2026-08-18 23:26 UTC",
+  "content": {
+    "blog": {
+      "headline": "From Job Loss to $85,000 in Bagels: How One Founder Shrunk the Stage and Doubled Down",
+      "angle": "A father’s job loss created financial pressure → instead of panicking, he focused on baking quality bagels at home → his kitchen became a $85,000 business → proving that adversity sharpens entrepreneurial focus and product discipline."
+    },
+    "linkedin": {
+      "headline": "Most people lose their job and panic. He lost his job and baked $85,000 worth of bagels in his kitchen.",
+      "angle": "When traditional presence maintenance fails, founders who shrink their stage and double down on product can turn adversity into a thriving business."
+    },
+    "facebook": {
+      "headline": "He lost his job and started baking bagels at home. Six years later, he sold over $85,000 worth from his kitchen.",
+      "angle": "Job loss forced a father to rethink his path — by starting small and focusing on quality, he built a thriving home-based business. What’s your kitchen table boardroom?"
+    },
+    "instagram": {
+      "headline": "From Kitchen Table to $85K Bagel Business",
+      "angle": "When the world shrinks your stage, the product becomes your spotlight — one dad’s story of turning job loss into a booming home bakery."
+    },
+    "threads": {
+      "thread_hook": "Losing your job usually means panic. For one dad, it meant baking 1.5 million bagels from his kitchen.",
+      "angle": "This thread breaks down how shrinking the stage and doubling down on product quality can transform financial insecurity into a scalable business."
+    },
+    "stories": {
+      "story_question": "What if losing your job meant starting your best business yet?",
+      "angle": "Exploring how founders can turn financial pressure into focused product excellence by starting small and owning their niche."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095582/never-blank/posts/research/9edc711177c0fc6b/blog/1787095582.png",
+        "path": "reports/content_packages/images/9edc711177c0fc6b_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095583/never-blank/posts/research/9edc711177c0fc6b/linkedin/1787095583.png",
+        "path": "reports/content_packages/images/9edc711177c0fc6b_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095584/never-blank/posts/research/9edc711177c0fc6b/facebook/1787095584.png",
+        "path": "reports/content_packages/images/9edc711177c0fc6b_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095585/never-blank/posts/research/9edc711177c0fc6b/instagram/1787095585.png",
+        "path": "reports/content_packages/images/9edc711177c0fc6b_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095586/never-blank/posts/research/9edc711177c0fc6b/threads/1787095586.png",
+        "path": "reports/content_packages/images/9edc711177c0fc6b_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095586/never-blank/posts/research/9edc711177c0fc6b/stories/1787095586.png",
+        "path": "reports/content_packages/images/9edc711177c0fc6b_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "sand_pause_card",
+    "hook_text": "Most people lose their job and panic. He lost his job and baked $85,000 worth of bagels in his kitchen."
+  }
+}

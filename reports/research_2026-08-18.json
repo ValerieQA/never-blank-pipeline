@@ -1,0 +1,237 @@
+{
+  "date": "2026-08-18",
+  "candidates_found": 2,
+  "duplicates_skipped": 0,
+  "new_signals_added": 2,
+  "selected_for_content": 2,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Running TikTok campaigns with impact \u2014 missed opportunities that make all the di",
+    "This Dad Lost His Job and Started Making a Breakfast Staple at Home. It Was So G"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "80725c18fd4ed61c",
+      "headline": "Running TikTok campaigns with impact \u2014 missed opportunities that make all the difference",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'the most expensive tiktok campaign is the one that fills your notifications but leaves your inbox empty.'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 2,
+  "images_new": 2,
+  "images_reused": 0,
+  "publish_failures": [
+    "editorial_gate: Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'the most expensive tiktok campaign is the one that fills your notifications but leaves your inbox empty.'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "80725c18fd4ed61c",
+      "HEADLINE": "Running TikTok campaigns with impact \u2014 missed opportunities that make all the difference",
+      "prepared_at": "2026-08-18 23:26 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why Most TikTok Campaigns Fail to Convert (And How Invisalign Cracked the Code)",
+          "angle": "Brands struggle to balance engagement with measurable sales results on TikTok \u2192 This tension leads to wasted ad spend and missed leads \u2192 Invisalign\u2019s interactive Smile Quiz shifted the campaign from passive views to active conversions \u2192 The lesson: campaign structure must prioritize direct qualification to drive ROI."
+        },
+        "linkedin": {
+          "headline": "Most TikTok campaigns end with a scroll. Invisalign\u2019s ended with a sale.",
+          "angle": "TikTok\u2019s engagement-driven format often leaves founders chasing vanity metrics, but integrating interactive elements like Invisalign\u2019s Smile Quiz turns passive views into qualified leads, proving that campaign structure dictates commercial impact."
+        },
+        "facebook": {
+          "headline": "Why do so many TikTok ads leave money on the table? Invisalign\u2019s Smile Quiz shows the difference.",
+          "angle": "TikTok campaigns often prioritize engagement over sales; Invisalign\u2019s interactive ad boosted form completions by nearly 30%\u2014are you structuring your campaigns to convert or just to be seen?"
+        },
+        "instagram": {
+          "headline": "From Scroll to Sale: TikTok Done Right",
+          "angle": "Interactive ad formats on TikTok, like Invisalign\u2019s Smile Quiz, turn fleeting attention into qualified leads, proving that campaign design beats flashy content alone."
+        },
+        "threads": {
+          "thread_hook": "Most TikTok ads stop at a view. Invisalign\u2019s Smile Quiz stopped the scroll and started the sale.",
+          "angle": "This thread breaks down how shifting from passive engagement to interactive qualification on TikTok transforms campaign ROI and why founders need to rethink ad structure if they want real results."
+        },
+        "stories": {
+          "story_question": "Are your TikTok ads just getting views or actually driving sales?",
+          "angle": "Exploring the tension between chasing engagement and demanding measurable sales outcomes in TikTok campaigns\u2014and how interactive formats can close that gap."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095552/never-blank/posts/research/80725c18fd4ed61c/blog/1787095552.png",
+            "path": "reports/content_packages/images/80725c18fd4ed61c_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095556/never-blank/posts/research/80725c18fd4ed61c/linkedin/1787095555.png",
+            "path": "reports/content_packages/images/80725c18fd4ed61c_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095559/never-blank/posts/research/80725c18fd4ed61c/facebook/1787095559.png",
+            "path": "reports/content_packages/images/80725c18fd4ed61c_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095565/never-blank/posts/research/80725c18fd4ed61c/instagram/1787095565.png",
+            "path": "reports/content_packages/images/80725c18fd4ed61c_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095570/never-blank/posts/research/80725c18fd4ed61c/threads/1787095570.png",
+            "path": "reports/content_packages/images/80725c18fd4ed61c_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095578/never-blank/posts/research/80725c18fd4ed61c/stories/1787095577.png",
+            "path": "reports/content_packages/images/80725c18fd4ed61c_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "mountains_depth_layers",
+        "hook_text": "Interactive elements can boost engagement by nearly 30%."
+      }
+    },
+    {
+      "SIGNAL_ID": "9edc711177c0fc6b",
+      "HEADLINE": "This Dad Lost His Job and Started Making a Breakfast Staple at Home. It Was So Good He Sold $85,000 Worth From His Kitchen.",
+      "prepared_at": "2026-08-18 23:26 UTC",
+      "content": {
+        "blog": {
+          "headline": "From Job Loss to $85,000 in Bagels: How One Founder Shrunk the Stage and Doubled Down",
+          "angle": "A father\u2019s job loss created financial pressure \u2192 instead of panicking, he focused on baking quality bagels at home \u2192 his kitchen became a $85,000 business \u2192 proving that adversity sharpens entrepreneurial focus and product discipline."
+        },
+        "linkedin": {
+          "headline": "Most people lose their job and panic. He lost his job and baked $85,000 worth of bagels in his kitchen.",
+          "angle": "When traditional presence maintenance fails, founders who shrink their stage and double down on product can turn adversity into a thriving business."
+        },
+        "facebook": {
+          "headline": "He lost his job and started baking bagels at home. Six years later, he sold over $85,000 worth from his kitchen.",
+          "angle": "Job loss forced a father to rethink his path \u2014 by starting small and focusing on quality, he built a thriving home-based business. What\u2019s your kitchen table boardroom?"
+        },
+        "instagram": {
+          "headline": "From Kitchen Table to $85K Bagel Business",
+          "angle": "When the world shrinks your stage, the product becomes your spotlight \u2014 one dad\u2019s story of turning job loss into a booming home bakery."
+        },
+        "threads": {
+          "thread_hook": "Losing your job usually means panic. For one dad, it meant baking 1.5 million bagels from his kitchen.",
+          "angle": "This thread breaks down how shrinking the stage and doubling down on product quality can transform financial insecurity into a scalable business."
+        },
+        "stories": {
+          "story_question": "What if losing your job meant starting your best business yet?",
+          "angle": "Exploring how founders can turn financial pressure into focused product excellence by starting small and owning their niche."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095582/never-blank/posts/research/9edc711177c0fc6b/blog/1787095582.png",
+            "path": "reports/content_packages/images/9edc711177c0fc6b_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095583/never-blank/posts/research/9edc711177c0fc6b/linkedin/1787095583.png",
+            "path": "reports/content_packages/images/9edc711177c0fc6b_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095584/never-blank/posts/research/9edc711177c0fc6b/facebook/1787095584.png",
+            "path": "reports/content_packages/images/9edc711177c0fc6b_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095585/never-blank/posts/research/9edc711177c0fc6b/instagram/1787095585.png",
+            "path": "reports/content_packages/images/9edc711177c0fc6b_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095586/never-blank/posts/research/9edc711177c0fc6b/threads/1787095586.png",
+            "path": "reports/content_packages/images/9edc711177c0fc6b_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787095586/never-blank/posts/research/9edc711177c0fc6b/stories/1787095586.png",
+            "path": "reports/content_packages/images/9edc711177c0fc6b_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "sand_pause_card",
+        "hook_text": "Most people lose their job and panic. He lost his job and baked $85,000 worth of bagels in his kitchen."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "80725c18fd4ed61c",
+      "headline": "Running TikTok campaigns with impact \u2014 missed opportunities that make all the difference",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'the most expensive tiktok campaign is the one that fills your notifications but leaves your inbox empty.'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ]
+}
