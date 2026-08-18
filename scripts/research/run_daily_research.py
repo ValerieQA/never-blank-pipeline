@@ -202,12 +202,18 @@ def run() -> dict:
         publish_reports = publish_packages(selected, content_packages)
         summary["publish_reports"] = publish_reports
         failures = _publishing_failures(publish_reports)
-        if failures:
-            # Fail the Actions run visibly. Editorial generation is completed and saved,
-            # but a blocked package must never look like a successful publication.
-            raise RuntimeError("Live publishing blocked/failed: " + " | ".join(failures))
         if not publish_reports:
-            raise RuntimeError("Publishing was enabled but produced no publish report")
+            failures = ["Publishing was enabled but produced no publish report"]
+        if failures:
+            # The run still fails visibly — a blocked package must never look
+            # like a successful publication — but it fails *after* discovery's
+            # own evidence is on disk. Raising here used to abandon Stages 7
+            # and 9 and skip the summary artifact, so a workflow could not
+            # tell "discovery succeeded, optional publishing failed" from
+            # "discovery failed", and committed neither. Stage 11 is
+            # explicitly not a Release 1 canonical publication (see the module
+            # docstring); it must not be able to destroy discovery results.
+            summary["publish_failures"] = failures
 
     log.info("=== Stage 7: Sheets Sync ===")
     summary["sheet_sync"] = "success" if sync_to_sheets() else "failed"
@@ -237,10 +243,24 @@ def _print_summary(s: dict) -> None:
 
 
 if __name__ == "__main__":
+    # A discovery failure still propagates out of run() and no summary is
+    # written — the absence of that artifact is what tells a caller the
+    # research stage itself failed, so partial results are never persisted as
+    # though the run had succeeded.
     result = run()
     _print_summary(result)
     Path("reports").mkdir(exist_ok=True)
     report_path = Path(f"reports/research_{result['date']}.json")
     with open(report_path, "w") as f:
         json.dump(result, f, indent=2)
+
+    # Deferred, not hidden: discovery is preserved above, and the optional
+    # non-canonical publishing stage still fails the run loudly.
+    if result.get("publish_failures"):
+        print(
+            "\nLive publishing blocked/failed: "
+            + " | ".join(result["publish_failures"]),
+            file=sys.stderr,
+        )
+        sys.exit(1)
     log.info("Report saved: %s", report_path)

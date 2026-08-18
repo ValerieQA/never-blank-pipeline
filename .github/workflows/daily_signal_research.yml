@@ -76,8 +76,21 @@ jobs:
           NB_TELEGRAM_CHANNEL_ID:            ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
         run: python scripts/research/run_daily_research.py
 
+      # Discovery results must survive a failure in the optional, explicitly
+      # non-canonical Stage 11 publishing (see run_daily_research.py's module
+      # docstring). always() alone would be wrong — it could commit partial
+      # output after discovery itself failed — so the guard below is what
+      # distinguishes the two cases: the summary artifact is written only
+      # once research completed, and a discovery failure raises before it
+      # exists, leaving nothing to commit.
       - name: Commit research data
+        if: always()
         run: |
+          REPORT="reports/research_$(date -u +%Y-%m-%d).json"
+          if [ ! -f "$REPORT" ]; then
+            echo "No research summary at $REPORT — discovery did not complete; nothing to persist."
+            exit 0
+          fi
           git config user.name  "never-blank-bot"
           git config user.email "bot@never-blank.com"
           # JSON packages are tracked; PNG images are gitignored (already on Cloudinary)
