@@ -102,8 +102,8 @@ namespace `reports/content_packages/<signal_id>/runs/<run_id>/`. A real
 publication whose evidence is gone cannot be verified by Story #16 provenance,
 cannot be validated as a Story #20 report, and cannot close this Story — so the
 workflow uploads that namespace as a **GitHub Actions artifact**
-(`run-evidence-<signal_id>`) immediately after the canonical execution attempt
-and before any bookkeeping commit.
+(`run-evidence-<signal_id>`) as the last step after the canonical execution
+attempt.
 
 Three properties make it evidence rather than a convenience:
 
@@ -111,6 +111,12 @@ Three properties make it evidence rather than a convenience:
   generated inside the process and is never knowable in advance, so the upload
   is scoped by the signal the run was launched with — `<signal_id>/runs/` —
   and no marker file or log scraping introduces a second source of truth.
+- **Evidence never vetoes bookkeeping.** The upload runs *after*
+  `Mark signal as published`, which is guarded by `success()`. In front of it,
+  an upload failing for an unrelated artifact-service reason would silently
+  skip the record of a publication that really happened, leaving a later run
+  free to treat an already-published signal as unconsumed. Running last, with
+  `always()`, it preserves evidence without being able to suppress anything.
 - **Failed and blocked attempts are preserved too** (`if: always()`). A blocked
   preflight or a failed publication is Story #21 evidence, and Story #20 writes
   `run_report.json` on those paths; uploading only on success would discard

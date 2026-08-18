@@ -89,12 +89,36 @@ def test_evidence_is_preserved_after_the_canonical_entrypoint_runs(steps):
     assert evidence > entrypoint
 
 
-def test_evidence_is_preserved_before_publication_bookkeeping(steps):
-    """Evidence must not depend on the bookkeeping commit succeeding."""
-
-    evidence = _index(steps, lambda s: s.get("name") == EVIDENCE_STEP)
+def test_the_canonical_run_precedes_publication_bookkeeping(steps):
+    entrypoint = _index(steps, lambda s: ENTRYPOINT_FRAGMENT in str(s.get("run", "")))
     bookkeeping = _index(steps, lambda s: s.get("name") == BOOKKEEPING_STEP)
-    assert evidence < bookkeeping
+    assert entrypoint < bookkeeping
+
+
+def test_evidence_preservation_cannot_suppress_publication_bookkeeping(steps):
+    """Ordering, not decoration — this is why the evidence step comes last.
+
+    ``Mark signal as published`` is guarded by ``success()``. An evidence
+    upload standing in front of it could fail for an unrelated
+    artifact-service reason, turn ``success()`` false, and silently skip the
+    record of a publication that really happened — leaving a later run free to
+    treat an already-published signal as unconsumed. Evidence may never veto
+    bookkeeping.
+    """
+
+    bookkeeping = _index(steps, lambda s: s.get("name") == BOOKKEEPING_STEP)
+    evidence = _index(steps, lambda s: s.get("name") == EVIDENCE_STEP)
+    assert bookkeeping < evidence
+
+    # …and the guard that makes the ordering matter is still the original one,
+    # so this test keeps failing if either side of the interaction changes.
+    assert steps[bookkeeping]["if"] == "success() && inputs.dry_run != 'true'"
+
+
+def test_evidence_survives_a_failed_bookkeeping_step(steps):
+    """Running last must not mean running only on a clean path."""
+
+    assert _evidence_step(steps)["if"] == "always()"
 
 
 # ── 3. failed and blocked attempts keep their evidence ───────────────────────
@@ -162,3 +186,29 @@ def test_the_canonical_entrypoint_invocation_is_unchanged(steps):
     assert 'python scripts/generate_and_publish.py --signal-id "${{ steps.resolve.outputs.signal_id }}" $FLAGS' in run
     # live unless the caller explicitly asks for a dry run
     assert '[ "${{ inputs.dry_run }}"       = "true" ] && FLAGS="$FLAGS --dry-run"' in run
+
+
+# ── 6. no production Python is involved in this contract ─────────────────────
+
+def test_the_correction_lives_entirely_in_configuration():
+    """The evidence contract is workflow configuration, by design.
+
+    If preserving evidence ever required changing the entrypoint, the run
+    would no longer be the canonical production path — which is the one thing
+    a Story #21 acceptance run cannot afford.
+    """
+
+    import subprocess
+
+    changed = subprocess.run(
+        ["git", "diff", "--name-only", "2aabc2fab2539c7e475559175c4ef658b7c6a4d4", "HEAD"],
+        capture_output=True, text=True, cwd=Path(__file__).resolve().parents[1],
+    )
+    if changed.returncode != 0:            # shallow clone or detached CI checkout
+        pytest.skip("base commit not available in this checkout")
+    files = [f for f in changed.stdout.split() if f]
+    production_python = [
+        f for f in files
+        if f.endswith(".py") and (f.startswith("src/") or f.startswith("scripts/"))
+    ]
+    assert production_python == [], f"unexpected production change: {production_python}"
