@@ -246,3 +246,85 @@ def test_the_reader_never_mutates_the_repository(repo: Path):
     resolve_code_identity(repo)
     assert _git(repo, "rev-parse", "HEAD") == before_head
     assert _git(repo, "status", "--porcelain") == before_status
+
+
+# ── The two-run acceptance condition (Issue #114 review correction) ──────────
+#
+# These prove the *evidence* behaves as the Story #21 procedure assumes. No
+# production code compares two runs — the comparison is the operator's, made
+# in the runbook — so what is tested here is what the operator's comparison
+# rests on.
+
+
+def test_two_runs_at_the_same_head_record_the_same_identity(repo: Path):
+    """The acceptance condition, in the case where it must hold."""
+
+    run_a = resolve_code_identity(repo)
+    # Run A leaves output behind: excluded roots, uncommitted.
+    (repo / "reports" / "output.json").write_text('{"run": "a"}\n')
+    (repo / "reports" / "run-a-artifacts").mkdir()
+    run_b = resolve_code_identity(repo)
+
+    assert run_a is not None and run_b is not None
+    assert run_a.commit_sha == run_b.commit_sha
+    assert run_a.tracked_worktree_clean and run_b.tracked_worktree_clean
+    assert qualifies_for_live_acceptance(run_a)
+    assert qualifies_for_live_acceptance(run_b)
+
+
+def test_generated_changes_under_either_output_root_stay_clean(repo: Path):
+    (repo / "data").mkdir()
+    (repo / "data" / "history.jsonl").write_text('{"published": true}\n')
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "add data root")
+
+    (repo / "data" / "history.jsonl").write_text('{"published": true}\n{"more": 1}\n')
+    (repo / "reports" / "output.json").write_text('{"run": "a"}\n')
+    identity = resolve_code_identity(repo)
+    assert identity is not None and identity.tracked_worktree_clean is True
+
+
+def test_an_artifact_only_commit_breaks_the_same_sha_condition(repo: Path):
+    """Why the runbook forbids committing between the runs.
+
+    The exclusion of the output roots is about *working-tree changes*. It says
+    nothing about commits: ``commit_sha`` is the exact ``rev-parse HEAD``, so
+    committing Run A's artifacts — even though they are excluded from
+    cleanliness, even though no source changed — moves HEAD and gives Run B a
+    different identity. Cleanliness and commit identity are separate
+    guarantees, and this is the case that separates them.
+    """
+
+    run_a = resolve_code_identity(repo)
+
+    (repo / "reports" / "output.json").write_text('{"run": "a"}\n')
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "chore: persist run A artifacts")
+
+    run_b = resolve_code_identity(repo)
+    assert run_a is not None and run_b is not None
+
+    # Both runs individually qualify — nothing is dirty, no source moved …
+    assert run_a.tracked_worktree_clean and run_b.tracked_worktree_clean
+    assert qualifies_for_live_acceptance(run_a)
+    assert qualifies_for_live_acceptance(run_b)
+    # … and yet the acceptance condition cannot be met.
+    assert run_a.commit_sha != run_b.commit_sha
+
+
+def test_an_automated_commit_touching_only_excluded_roots_also_breaks_it(repo: Path):
+    """Automated VI publishing commits to data/ and report artifacts.
+
+    It moves HEAD like any other commit, which is why the runbook resets the
+    sequence rather than reasoning that the commit "was only artifacts".
+    """
+
+    frozen = resolve_code_identity(repo)
+    (repo / "data").mkdir()
+    (repo / "data" / "visibility_queue.jsonl").write_text('{"queued": 1}\n')
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "chore(vi): publish run [skip ci]")
+
+    after = resolve_code_identity(repo)
+    assert frozen is not None and after is not None
+    assert after.commit_sha != frozen.commit_sha

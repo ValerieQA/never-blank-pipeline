@@ -1071,3 +1071,29 @@ def test_a_malformed_code_identity_fails_the_anchor_closed(tmp_path, monkeypatch
 
     with pytest.raises(RunReportError):
         _rebuild(tmp_path, run_dir)
+
+
+def test_report_reads_the_recorded_identity_rather_than_the_current_checkout(
+    tmp_path, monkeypatch
+):
+    """Propagation, not recomputation — the distinction the report depends on.
+
+    A report built later, from a checkout that has since moved, must still
+    describe the code that executed the run. Re-deriving the identity at
+    report time would quietly relabel a run with whatever is checked out when
+    the account is written.
+    """
+
+    run_dir = _published_run(tmp_path, monkeypatch)
+    anchor_path = run_dir / "assignment.json"
+    anchor = json.loads(anchor_path.read_text())
+    recorded_sha = "1234567890abcdef" * 2 + "12345678"
+    assert len(recorded_sha) == 40
+    anchor["code_identity"]["commit_sha"] = recorded_sha
+    anchor["code_identity"]["tracked_worktree_clean"] = False
+    anchor_path.write_text(json.dumps(anchor), encoding="utf-8")
+
+    report = _rebuild(tmp_path, run_dir)
+    assert report.code_identity is not None
+    assert report.code_identity.commit_sha == recorded_sha
+    assert report.code_identity.tracked_worktree_clean is False
