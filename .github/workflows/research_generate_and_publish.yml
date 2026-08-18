@@ -172,6 +172,35 @@ jobs:
           git diff --staged --quiet || git commit -m "Publish ${{ steps.resolve.outputs.signal_id }}: mark signal + update history [skip ci]"
           git push
 
+      # Story #21 acceptance evidence. The canonical run namespace is written
+      # into the runner's working tree and would otherwise be destroyed with
+      # the runner, leaving a real publication with nothing to verify against
+      # (Story #16 provenance, Story #20 run_report, Story #21 closure).
+      #
+      # The path is derived from the signal the run was launched with — run_id
+      # is generated inside the process, so it is never knowable in advance and
+      # is deliberately not reconstructed from logs or a marker file.
+      #
+      # always(): a blocked preflight or a failed publication is evidence under
+      # Story #21, and run_report.json is written on those paths too. Uploading
+      # only on success would discard exactly the runs that matter most.
+      #
+      # Placed AFTER bookkeeping on purpose. "Mark signal as published" is
+      # guarded by success(), so an evidence upload standing in front of it
+      # could fail for an unrelated artifact-service reason and silently
+      # suppress the record of a publication that really happened — leaving a
+      # later run free to treat the signal as unconsumed. Evidence must never
+      # be able to veto bookkeeping; always() keeps it running regardless of
+      # what happened upstream.
+      - name: Preserve canonical run evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "run-evidence-${{ steps.resolve.outputs.signal_id }}"
+          path: "reports/content_packages/${{ steps.resolve.outputs.signal_id }}/runs/"
+          if-no-files-found: warn
+          retention-days: 90
+
       - name: Upload generated package
         if: always()
         uses: actions/upload-artifact@v4
