@@ -604,10 +604,16 @@ def test_production_instruction_artifact_loads_with_stable_version():
     instructions = DecisionLensInstructions.load()
     assert instructions.instruction_id == "never-blank-decision-lens"
     assert instructions.profile_id == "never-blank-editorial-lens"
-    assert instructions.profile_version == "1.0"
-    assert instructions.version == "1.0"
-    assert instructions.decision_lens_version == "never-blank-decision-lens/1.0"
-    assert instructions.profile_identity == _lens_profile()
+    # Issue #127 bumped the maintained profile to 1.1 — judgment semantics
+    # changed (the editorial claim mode), which this contract requires to be a
+    # reviewed version bump rather than a silent edit. These assertions exist
+    # to notice exactly that, so they move with it.
+    assert instructions.profile_version == "1.1"
+    assert instructions.version == "1.1"
+    assert instructions.decision_lens_version == "never-blank-decision-lens/1.1"
+    assert instructions.profile_identity == DecisionLensProfileIdentity(
+        lens_profile_id="never-blank-editorial-lens", lens_profile_version="1.1"
+    )
     assert "evidence" in instructions.instructions.lower()
 
 
@@ -617,5 +623,5 @@ def test_production_evaluator_wires_maintained_instructions_without_live_calls()
     # constructing the production evaluator performs no provider calls; the
     # decision version comes from the maintained artifact
     assert evaluator._instructions.decision_lens_version == (  # noqa: SLF001
-        "never-blank-decision-lens/1.0"
+        "never-blank-decision-lens/1.1"
     )

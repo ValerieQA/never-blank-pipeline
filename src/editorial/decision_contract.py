@@ -88,6 +88,30 @@ class AudienceRelevanceBasisType(str, Enum):
     ANALOGY_ONLY = "analogy_only"
 
 
+class EditorialClaimMode(str, Enum):
+    """What the article claims *about the configured audience*.
+
+    The contract has always judged how relevant the evidence is to the
+    audience. It could not express how the article intends to speak about
+    them, so an honest piece — one that reports a verified external case,
+    says plainly that it does not transfer, and asks the audience a bounded
+    question — was indistinguishable from one asserting the outcome as theirs.
+
+    Declaring the mode separates those two. It grants nothing on its own:
+    bounded mode relaxes only the relevance requirement, and every evidence
+    guarantee is unchanged in both modes.
+    """
+
+    #: Asserts something about the configured audience. Requires direct
+    #: configured-audience relevance, exactly as before.
+    DIRECT_AUDIENCE_CLAIM = "direct_audience_claim"
+
+    #: Factual assertions stay attributed to the observed external context;
+    #: the audience treatment is a question, observation, hypothesis or
+    #: decision prompt, never a transferred outcome.
+    BOUNDED_EXTERNAL_CASE = "bounded_external_case"
+
+
 class CriterionAssessment(str, Enum):
     SATISFIED = "satisfied"
     NOT_SATISFIED = "not_satisfied"
@@ -228,6 +252,10 @@ class DecisionResearchConditionHandling(_DecisionModel):
 
 
 class DecisionLensJudgment(_DecisionModel):
+    #: Explicit and serialized — never inferred from the editorial angle.
+    #: Defaults to the pre-existing behaviour, so artifacts written before
+    #: this field existed keep their meaning rather than acquiring a new one.
+    claim_mode: EditorialClaimMode = EditorialClaimMode.DIRECT_AUDIENCE_CLAIM
     relevance: BusinessAudienceRelevance
     evidence_sufficiency: DecisionEvidenceSufficiency
     why_signal_matters: str = Field(min_length=1, max_length=2000)
@@ -348,7 +376,18 @@ class DecisionLensDecisionArtifact(_DecisionModel):
             if not set(criterion.evidence_ids) <= set(self.evidence_ids):
                 raise DecisionContractError("criterion result cites undeclared decision evidence")
         if self.disposition is DecisionDisposition.PROCEED:
-            if self.judgment.relevance is not BusinessAudienceRelevance.DIRECT:
+            if self.judgment.claim_mode is EditorialClaimMode.BOUNDED_EXTERNAL_CASE:
+                # The article's factual claims stay with the external context
+                # and its audience treatment is a question, so INDIRECT
+                # relevance is honest here. IRRELEVANT is not: there is no
+                # bounded question to ask about an audience the evidence does
+                # not touch at all.
+                if self.judgment.relevance is BusinessAudienceRelevance.IRRELEVANT:
+                    raise DecisionContractError(
+                        "PROCEED requires evidence relevant to the configured audience"
+                    )
+            elif self.judgment.relevance is not BusinessAudienceRelevance.DIRECT:
+                # Direct-claim mode is untouched, message included.
                 raise DecisionContractError("PROCEED requires direct audience relevance")
             if self.judgment.evidence_sufficiency is not DecisionEvidenceSufficiency.SUFFICIENT:
                 raise DecisionContractError("PROCEED requires sufficient evidence")
@@ -358,6 +397,10 @@ class DecisionLensDecisionArtifact(_DecisionModel):
                 basis.basis_type is AudienceRelevanceBasisType.ANALOGY_ONLY
                 for basis in self.judgment.relevance_bases
             ):
+                # Unchanged, and deliberately outside the mode branch. A
+                # bounded question still has to be raised *by* something: an
+                # analogy with no documented mechanism behind it is not a
+                # weaker claim, it is an unsupported one.
                 raise DecisionContractError(
                     "PROCEED requires direct configured-audience evidence, "
                     "not analogy-only relevance"

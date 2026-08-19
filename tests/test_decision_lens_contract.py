@@ -12,6 +12,7 @@ from src.editorial.decision_contract import (
     BusinessAudienceRelevance,
     DecisionContractError,
     DecisionDisposition,
+    EditorialClaimMode,
     DecisionEvidenceSufficiency,
     DecisionLensDecisionArtifact,
     DecisionLensProfileIdentity,
@@ -978,3 +979,160 @@ def test_strict_json_reload_cannot_bypass_relevance_basis_exact_match():
             configuration_identity=_identity(),
             lens_profile=_lens_profile(),
         )
+
+
+# ── Issue #127: the editorial claim mode ─────────────────────────────────────
+#
+# The contract judged how relevant the evidence is to the audience, and could
+# not express how the article intends to speak about them. An honest piece —
+# reporting a verified external case, saying plainly it does not transfer, and
+# asking the audience a bounded question — was indistinguishable from one
+# asserting the outcome as theirs, so it could never PROCEED.
+#
+# Declaring the mode separates those. It grants nothing on its own: it relaxes
+# only the relevance requirement, and every evidence guarantee holds in both.
+
+
+def _bounded_payload(*, relevance="indirect", basis_type="documented_direct_impact",
+                     disposition="proceed") -> dict:
+    """An Invisalign-shaped case: external facts, bounded audience treatment."""
+
+    payload = _decision_payload(disposition=disposition, basis_type=basis_type)
+    j = payload["judgment"]
+    j["claim_mode"] = "bounded_external_case"
+    j["relevance"] = relevance
+    j["why_signal_matters"] = (
+        "A documented campaign mechanism raises a presence question for the audience."
+    )
+    j["supported_editorial_angle"] = (
+        "The cited case reports its own result; it does not establish the same "
+        "outcome for the configured audience. It raises a bounded question about "
+        "the distance between attention and a first meaningful action."
+    )
+    j["relevance_bases"][0]["statement"] = (
+        "The cited evidence documents a mechanism in another organization's "
+        "context. It is not evidence about the configured audience."
+    )
+    j["restrictions"] = [
+        "Do not assert that the external outcome transfers to the configured audience."
+    ]
+    return payload
+
+
+# A. direct evidence + direct mode — unchanged
+
+def test_case_a_direct_claim_with_direct_relevance_still_proceeds():
+    decision = _validate(_decision_payload())
+    assert decision.disposition is DecisionDisposition.PROCEED
+    assert decision.judgment.claim_mode is EditorialClaimMode.DIRECT_AUDIENCE_CLAIM
+    assert decision.judgment.relevance is BusinessAudienceRelevance.DIRECT
+
+
+# B. external case + bounded mode — the newly reachable path
+
+def test_case_b_bounded_external_case_may_proceed_on_indirect_relevance():
+    decision = _validate(_bounded_payload())
+    assert decision.disposition is DecisionDisposition.PROCEED
+    assert decision.judgment.claim_mode is EditorialClaimMode.BOUNDED_EXTERNAL_CASE
+    assert decision.judgment.relevance is BusinessAudienceRelevance.INDIRECT
+    # the external context is preserved and the transfer explicitly refused
+    assert "does not establish" in decision.judgment.supported_editorial_angle
+    assert decision.judgment.restrictions
+
+
+# C. same evidence, direct mode — must not proceed
+
+def test_case_c_the_same_external_evidence_cannot_proceed_as_a_direct_claim():
+    payload = _bounded_payload()
+    payload["judgment"]["claim_mode"] = "direct_audience_claim"
+    with pytest.raises(ValidationError, match="direct audience relevance"):
+        _validate(payload)
+
+
+# D. analogy alone — non-qualifying in BOTH modes
+
+def test_case_d_analogy_alone_cannot_proceed_even_in_bounded_mode():
+    payload = _bounded_payload(basis_type="analogy_only")
+    with pytest.raises(ValidationError, match="analogy-only"):
+        _validate(payload)
+
+
+def test_case_d_analogy_alone_still_cannot_proceed_in_direct_mode():
+    payload = _decision_payload(basis_type="analogy_only")
+    with pytest.raises(ValidationError):
+        _validate(payload)
+
+
+# E. irrelevant evidence — never, in either mode
+
+def test_case_e_irrelevant_evidence_cannot_proceed_in_bounded_mode():
+    payload = _bounded_payload(relevance="irrelevant")
+    with pytest.raises(ValidationError, match="relevant to the configured audience"):
+        _validate(payload)
+
+
+def test_case_e_irrelevant_evidence_cannot_proceed_in_direct_mode():
+    payload = _decision_payload()
+    payload["judgment"]["relevance"] = "irrelevant"
+    with pytest.raises(ValidationError, match="direct audience relevance"):
+        _validate(payload)
+
+
+# F. unsupported interpretation — citation rules unchanged by the mode
+
+def test_case_f_bounded_mode_does_not_relax_citation_requirements():
+    payload = _bounded_payload()
+    payload["evidence_ids"] = []
+    with pytest.raises(ValidationError):
+        _validate(payload)
+
+
+def test_case_f_bounded_mode_cannot_cite_undeclared_evidence():
+    payload = _bounded_payload()
+    payload["judgment"]["relevance_bases"][0]["evidence_ids"] = ["evidence-invented"]
+    with pytest.raises(ValidationError):
+        _validate(payload)
+
+
+# G. serialization, reload, provenance
+
+def test_case_g_bounded_mode_survives_strict_serialization_and_reload():
+    decision = _validate(_bounded_payload())
+    raw = decision.model_dump_json()
+    assert '"claim_mode":"bounded_external_case"' in raw.replace(" ", "")
+    back = DecisionLensDecisionArtifact.model_validate_json(raw)
+    assert back.judgment.claim_mode is EditorialClaimMode.BOUNDED_EXTERNAL_CASE
+    assert back.judgment.relevance is BusinessAudienceRelevance.INDIRECT
+    assert back.model_dump_json() == raw
+
+
+# H. artifacts predating the field keep their meaning
+
+def test_case_h_a_judgment_without_a_claim_mode_defaults_to_direct():
+    payload = _decision_payload()
+    payload["judgment"].pop("claim_mode", None)
+    decision = _validate(payload)
+    assert decision.judgment.claim_mode is EditorialClaimMode.DIRECT_AUDIENCE_CLAIM
+
+
+def test_case_h_a_pre_existing_indirect_judgment_still_cannot_proceed():
+    """The default must not quietly widen what old artifacts were allowed."""
+
+    payload = _decision_payload()
+    payload["judgment"].pop("claim_mode", None)
+    payload["judgment"]["relevance"] = "indirect"
+    with pytest.raises(ValidationError, match="direct audience relevance"):
+        _validate(payload)
+
+
+# I. the mode is profile-agnostic
+
+def test_case_i_a_contrasting_profile_uses_the_same_mode_without_code_changes():
+    other = DecisionLensProfileIdentity(
+        lens_profile_id="clinical-quality-lens", lens_profile_version="2.0"
+    )
+    payload = _bounded_payload()
+    payload["lens_profile"] = other.model_dump(mode="json")
+    decision = _validate(payload, lens_profile=other)
+    assert decision.judgment.claim_mode is EditorialClaimMode.BOUNDED_EXTERNAL_CASE
+    assert decision.lens_profile == other
