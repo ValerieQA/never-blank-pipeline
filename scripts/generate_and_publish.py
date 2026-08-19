@@ -212,6 +212,7 @@ from src.artifacts import (
     load_visual_assets_json,
     write_assignment_json,
     write_editorial_acceptance_json,
+    write_editorial_review_content_json,
     write_generated_json,
     write_linkedin_composition_json,
     write_visual_assets_json,
@@ -1434,6 +1435,43 @@ def _run(
         print(f"  ✓  editorial audit: {run_dir / 'editorial_acceptance.json'}")
         if not _acceptance.accepted:
             _final = _acceptance.final_review or _acceptance.initial_review
+            # Issue #134: preserve what this run produced so a human can read
+            # the article the reviewer refused. Review-only, never a
+            # publication input, and never a reason to continue: the block
+            # below is unchanged and still ends the run.
+            try:
+                write_editorial_review_content_json(
+                    run_dir,
+                    {
+                        "run_id": run_ctx.run_id,
+                        "signal_id": signal_id,
+                        "assignment_id": assignment.assignment_id,
+                        "editorial": {
+                            "rubric": _acceptance_rubric.identity,
+                            "final_disposition": _final.disposition.value,
+                            "failed_criterion_ids": list(_final.failed_criterion_ids),
+                            "revised": _acceptance.revised,
+                        },
+                        "content": {
+                            "article_as_generated": blog_body,
+                            "article_after_revision": (
+                                _acceptance.final_article_body
+                                if _acceptance.revised
+                                else None
+                            ),
+                            "linkedin_body": linkedin_text,
+                        },
+                        "visuals": dict(platform_image_urls),
+                    },
+                )
+                print(
+                    "  ✓  produced content preserved for review: "
+                    f"{run_dir / 'editorial_review_content.json'} (not publishable)"
+                )
+            except (ArtifactCollisionError, OSError) as exc:
+                # Losing the review copy must not change the verdict or hide
+                # the real reason the run stopped.
+                print(f"  ⚠  produced content could not be preserved: {exc}")
             state.ended(TerminalStage.EDITORIAL, TerminalDisposition.BLOCKED,
                         f"editorial disposition={_final.disposition.value}")
             print(

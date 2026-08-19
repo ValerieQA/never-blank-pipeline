@@ -210,6 +210,40 @@ def write_editorial_acceptance_json(run_dir: Path, data: dict) -> None:
     atomic_write_json(run_dir / "editorial_acceptance.json", data)
 
 
+#: Marks the review-only record as what it is, in the artifact itself rather
+#: than only in its filename. Anything reading this file sees the disclaimer
+#: before it sees the prose.
+REVIEW_ONLY_KIND = "editorial_review_content"
+REVIEW_ONLY_NOTICE = (
+    "Produced content preserved for human inspection. NOT approved for "
+    "publication: editorial acceptance blocked this run. This artifact is "
+    "never a packaging or publication input."
+)
+
+
+def write_editorial_review_content_json(run_dir: Path, data: dict) -> None:
+    """Preserve what a blocked run produced, for human review only (Issue #134).
+
+    Editorial acceptance blocks before packaging, so a blocked run writes no
+    ``generated.json`` and its article, LinkedIn body and visuals were being
+    destroyed with the runner — leaving reviewers' prose *about* an article
+    nobody can read.
+
+    This record exists so that content can be inspected. It is deliberately
+    **not** ``generated.json``: that name means "an accepted article, ready to
+    package", and reusing it for refused content would make the canonical
+    vocabulary lie. Nothing loads this file — ``--from-package`` reads
+    ``generated.json`` and only ``generated.json`` — so preserving evidence
+    cannot become a route to publishing what the gate refused.
+    """
+
+    atomic_write_json(
+        run_dir / "editorial_review_content.json",
+        {"artifact_kind": REVIEW_ONLY_KIND, "publishable": False,
+         "notice": REVIEW_ONLY_NOTICE, **data},
+    )
+
+
 def write_assignment_json(run_dir: Path, data: dict) -> None:
     """Commit the run's canonical intake assignment record exactly once."""
     atomic_write_json(run_dir / "assignment.json", data)
