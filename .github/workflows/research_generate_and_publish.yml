@@ -129,6 +129,11 @@ jobs:
       - name: "Generate + Publish — ${{ steps.resolve.outputs.signal_id }}"
         env:
           NB_OPENAI_API_KEY:              ${{ secrets.NB_OPENAI_API_KEY }}
+          # Story #11 research evidence. Without it the canonical Exa
+          # adapter fails closed and the research gate blocks generation —
+          # correctly, but for a missing credential rather than missing
+          # evidence (live run 32259987125).
+          NB_EXA_API_KEY:                 ${{ secrets.NB_EXA_API_KEY }}
           NB_OPENAI_CHAT_MODEL:           ${{ secrets.NB_OPENAI_CHAT_MODEL }}
           NB_WIX_API_KEY:                 ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID:                 ${{ secrets.NB_WIX_SITE_ID }}
