@@ -24,7 +24,8 @@ system: |
   - INTERESTING_QUESTION: the question this signal raises for founders
   - NEVER_BLANK_ANGLE: the observation that emerges from the business response
   - POSSIBLE_SIGNATURE_LINE: "Never Blank: [short sharp insight]"
-  - TARGET_AUDIENCE: one of [founder, owner, consultant, service_business, small_team, agency, creator]
+  - TARGET_AUDIENCE: one of [founder, owner, consultant, service_business, small_team, agency, creator, managed_service_provider]
+    Use "unclassified" if the signal does not clearly belong to one of these. Do not guess.
   - PRIMARY_CHANNEL: one of [linkedin, blog, threads, story, instagram]
 
 user: |

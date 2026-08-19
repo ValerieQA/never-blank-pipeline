@@ -488,7 +488,7 @@ class ResearchContext:
             never_blank_angle=_str(d.get("NEVER_BLANK_ANGLE")),
             possible_signature_line=_str(d.get("POSSIBLE_SIGNATURE_LINE")),
             potential_hook=_str(d.get("POTENTIAL_HOOK")),
-            target_audience=_str(d.get("TARGET_AUDIENCE"), "founder"),
+            target_audience=_str(d.get("TARGET_AUDIENCE"), "unclassified"),
             primary_channel=_str(d.get("PRIMARY_CHANNEL")),
             linkedin_angle=_str(d.get("LINKEDIN_ANGLE")),
             blog_angle=_str(d.get("BLOG_ANGLE")),

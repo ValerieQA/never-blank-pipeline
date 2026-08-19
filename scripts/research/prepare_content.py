@@ -46,7 +46,7 @@ def _generate_content_package(
         "content_territories": "[]",
         "preferred_claims": "[]",
         "restrictions": "[]",
-        "selected_audience_id": signal.get("TARGET_AUDIENCE", "founder"),
+        "selected_audience_id": signal.get("TARGET_AUDIENCE", "unclassified"),
         "selected_audience_problem": "",
     }
     if strategy_view is not None:
