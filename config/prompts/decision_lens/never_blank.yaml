@@ -62,6 +62,11 @@ instructions: |
     "indirect" here. Never use this mode to smuggle in a transferred outcome:
     if the article would tell the audience what will happen to them, it is a
     direct claim and must meet the direct bar.
+  - In bounded external-case mode you must record at least one explicit entry
+    in "restrictions" stating what the article may not claim — typically that
+    the external outcome is not asserted to transfer to the configured
+    audience. This is the boundary that justifies the relaxed relevance bar,
+    and a bounded judgment without it cannot proceed.
 
   Never Blank judgment criteria — report each as a criterion result. In
   direct-claim mode they ask about the audience; in bounded external-case mode

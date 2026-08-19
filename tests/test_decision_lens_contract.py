@@ -1136,3 +1136,114 @@ def test_case_i_a_contrasting_profile_uses_the_same_mode_without_code_changes():
     decision = _validate(payload, lens_profile=other)
     assert decision.judgment.claim_mode is EditorialClaimMode.BOUNDED_EXTERNAL_CASE
     assert decision.lens_profile == other
+
+
+# ── blocking review: the bounded promise must be collected on ────────────────
+#
+# Bounded mode trades the DIRECT-relevance requirement for a promise about how
+# the article will speak about the audience. The first implementation declared
+# that promise and never collected on it: selecting the mode was enough, so a
+# judgment could assert outright transfer in prose, carry no restrictions, and
+# still PROCEED at INDIRECT relevance — the exact form the authorization
+# forbade.
+#
+# The contract cannot read prose, and does not try to. It requires the
+# judgment to record the boundary it binds itself to, which is auditable
+# afterwards. Whether the generated article honours that boundary is
+# editorial acceptance's question, not this one.
+
+
+def test_bounded_mode_without_restrictions_cannot_proceed():
+    payload = _bounded_payload()
+    payload["judgment"]["restrictions"] = []
+    with pytest.raises(ValidationError, match="explicit restriction"):
+        _validate(payload)
+
+
+@pytest.mark.parametrize("blank", [[""], ["   "], ["\t"], ["", "  "]])
+def test_bounded_mode_with_blank_restrictions_cannot_proceed(blank):
+    """A restriction that says nothing is not a boundary."""
+
+    payload = _bounded_payload()
+    payload["judgment"]["restrictions"] = blank
+    with pytest.raises(ValidationError):
+        _validate(payload)
+
+
+def test_the_forbidden_transfer_form_no_longer_proceeds():
+    """The blocking review's reproduction, held closed.
+
+    An angle asserting that the external outcome applies to the audience,
+    with no recorded boundary, previously validated as PROCEED.
+    """
+
+    payload = _bounded_payload()
+    payload["judgment"]["supported_editorial_angle"] = (
+        "The external case documents a 30% lift, therefore the configured "
+        "audience will improve conversion by doing the same."
+    )
+    payload["judgment"]["restrictions"] = []
+    with pytest.raises(ValidationError, match="explicit restriction"):
+        _validate(payload)
+
+
+def test_bounded_mode_with_an_explicit_restriction_may_proceed():
+    payload = _bounded_payload()
+    payload["judgment"]["restrictions"] = [
+        "Do not assert that the external outcome transfers to the configured audience."
+    ]
+    decision = _validate(payload)
+    assert decision.disposition is DecisionDisposition.PROCEED
+    assert decision.judgment.claim_mode is EditorialClaimMode.BOUNDED_EXTERNAL_CASE
+    assert decision.judgment.relevance is BusinessAudienceRelevance.INDIRECT
+    assert any(r.strip() for r in decision.judgment.restrictions)
+
+
+def test_the_recorded_boundary_survives_strict_reload():
+    """The boundary must be auditable after the fact, not only at validation."""
+
+    decision = _validate(_bounded_payload())
+    back = DecisionLensDecisionArtifact.model_validate_json(decision.model_dump_json())
+    assert any(r.strip() for r in back.judgment.restrictions)
+    assert back.judgment.claim_mode is EditorialClaimMode.BOUNDED_EXTERNAL_CASE
+
+
+def test_direct_mode_does_not_acquire_a_restriction_requirement():
+    """The new requirement belongs to bounded mode alone."""
+
+    payload = _decision_payload()
+    payload["judgment"]["restrictions"] = []
+    decision = _validate(payload)
+    assert decision.disposition is DecisionDisposition.PROCEED
+    assert decision.judgment.claim_mode is EditorialClaimMode.DIRECT_AUDIENCE_CLAIM
+
+
+def test_a_legacy_judgment_without_claim_mode_needs_no_restrictions():
+    payload = _decision_payload()
+    payload["judgment"].pop("claim_mode", None)
+    payload["judgment"]["restrictions"] = []
+    assert _validate(payload).disposition is DecisionDisposition.PROCEED
+
+
+def test_a_restriction_cannot_rescue_analogy_only_in_bounded_mode():
+    """The boundary is not a substitute for a documented mechanism."""
+
+    payload = _bounded_payload(basis_type="analogy_only")
+    payload["judgment"]["restrictions"] = ["Do not assert transfer."]
+    with pytest.raises(ValidationError, match="analogy-only"):
+        _validate(payload)
+
+
+def test_a_restriction_cannot_rescue_irrelevant_evidence():
+    payload = _bounded_payload(relevance="irrelevant")
+    payload["judgment"]["restrictions"] = ["Do not assert transfer."]
+    with pytest.raises(ValidationError, match="relevant to the configured audience"):
+        _validate(payload)
+
+
+def test_a_restriction_cannot_rescue_missing_citations():
+    payload = _bounded_payload()
+    payload["judgment"]["restrictions"] = ["Do not assert transfer."]
+    payload["evidence_ids"] = []
+    with pytest.raises(ValidationError):
+        _validate(payload)

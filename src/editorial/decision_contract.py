@@ -386,6 +386,24 @@ class DecisionLensDecisionArtifact(_DecisionModel):
                     raise DecisionContractError(
                         "PROCEED requires evidence relevant to the configured audience"
                     )
+                # Bounded mode trades the DIRECT-relevance requirement for a
+                # promise about how the article will speak. Declaring the mode
+                # cannot be what collects on that promise, or the mode is a
+                # word that buys a relaxation. The judgment must record the
+                # boundary it is binding itself to — at least one explicit
+                # restriction — which is auditable afterwards in a way prose
+                # is not.
+                #
+                # This makes the limitation explicit; it does not prove the
+                # eventual article obeys it. That is editorial acceptance's
+                # question, and it is deliberately not answered here.
+                if not any(
+                    (item or "").strip() for item in self.judgment.restrictions
+                ):
+                    raise DecisionContractError(
+                        "PROCEED in bounded external-case mode requires at least "
+                        "one explicit restriction bounding the audience claim"
+                    )
             elif self.judgment.relevance is not BusinessAudienceRelevance.DIRECT:
                 # Direct-claim mode is untouched, message included.
                 raise DecisionContractError("PROCEED requires direct audience relevance")
