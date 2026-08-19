@@ -11,8 +11,11 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from src.editorial.decision_contract import (
+    BusinessAudienceRelevance,
     DecisionDisposition,
+    DecisionLensDecisionArtifact,
     DecisionLensProfileIdentity,
+    EditorialClaimMode,
 )
 from src.editorial.decision_lens_evaluator import (
     DecisionEvaluationFailureKind,
@@ -625,3 +628,160 @@ def test_production_evaluator_wires_maintained_instructions_without_live_calls()
     assert evaluator._instructions.decision_lens_version == (  # noqa: SLF001
         "never-blank-decision-lens/1.1"
     )
+
+
+# --- editorial claim mode across the evaluator boundary (Issue #129) ---
+#
+# Issue #127 taught the contract the claim mode and taught profile 1.1 to
+# declare it, but the evaluator's accepted output contract did not list it, so
+# a profile-1.1 response was rejected whole as malformed and the bounded mode
+# was unreachable in production. These scenarios exercise the real parsing path
+# — transport text through `evaluate` — and never construct a judgment
+# directly, because constructing one is exactly what hid the defect.
+
+
+def _bounded_model_output() -> dict:
+    """A realistic Never Blank profile-1.1 bounded external-case response."""
+
+    return {
+        "disposition": "proceed",
+        "claim_mode": "bounded_external_case",
+        "relevance": "indirect",
+        "evidence_sufficiency": "sufficient",
+        "why_signal_matters": "It exposes friction between attention and first action.",
+        "business_value_connection": "First-action friction governs whether interest converts.",
+        "audience_problem_or_opportunity": "Interest arrives and stalls before the first step.",
+        "defensible_perspective": "Reducing the first step is a commercial decision.",
+        "supported_editorial_angle": "What a documented external case asks of owners.",
+        "source_ids": ["source-sba"],
+        "evidence_ids": ["evidence-smb"],
+        "relevance_bases": [{
+            "basis_type": "credible_sector_evidence",
+            "statement": "The cited evidence documents a mechanism in an adjacent sector.",
+            "evidence_ids": ["evidence-smb"],
+            "source_ids": ["source-sba"],
+            "documented_direct_consequence": "Capacity constrains which work is accepted.",
+        }],
+        "criterion_results": [{
+            "criterion_id": "nb-owner-presence",
+            "assessment": "satisfied",
+            "conclusion": "The case raises a real owner decision without asserting transfer.",
+            "evidence_ids": ["evidence-smb"],
+            "source_ids": ["source-sba"],
+            "restrictions": ["Attribute the outcome to the observed context only."],
+        }],
+        "research_condition_handling": [],
+        "restrictions": [
+            "This does not establish the same outcome for the configured audience.",
+        ],
+        "disposition_reasons": ["A documented external mechanism raises a bounded question."],
+    }
+
+
+def test_profile_1_1_bounded_response_reaches_a_typed_bounded_judgment():
+    evaluator, _ = _evaluator(_bounded_model_output())
+
+    result = _evaluate(evaluator)
+
+    assert result.outcome is EvaluationOutcome.DECISION
+    decision = result.decision
+    assert decision is not None
+    # accepted, not merely parsed: the artifact came back through the canonical
+    # #58 validation boundary
+    assert decision.disposition is DecisionDisposition.PROCEED
+    assert decision.judgment.claim_mode is EditorialClaimMode.BOUNDED_EXTERNAL_CASE
+    # the relaxation the mode buys, and only that one
+    assert decision.judgment.relevance is BusinessAudienceRelevance.INDIRECT
+    assert decision.judgment.restrictions == (
+        "This does not establish the same outcome for the configured audience.",
+    )
+
+
+def test_bounded_mode_survives_serialization_and_strict_reload_after_evaluation():
+    evaluator, _ = _evaluator(_bounded_model_output())
+    decision = _evaluate(evaluator).decision
+    assert decision is not None
+
+    raw = decision.canonical_bytes()
+    reloaded = DecisionLensDecisionArtifact.validate_json_for_research(
+        raw,
+        research=_research(),
+        audience=_audience(),
+        configuration_identity=_identity(),
+        lens_profile=_lens_profile(),
+    )
+
+    assert reloaded.judgment.claim_mode is EditorialClaimMode.BOUNDED_EXTERNAL_CASE
+
+
+def test_bounded_proceed_without_restrictions_is_still_refused_by_the_evaluator():
+    payload = _bounded_model_output()
+    payload["restrictions"] = []
+    evaluator, _ = _evaluator(payload)
+
+    # admitting the field buys nothing past the Issue #127 invariants
+    _expect_failure(_evaluate(evaluator), DecisionEvaluationFailureKind.CONTRACT_VIOLATION)
+
+
+def test_bounded_proceed_on_analogy_only_relevance_is_still_refused():
+    payload = _bounded_model_output()
+    # a well-formed analogy-only basis: no documented mechanism to claim, which
+    # is the whole point of the prohibition
+    payload["relevance_bases"][0]["basis_type"] = "analogy_only"
+    payload["relevance_bases"][0]["documented_direct_consequence"] = None
+    evaluator, _ = _evaluator(payload)
+
+    _expect_failure(_evaluate(evaluator), DecisionEvaluationFailureKind.CONTRACT_VIOLATION)
+
+
+def test_indirect_relevance_without_a_declared_bounded_mode_is_still_refused():
+    payload = _bounded_model_output()
+    payload.pop("claim_mode")
+    evaluator, _ = _evaluator(payload)
+
+    # falling back to the direct default must not smuggle INDIRECT past PROCEED
+    _expect_failure(_evaluate(evaluator), DecisionEvaluationFailureKind.CONTRACT_VIOLATION)
+
+
+def test_a_response_without_claim_mode_keeps_direct_mode_semantics():
+    evaluator, _ = _evaluator(_model_output())
+
+    decision = _evaluate(evaluator).decision
+
+    assert decision is not None
+    assert decision.judgment.claim_mode is EditorialClaimMode.DIRECT_AUDIENCE_CLAIM
+    assert decision.judgment.relevance is BusinessAudienceRelevance.DIRECT
+
+
+@pytest.mark.parametrize("value", ["bounded", "", None, 5, ["bounded_external_case"]])
+def test_a_malformed_claim_mode_is_rejected(value):
+    payload = _bounded_model_output()
+    payload["claim_mode"] = value
+    evaluator, _ = _evaluator(payload)
+
+    # an explicit null is a declaration of nothing, not an absent key: it fails
+    # rather than being read as a direct claim the model never made
+    _expect_failure(_evaluate(evaluator), DecisionEvaluationFailureKind.MALFORMED_OUTPUT)
+
+
+def test_admitting_claim_mode_does_not_admit_other_unknown_fields():
+    payload = _bounded_model_output()
+    payload["claim_scope"] = "bounded_external_case"
+    evaluator, _ = _evaluator(payload)
+
+    failure = _expect_failure(
+        _evaluate(evaluator), DecisionEvaluationFailureKind.MALFORMED_OUTPUT
+    )
+    assert "claim_scope" in failure.detail
+
+
+def test_claim_mode_is_not_accepted_inside_a_relevance_basis_or_criterion():
+    for group in ("relevance_bases", "criterion_results"):
+        payload = _bounded_model_output()
+        payload[group][0]["claim_mode"] = "bounded_external_case"
+        evaluator, _ = _evaluator(payload)
+
+        failure = _expect_failure(
+            _evaluate(evaluator), DecisionEvaluationFailureKind.MALFORMED_OUTPUT
+        )
+        assert group in failure.detail

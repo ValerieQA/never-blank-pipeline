@@ -441,6 +441,7 @@ class DecisionLensEvaluator:
 
     _ALLOWED_OUTPUT_KEYS = frozenset({
         "disposition",
+        "claim_mode",
         "relevance",
         "evidence_sufficiency",
         "why_signal_matters",
@@ -612,6 +613,31 @@ class DecisionLensEvaluator:
                 }
             )
 
+        judgment = {
+            "relevance": data.get("relevance"),
+            "evidence_sufficiency": data.get("evidence_sufficiency"),
+            "why_signal_matters": data.get("why_signal_matters"),
+            "business_value_connection": data.get("business_value_connection"),
+            "audience_problem_or_opportunity": data.get(
+                "audience_problem_or_opportunity"
+            ),
+            "defensible_perspective": data.get("defensible_perspective"),
+            "supported_editorial_angle": data.get("supported_editorial_angle"),
+            "relevance_bases": bases,
+            "criterion_results": criteria,
+            "research_condition_handling": data.get("research_condition_handling", []),
+            "restrictions": data.get("restrictions", []),
+            "disposition_reasons": data.get("disposition_reasons", []),
+        }
+        # Only a declared claim mode is carried. An absent key keeps the
+        # canonical DIRECT_AUDIENCE_CLAIM default, so responses written before
+        # the mode existed keep their exact prior meaning; passing None instead
+        # would reject them as malformed. An explicit null is not absence — it
+        # names the field and declares nothing — and fails closed rather than
+        # being read as a direct claim the evaluator never made.
+        if "claim_mode" in data:
+            judgment["claim_mode"] = data["claim_mode"]
+
         return {
             "decision_artifact_id": self._id_factory(),
             "run_id": run_id,
@@ -631,24 +657,7 @@ class DecisionLensEvaluator:
             "created_at": self._clock(),
             "source_ids": data.get("source_ids", []),
             "evidence_ids": data.get("evidence_ids", []),
-            "judgment": {
-                "relevance": data.get("relevance"),
-                "evidence_sufficiency": data.get("evidence_sufficiency"),
-                "why_signal_matters": data.get("why_signal_matters"),
-                "business_value_connection": data.get("business_value_connection"),
-                "audience_problem_or_opportunity": data.get(
-                    "audience_problem_or_opportunity"
-                ),
-                "defensible_perspective": data.get("defensible_perspective"),
-                "supported_editorial_angle": data.get("supported_editorial_angle"),
-                "relevance_bases": bases,
-                "criterion_results": criteria,
-                "research_condition_handling": data.get(
-                    "research_condition_handling", []
-                ),
-                "restrictions": data.get("restrictions", []),
-                "disposition_reasons": data.get("disposition_reasons", []),
-            },
+            "judgment": judgment,
             "disposition": data.get("disposition"),
         }
 
