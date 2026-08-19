@@ -185,6 +185,14 @@ def execute_and_persist_research(
             assessed = assess_artifact(
                 result.artifact,
                 transport=judgment_transport or LlmChatEvidenceJudgmentTransport(),
+                # The canonical outcome, not a provider-specific check: only a
+                # COMPLETE operation retrieved everything it was asked for. A
+                # partial result keeps its readiness, so no invalid
+                # partial-plus-READY object is ever constructed and the
+                # retrieved evidence is persisted normally.
+                retrieval_complete=(
+                    result.outcome is ResearchOperationOutcome.COMPLETE
+                ),
             )
         except EvidenceAssessmentError:
             # Losing the retrieval because the assessment failed would destroy

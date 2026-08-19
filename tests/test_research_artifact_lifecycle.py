@@ -628,3 +628,46 @@ def test_from_package_rejects_invalid_research_lineage_before_side_effects(tmp_p
 
     reuse_patches["_load_package_images"].assert_not_called()
     reuse_patches["generate_article"].assert_not_called()
+
+
+class AcceptingJudgment(RejectingJudgment):
+    """A verdict that would promote — used to prove it cannot."""
+
+    def __init__(self):
+        super().__init__(disposition="accepted")
+
+
+def test_partial_retrieval_preserves_research_json_and_stays_non_ready(lifecycle):
+    """The exact shape that used to lose the evidence entirely.
+
+    Assessing a partial retrieval's surviving evidence produced READY, which
+    made an invalid partial-plus-READY object. `model_copy` does not
+    revalidate, so it was built silently and rejected one line later as a raw
+    ValidationError — before `write_research_json` ran. The retrieval was lost
+    and a working provider was reported as a validation failure.
+
+    Now the provider's incomplete state survives assessment, so the artifact
+    is persisted truthfully and blocked through the canonical lifecycle.
+    """
+
+    root, strategy, _, assignment, run, request = lifecycle
+    run_dir = root / assignment.assignment_id / "runs" / run.run_id
+    judgment = AcceptingJudgment()
+
+    with pytest.raises(ResearchGateError, match="partial"):
+        execute_and_persist_research(
+            ReadyProvider(readiness=EvidenceReadiness.NEEDS_REVIEW,
+                          disposition=EvidenceDisposition.NOT_ASSESSED, partial=True),
+            request, run_dir, identity=strategy.identity, run_started_at=run.started_at,
+            clock=lambda: request.requested_at + timedelta(seconds=2),
+            judgment_transport=judgment,
+        )
+
+    # the evidence survived, and it is the assessed evidence
+    assert (run_dir / "research.json").exists()
+    persisted = load_research_envelope(root, assignment.assignment_id, run.run_id)
+    artifact = persisted.result.artifact
+    assert artifact.readiness is not EvidenceReadiness.READY
+    assert artifact.evidence[0].disposition is EvidenceDisposition.ACCEPTED
+    assert artifact.evidence[0].assessment_rationale
+    assert judgment.calls == 1, "the surviving evidence was genuinely assessed"

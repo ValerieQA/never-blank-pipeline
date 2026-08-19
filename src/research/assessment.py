@@ -130,10 +130,18 @@ _PROVIDER_FINDINGS_THE_ASSESSOR_CANNOT_OVERTURN = frozenset(
 
 
 def _readiness_for(
-    evidence: tuple[ExtractedEvidence, ...], artifact: NormalizedResearchArtifact
+    evidence: tuple[ExtractedEvidence, ...],
+    artifact: NormalizedResearchArtifact,
+    retrieval_complete: bool,
 ) -> EvidenceReadiness:
     """Readiness follows from the assessment; it is never chosen directly."""
 
+    if not retrieval_complete:
+        # Retrieval was incomplete — a required source failed. Evidence that
+        # did arrive is still assessed, because the run deserves a truthful
+        # account of it, but assessing survivors cannot compensate for what is
+        # missing. The provider's finding stands, and no verdict overrides it.
+        return artifact.readiness
     if artifact.readiness in _PROVIDER_FINDINGS_THE_ASSESSOR_CANNOT_OVERTURN:
         return artifact.readiness
 
@@ -201,18 +209,47 @@ def assess_artifact(
     *,
     transport: EvidenceJudgmentTransport,
     assessor: EvidenceAssessorIdentity | None = None,
+    retrieval_complete: bool = True,
 ) -> NormalizedResearchArtifact:
     """Return the same artifact with its evidence assessed and readiness set.
 
     Records already carrying a disposition are left alone — this assesses what
     retrieval left `not_assessed`, and does not overrule a judgment already
     made. Readiness is derived from the result, never asserted.
+
+    ``retrieval_complete`` carries the one fact the artifact cannot express:
+    whether the provider actually retrieved everything it was asked for. An
+    incomplete retrieval keeps its readiness whatever the verdicts say.
+
+    The assessor's identity is claimed only for work it performed. An artifact
+    whose records were all assessed elsewhere is returned unattributed, so the
+    canonical gate declines it rather than accepting someone else's judgment
+    under this assessor's name.
     """
 
     identity = assessor or EvidenceAssessorIdentity(
         assessor_id=ASSESSOR_ID, version=ASSESSOR_VERSION
     )
     sources = {source.source_id: source for source in artifact.sources}
+    preassessed = tuple(
+        item.evidence_id for item in artifact.evidence
+        if item.disposition is not EvidenceDisposition.NOT_ASSESSED
+    )
+    unassessed = tuple(
+        item.evidence_id for item in artifact.evidence
+        if item.disposition is EvidenceDisposition.NOT_ASSESSED
+    )
+    if preassessed and unassessed:
+        # One artifact-level identity cannot say "this assessor judged these
+        # records but not those". Rather than attribute work falsely — the
+        # precise thing the gate exists to prevent — the mixed case fails
+        # closed. Representing mixed provenance truthfully would need a
+        # per-record attribution the accepted schema does not have.
+        raise EvidenceAssessmentError(
+            "artifact mixes pre-assessed and unassessed evidence, which this "
+            f"contract cannot attribute truthfully: assessed={preassessed!r}, "
+            f"unassessed={unassessed!r}"
+        )
 
     assessed: list[ExtractedEvidence] = []
     pending: list[ExtractedEvidence] = []
@@ -248,8 +285,11 @@ def assess_artifact(
     )
     return artifact.model_copy(update={
         "evidence": ordered,
-        "assessor": identity,
-        "readiness": _readiness_for(ordered, artifact),
+        # Claimed only for work actually done. Nothing to assess means nothing
+        # to attribute, and the artifact keeps whatever attribution it arrived
+        # with — which for an unattributed artifact means the gate declines it.
+        "assessor": identity if unassessed else artifact.assessor,
+        "readiness": _readiness_for(ordered, artifact, retrieval_complete),
     })
 
 

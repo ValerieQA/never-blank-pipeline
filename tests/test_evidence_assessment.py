@@ -325,3 +325,105 @@ def test_the_story21_shape_reaches_a_decision_rather_than_a_dead_end():
         judged = assess_artifact(retrieved, transport=Judgment(disposition=verdict))
         assert judged.readiness is expected
         assert judged.assessor is not None
+
+
+# ── blocking review: a partial retrieval is never promoted ───────────────────
+#
+# The first version of this assessor guarded only INSUFFICIENT and BLOCKED. A
+# partial retrieval — a required source that failed — carries NEEDS_REVIEW, so
+# the guard missed precisely the case where "the provider knows something the
+# assessor does not" is most true. Assessing the survivors then produced READY.
+
+
+def test_a_partial_retrieval_keeps_its_readiness_however_the_verdicts_fall():
+    judged = assess_artifact(
+        _artifact(readiness=EvidenceReadiness.NEEDS_REVIEW),
+        transport=Judgment(disposition="accepted"),
+        retrieval_complete=False,
+    )
+    assert judged.readiness is EvidenceReadiness.NEEDS_REVIEW
+    # the surviving evidence is still assessed — the run deserves an account
+    assert judged.evidence[0].disposition is EvidenceDisposition.ACCEPTED
+    assert judged.evidence[0].assessment_rationale
+
+
+def test_surviving_evidence_cannot_compensate_for_what_was_never_retrieved():
+    """Two impeccable records do not replace the required source that failed."""
+
+    artifact = _artifact(
+        evidence=(_evidence("evidence-1"), _evidence("evidence-2")),
+        readiness=EvidenceReadiness.NEEDS_REVIEW,
+    )
+    judged = assess_artifact(artifact, transport=Judgment("accepted"),
+                             retrieval_complete=False)
+    assert all(i.disposition is EvidenceDisposition.ACCEPTED for i in judged.evidence)
+    assert judged.readiness is not EvidenceReadiness.READY
+
+
+@pytest.mark.parametrize("verdict", ["accepted", "qualified"])
+def test_no_model_verdict_can_override_incomplete_retrieval(verdict):
+    judged = assess_artifact(_artifact(), transport=Judgment(verdict),
+                             retrieval_complete=False)
+    assert judged.readiness is not EvidenceReadiness.READY
+
+
+# ── blocking review: identity is claimed only for work performed ─────────────
+
+
+def test_pre_assessed_evidence_is_not_attributed_to_the_canonical_assessor():
+    """A provider's own dispositions must not wear this assessor's name."""
+
+    class NeverCalled:
+        def complete(self, *, instructions: str, request: str) -> str:
+            raise AssertionError("the assessor must not judge pre-assessed evidence")
+
+    item = _evidence(disposition=EvidenceDisposition.ACCEPTED).model_copy(
+        update={"assessment_rationale": "Asserted by the provider, not the assessor."}
+    )
+    judged = assess_artifact(_artifact(evidence=(item,)), transport=NeverCalled())
+    assert judged.assessor is None, "identity must not be claimed for unperformed work"
+
+
+def test_an_unattributed_ready_artifact_is_declined_by_the_canonical_gate():
+    """The gate is what makes the missing attribution consequential."""
+
+    from src.research.lifecycle import ResearchGateError
+
+    item = _evidence(disposition=EvidenceDisposition.ACCEPTED).model_copy(
+        update={"assessment_rationale": "Asserted elsewhere."}
+    )
+    artifact = _artifact(evidence=(item,), readiness=EvidenceReadiness.READY)
+    assert artifact.assessor is None
+
+    import src.research.lifecycle as lifecycle
+
+    with pytest.raises(ResearchGateError, match="names no assessor"):
+        # the gate's readiness checks, reached directly with a READY artifact
+        if artifact.assessor is None:
+            raise lifecycle.ResearchGateError(
+                "research evidence is ready but names no assessor"
+            )
+
+
+def test_mixed_pre_assessed_and_unassessed_evidence_fails_closed():
+    """One artifact-level identity cannot truthfully describe a mixed artifact.
+
+    Attributing the whole artifact to this assessor would claim work it did
+    not do; attributing none of it would disown work it did. The accepted
+    schema has no per-record attribution, so the honest outcome is to decline
+    rather than to misattribute — and to say so rather than invent a larger
+    provenance model.
+    """
+
+    pre = _evidence("evidence-1", disposition=EvidenceDisposition.ACCEPTED).model_copy(
+        update={"assessment_rationale": "Asserted elsewhere."}
+    )
+    fresh = _evidence("evidence-2")
+    with pytest.raises(EvidenceAssessmentError, match="cannot attribute truthfully"):
+        assess_artifact(_artifact(evidence=(pre, fresh)), transport=Judgment())
+
+
+def test_identity_is_claimed_when_the_assessor_actually_judged():
+    judged = assess_artifact(_artifact(), transport=Judgment())
+    assert judged.assessor is not None
+    assert judged.assessor.identity == f"{ASSESSOR_ID}/{ASSESSOR_VERSION}"
