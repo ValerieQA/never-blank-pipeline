@@ -30,3 +30,7 @@ __pycache__/
 venv/
 *.egg-info/
 .DS_Store
+diagnostics/
+
+# Story #21 diagnostic output (artifact only, never committed)
+/diagnostics/

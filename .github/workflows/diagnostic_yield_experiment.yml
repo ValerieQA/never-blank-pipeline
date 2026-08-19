@@ -1,0 +1,48 @@
+# Story #21 diagnostic only. Manual trigger, no schedule, no publication, no
+# commit, no canonical state written. It exists to separate the source change
+# from the selector change; production configuration is never modified — the
+# historical variant is read out of git history in memory.
+name: Diagnostic — research yield V2/V3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [diagnostic/yield-v2-v3]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: "V2/V3 yield experiment"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # the experiment reads pre-2026-07-21 config from history
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install --quiet -r requirements.txt
+
+      - name: Run diagnostic
+        env:
+          NB_OPENAI_API_KEY:      ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_OPENAI_CHAT_MODEL:   ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          NB_DISCOVERY_MODEL:     ${{ secrets.NB_DISCOVERY_MODEL }}
+          NB_ENRICH_MODEL:        ${{ secrets.NB_ENRICH_MODEL }}
+        run: python scripts/diagnostics/yield_experiment.py
+
+      - name: Upload diagnostic artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yield-diagnostic
+          path: diagnostics/
+          if-no-files-found: warn
+
+      - name: Prove the repository was not mutated
+        if: always()
+        run: |
+          git status --porcelain --untracked-files=no | tee /tmp/dirty
+          test ! -s /tmp/dirty || (echo "diagnostic mutated tracked files"; exit 1)
