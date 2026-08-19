@@ -14,7 +14,22 @@ from src.utils.config_loader import load_prompt
 
 log = get_logger("research.angles")
 
-VALID_AUDIENCES = {"founder", "owner", "consultant", "service_business", "small_team", "agency", "creator"}
+#: Generic research taxonomy — profile-agnostic vocabulary. These are never
+#: strategy audience IDs: which of them a configured audience answers to is
+#: declared by that audience's selection_terms, so a new profile needs no
+#: change here.
+VALID_AUDIENCES = {
+    "founder", "owner", "consultant", "service_business",
+    "small_team", "agency", "creator", "managed_service_provider",
+}
+
+#: What the classifier says when it did not classify. Deliberately outside the
+#: taxonomy and declared by no configuration, so it resolves to nothing and
+#: intake declines it. The previous fallback was "founder", which is not a
+#: truthful default: more than one configured Never Blank audience is
+#: founder-led, so the term claimed a specificity the classifier never had —
+#: and it silently became the audience of 241 of 244 queued signals.
+UNCLASSIFIED_AUDIENCE = "unclassified"
 VALID_CHANNELS  = {"linkedin", "blog", "threads", "story", "instagram"}
 
 def generate_angles(signal: dict) -> dict:
@@ -38,7 +53,7 @@ def generate_angles(signal: dict) -> dict:
         angles = {}
 
     if angles.get("TARGET_AUDIENCE") not in VALID_AUDIENCES:
-        angles["TARGET_AUDIENCE"] = "founder"
+        angles["TARGET_AUDIENCE"] = UNCLASSIFIED_AUDIENCE
     if angles.get("PRIMARY_CHANNEL") not in VALID_CHANNELS:
         angles["PRIMARY_CHANNEL"] = "linkedin"
 

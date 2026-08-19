@@ -294,7 +294,10 @@ def test_from_dict_old_record_all_none_fields():
     assert rc.factual_readiness == "insufficient"
     assert rc.admission_status == "rejected"
     assert rc.confidence == "low"
-    assert rc.target_audience == "founder"
+    # A record with no audience is unclassified, not "founder": that default
+    # claimed a specificity the record never carried, and more than one
+    # configured audience is founder-led.
+    assert rc.target_audience == "unclassified"
     assert rc.outcome_if_known == "unknown"
     assert rc.did_it_work == "unknown"
 

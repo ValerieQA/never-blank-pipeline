@@ -25,7 +25,11 @@
     {
       "audience_id": "small-b2b-agencies",
       "name": "Founder-led digital, web, development, and creative agencies",
-      "selection_terms": ["agencies", "agency", "small b2b agencies"],
+      "selection_terms": [
+        "agencies",
+        "agency",
+        "small b2b agencies"
+      ],
       "problems": [
         "Client delivery displaces consistent market presence.",
         "The work being delivered is more substantial than what prospective clients can see.",
@@ -47,7 +51,11 @@
     {
       "audience_id": "independent-consultants",
       "name": "Independent consultants and advisors",
-      "selection_terms": ["consultants", "consultant", "advisors"],
+      "selection_terms": [
+        "consultants",
+        "consultant",
+        "advisors"
+      ],
       "problems": [
         "Expertise remains inside delivery work instead of becoming visible market evidence.",
         "Publishing stops when client work becomes demanding.",
@@ -69,7 +77,12 @@
     {
       "audience_id": "managed-service-providers",
       "name": "Founder-led managed service providers",
-      "selection_terms": ["msps", "msp", "managed service providers"],
+      "selection_terms": [
+        "msps",
+        "msp",
+        "managed service providers",
+        "managed service provider"
+      ],
       "problems": [
         "Operational delivery is visible to clients only when something fails or a project is active.",
         "Technical competence is difficult for non-technical buyers to evaluate from the outside.",
