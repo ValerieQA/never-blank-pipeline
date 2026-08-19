@@ -18,6 +18,8 @@ not publish a generic article to fill the gap.
 """
 
 from typing import Callable, Mapping
+from src.editorial.claim_boundary import claim_boundary_text
+from src.editorial.decision_contract import DecisionLensDecisionArtifact
 from src.research.evidence import NormalizedResearchArtifact
 
 from src.editorial.pattern_extractor import extract_pattern, SignalRejectedError
@@ -70,6 +72,7 @@ def generate_article(
     linkedin_strategy: LinkedInStrategyView | None = None,
     audience_selection: AudienceSelection | None = None,
     research_artifact: NormalizedResearchArtifact | None = None,
+    decision_artifact: DecisionLensDecisionArtifact | None = None,
 ) -> dict:
     """
     Run the full Editorial Engine V2 pipeline for one enriched signal.
@@ -138,20 +141,41 @@ def generate_article(
             "decision_lens_lite", generate_decision_lens,
             enriched, typed_strategy, audience_selection, research_artifact,
         )
-    spine = _run_stage("narrative_spine", build_narrative_spine, decision_lens, enriched)
+    # Issue #131: the run's own claim boundary — declared claim mode, cited
+    # supported facts, and the restrictions the Decision Lens bound itself to.
+    # Every stage that writes prose gets it; without it these stages are told
+    # to generalize into audience-level statements with nothing saying where
+    # generalization stops. None when a non-canonical caller has no decision or
+    # no research, and then the prompts are byte-identical to before.
+    claim_boundary = claim_boundary_text(decision_artifact, research_artifact)
+
+    spine = _run_stage(
+        "narrative_spine", build_narrative_spine, decision_lens, enriched,
+        claim_boundary=claim_boundary,
+    )
     hook = _run_stage("hook_engine", generate_hook, spine, decision_lens, enriched)
     reader_context = _run_stage("reader_context", build_reader_context, enriched)
-    discovery = _run_stage("discovery_builder", build_discovery, hook, spine, decision_lens, enriched)
-    story = _run_stage("story_assembly", assemble_story, discovery, spine, decision_lens, enriched)
+    discovery = _run_stage(
+        "discovery_builder", build_discovery, hook, spine, decision_lens, enriched,
+        claim_boundary=claim_boundary,
+    )
+    story = _run_stage(
+        "story_assembly", assemble_story, discovery, spine, decision_lens, enriched,
+        claim_boundary=claim_boundary,
+    )
     voice_args = (
         hook, reader_context, discovery, story, spine, decision_lens, enriched, cta_mode
     )
     if typed_strategy is None:
-        structured_article = _run_stage("never_blank_voice", finalize_article, *voice_args)
+        structured_article = _run_stage(
+            "never_blank_voice", finalize_article, *voice_args,
+            claim_boundary=claim_boundary,
+        )
     else:
         structured_article = _run_stage(
             "never_blank_voice", finalize_article, *voice_args,
             typed_strategy, audience_selection, selected_cta,
+            claim_boundary=claim_boundary,
         )
     platforms = _run_stage(
         "platform_composer",

@@ -256,26 +256,42 @@ def _revise_article(
     article_body: str,
     review: EditorialReview,
     run_id: str,
+    claim_boundary: str | None = None,
 ) -> str:
-    """Perform the single controlled revision of the Wix article body only."""
+    """Perform the single controlled revision of the Wix article body only.
+
+    Issue #131: the reviser receives the run's claim boundary, not only the
+    reviewer's prose. Without it the only picture of truth is one review's
+    narrative, so a revision can satisfy a named complaint by writing a
+    different unsupported claim — and "do not invent facts" is an instruction
+    the model has no way to check itself against.
+    """
 
     failed = [
         {"criterion_id": c.criterion_id, "description": c.description}
         for c in rubric.criteria
         if c.criterion_id in review.failed_criterion_ids
     ]
+    payload = {
+        "run_id": run_id,
+        "article": article_body,
+        "failed_criteria": failed,
+        "revision_guidance": review.revision_guidance,
+        "rationale": review.rationale,
+        "note": (
+            "Revise this one article to address the failed criteria. Do not "
+            "invent facts or evidence. Return only the revised article text."
+        ),
+    }
+    if claim_boundary:
+        payload["claim_boundary"] = claim_boundary
+        payload["note"] += (
+            " The claim boundary below is authoritative and binds this revision "
+            "exactly as it bound the original article: a correction that "
+            "introduces a claim outside it is not a correction."
+        )
     request = json.dumps(
-        {
-            "run_id": run_id,
-            "article": article_body,
-            "failed_criteria": failed,
-            "revision_guidance": review.revision_guidance,
-            "rationale": review.rationale,
-            "note": (
-                "Revise this one article to address the failed criteria. Do not "
-                "invent facts or evidence. Return only the revised article text."
-            ),
-        },
+        payload,
         ensure_ascii=False,
         sort_keys=True,
     )
@@ -303,6 +319,7 @@ def run_editorial_acceptance(
     rubric: EditorialAcceptanceRubric,
     reviewer: EditorialReviewTransport,
     revisor: ArticleRevisionTransport,
+    claim_boundary: str | None = None,
 ) -> EditorialAcceptanceOutcome:
     """Run the complete Release 1 acceptance lifecycle for one generated article.
 
@@ -342,7 +359,8 @@ def run_editorial_acceptance(
 
     # REVISE: exactly one controlled revision, then exactly one recheck.
     revised_body = _revise_article(
-        revisor, rubric, article_body=article_body, review=initial, run_id=run_id
+        revisor, rubric, article_body=article_body, review=initial, run_id=run_id,
+        claim_boundary=claim_boundary,
     )
     final = _review_article(
         reviewer, rubric, article_body=revised_body, research=research, run_id=run_id

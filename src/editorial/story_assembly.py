@@ -102,7 +102,13 @@ def _validate(data: dict) -> dict:
     }
 
 
-def assemble_story(discovery: dict, spine: dict, decision_lens: dict, signal: dict) -> dict:
+def assemble_story(
+    discovery: dict,
+    spine: dict,
+    decision_lens: dict,
+    signal: dict,
+    claim_boundary: str | None = None,
+) -> dict:
     """
     Produce surviving_explanation, reframe, remaining_uncertainty, and business_translation.
 
@@ -128,6 +134,9 @@ HARD REQUIREMENT: surviving_explanation must name the structural mechanism the o
 experiences, not what the company decided.
 
 Produce the Story Assembly JSON."""
+
+    if claim_boundary:
+        user = f"{user}\n{claim_boundary}"
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_article())
     try:

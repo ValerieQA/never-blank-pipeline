@@ -104,7 +104,13 @@ def _validate(data: dict) -> dict:
     }
 
 
-def build_discovery(hook: dict, spine: dict, decision_lens: dict, signal: dict) -> dict:
+def build_discovery(
+    hook: dict,
+    spine: dict,
+    decision_lens: dict,
+    signal: dict,
+    claim_boundary: str | None = None,
+) -> dict:
     user = f"""selected_hook: {hook.get('selected_hook', '')}
 narrative_spine: {spine.get('narrative_spine', '')}
 visibility_pattern: {signal.get('visibility_pattern', '')}
@@ -123,6 +129,9 @@ delivery_vs_presence_conflict: {decision_lens.get('delivery_vs_presence_conflict
 
 Produce owner-centered structured discovery material. Do not write publishable prose.
 The company is evidence, never protagonist."""
+
+    if claim_boundary:
+        user = f"{user}\n{claim_boundary}"
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_article())
     try:

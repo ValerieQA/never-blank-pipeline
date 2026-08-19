@@ -119,11 +119,21 @@ _STRATEGY_CONTEXT = {
 # require_proceed() inspects the real enum disposition; decision_lens_version
 # feeds the entrypoint status line.
 from src.editorial.decision_contract import DecisionDisposition as _DecisionDisposition
+from src.editorial.decision_contract import EditorialClaimMode as _EditorialClaimMode
 
 _FAKE_DECISION = SimpleNamespace(
     disposition=_DecisionDisposition.PROCEED,
     decision_lens_version="never-blank-decision-lens/1.0",
     run_id="",
+    # Issue #131: the entrypoint derives the run's claim boundary from the
+    # decision, so this stand-in carries the judgment fields that derivation
+    # reads. Empty here — the boundary's own behaviour is covered by
+    # tests/test_claim_boundary.py against real decision artifacts.
+    evidence_ids=(),
+    judgment=SimpleNamespace(
+        claim_mode=_EditorialClaimMode.DIRECT_AUDIENCE_CLAIM,
+        restrictions=(),
+    ),
 )
 
 # VALID-shaped stand-in for the visual contract gate (Issue #96): the

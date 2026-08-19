@@ -139,6 +139,7 @@ from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
+from src.editorial.claim_boundary import claim_boundary_text
 from src.editorial.pipeline import ArticleGenerationError, generate_article
 from src.editorial.decision_lens_evaluator import (
     DecisionLensEvaluator,
@@ -1369,6 +1370,7 @@ def _run(
                 linkedin_strategy=strategy_execution.linkedin,
                 audience_selection=audience_selection,
                 research_artifact=research_artifact,
+                decision_artifact=decision_artifact,
             )
             platforms  = article["platforms"]
             structured = article["structured_article"]
@@ -1407,6 +1409,12 @@ def _run(
                     article_revisor
                     if article_revisor is not None
                     else LlmChatArticleRevisionTransport()
+                ),
+                # Issue #131: the same authoritative boundary the article was
+                # written against, so the one controlled revision cannot trade
+                # a flagged claim for a fresh one outside the decision.
+                claim_boundary=claim_boundary_text(
+                    decision_artifact, research_artifact
                 ),
             )
         except (EditorialAcceptanceError, ValueError, OSError) as exc:
