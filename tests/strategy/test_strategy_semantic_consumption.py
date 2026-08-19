@@ -178,16 +178,38 @@ def test_unknown_and_ambiguous_audience_fail_closed():
         ambiguous.decision_lens_editorial.select_audience("shared")
 
 
-def test_unknown_audience_blocks_canonical_path_before_generation_or_publishers(tmp_path):
+def _newest_run_dir(packages_dir):
+    runs = [p for p in packages_dir.rglob("runs/*") if p.is_dir()]
+    return max(runs, key=lambda p: p.stat().st_mtime)
+
+
+def test_a_research_audience_label_no_longer_blocks_the_canonical_path(tmp_path, capsys):
+    """Issue #121 moved this boundary, and the move is the point.
+
+    A discovery label naming no configured audience used to end the run at
+    intake — before any research artifact, decision or reasoning existed, so a
+    documented mechanism and an irrelevant corporate case were rejected
+    identically. The label is source metadata; whether the evidence supports a
+    bounded claim for the configured audience is Decision Lens's judgment, and
+    the accepted #58 rules still govern it.
+
+    The strict guarantee this test originally protected survives where it
+    still applies: an *explicit* unknown or ambiguous audience request still
+    fails closed (`tests/test_audience_routing.py`, case D).
+    """
+
     argv, patches = harness._base_patches(dry_run=False)
     patches["PACKAGES_DIR"] = tmp_path
     signal = dict(harness._RAW_SIGNAL, TARGET_AUDIENCE="not configured")
     patches["_load_signal"] = mock.MagicMock(return_value=signal)
-    generation = patches["generate_article"]
-    publisher = mock.MagicMock()
-    with mock.patch("sys.argv", argv), mock.patch.multiple(gap, **patches), \
-         mock.patch.object(gap, "WixPublisher", publisher), \
-         mock.patch.object(gap, "LinkedInPublisher", publisher):
-        assert main() == 1
-    generation.assert_not_called()
-    publisher.assert_not_called()
+    with mock.patch("sys.argv", argv), mock.patch.multiple(gap, **patches):
+        main()
+    output = capsys.readouterr().out
+
+    # the load-bearing change: the label no longer ends the run at intake
+    assert "unknown target audience" not in output
+
+    # and it is preserved as source metadata, never recorded as the selected
+    # configured audience
+    record = json.loads((_newest_run_dir(tmp_path) / "assignment.json").read_text())
+    assert record["assignment"]["target_audience"] == "not configured"
