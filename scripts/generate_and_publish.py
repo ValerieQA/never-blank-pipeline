@@ -126,6 +126,7 @@ from src.run.code_identity import resolve_code_identity
 from src.lifecycle.signal_lifecycle import ResearchContext
 from src.research.provider import ResearchProvider
 from src.research.adapters.exa import ExaResearchAdapter
+from src.research.assessment import EvidenceAssessmentError, EvidenceJudgmentTransport
 from src.research.lifecycle import (
     ResearchGateError,
     build_research_request,
@@ -639,6 +640,7 @@ def _build_legacy_research_context(
 def main(
     *,
     research_provider: ResearchProvider | None = None,
+    evidence_judgment: "EvidenceJudgmentTransport | None" = None,
     decision_evaluator: DecisionLensEvaluator | None = None,
     editorial_reviewer: EditorialReviewTransport | None = None,
     article_revisor: ArticleRevisionTransport | None = None,
@@ -656,6 +658,7 @@ def main(
     exit_code = _run(
         state,
         research_provider=research_provider,
+        evidence_judgment=evidence_judgment,
         decision_evaluator=decision_evaluator,
         editorial_reviewer=editorial_reviewer,
         article_revisor=article_revisor,
@@ -668,6 +671,7 @@ def _run(
     state: "_TerminalState",
     *,
     research_provider: ResearchProvider | None = None,
+    evidence_judgment: "EvidenceJudgmentTransport | None" = None,
     decision_evaluator: DecisionLensEvaluator | None = None,
     editorial_reviewer: EditorialReviewTransport | None = None,
     article_revisor: ArticleRevisionTransport | None = None,
@@ -926,7 +930,15 @@ def _run(
                 provider, research_request, run_dir,
                 identity=strategy_execution.identity,
                 run_started_at=run_ctx.started_at,
+                judgment_transport=evidence_judgment,
             )
+        except EvidenceAssessmentError as exc:
+            # Assessment failed — which is not retrieval failing, and must not
+            # be reported as though the provider broke. Nothing is promoted.
+            print(f"  ERROR: evidence assessment blocked generation: {exc}")
+            state.ended(TerminalStage.RESEARCH, TerminalDisposition.FAILED,
+                        f"evidence assessment: {type(exc).__name__}")
+            return 1
         except (ResearchGateError, ArtifactCollisionError, OSError, ValueError, EnvironmentError) as exc:
             print(f"  ERROR: research gate blocked generation: {exc}")
             state.ended(TerminalStage.RESEARCH, TerminalDisposition.FAILED,

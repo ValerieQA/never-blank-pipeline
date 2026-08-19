@@ -2,6 +2,7 @@
 
 from .evidence import (
     Contradiction,
+    EvidenceAssessorIdentity,
     EvidenceDisposition,
     EvidenceReadiness,
     ExtractedEvidence,
@@ -43,6 +44,7 @@ from .provider import (
 
 __all__ = [
     "Contradiction",
+    "EvidenceAssessorIdentity",
     "EvidenceDisposition",
     "EvidenceReadiness",
     "ExtractedEvidence",

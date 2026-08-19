@@ -9,6 +9,12 @@ from typing import Callable
 from src.artifacts import load_research_json, write_research_json
 from src.intake import ContentAssignment
 from src.research.evidence import EvidenceReadiness, NormalizedResearchArtifact
+from src.research.assessment import (
+    EvidenceAssessmentError,
+    EvidenceJudgmentTransport,
+    LlmChatEvidenceJudgmentTransport,
+    assess_artifact,
+)
 from src.research.provider import (
     CompleteResearchResult,
     FreshnessRequirement,
@@ -142,6 +148,23 @@ def validate_research_envelope(
         raise ResearchGateError("research artifact configuration identity mismatch")
     if artifact.readiness is not EvidenceReadiness.READY:
         raise ResearchGateError(f"research evidence is {artifact.readiness.value}, not ready")
+    # READY asserts that evidence was assessed, and the canonical path holds
+    # it to that. Without a named assessor and a stated reason per record the
+    # assertion is unfalsifiable afterwards, and retrieval alone could wear
+    # the appearance of assessment. The artifact contract itself is unchanged:
+    # this is the production gate declining an unassessed READY, not a new
+    # meaning for READY.
+    if artifact.assessor is None:
+        raise ResearchGateError("research evidence is ready but names no assessor")
+    unexplained = tuple(
+        item.evidence_id
+        for item in artifact.evidence
+        if not (item.assessment_rationale or "").strip()
+    )
+    if unexplained:
+        raise ResearchGateError(
+            f"research evidence is ready but unexplained: {unexplained!r}"
+        )
     return artifact
 
 
@@ -149,8 +172,30 @@ def execute_and_persist_research(
     provider: ResearchProvider, request: ResearchProviderRequest, run_dir: Path,
     *, identity: ConfigurationIdentity, run_started_at: datetime,
     clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+    judgment_transport: "EvidenceJudgmentTransport | None" = None,
 ) -> NormalizedResearchArtifact:
     result = execute_research(provider, request)
+    # Issue #125: assessment happens here — after retrieval, before the
+    # create-once artifact is written — so research.json records the assessed
+    # evidence the rest of the run actually reasons from, rather than being
+    # amended afterwards. A result carrying no artifact (a failed operation)
+    # has nothing to assess and is passed through untouched.
+    if getattr(result, "artifact", None) is not None:
+        try:
+            assessed = assess_artifact(
+                result.artifact,
+                transport=judgment_transport or LlmChatEvidenceJudgmentTransport(),
+            )
+        except EvidenceAssessmentError:
+            # Losing the retrieval because the assessment failed would destroy
+            # real evidence and misreport a working provider. The unassessed
+            # artifact is persisted exactly as retrieved — every record still
+            # `not_assessed`, readiness untouched — so the run has a truthful
+            # account, and then the failure propagates. Nothing is promoted.
+            unassessed = ResearchResultEnvelope(request=request, result=result)
+            write_research_json(run_dir, unassessed.canonical_json().encode("utf-8"))
+            raise
+        result = result.model_copy(update={"artifact": assessed})
     envelope = ResearchResultEnvelope(request=request, result=result)
     write_research_json(run_dir, envelope.canonical_json().encode("utf-8"))
     persisted = load_research_envelope(run_dir.parent.parent.parent, request.signal_id, request.run_id)

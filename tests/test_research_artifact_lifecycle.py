@@ -15,7 +15,8 @@ from scripts.generate_and_publish import main
 from src.artifacts import ArtifactCollisionError
 from src.intake import from_jsonl_signal
 from src.research.evidence import (
-    Contradiction, EvidenceDisposition, EvidenceReadiness, ExtractedEvidence,
+    Contradiction, EvidenceAssessorIdentity, EvidenceDisposition,
+    EvidenceReadiness, ExtractedEvidence,
     ModelInterpretation,
     NormalizedResearchArtifact, NormalizedSource, PublicationTime,
     PublicationTimeStatus, ResolutionStatus, SourceLocator, SourceLocatorKind,
@@ -46,6 +47,31 @@ from tests import test_research_provider_adapter as provider_tests
 pytestmark = pytest.mark.story11
 
 
+class RejectingJudgment:
+    """Issue #125 fixture adaptation: a typed verdict without a live model.
+
+    These tests supply `not_assessed` evidence, which now reaches the
+    assessor. Rejecting keeps each test's original premise — the artifact
+    stays non-ready and downstream effects stay blocked — while exercising the
+    real assessment path rather than skipping it.
+    """
+
+    def __init__(self, disposition="rejected"):
+        self.disposition = disposition
+        self.calls = 0
+
+    def complete(self, *, instructions: str, request: str) -> str:
+        import json as _json
+
+        self.calls += 1
+        payload = _json.loads(request)
+        return _json.dumps({"verdicts": [
+            {"evidence_id": item["evidence_id"], "disposition": self.disposition,
+             "rationale": "Fixture verdict for the assessment path."}
+            for item in payload["evidence"]
+        ]})
+
+
 class ReadyProvider:
     def __init__(self, *, readiness=EvidenceReadiness.READY,
                  disposition=EvidenceDisposition.ACCEPTED, partial=False):
@@ -69,11 +95,17 @@ class ReadyProvider:
             evidence_id="evidence-1", claim="A verified claim", source_ids=("source-1",),
             support=(SupportReference(source_id="source-1", excerpt="A verified claim"),),
             disposition=self.disposition,
+            # Issue #125 fixture adaptation: a READY artifact reaching the
+            # canonical gate must now name its assessor and say why each
+            # record was assessed as it was. The lineage guarantees these
+            # tests exist to protect are unchanged.
+            assessment_rationale="The cited excerpt states the claim verbatim.",
         )
         artifact = NormalizedResearchArtifact(
             artifact_id="artifact-1", run_id=request.run_id,
             assignment_id=request.assignment_id, signal_id=request.signal_id,
             configuration_identity=request.strategy.identity, created_at=completed,
+            assessor=EvidenceAssessorIdentity(assessor_id="test-assessor", version="1.0"),
             sources=(source,), evidence=(evidence,),
             interpretations=(ModelInterpretation(
                 interpretation_id="interpretation-1",
@@ -188,10 +220,15 @@ def test_non_ready_complete_result_is_persisted_honestly_then_blocked(lifecycle,
         execute_and_persist_research(
             ReadyProvider(readiness=readiness, disposition=EvidenceDisposition.NOT_ASSESSED),
             request, run_dir, identity=strategy.identity, run_started_at=run.started_at,
+            judgment_transport=RejectingJudgment(),
             clock=lambda: request.requested_at + timedelta(seconds=2),
         )
     persisted = load_research_envelope(root, assignment.assignment_id, run.run_id)
-    assert persisted.result.artifact.readiness is readiness
+    # Issue #125: assessment may lower a provider's readiness — rejecting the
+    # only evidence makes NEEDS_REVIEW honestly INSUFFICIENT. The guarantee
+    # this test protects is that the persisted artifact stays non-ready and
+    # the gate blocks, not that the provider's label survives assessment.
+    assert persisted.result.artifact.readiness is not EvidenceReadiness.READY
 
 
 def test_partial_result_with_artifact_is_persisted_then_blocked(lifecycle):
@@ -203,6 +240,7 @@ def test_partial_result_with_artifact_is_persisted_then_blocked(lifecycle):
                           disposition=EvidenceDisposition.NOT_ASSESSED, partial=True),
             request, run_dir, identity=strategy.identity, run_started_at=run.started_at,
             clock=lambda: request.requested_at + timedelta(seconds=2),
+            judgment_transport=RejectingJudgment(),
         )
     assert (run_dir / "research.json").exists()
 
@@ -346,10 +384,13 @@ def test_canonical_main_blocks_nonready_before_all_downstream_effects(tmp_path):
     patches["PACKAGES_DIR"] = tmp_path
     del patches["execute_and_persist_research"]
     with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
-        assert main(research_provider=ReadyProvider(
-            readiness=EvidenceReadiness.NEEDS_REVIEW,
-            disposition=EvidenceDisposition.NOT_ASSESSED,
-        )) == 1
+        assert main(
+            research_provider=ReadyProvider(
+                readiness=EvidenceReadiness.NEEDS_REVIEW,
+                disposition=EvidenceDisposition.NOT_ASSESSED,
+            ),
+            evidence_judgment=RejectingJudgment(),
+        ) == 1
     patches["generate_article"].assert_not_called()
     assert list(tmp_path.glob("*/runs/*/research.json"))
     assert not list(tmp_path.glob("*/runs/*/generated.json"))
@@ -376,7 +417,9 @@ def test_canonical_entrypoint_rejects_client_userinfo_before_provider_or_side_ef
     patches["PACKAGES_DIR"] = tmp_path
     provider = mock.MagicMock()
     with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
-        assert main(research_provider=provider) == 1
+        assert main(
+            research_provider=provider, evidence_judgment=RejectingJudgment()
+        ) == 1
     provider.research.assert_not_called()
     patches["generate_article"].assert_not_called()
     patches["_load_package_images"].assert_not_called()
