@@ -141,9 +141,16 @@ def validate_research_envelope(
         raise ResearchGateError("provider invocation predates current run")
     if result.invocation.completed_at > now + MAX_CLOCK_SKEW:
         raise ResearchGateError("provider timestamps exceed the permitted five-minute clock skew")
-    if not isinstance(result, CompleteResearchResult) or result.outcome is not ResearchOperationOutcome.COMPLETE:
-        raise ResearchGateError(f"research provider outcome is {result.outcome.value}, not complete")
-    artifact = result.artifact
+    # The gate judges evidence, not the retrieval operation (Issue #125). A
+    # failed operation carries no artifact and so has nothing to judge; a
+    # partial one does, and its evidence is judged on its own merits. The
+    # outcome and any operation failure remain recorded beside the artifact,
+    # so a reviewer sees retrieval truth and evidence readiness independently.
+    artifact = getattr(result, "artifact", None)
+    if artifact is None:
+        raise ResearchGateError(
+            f"research provider outcome is {result.outcome.value}, with no artifact to assess"
+        )
     if artifact.configuration_identity != identity:
         raise ResearchGateError("research artifact configuration identity mismatch")
     if artifact.readiness is not EvidenceReadiness.READY:
@@ -185,14 +192,6 @@ def execute_and_persist_research(
             assessed = assess_artifact(
                 result.artifact,
                 transport=judgment_transport or LlmChatEvidenceJudgmentTransport(),
-                # The canonical outcome, not a provider-specific check: only a
-                # COMPLETE operation retrieved everything it was asked for. A
-                # partial result keeps its readiness, so no invalid
-                # partial-plus-READY object is ever constructed and the
-                # retrieved evidence is persisted normally.
-                retrieval_complete=(
-                    result.outcome is ResearchOperationOutcome.COMPLETE
-                ),
             )
         except EvidenceAssessmentError:
             # Losing the retrieval because the assessment failed would destroy

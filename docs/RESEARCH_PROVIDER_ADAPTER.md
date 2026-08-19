@@ -69,14 +69,29 @@ authentication, rate-limit, unavailable, and source-failure scenarios.
 
 ## Execution outcome is not evidence readiness
 
-Provider transport success and evidence readiness are separate dimensions. A
-complete provider operation may still contain a non-ready artifact. Retrieved
-provider claims default to `not_assessed`; the adapter has no deterministic
-assessment policy that could justify `accepted` or `qualified`.
+Provider transport success and evidence readiness are separate dimensions, and
+since Issue #125 they are separate in both directions. The outcome answers
+*did the operation obtain everything it attempted to obtain*; readiness answers
+*is what we hold sufficient and assessed for the bounded claim downstream may
+reason from*. Neither settles the other.
 
-- Partial retrieval always carries a non-ready artifact and explicit failures.
+A complete operation may still contain a non-ready artifact. A partial one may
+carry a READY artifact when the surviving evidence is assessed and sufficient —
+what was missed is a fact about the retrieval, not a verdict on what arrived.
+Nothing counts sources: two strong records can suffice where five weak ones do
+not.
+
+Retrieved provider claims default to `not_assessed`; the adapter has no
+deterministic assessment policy that could justify `accepted` or `qualified`.
+Assessment is a separate lifecycle step (`src/research/assessment.py`), and it
+is what may raise readiness.
+
+- Partial retrieval always carries explicit failures, which stay visible
+  alongside whatever readiness the evidence earns.
 - Empty and fatal outcomes carry no fabricated artifact.
-- Required-source failure cannot become complete or `READY`.
+- Required-source failure can never become `COMPLETE`. Retrieval truth is
+  never rewritten: the outcome stays `PARTIAL`, `operation_failure` stays
+  attached, and the failed source outcomes stay listed.
 - Conflicting evidence and unresolved material uncertainty remain representable
   only through the Issue #50 non-ready states.
 - Invalid attempted `READY` construction is rejected by the canonical Issue #50

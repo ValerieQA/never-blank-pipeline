@@ -29,7 +29,7 @@ non-material unresolved uncertainty, is compatible with `ready`; the
 classification is never inferred from description text. Contradictions also
 declare resolution, and every unresolved contradiction blocks `ready`.
 
-Partial, unassessed, rejected, uncertain, and conflicting research remains
+Unassessed, rejected, uncertain, and conflicting research remains
 representable with a non-ready state such as `insufficient`, `needs_review`, or
 `blocked`. An inconsistent requested `ready` value is rejected with a validation
 error; the model never silently coerces it to another state.

@@ -92,15 +92,22 @@ def test_the_canonical_invocation_is_unchanged(publish_step):
 
 # ── 5. the research gate itself is not weakened ──────────────────────────────
 
-def test_the_research_gate_semantics_are_unchanged():
-    """A credential fix must not become a way past Story #11."""
+def test_the_research_gate_still_blocks_and_the_adapter_still_fails_closed():
+    """A credential fix must not become a way past Story #11.
+
+    This asserts the guarantee rather than the wording. The gate's message
+    changed under the authorized Issue #125 contract correction — it now
+    declines on evidence readiness rather than on the retrieval outcome — and
+    pinning that sentence would have made an accepted architectural change
+    look like a regression.
+    """
 
     entrypoint = (ROOT / "scripts" / "generate_and_publish.py").read_text()
     assert "research gate blocked generation" in entrypoint
 
     lifecycle = (ROOT / "src" / "research" / "lifecycle.py").read_text()
-    assert "research provider outcome is" in lifecycle
-    assert "not complete" in lifecycle
+    assert "EvidenceReadiness.READY" in lifecycle          # readiness still required
+    assert "ResearchGateError" in lifecycle
 
     adapter = (ROOT / "src" / "research" / "adapters" / "exa.py").read_text()
     assert 'os.getenv("NB_EXA_API_KEY", "")' in adapter

@@ -231,10 +231,18 @@ def test_non_ready_complete_result_is_persisted_honestly_then_blocked(lifecycle,
     assert persisted.result.artifact.readiness is not EvidenceReadiness.READY
 
 
-def test_partial_result_with_artifact_is_persisted_then_blocked(lifecycle):
+def test_partial_retrieval_with_unusable_evidence_is_persisted_then_blocked(lifecycle):
+    """Intentional contract change (Issue #125).
+
+    This previously asserted that a PARTIAL result is blocked *because* it is
+    partial. It is now blocked on the merits of its evidence: the surviving
+    records are rejected, so readiness is INSUFFICIENT and the gate declines
+    it. The retrieval outcome is no longer the reason.
+    """
+
     root, strategy, _, assignment, run, request = lifecycle
     run_dir = root / assignment.assignment_id / "runs" / run.run_id
-    with pytest.raises(ResearchGateError, match="partial"):
+    with pytest.raises(ResearchGateError, match="not ready"):
         execute_and_persist_research(
             ReadyProvider(readiness=EvidenceReadiness.NEEDS_REVIEW,
                           disposition=EvidenceDisposition.NOT_ASSESSED, partial=True),
@@ -637,37 +645,132 @@ class AcceptingJudgment(RejectingJudgment):
         super().__init__(disposition="accepted")
 
 
-def test_partial_retrieval_preserves_research_json_and_stays_non_ready(lifecycle):
-    """The exact shape that used to lose the evidence entirely.
+def test_partial_retrieval_with_sufficient_evidence_passes_with_failures_visible(lifecycle):
+    """The shape that once lost its evidence entirely, now passing honestly.
 
     Assessing a partial retrieval's surviving evidence produced READY, which
-    made an invalid partial-plus-READY object. `model_copy` does not
-    revalidate, so it was built silently and rejected one line later as a raw
-    ValidationError — before `write_research_json` ran. The retrieval was lost
-    and a working provider was reported as a validation failure.
+    built an invalid partial-plus-READY object; `model_copy` does not
+    revalidate, so it was rejected a line later as a raw ValidationError,
+    before `write_research_json` ran, and the retrieval was lost.
 
-    Now the provider's incomplete state survives assessment, so the artifact
-    is persisted truthfully and blocked through the canonical lifecycle.
+    Both halves are fixed: the combination is now legitimate (Issue #125), and
+    nothing invalid is constructed on the way. What must stay visible is the
+    retrieval truth — a reviewer sees PARTIAL, the failed source outcome, and
+    READY evidence side by side.
     """
 
     root, strategy, _, assignment, run, request = lifecycle
     run_dir = root / assignment.assignment_id / "runs" / run.run_id
     judgment = AcceptingJudgment()
 
-    with pytest.raises(ResearchGateError, match="partial"):
-        execute_and_persist_research(
-            ReadyProvider(readiness=EvidenceReadiness.NEEDS_REVIEW,
-                          disposition=EvidenceDisposition.NOT_ASSESSED, partial=True),
-            request, run_dir, identity=strategy.identity, run_started_at=run.started_at,
+    artifact = execute_and_persist_research(
+        ReadyProvider(readiness=EvidenceReadiness.NEEDS_REVIEW,
+                      disposition=EvidenceDisposition.NOT_ASSESSED, partial=True),
+        request, run_dir, identity=strategy.identity, run_started_at=run.started_at,
+        clock=lambda: request.requested_at + timedelta(seconds=2),
+        judgment_transport=judgment,
+    )
+
+    assert (run_dir / "research.json").exists()
+    assert artifact.readiness is EvidenceReadiness.READY
+    assert artifact.evidence[0].disposition is EvidenceDisposition.ACCEPTED
+    assert artifact.evidence[0].assessment_rationale
+    assert judgment.calls == 1
+
+    # retrieval truth is untouched and remains inspectable beside the verdict
+    persisted = load_research_envelope(root, assignment.assignment_id, run.run_id)
+    assert persisted.result.outcome is ResearchOperationOutcome.PARTIAL
+    assert persisted.result.operation_failure is not None
+    assert any(o.status.value == "failed" for o in persisted.result.source_outcomes)
+    assert persisted.result.artifact.readiness is EvidenceReadiness.READY
+
+
+# ── Issue #125: the two dimensions, proven independent ───────────────────────
+#
+# Cases A–H from the authorized contract correction. Each asserts the retrieval
+# outcome and the evidence readiness separately, because the whole point is
+# that neither one determines the other.
+
+
+def _run_case(lifecycle, *, partial, verdict):
+    root, strategy, _, assignment, run, request = lifecycle
+    run_dir = root / assignment.assignment_id / "runs" / run.run_id
+    provider = ReadyProvider(readiness=EvidenceReadiness.NEEDS_REVIEW,
+                             disposition=EvidenceDisposition.NOT_ASSESSED, partial=partial)
+    judgment = RejectingJudgment(disposition=verdict)
+    try:
+        artifact = execute_and_persist_research(
+            provider, request, run_dir, identity=strategy.identity,
+            run_started_at=run.started_at,
             clock=lambda: request.requested_at + timedelta(seconds=2),
             judgment_transport=judgment,
         )
-
-    # the evidence survived, and it is the assessed evidence
-    assert (run_dir / "research.json").exists()
+        blocked = None
+    except ResearchGateError as exc:
+        artifact, blocked = None, exc
     persisted = load_research_envelope(root, assignment.assignment_id, run.run_id)
-    artifact = persisted.result.artifact
-    assert artifact.readiness is not EvidenceReadiness.READY
-    assert artifact.evidence[0].disposition is EvidenceDisposition.ACCEPTED
+    return persisted, artifact, blocked
+
+
+def test_case_a_partial_retrieval_with_sufficient_evidence_passes(lifecycle):
+    persisted, artifact, blocked = _run_case(lifecycle, partial=True, verdict="accepted")
+    assert blocked is None
+    assert persisted.result.outcome is ResearchOperationOutcome.PARTIAL
+    assert artifact.readiness is EvidenceReadiness.READY
+
+
+def test_case_b_partial_retrieval_with_insufficient_evidence_blocks(lifecycle):
+    persisted, _, blocked = _run_case(lifecycle, partial=True, verdict="rejected")
+    assert isinstance(blocked, ResearchGateError)
+    assert persisted.result.outcome is ResearchOperationOutcome.PARTIAL
+    assert persisted.result.artifact.readiness is not EvidenceReadiness.READY
+
+
+def test_case_c_complete_retrieval_with_insufficient_evidence_blocks(lifecycle):
+    persisted, _, blocked = _run_case(lifecycle, partial=False, verdict="rejected")
+    assert isinstance(blocked, ResearchGateError)
+    assert persisted.result.outcome is ResearchOperationOutcome.COMPLETE
+    assert persisted.result.artifact.readiness is not EvidenceReadiness.READY
+
+
+def test_case_d_complete_retrieval_with_sufficient_evidence_passes(lifecycle):
+    persisted, artifact, blocked = _run_case(lifecycle, partial=False, verdict="accepted")
+    assert blocked is None
+    assert persisted.result.outcome is ResearchOperationOutcome.COMPLETE
+    assert artifact.readiness is EvidenceReadiness.READY
+
+
+def test_case_e_a_single_qualified_source_can_pass_with_its_limitation_kept(lifecycle):
+    root, strategy, _, assignment, run, request = lifecycle
+    run_dir = root / assignment.assignment_id / "runs" / run.run_id
+    judgment = RejectingJudgment(disposition="qualified")
+    artifact = execute_and_persist_research(
+        ReadyProvider(readiness=EvidenceReadiness.NEEDS_REVIEW,
+                      disposition=EvidenceDisposition.NOT_ASSESSED),
+        request, run_dir, identity=strategy.identity, run_started_at=run.started_at,
+        clock=lambda: request.requested_at + timedelta(seconds=2),
+        judgment_transport=judgment,
+    )
+    assert len(artifact.sources) == 1
+    assert artifact.evidence[0].disposition is EvidenceDisposition.QUALIFIED
     assert artifact.evidence[0].assessment_rationale
-    assert judgment.calls == 1, "the surviving evidence was genuinely assessed"
+    assert artifact.readiness is EvidenceReadiness.READY
+
+
+def test_case_g_retrieval_failures_stay_visible_when_partial_passes(lifecycle):
+    persisted, artifact, blocked = _run_case(lifecycle, partial=True, verdict="accepted")
+    assert blocked is None and artifact.readiness is EvidenceReadiness.READY
+    # both dimensions readable side by side, from the persisted artifact alone
+    assert persisted.result.outcome is ResearchOperationOutcome.PARTIAL
+    assert persisted.result.operation_failure is not None
+    assert any(o.status is RetrievalStatus.FAILED for o in persisted.result.source_outcomes)
+
+
+def test_case_h_serialization_and_strict_reload_keep_both_dimensions(lifecycle):
+    persisted, _, _ = _run_case(lifecycle, partial=True, verdict="accepted")
+    raw = persisted.canonical_json()
+    back = ResearchResultEnvelope.model_validate_json(raw)
+    assert back.result.outcome is ResearchOperationOutcome.PARTIAL
+    assert back.result.artifact.readiness is EvidenceReadiness.READY
+    assert back.result.operation_failure is not None
+    assert back.canonical_json() == raw

@@ -244,12 +244,18 @@ def test_a_non_material_uncertainty_does_not_prevent_ready():
 
 # ── the assessor cannot rescue what the provider found ───────────────────────
 
-@pytest.mark.parametrize("declared", [EvidenceReadiness.INSUFFICIENT, EvidenceReadiness.BLOCKED])
-def test_the_assessor_never_overturns_a_provider_finding(declared):
-    """A partial or blocked retrieval knows something the assessor does not."""
+def test_a_providers_insufficient_is_re_derived_from_the_evidence():
+    """Intentional contract change: INSUFFICIENT is a claim about evidence.
 
-    judged = assess_artifact(_artifact(readiness=declared), transport=Judgment("accepted"))
-    assert judged.readiness is declared
+    An adapter marks a partial retrieval INSUFFICIENT before anything has
+    been assessed. Once the surviving evidence is judged, readiness follows
+    that judgment — the retrieval outcome stays PARTIAL and visible either way.
+    """
+
+    judged = assess_artifact(
+        _artifact(readiness=EvidenceReadiness.INSUFFICIENT), transport=Judgment("accepted")
+    )
+    assert judged.readiness is EvidenceReadiness.READY
 
 
 # ── identity and rationale are recorded, and provable ────────────────────────
@@ -327,44 +333,58 @@ def test_the_story21_shape_reaches_a_decision_rather_than_a_dead_end():
         assert judged.assessor is not None
 
 
-# ── blocking review: a partial retrieval is never promoted ───────────────────
+# ── retrieval quantity neither grants nor denies READY (Issue #125) ─────────
 #
-# The first version of this assessor guarded only INSUFFICIENT and BLOCKED. A
-# partial retrieval — a required source that failed — carries NEEDS_REVIEW, so
-# the guard missed precisely the case where "the provider knows something the
-# assessor does not" is most true. Assessing the survivors then produced READY.
+# These four replace tests that asserted an incomplete retrieval could never
+# be READY. That invariant let a fact about the retrieval operation decide a
+# question about the evidence; the two dimensions are now independent, and
+# readiness is derived from what the surviving evidence actually supports.
 
 
-def test_a_partial_retrieval_keeps_its_readiness_however_the_verdicts_fall():
-    judged = assess_artifact(
-        _artifact(readiness=EvidenceReadiness.NEEDS_REVIEW),
-        transport=Judgment(disposition="accepted"),
-        retrieval_complete=False,
-    )
-    assert judged.readiness is EvidenceReadiness.NEEDS_REVIEW
-    # the surviving evidence is still assessed — the run deserves an account
-    assert judged.evidence[0].disposition is EvidenceDisposition.ACCEPTED
-    assert judged.evidence[0].assessment_rationale
-
-
-def test_surviving_evidence_cannot_compensate_for_what_was_never_retrieved():
-    """Two impeccable records do not replace the required source that failed."""
+def test_surviving_evidence_can_be_sufficient_after_an_incomplete_retrieval():
+    """Two strong records may carry a bounded claim that five weak ones cannot."""
 
     artifact = _artifact(
         evidence=(_evidence("evidence-1"), _evidence("evidence-2")),
-        readiness=EvidenceReadiness.NEEDS_REVIEW,
+        readiness=EvidenceReadiness.INSUFFICIENT,      # as a partial retrieval arrives
     )
-    judged = assess_artifact(artifact, transport=Judgment("accepted"),
-                             retrieval_complete=False)
-    assert all(i.disposition is EvidenceDisposition.ACCEPTED for i in judged.evidence)
-    assert judged.readiness is not EvidenceReadiness.READY
+    judged = assess_artifact(artifact, transport=Judgment("accepted"))
+    assert judged.readiness is EvidenceReadiness.READY
 
 
-@pytest.mark.parametrize("verdict", ["accepted", "qualified"])
-def test_no_model_verdict_can_override_incomplete_retrieval(verdict):
-    judged = assess_artifact(_artifact(), transport=Judgment(verdict),
-                             retrieval_complete=False)
-    assert judged.readiness is not EvidenceReadiness.READY
+def test_surviving_evidence_that_does_not_support_the_claim_is_not_ready():
+    artifact = _artifact(
+        evidence=(_evidence("evidence-1"), _evidence("evidence-2")),
+        readiness=EvidenceReadiness.INSUFFICIENT,
+    )
+    judged = assess_artifact(artifact, transport=Judgment("rejected"))
+    assert judged.readiness is EvidenceReadiness.INSUFFICIENT
+
+
+def test_readiness_counts_no_sources():
+    """One assessed record and three assessed records reach the same verdict."""
+
+    one = assess_artifact(_artifact(), transport=Judgment("accepted"))
+    three = assess_artifact(
+        _artifact(evidence=tuple(_evidence(f"evidence-{i}") for i in range(1, 4))),
+        transport=Judgment("accepted"),
+    )
+    assert one.readiness is three.readiness is EvidenceReadiness.READY
+
+    weak_many = assess_artifact(
+        _artifact(evidence=tuple(_evidence(f"evidence-{i}") for i in range(1, 6))),
+        transport=Judgment("rejected"),
+    )
+    assert weak_many.readiness is EvidenceReadiness.INSUFFICIENT
+
+
+def test_a_deliberate_block_is_not_an_evidence_question():
+    """BLOCKED is not lifted by assessing evidence."""
+
+    judged = assess_artifact(
+        _artifact(readiness=EvidenceReadiness.BLOCKED), transport=Judgment("accepted")
+    )
+    assert judged.readiness is EvidenceReadiness.BLOCKED
 
 
 # ── blocking review: identity is claimed only for work performed ─────────────

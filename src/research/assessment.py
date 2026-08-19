@@ -119,30 +119,26 @@ def _structural_rejection(
     return None
 
 
-#: Readiness the assessor must never overturn. A provider reporting
-#: INSUFFICIENT or BLOCKED knows something the assessor does not — a required
-#: source failed, retrieval was partial — and assessing the fragments it did
-#: return must not promote the run. The assessor resolves *unassessed*; it
-#: does not rescue *incomplete*.
-_PROVIDER_FINDINGS_THE_ASSESSOR_CANNOT_OVERTURN = frozenset(
-    {EvidenceReadiness.INSUFFICIENT, EvidenceReadiness.BLOCKED}
-)
+#: A deliberate block is not an evidence question, so assessing evidence
+#: cannot lift it. Every other readiness is re-derived from the assessment:
+#: how much was retrieved is a fact about the operation, not about whether
+#: what arrived supports the claim (Issue #125).
+_NOT_AN_EVIDENCE_QUESTION = frozenset({EvidenceReadiness.BLOCKED})
 
 
 def _readiness_for(
     evidence: tuple[ExtractedEvidence, ...],
     artifact: NormalizedResearchArtifact,
-    retrieval_complete: bool,
 ) -> EvidenceReadiness:
-    """Readiness follows from the assessment; it is never chosen directly."""
+    """Readiness follows from the assessment; it is never chosen directly.
 
-    if not retrieval_complete:
-        # Retrieval was incomplete — a required source failed. Evidence that
-        # did arrive is still assessed, because the run deserves a truthful
-        # account of it, but assessing survivors cannot compensate for what is
-        # missing. The provider's finding stands, and no verdict overrides it.
-        return artifact.readiness
-    if artifact.readiness in _PROVIDER_FINDINGS_THE_ASSESSOR_CANNOT_OVERTURN:
+    Nothing here counts sources. Two strong records can be sufficient where
+    five weak ones are not, and a retrieval that missed half of what it asked
+    for may still have obtained what the claim needs — that judgment belongs
+    to the evidence, and the retrieval outcome is recorded separately.
+    """
+
+    if artifact.readiness in _NOT_AN_EVIDENCE_QUESTION:
         return artifact.readiness
 
     if not evidence:
@@ -209,17 +205,12 @@ def assess_artifact(
     *,
     transport: EvidenceJudgmentTransport,
     assessor: EvidenceAssessorIdentity | None = None,
-    retrieval_complete: bool = True,
 ) -> NormalizedResearchArtifact:
     """Return the same artifact with its evidence assessed and readiness set.
 
     Records already carrying a disposition are left alone — this assesses what
     retrieval left `not_assessed`, and does not overrule a judgment already
     made. Readiness is derived from the result, never asserted.
-
-    ``retrieval_complete`` carries the one fact the artifact cannot express:
-    whether the provider actually retrieved everything it was asked for. An
-    incomplete retrieval keeps its readiness whatever the verdicts say.
 
     The assessor's identity is claimed only for work it performed. An artifact
     whose records were all assessed elsewhere is returned unattributed, so the
@@ -289,7 +280,7 @@ def assess_artifact(
         # to attribute, and the artifact keeps whatever attribution it arrived
         # with — which for an unattributed artifact means the gate declines it.
         "assessor": identity if unassessed else artifact.assessor,
-        "readiness": _readiness_for(ordered, artifact, retrieval_complete),
+        "readiness": _readiness_for(ordered, artifact),
     })
 
 
