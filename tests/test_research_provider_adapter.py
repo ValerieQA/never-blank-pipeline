@@ -826,7 +826,20 @@ def test_required_directive_cannot_be_arbitrary_query():
         _directive(kind=SourceDirectiveKind.QUERY, value="anything")
 
 
-def test_partial_result_cannot_carry_ready_artifact():
+def test_partial_retrieval_may_carry_ready_evidence_with_its_failures_visible():
+    """Intentional contract change (Issue #125).
+
+    This test previously asserted the opposite — that a PARTIAL result could
+    never carry a READY artifact. That invariant let a fact about the
+    *retrieval operation* decide a question about the *evidence*: failing to
+    fetch everything asked for meant nothing fetched could be relied on.
+
+    The two dimensions are now independent. What remains inviolable is
+    retrieval truth: the outcome stays PARTIAL, the failed source outcome
+    stays listed, and operation_failure stays attached — all beside the READY
+    artifact, so a reviewer sees both at once.
+    """
+
     complete = execute_research(DeterministicFakeResearchProvider(), _request())
     artifact_payload = complete.artifact.model_dump()
     artifact_payload["evidence"][0]["disposition"] = "accepted"
@@ -845,8 +858,7 @@ def test_partial_result_cannot_carry_ready_artifact():
             retryable=True,
         ),
     )
-    with pytest.raises(ValidationError, match="cannot contain a READY"):
-        PartialResearchResult(
+    partial = PartialResearchResult(
             outcome=ResearchOperationOutcome.PARTIAL,
             request_run_id=complete.request_run_id,
             request_assignment_id=complete.request_assignment_id,
@@ -855,4 +867,10 @@ def test_partial_result_cannot_carry_ready_artifact():
             source_outcomes=(*complete.source_outcomes, failed),
             artifact=ready,
             operation_failure=failed.failure,
-        )
+    )
+
+    assert partial.outcome is ResearchOperationOutcome.PARTIAL
+    assert partial.artifact.readiness is EvidenceReadiness.READY
+    # the retrieval failure is not softened by the evidence being sufficient
+    assert partial.operation_failure is failed.failure
+    assert any(o.status is RetrievalStatus.FAILED for o in partial.source_outcomes)

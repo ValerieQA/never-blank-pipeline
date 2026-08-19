@@ -181,11 +181,16 @@ class ExtractedEvidence(_ContractModel):
     source_ids: tuple[str, ...] = Field(min_length=1)
     support: tuple[SupportReference, ...] = Field(min_length=1)
     disposition: EvidenceDisposition
+    #: Why this disposition was assigned, in one bounded auditable sentence
+    #: checkable against the item's own cited support. Absent while the item
+    #: is still `not_assessed`. Never chain-of-thought, never a raw model
+    #: response: the same trust boundary that governs every other artifact.
+    assessment_rationale: str | None = Field(default=None, max_length=600)
 
-    @field_validator("claim")
+    @field_validator("claim", "assessment_rationale")
     @classmethod
-    def _safe_claim(cls, value: str) -> str:
-        return _reject_credential_shape(value)
+    def _safe_claim(cls, value: str | None) -> str | None:
+        return None if value is None else _reject_credential_shape(value)
 
     @model_validator(mode="after")
     def _support_is_declared(self) -> Self:
@@ -231,6 +236,29 @@ class UncertaintyAssessment(_ContractModel):
         return self
 
 
+class EvidenceAssessorIdentity(_ContractModel):
+    """Who assessed this evidence, and at which version.
+
+    Evidence assessment is its own lifecycle operation, so it carries its own
+    identity rather than borrowing the research configuration's. Recorded on
+    the artifact so the chain — retrieval provider, assessor and version,
+    assessed evidence, resulting readiness — is establishable from the
+    artifact alone, never from logs or inference.
+    """
+
+    assessor_id: str = Field(min_length=1, max_length=120)
+    version: str = Field(min_length=1, max_length=40)
+
+    @property
+    def identity(self) -> str:
+        return f"{self.assessor_id}/{self.version}"
+
+    @field_validator("assessor_id", "version")
+    @classmethod
+    def _safe_identity(cls, value: str) -> str:
+        return _reject_credential_shape(value)
+
+
 class Contradiction(_ContractModel):
     contradiction_id: str = Field(min_length=1)
     resolution: ResolutionStatus
@@ -269,6 +297,9 @@ class NormalizedResearchArtifact(_ContractModel):
     interpretations: tuple[ModelInterpretation, ...] = ()
     uncertainties: tuple[UncertaintyAssessment, ...] = ()
     contradictions: tuple[Contradiction, ...] = ()
+    #: Present once evidence assessment has run. Absent on a purely retrieved
+    #: artifact, which is why READY requires it.
+    assessor: EvidenceAssessorIdentity | None = None
     readiness: EvidenceReadiness
 
     @field_validator("schema_version")

@@ -332,8 +332,14 @@ class PartialResearchResult(_ResultBase):
 
     @model_validator(mode="after")
     def _partial_is_consistent(self) -> "PartialResearchResult":
-        if self.artifact.readiness is EvidenceReadiness.READY:
-            raise ValueError("partial provider result cannot contain a READY artifact")
+        # Retrieval completeness and evidence sufficiency are independent
+        # dimensions (Issue #125). This contract used to forbid a READY
+        # artifact here, which made "we could not fetch everything we asked
+        # for" mean "nothing we did fetch can be relied on" — a claim about
+        # the operation standing in for a claim about the evidence. A partial
+        # retrieval whose surviving evidence is assessed and sufficient may
+        # now carry READY; what stays inviolable is the retrieval truth below,
+        # so the failure remains visible beside it.
         if not any(item.status is RetrievalStatus.FAILED for item in self.source_outcomes):
             raise ValueError("partial result requires a failed source outcome")
         _validate_artifact_link(self)
