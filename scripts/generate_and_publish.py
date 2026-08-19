@@ -121,6 +121,7 @@ from src.intake import (
     JsonlIntakeAdapter,
 )
 from src.intake.assignment_record import AssignmentRecord
+from src.intake.audience_routing import audience_request
 from src.run.code_identity import resolve_code_identity
 from src.lifecycle.signal_lifecycle import ResearchContext
 from src.research.provider import ResearchProvider
@@ -821,11 +822,20 @@ def _run(
         return 1
 
     try:
+        # Issue #121: a coarse discovery label is source metadata, not a
+        # request. When it names no configured audience the configured default
+        # supplies identity and says so, so the case reaches Decision Lens —
+        # which is what decides whether the evidence supports a bounded claim
+        # for that audience. An explicit request is still strict and still
+        # fails closed; a routing error is never rescued by a default.
+        _requested_audience = audience_request(
+            assignment, strategy_execution.decision_lens_editorial
+        )
         audience_selection = strategy_execution.decision_lens_editorial.select_audience(
-            assignment.target_audience
+            _requested_audience
         )
         research_audience = strategy_execution.research.select_audience(
-            assignment.target_audience
+            _requested_audience
         )
         if audience_selection != research_audience:
             raise StrategyExecutionError("audience selection differs across strategy views")
