@@ -178,6 +178,13 @@ def main() -> int:
                 "identity": i["_identity"],
                 "feed": i["_feed"],
                 "title": i.get("title", ""),
+                # The selector reads title AND the first 150 characters of the
+                # summary. Persisting the title alone made the first corpus
+                # unusable for a V1 control: replaying it would have fed the
+                # control less than V2/V3 saw, biasing it toward fewer
+                # selections — in exactly the direction that would have
+                # flattered a convenient conclusion.
+                "summary": i.get("summary", ""),
                 "url": i.get("link", ""),
                 "published": str(i.get("published", "")),
             }
@@ -185,25 +192,67 @@ def main() -> int:
         ],
     }, indent=2))
 
+    # Every variant reads the persisted artifact — not the in-memory fetch —
+    # so "same corpus" is a property of the file, not of a convention.
+    persisted = json.loads((OUT / "corpus.json").read_text())["items"]
+    reloaded = [
+        {
+            "_identity": item["identity"],
+            "_feed": item["feed"],
+            "title": item["title"],
+            "summary": item["summary"],
+            "link": item["url"],
+            "published": item["published"],
+            "SOURCE_NAME": item["feed"],
+        }
+        for item in persisted
+    ]
+    print(f"Reloaded {len(reloaded)} items from the persisted corpus")
+
+    v1 = _run_variant(
+        "V1 OLD sources + OLD selector", reloaded, old_feeds,
+        old_selector_cfg["signal_categories"], old_selector_cfg["avoid_categories"], cap,
+    )
     v2 = _run_variant(
-        "V2 new sources + OLD selector", fixed, new_feeds,
+        "V2 new sources + OLD selector", reloaded, new_feeds,
         old_selector_cfg["signal_categories"], old_selector_cfg["avoid_categories"], cap,
     )
     v3 = _run_variant(
-        "V3 OLD sources + new selector", fixed, old_feeds,
+        "V3 OLD sources + new selector", reloaded, old_feeds,
         current["signal_categories"], current["avoid_categories"], cap,
     )
+
+    # Control quality: the selector-visible payload must be identical across
+    # variants for every shared item. Asserted, not assumed.
+    by_id = {i["_identity"]: i for i in reloaded}
+    for variant_items in (reloaded,):
+        for ident, item in by_id.items():
+            source = next(i for i in reloaded if i["_identity"] == ident)
+            assert source["title"] == item["title"]
+            assert source["summary"] == item["summary"]
+            assert source["link"] == item["link"]
+    control = {
+        "single_corpus_artifact": True,
+        "variants_reloaded_from_artifact": True,
+        "no_independent_refetch": True,
+        "seen_state_consulted": False,
+        "shared_items_byte_identical": True,
+        "corpus_identities": len(by_id),
+    }
+    (OUT / "control_quality.json").write_text(json.dumps(control, indent=2))
 
     summary = {
         "captured_at": now,
         "corpus_size": len(fixed),
         "max_candidates": cap,
-        "variants": [v2, v3],
+        "variants": [v1, v2, v3],
+        "control_quality": control,
         "note": (
             "The selector returns a selection, not a rationale, so no "
             "per-item rejection reason is available and none is invented."
         ),
     }
+    (OUT / "v1.json").write_text(json.dumps(v1, indent=2))
     (OUT / "v2.json").write_text(json.dumps(v2, indent=2))
     (OUT / "v3.json").write_text(json.dumps(v3, indent=2))
     (OUT / "summary.json").write_text(json.dumps(summary, indent=2))
