@@ -1,0 +1,28 @@
+name: "Wednesday Golden — contract verification (activation pending #142)"
+
+# Issue #143 parallel phase: manual-only and publication-safe.
+#
+# There is deliberately no schedule and no generation/publishing command while
+# current main still has two scheduled Wednesday owners and while the generic
+# editorial-role seam is unmerged. After #142 lands, this workflow will reuse
+# its accepted due check and canonical --editorial-role path, then Wednesday
+# alone will be removed from the shared owners before a cron is activated.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-wednesday-product-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet -r requirements.txt
+      - name: Verify Wednesday Golden product contract
+        run: python3 -m pytest tests/test_wednesday_golden.py

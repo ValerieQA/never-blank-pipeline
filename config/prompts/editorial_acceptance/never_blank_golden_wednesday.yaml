@@ -1,0 +1,57 @@
+# Never Blank Wednesday Golden acceptance rubric (Issue #143).
+# Loaded by the existing strict EditorialAcceptanceRubric contract. This is a
+# product artifact, not a change to the generic acceptance lifecycle.
+
+rubric_id: never-blank-golden-wednesday-acceptance
+version: "1.0"
+
+criteria:
+  - criterion_id: factual-anchor
+    description: The article establishes a concrete documented event or fact without becoming a news recap or long source summary.
+  - criterion_id: x-y-turn
+    description: The article distinguishes the obvious reading X from one overlooked Y and makes a genuine discovery turn between them.
+  - criterion_id: evidence-supported-y
+    description: The accepted evidence supports the overlooked Y; surprise, contrarian tone, or plausibility cannot substitute for evidence.
+  - criterion_id: one-primary-mechanism
+    description: The article explains exactly one primary business mechanism underneath Y and does not scatter into several lessons or mechanisms.
+  - criterion_id: bounded-business-question
+    description: The article asks what the configured audience should examine without claiming the source company's outcome will occur for that audience.
+  - criterion_id: anti-flattening
+    description: The article is not a news recap, source summary, “5 lessons”, “3 takeaways”, generic SMB advice, or generic AI/business-blog prose.
+  - criterion_id: title-curiosity
+    description: The title creates evidence-grounded curiosity around the tension without copying the source headline, summarizing the article, revealing all of Y, or using invented clickbait.
+  - criterion_id: same-discovery
+    description: The Wix article carries one central discovery suitable for a native compressed LinkedIn composition of the same idea.
+  - criterion_id: never-blank-close
+    description: The close earns one contextual Never Blank insight and uses the configured website invitation without a capability or outcome promise.
+
+instructions: |
+  You are evaluating the Never Blank Wednesday Golden Wix article. The Golden
+  invariant is a movement of thought, not a set of literal headings:
+
+  documented event -> obvious reading X -> turn -> overlooked Y -> exactly one
+  mechanism -> evidence supporting Y -> bounded business question -> Never
+  Blank insight -> contextual close and configured website invitation.
+
+  Reject flattening into a news recap, source summary, “5 lessons from X”, “3
+  takeaways”, generic small-business advice, multiple mechanisms, or generic
+  AI/business-blog prose. Reject an unsupported hidden Y or manufactured
+  contradiction. A large-company case may be the factual source, but its
+  outcome is never evidence that the configured audience will obtain the same
+  outcome. The transfer must remain a bounded question.
+
+  Judge only against the supplied accepted current-run evidence. A surprising
+  interpretation earns no special permission. ACCEPT only when every criterion
+  passes. REVISE when one focused revision can plausibly fix every failure.
+  REJECT when the Golden movement or evidence boundary cannot be repaired in
+  one revision. Return only the strict JSON verdict required by the existing
+  editorial acceptance contract.
+
+revision_instructions: |
+  Revise only the Never Blank Wednesday Golden Wix article. Preserve supported
+  facts and one central discovery. Restore the movement from obvious X to one
+  evidence-supported Y, one primary mechanism, a bounded business question,
+  and a contextual Never Blank close. Remove listicle framing, recap, generic
+  advice, filler, unsupported contrarian claims, and silent outcome transfer.
+  Do not invent evidence, change the accepted facts, or write another channel.
+  Return only the revised article text.
