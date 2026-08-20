@@ -229,3 +229,71 @@ def _compose(payload: dict) -> dict:
         "src.editorial.platform_composer.chat", return_value=json.dumps(payload)
     ):
         return compose_platforms(article, cta_mode="none")
+
+
+# ===========================================================================
+# Evidence framing (#139): the reviewer's three recurring objections
+# ===========================================================================
+#
+# Four live runs were refused on `evidence-use` and `unsupported-claims`. By
+# the last one the reviewer's objections had narrowed to framing: the source
+# was credited to the platform the case was about rather than to the article
+# the evidence came from; reader scenarios were written as reported market
+# behaviour; and the closing invitation claimed a capability. These rules
+# answer those three, and nothing about the rubric changed to meet them.
+
+
+def test_external_facts_must_be_credited_to_the_recorded_source(wix_text):
+    assert "attribute every external fact to the exact source recorded" in wix_text
+    # naming the subject company as the reporter is the exact error observed
+    assert "never credit the company or platform the case is about as the" in wix_text
+
+
+def test_the_evidence_supports_a_principle_not_a_promised_result(wix_text):
+    assert "never as a proven result for the reader" in wix_text
+
+
+def test_reader_scenarios_must_read_as_hypothetical_not_as_market_fact(wix_text, linkedin_text):
+    assert "hypothetical scenario addressed to the reader" in wix_text
+    assert "never as reported market behaviour" in wix_text
+    assert "only the accepted evidence may be stated as fact" in wix_text
+    # LinkedIn carries the same separation
+    assert "only the accepted evidence may be stated as fact" in linkedin_text
+    assert "hypothetical scenario or the author" in linkedin_text
+
+
+def test_the_invitation_claims_no_capability(wix_text, linkedin_text):
+    assert "makes no claim about what never blank can do" in wix_text
+    assert "makes no claim about what never blank can do or achieve" in linkedin_text
+
+    reflection = next(
+        cta for cta in json.loads(CONFIG_PATH.read_text())["calls_to_action"]
+        if cta["cta_id"] == "reflection"
+    )
+    joined = " ".join(reflection["rules"]).lower()
+    assert "invite; never assert a capability" in joined
+    assert "no promised outcome" in joined
+
+
+def test_the_canonical_destination_survives_the_framing_rules(wix_text, linkedin_text):
+    # the CTA rules were rewritten; the destination must not have been lost
+    assert SITE.lower() in wix_text
+    assert SITE.lower() in linkedin_text
+    assert wix_text.count(SITE.lower()) == 1  # one destination, named once
+
+
+def test_the_framing_rules_reach_the_real_prompts():
+    execution = StrategyExecutionContext.from_configuration(
+        load_business_strategy_configuration(CONFIG_PATH)
+    )
+    article = {"hook": "h", "discovery": {}, "echo_line": "Echo line.", "cta_line": "cta"}
+
+    blog = _build_user_prompt(article, "long", "reflection", _wix_rules(execution.wix)).lower()
+    li = _build_user_prompt(
+        article, "medium", "reflection", _linkedin_rules(execution.linkedin)
+    ).lower()
+
+    assert "attribute every external fact" in blog
+    assert "never as reported market behaviour" in blog
+    assert "makes no claim about what never blank can do" in blog
+    assert "only the accepted evidence may be stated as fact" in li
