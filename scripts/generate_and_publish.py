@@ -144,6 +144,10 @@ from src.editorial.editorial_role import (
     render_editorial_role_rules,
     resolve_editorial_role,
 )
+from src.editorial.source_transparency import (
+    SourceTransparencyError,
+    validate_source_transparency,
+)
 from src.editorial.pipeline import ArticleGenerationError, generate_article
 from src.editorial.decision_lens_evaluator import (
     DecisionLensEvaluator,
@@ -693,8 +697,8 @@ def _run(
     parser.add_argument("--legacy-package", action="store_true",
                         help="Read legacy flat artifact {signal_id}_generated.json (explicit adapter; never auto-fallback)")
     parser.add_argument("--editorial-role", default="",
-                        help="Editorial role id declared by the business configuration; "
-                             "recorded on the run and applied to composition")
+                        help="Editorial role id declared by the business configuration "
+                             "(Issue #142); recorded on the run and applied to composition")
     parser.add_argument("--delete-wix-post-id",
                         help="Delete this Wix post ID before publishing (use when replacing an existing post)")
     args = parser.parse_args()
@@ -733,8 +737,11 @@ def _run(
         print(f"  ERROR: {exc}")
         return 1
 
-    # Role selection is explicit and configuration-bound. Unknown roles stop
-    # before intake, generation, visual preparation, or publisher construction.
+    # Issue #142: which editorial role this run produces. Requested explicitly
+    # by the caller and resolved against the declared roles — never inferred
+    # from the weekday, the cron, the source title, or the prompt. An unknown
+    # role fails closed: a run with no rules to follow must not quietly
+    # produce a default article under a role name it never honoured.
     _editorial_role_identity = None
     _editorial_role_rules = None
     _editorial_acceptance_path = None
@@ -747,6 +754,10 @@ def _run(
         except EditorialRoleError as exc:
             print(f"  ERROR: {exc}")
             return 1
+        # Per-format rendering: the role's surface-scoped rules reach exactly
+        # the surface they are for. ``long`` is the Wix article and ``medium``
+        # the LinkedIn artifact — the same mapping this entrypoint already
+        # relies on when it publishes them.
         _editorial_role_rules = {
             "long": render_editorial_role_rules(_role, surface="wix"),
             "medium": render_editorial_role_rules(_role, surface="linkedin"),
@@ -1542,6 +1553,32 @@ def _run(
             f"({'after one revision' if _acceptance.revised else 'original article'}) "
             f"[{_acceptance_rubric.identity}]"
         )
+
+        # Issue #142 review round 2: a role may require source transparency
+        # as a fail-closed publication condition. The prompt asked for
+        # attribution; here the accepted article and the LinkedIn body are
+        # verified against the run's ACTUAL sources — a model that ignored the
+        # instruction, or invented a link, stops the run before any publisher
+        # is called. Roles without the requirement (every other stream, and
+        # every run with no role) are never checked.
+        if _editorial_role_identity is not None and _role.require_source_transparency:
+            try:
+                validate_source_transparency(
+                    article_body=blog_body,
+                    linkedin_body=linkedin_text,
+                    research=research_artifact,
+                    allowed_destinations=tuple(
+                        destination for destination in (
+                            os.environ.get("NB_WIX_SITE_BASE_URL", ""),
+                        ) if destination
+                    ),
+                )
+            except SourceTransparencyError as exc:
+                print(f"  ERROR: source transparency blocked publication: {exc}")
+                state.ended(TerminalStage.EDITORIAL, TerminalDisposition.BLOCKED,
+                            f"source transparency: {type(exc).__name__}")
+                return 1
+            print("  ✓  source transparency: attribution verified against run sources")
 
         print(f"  ✓  blog:      {len(blog_body)} chars")
         print(f"  ✓  linkedin:  {len(linkedin_text)} chars")

@@ -20,7 +20,7 @@ from pydantic import ValidationError
 
 import scripts.generate_and_publish as gap
 from scripts.generate_and_publish import main
-from scripts.streams import due_check
+from scripts.streams import due_check, select_eligible_signal
 from scripts.streams.due_check import NOT_DUE, is_due
 from src.editorial.editorial_role import (
     EditorialRoleError,
@@ -206,6 +206,7 @@ def test_wednesday_role_resolves_explicitly_from_strict_configuration(profile):
         configuration_version=configuration.configuration_version,
     )
     assert role.role_id == profile.editorial_role_id
+    assert tuple(role.eligibility_criteria) == profile.source_eligibility_rules()
     assert role.acceptance_rubric_path == profile.acceptance_rubric_path
     assert role.acceptance_rubric_identity == profile.acceptance_rubric_identity
 
@@ -423,14 +424,14 @@ def test_exactly_one_authoritative_scheduled_wednesday_publisher():
 
 def test_legacy_owners_remove_only_wednesday_and_preserve_other_days():
     assert _schedule(_workflow("scheduled_publish.yml")) == [
-        "0 10 * * 1,5",
-        "0 11 * * 1,5",
+        "0 10 * * 5",
+        "0 11 * * 5",
     ]
     assert _schedule(_workflow("research_generate_and_publish.yml")) == [
-        "0 7 * * 1,5,0"
+        "0 7 * * 5,0"
     ]
     schedule = yaml.safe_load(Path("config/schedule.yaml").read_text())["schedule"]
-    assert schedule["days"] == ["monday", "friday"]
+    assert schedule["days"] == ["friday"]
     assert schedule["time"] == "06:00"
     assert schedule["timezone"] == "America/New_York"
 
@@ -473,13 +474,109 @@ def test_due_check_not_due_and_manual_force_are_unambiguous():
     ) == 0
 
 
-def test_wednesday_runtime_state_is_independent_from_monday():
+def test_wednesday_reuses_shared_eligibility_and_consumption_without_monday_policy():
     text = WORKFLOW.read_text()
-    assert "data/research/wednesday_published_signal_ids.txt" in text
-    assert "data/research/published_signal_ids.txt" not in text
+    assert "data/research/published_signal_ids.txt" in text
+    assert "wednesday_published_signal_ids.txt" not in text
     assert "monday_selection" not in text
-    assert "select_eligible_signal.py" not in text
+    assert "select_eligible_signal.py" in text
+    assert '--editorial-role "$WEDNESDAY_ROLE"' in text
+    assert "wednesday_selection.json" in text
     assert "never-blank-monday" not in text
+
+
+def _signal(signal_id: str) -> dict[str, str]:
+    return {
+        "SIGNAL_ID": signal_id,
+        "HEADLINE": f"Documented case {signal_id}",
+        "CORE_FACT": "A documented decision changed one operating assumption.",
+        "SOURCE_URL": f"https://source.example/{signal_id}",
+    }
+
+
+def _write_selection_inputs(tmp_path, signal_ids: tuple[str, ...]):
+    active = tmp_path / "signals_active.jsonl"
+    active.write_text(
+        "".join(json.dumps(_signal(signal_id)) + "\n" for signal_id in signal_ids)
+    )
+    return active, tmp_path / "published_signal_ids.txt"
+
+
+class _EligibleTransport:
+    def complete(self, *, instructions: str, request: str) -> str:
+        return json.dumps(
+            {"eligible": True, "reason": "Documented Wednesday source class."}
+        )
+
+
+def test_shared_consumption_hides_a_monday_published_signal_from_wednesday(tmp_path):
+    active, published = _write_selection_inputs(tmp_path, ("shared-case", "next-case"))
+    published.write_text("shared-case\n")
+
+    candidates = select_eligible_signal._load_candidates(active, published)
+
+    assert [item["SIGNAL_ID"] for item in candidates] == ["next-case"]
+
+
+def test_wednesday_consumption_is_visible_to_other_canonical_selectors(tmp_path):
+    active, published = _write_selection_inputs(tmp_path, ("wednesday-case",))
+    published.write_text("wednesday-case\n")
+
+    assert select_eligible_signal._load_candidates(active, published) == []
+    for workflow_name in (
+        "monday_publish.yml",
+        "research_generate_and_publish.yml",
+        "wednesday_golden.yml",
+    ):
+        assert "data/research/published_signal_ids.txt" in Path(
+            ".github/workflows", workflow_name
+        ).read_text()
+
+
+def test_blocked_wednesday_does_not_consume_and_explicit_retry_remains_possible(
+    tmp_path,
+):
+    active, published = _write_selection_inputs(tmp_path, ("blocked-case",))
+    audit = tmp_path / "selection.json"
+
+    code = select_eligible_signal.main(
+        [
+            "--editorial-role", ROLE_ID,
+            "--signal-id", "blocked-case",
+            "--active-path", str(active),
+            "--published-path", str(published),
+            "--audit-out", str(audit),
+        ],
+        transport=_EligibleTransport(),
+    )
+
+    assert code == 0
+    assert json.loads(audit.read_text())["selected_signal_id"] == "blocked-case"
+    assert not published.exists()  # selection/gates never consume; success step does
+    mark_step = next(
+        step for step in _workflow("wednesday_golden.yml")["jobs"]
+        ["wednesday-golden"]["steps"]
+        if step.get("name") == "Mark signal as published"
+    )
+    assert "success()" in mark_step["if"]
+    assert "inputs.dry_run != 'true'" in mark_step["if"]
+
+
+def test_explicit_retry_cannot_pretend_a_consumed_signal_is_unused(tmp_path):
+    active, published = _write_selection_inputs(tmp_path, ("published-case",))
+    published.write_text("published-case\n")
+
+    code = select_eligible_signal.main(
+        [
+            "--editorial-role", ROLE_ID,
+            "--signal-id", "published-case",
+            "--active-path", str(active),
+            "--published-path", str(published),
+        ],
+        transport=_EligibleTransport(),
+    )
+
+    assert code == 1
 
 
 def test_wednesday_semantics_do_not_leak_into_frozen_universal_modules():
@@ -501,26 +598,10 @@ def test_wednesday_semantics_do_not_leak_into_frozen_universal_modules():
         assert not any(term in text for term in forbidden), path
 
 
-def test_monday_policy_was_not_imported_with_the_generic_seam():
-    changed_generic = [
-        Path("src/editorial/editorial_role.py"),
-        Path("src/editorial/platform_composer.py"),
-        Path("src/editorial/pipeline.py"),
-        Path("src/strategy/business_config.py"),
-        Path("src/intake/assignment_record.py"),
-        Path("scripts/streams/due_check.py"),
-    ]
-    forbidden = (
-        "never-blank-monday-documented-case",
-        "monday eligibility",
-        "source transparency",
-        "small-business evidence",
-    )
-    for path in changed_generic:
-        text = path.read_text().lower()
-        assert not any(term in text for term in forbidden), path
-
-    assert not Path("scripts/streams/select_eligible_signal.py").exists()
-    assert not Path("src/editorial/source_eligibility.py").exists()
-    assert not Path("src/editorial/source_transparency.py").exists()
-    assert not Path(".github/workflows/monday_publish.yml").exists()
+def test_wednesday_workflow_does_not_import_monday_product_policy():
+    text = WORKFLOW.read_text().lower()
+    assert "never-blank-monday-documented-case" not in text
+    assert "monday_selection" not in text
+    assert "monday_publish" not in text
+    assert "small-business evidence" not in text
+    assert Path(".github/workflows/monday_publish.yml").exists()

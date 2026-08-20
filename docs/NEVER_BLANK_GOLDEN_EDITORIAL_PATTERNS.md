@@ -42,8 +42,16 @@ acquisitions, strategic shifts, historical cases, product/market behaviour,
 and other documented cases may qualify. A merely interesting event does not
 qualify when its connection to Compound Presence is only an invented analogy.
 
-Issue #141 remains open. This profile neither weakens editorial acceptance nor
-licenses Never Blank pattern claims unsupported by the current run's evidence.
+For Release 1 this is an intentional Never Blank product decision: Wednesday
+permits **bounded editorial interpretation** of a documented case while
+retaining evidence discipline. The interpretation must remain distinguishable
+from documented facts; fabricated facts, invented evidence, and unsupported
+source claims are rejected. A bounded question may invite the reader to examine
+a mechanism without claiming the source company's outcome will transfer.
+
+Issue #141 remains open. This profile neither weakens universal Editorial
+Acceptance nor claims to solve the broader evidence-versus-editorial-
+interpretation design conflict recorded there.
 
 ## Golden reasoning references
 

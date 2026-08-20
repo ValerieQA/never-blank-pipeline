@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       signal_id:
-        description: "SIGNAL_ID (leave empty for the next unused ready Wednesday candidate)"
+        description: "SIGNAL_ID (leave empty to select an unused eligible Wednesday case)"
         required: false
         default: ""
         type: string
@@ -58,41 +58,45 @@ jobs:
         if: steps.window.outputs.due == 'true'
         run: pip install --quiet -r requirements.txt
 
-      # Input remains the canonical signal queue. Wednesday has its own
-      # post-success marker so Monday success, failure or no-signal cannot
-      # decide which Wednesday run starts. The canonical readiness, research,
-      # Decision Lens and Golden acceptance gates still fail closed.
+      # Reuse the generic role-eligibility selector merged with #142. The
+      # Wednesday source class is configuration, while the selector and the
+      # shared consumption marker are canonical cross-stream infrastructure.
       - name: Resolve Wednesday signal
         id: resolve
         if: steps.window.outputs.due == 'true'
+        env:
+          NB_OPENAI_API_KEY:    ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_OPENAI_CHAT_MODEL: ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          WEDNESDAY_ROLE:       never-blank-wednesday-golden
         run: |
-          SIGNAL_ID="${{ inputs.signal_id }}"
-          if [ -z "$SIGNAL_ID" ]; then
-            SIGNAL_ID=$(python - <<'PY'
-          import json
-          from pathlib import Path
-
-          active = Path("data/research/signals_active.jsonl")
-          consumed = Path("data/research/wednesday_published_signal_ids.txt")
-          done = set(consumed.read_text().splitlines()) if consumed.exists() else set()
-
-          for line in active.read_text().splitlines():
-              try:
-                  signal = json.loads(line)
-              except json.JSONDecodeError:
-                  continue
-              signal_id = str(signal.get("SIGNAL_ID", "")).strip()
-              ready = str(signal.get("ARTICLE_READY", "")).strip().lower() == "true"
-              if signal_id and ready and signal_id not in done:
-                  print(signal_id)
-                  break
-          PY
-            )
+          set +e
+          python scripts/streams/select_eligible_signal.py \
+            --editorial-role "$WEDNESDAY_ROLE" \
+            --signal-id "${{ inputs.signal_id }}" \
+            --audit-out reports/stream_selection/wednesday_selection.json \
+            | tee selection.log
+          RC=${PIPESTATUS[0]}
+          set -e
+          if [ "$RC" = "3" ]; then
+            echo "signal_id=" >> "$GITHUB_OUTPUT"
+            echo "No eligible Wednesday candidate — publishing nothing."
+            exit 0
+          elif [ "$RC" != "0" ]; then
+            # Eligibility infrastructure failure or a truncated search is not
+            # a healthy empty Wednesday and must remain visible.
+            exit "$RC"
           fi
-          if [ -z "$SIGNAL_ID" ]; then
-            echo "No unused ready Wednesday candidate — publishing nothing."
-          fi
+          SIGNAL_ID=$(grep '^selected=' selection.log | tail -1 | cut -d= -f2)
           echo "signal_id=$SIGNAL_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Preserve Wednesday selection audit
+        if: steps.window.outputs.due == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wednesday-selection-audit
+          path: reports/stream_selection/wednesday_selection.json
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Check OpenAI secret
         if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != ''
@@ -146,14 +150,14 @@ jobs:
             --signal-id "${{ steps.resolve.outputs.signal_id }}" \
             --editorial-role "$WEDNESDAY_ROLE" $FLAGS
 
-      - name: Mark Wednesday signal as published
+      - name: Mark signal as published
         if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && success() && inputs.dry_run != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash origin main
-          echo "${{ steps.resolve.outputs.signal_id }}" >> data/research/wednesday_published_signal_ids.txt
-          git add data/research/wednesday_published_signal_ids.txt
+          echo "${{ steps.resolve.outputs.signal_id }}" >> data/research/published_signal_ids.txt
+          git add data/research/published_signal_ids.txt
           git add strategy/published_content_index.jsonl 2>/dev/null || true
           git diff --staged --quiet || git commit -m "Publish Wednesday ${{ steps.resolve.outputs.signal_id }} [skip ci]"
           git push

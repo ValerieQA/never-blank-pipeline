@@ -110,10 +110,9 @@ def test_complete_contract_is_strict_immutable_and_serializable():
 
     assert configuration.configuration_id == "fictional-r1-business"
     assert configuration.channels.wix != configuration.channels.linkedin
-    assert configuration.model_dump(mode="json") == {
-        **_valid_config(),
-        "editorial_roles": [],
-    }
+    # Issue #142: editorial_roles defaults to empty for configurations that
+    # declare none — the round-trip adds only that explicit default.
+    assert configuration.model_dump(mode="json") == {**_valid_config(), "editorial_roles": []}
     with pytest.raises(ValidationError):
         configuration.configuration_version = "2"
 

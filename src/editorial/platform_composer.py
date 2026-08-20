@@ -193,6 +193,8 @@ def _build_user_prompt(
 
     lines.append("Write the native platform body now. Do not copy sentences from another format.")
     if editorial_role_rules:
+        # Issue #142: which editorial role this run is producing. The rules are
+        # configured by the business, never inferred here from a weekday.
         lines.append(editorial_role_rules)
     return "\n".join(lines)
 
@@ -208,10 +210,7 @@ def _compose_one(
     raw = chat(
         system=_SYSTEM_PROMPT,
         user=_build_user_prompt(
-            structured_article,
-            format_key,
-            cta_mode,
-            strategy_rules,
+            structured_article, format_key, cta_mode, strategy_rules,
             editorial_role_rules=editorial_role_rules,
         ),
         json_mode=True,
@@ -301,13 +300,15 @@ def compose_platforms(
             format_key,
             cta_mode=cta_mode,
             strategy_rules=strategy_rules,
+            # The Release 1 published surfaces: the Wix article and the
+            # LinkedIn artifact. Other formats keep their prior prompts. A
+            # mapping carries per-surface renderings; a plain string applies
+            # to both published surfaces unchanged.
             editorial_role_rules=(
                 editorial_role_rules.get(format_key)
                 if isinstance(editorial_role_rules, dict)
                 else (
-                    editorial_role_rules
-                    if format_key in ("long", "medium")
-                    else None
+                    editorial_role_rules if format_key in ("long", "medium") else None
                 )
             ),
         )

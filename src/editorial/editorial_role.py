@@ -1,14 +1,29 @@
-"""Generic configured editorial-role identity and prompt rendering.
+"""Which editorial role produced a run (Issue #142).
 
-A role belongs to a run, not to a weekday or source. Its identity is persisted
-as evidence and its business meaning is resolved from strict configuration.
+A pipeline that publishes several kinds of article each week has to be able to
+say which kind a given run was — and to say it from evidence, not from the
+weekday the job happened to fire on. A stream re-run a day late is still the
+same editorial role, and a run's own record is the only place that can be true.
+
+The identity here is deliberately generic: a role id and the configuration
+version that declared it. It carries no editorial meaning of its own. What a
+role *asks for* — its structure, its prohibitions — is declared in the business
+strategy configuration, so a different business can define entirely different
+roles, or none, without this module changing.
+
+The role is a property of the **run**, not of the source material. The same
+business case could legitimately be produced under different roles, so this
+lives on the run-scoped assignment record rather than on the intake contract.
 """
 
 from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.strategy.business_config import BusinessStrategyConfiguration, EditorialRole
+from src.strategy.business_config import (
+    BusinessStrategyConfiguration,
+    EditorialRole,
+)
 
 
 class EditorialRoleError(RuntimeError):
@@ -16,7 +31,7 @@ class EditorialRoleError(RuntimeError):
 
 
 class EditorialRoleIdentity(BaseModel):
-    """Names the configured role used by one run."""
+    """Names the declared role a run executed under, and where it came from."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -27,7 +42,13 @@ class EditorialRoleIdentity(BaseModel):
 def resolve_editorial_role(
     configuration: BusinessStrategyConfiguration, role_id: str
 ) -> tuple[EditorialRoleIdentity, EditorialRole]:
-    """Resolve an explicit role id or fail closed."""
+    """Resolve a requested role id against the declared roles.
+
+    Fails closed on an unknown id. A run asked to produce a role the
+    configuration does not declare has no rules to follow, and silently
+    producing a default article under a role name it never honoured would make
+    the recorded identity a lie.
+    """
 
     requested = (role_id or "").strip()
     if not requested:
@@ -51,7 +72,15 @@ def resolve_editorial_role(
 def render_editorial_role_rules(
     role: EditorialRole, surface: str | None = None
 ) -> str:
-    """Render deterministic role rules for one optional publication surface."""
+    """Render a declared role as deterministic prompt text.
+
+    Structure and prohibitions travel together: a structure without its
+    prohibitions is an invitation to produce the shape the role exists to
+    avoid. ``surface`` ("wix" or "linkedin") appends that surface's
+    role-scoped rules — rules that belong to this role only, deliberately not
+    written into the shared channel configuration where every other stream
+    would inherit them.
+    """
 
     lines = [
         "",
@@ -64,8 +93,7 @@ def render_editorial_role_rules(
     lines.append("Never do any of the following:")
     lines.extend(f"- {item}" for item in role.forbidden)
     surface_rules = {
-        "wix": role.wix_rules,
-        "linkedin": role.linkedin_rules,
+        "wix": role.wix_rules, "linkedin": role.linkedin_rules,
     }.get(surface or "", ())
     if surface_rules:
         lines.append("")

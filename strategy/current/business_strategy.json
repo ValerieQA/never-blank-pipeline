@@ -342,6 +342,52 @@
   ],
   "editorial_roles": [
     {
+      "role_id": "never-blank-monday-documented-case",
+      "intent": "A documented small-business, owner-led, or early-stage business story: verified facts, one observable mechanism, the Compound Presence lens applied with explicit bounds, one bounded reflection for an owner-led reader, and published sources. It does not need to be breaking news.",
+      "structure": [
+        "Hook or business tension: open on a fact, contradiction, surprising consequence or tension. Never restate the source headline.",
+        "Verified account of what happened: only documented, verifiable facts, and only as much as the mechanism requires.",
+        "Why this case is worth examining: the non-obvious business significance.",
+        "The one observable mechanism: exactly ONE mechanism actually visible in the documented case — never a broader pattern the case does not show.",
+        "Compound Presence lens, explicitly bounded: what this mechanism suggests about consistent presence and being remembered, stated as an interpretation of this case, never as a proven law.",
+        "One practical question or consequence an owner-led reader can examine. One, not several.",
+        "Keep three things distinguishable throughout: documented facts, the observable mechanism, and the bounded Never Blank reflection. The reflection may say what is worth examining; it may never present this company's outcome as evidence of the reader's likely result.",
+        "Never Blank close: reconnect to the Never Blank idea in this article's own language.",
+        "Website invitation: the canonical configured destination.",
+        "Source attribution: name the published sources the facts came from.",
+        "Section headings are not required in the prose; the movement through the structure is what matters."
+      ],
+      "forbidden": [
+        "News recap or source summary.",
+        "'5 lessons from X', '3 takeaways', or any list of lessons.",
+        "Generic small-business advice that would fit any article.",
+        "More than one mechanism, or several unrelated mechanisms.",
+        "Background beyond what the mechanism needs.",
+        "A large-company outcome transferred, silently or openly, to smaller businesses.",
+        "Analogy represented as evidence.",
+        "An unsupported universal pattern or causal law derived from one case.",
+        "Citation used as a substitute for verification.",
+        "Forcing Compound Presence onto a story it does not fit.",
+        "Generic AI-business-blog prose.",
+        "Padding to reach a length."
+      ],
+      "eligibility_criteria": [
+        "Eligible: a documented case genuinely about a small business, an owner-led business, a founder-led operating business at a meaningfully small or early stage, or an early-stage company.",
+        "A company that is large today is eligible ONLY when the documented episode occurred while it was still meaningfully small, founder-led, or early-stage.",
+        "Ineligible: current large-company or public-company/major-corporate behaviour, however recognizable the company or interesting the analogy.",
+        "Ineligible: any case whose connection to an owner-led/small-business audience exists only by analogy.",
+        "Ineligible: any case whose business scale, stage, or ownership the available material does not establish. Unknown is ineligible; never classify an unestablished company as small."
+      ],
+      "wix_rules": [
+        "Materially verifiable external claims keep publishable provenance: the article carries a visible Sources section and/or appropriate inline source links naming where the facts came from.",
+        "Attribution never substitutes for verification, and no source or URL is ever invented."
+      ],
+      "linkedin_rules": [
+        "Carry compact source attribution sufficient to identify the source case — one clear reference, not citation-heavy prose."
+      ],
+      "require_source_transparency": true
+    },
+    {
       "role_id": "never-blank-wednesday-golden",
       "intent": "Demonstrate how Never Blank thinks by moving from a documented event and its obvious public reading X to one evidence-supported overlooked Y, one primary mechanism, and one bounded business question.",
       "structure": [
@@ -366,6 +412,14 @@
         "A corporate or external-case outcome silently transferred to the configured audience.",
         "Generic AI or ordinary marketing-business-blog prose and padding.",
         "A title that copies the source headline, summarizes the whole article, reveals all of Y, or uses cheap clickbait."
+      ],
+      "eligibility_criteria": [
+        "The source is a documented case in one of these classes: current_business_event, business_decision, acquisition, strategic_shift, historical_business_case, product_market_behavior, credible_corporate_case, other_documented_event.",
+        "The case contains a recognizable obvious reading X and enough factual substance to investigate one overlooked Y and exactly one primary mechanism.",
+        "The documented material can support Y; surprise or analogy alone is not eligibility.",
+        "The case has a genuine documented connection to Compound Presence; do not force an unrelated interesting story into the role.",
+        "Same-day or breaking-news status is not required; historical cases may qualify.",
+        "A credible large-company case may qualify, but its outcome may transfer only as a bounded question for the configured audience, never as their predicted result."
       ],
       "wix_rules": [
         "Develop one concise Golden discovery through X, Y, one mechanism, evidence, a bounded question, the Never Blank insight, and the contextual close.",

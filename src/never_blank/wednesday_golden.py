@@ -6,11 +6,11 @@ for this one product stream. It does not define generic editorial-role
 identity, assignment persistence, scheduler semantics, or pipeline wiring;
 Wednesday reuses those generic capabilities without importing Monday policy.
 
-The source policy remains declarative. Runtime eligibility judgment is not
-implemented here: the Wednesday workflow selects a ready item from the
-canonical queue, and the existing research, Decision Lens, and configured
-Golden acceptance boundaries decide whether it may continue. No parallel
-eligibility verdict or Monday selector is introduced.
+The source policy remains declarative. The Wednesday workflow carries the
+equivalent configured criteria through the generic role-eligibility selector
+merged in Issue #142; this module does not implement a second judgment path.
+Research, Decision Lens, and configured Golden acceptance remain the later
+fail-closed boundaries for evidence and editorial meaning.
 """
 
 from __future__ import annotations

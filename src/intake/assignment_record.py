@@ -26,9 +26,11 @@ from src.strategy.execution_context import ConfigurationIdentity
 
 ASSIGNMENT_RECORD_SCHEMA_VERSION = "1.2"
 
-#: Schema versions this contract can still read. ``1.1`` added code identity;
-#: ``1.2`` added the optional editorial role. Immutable historical records are
-#: never rewritten, so every accepted shape stays loadable.
+#: Schema versions this contract can still read. ``1.1`` added the optional
+#: code identity (Issue #114); ``1.2`` added the optional editorial role
+#: (Issue #142). Earlier records are immutable create-once evidence and are
+#: never rewritten, so every shape must stay loadable — and the version keeps
+#: recording which shape was actually written.
 KNOWN_ASSIGNMENT_RECORD_SCHEMA_VERSIONS = frozenset({"1.0", "1.1", "1.2"})
 
 
@@ -50,8 +52,12 @@ class AssignmentRecord(BaseModel):
     #: fabricated identity would corrupt exactly the claim it supports.
     code_identity: Optional[CodeIdentity] = None
 
-    #: Explicit role identity for this run. Absent preserves legacy/default
-    #: execution; it is never inferred from a weekday or source.
+    #: Which editorial role this run was produced under (Issue #142). Absent
+    #: for runs that declared none, which is every run before this contract
+    #: and every run of a business that declares no roles. Recorded here
+    #: because the role is a decision about the run, not a property of the
+    #: source material — and because a weekday is not evidence: a stream
+    #: re-run a day late is still the same role.
     editorial_role: Optional[EditorialRoleIdentity] = None
 
     @field_validator("schema_version")
