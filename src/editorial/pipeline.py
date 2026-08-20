@@ -70,6 +70,7 @@ def generate_article(
     linkedin_strategy: LinkedInStrategyView | None = None,
     audience_selection: AudienceSelection | None = None,
     research_artifact: NormalizedResearchArtifact | None = None,
+    editorial_role_rules: str | None = None,
 ) -> dict:
     """
     Run the full Editorial Engine V2 pipeline for one enriched signal.
@@ -160,6 +161,7 @@ def generate_article(
         cta_mode=cta_mode,
         wix_strategy=wix_strategy,
         linkedin_strategy=linkedin_strategy,
+        editorial_role_rules=editorial_role_rules,
     )
 
     log.info("Editorial Engine: generation complete for signal %s", sig_id)

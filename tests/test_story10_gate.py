@@ -165,7 +165,7 @@ def test_alternate_configuration_changes_actual_consumer_inputs():
 
         captured: dict[str, tuple[str, ...]] = {}
 
-        def compose(structured, format_key, cta_mode="none", strategy_rules=()):
+        def compose(structured, format_key, cta_mode="none", strategy_rules=(), **kwargs):
             captured[format_key] = strategy_rules
             return {"word_count": 1, "body": "accepted", "echo_included": False}
 

@@ -87,6 +87,21 @@ class CallToAction(_ContractModel):
     rules: NonEmptyTextTuple
 
 
+class EditorialRole(_ContractModel):
+    """One declared editorial role a run may be produced under (Issue #142).
+
+    Generic by construction: the engine knows a role has an intent, a
+    structure and a list of prohibitions. What any particular role means is
+    the configured business's decision, so a different business declares
+    different roles — or none — without changing this contract.
+    """
+
+    role_id: NonBlankStr
+    intent: NonBlankStr
+    structure: NonEmptyTextTuple
+    forbidden: NonEmptyTextTuple
+
+
 class WixChannelRules(_ContractModel):
     article_rules: NonEmptyTextTuple
     metadata_rules: NonEmptyTextTuple
@@ -133,6 +148,10 @@ class BusinessStrategyConfiguration(_ContractModel):
     calls_to_action: tuple[CallToAction, ...]
     channels: ChannelRules
     prompt_rule_references: tuple[PromptRuleReference, ...]
+    #: Declared editorial roles (Issue #142). Optional and empty by default:
+    #: a configuration that declares none keeps its exact prior behaviour, and
+    #: a run simply has no role to record.
+    editorial_roles: tuple[EditorialRole, ...] = ()
 
     @model_validator(mode="after")
     def _validate_required_collections_and_ids(self) -> "BusinessStrategyConfiguration":
@@ -145,6 +164,9 @@ class BusinessStrategyConfiguration(_ContractModel):
         for name, values in required_collections.items():
             if not values:
                 raise ValueError(f"{name} must contain at least one item")
+        role_ids = [role.role_id for role in self.editorial_roles]
+        if len(set(role_ids)) != len(role_ids):
+            raise ValueError("editorial role IDs must be unique")
 
         self._require_unique("product_id", self.products_services)
         self._require_unique("audience_id", self.audiences)

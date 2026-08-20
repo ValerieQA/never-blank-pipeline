@@ -1,48 +1,51 @@
-name: Research — Generate + Publish (Full LLM Cycle)
+name: Monday — Never Blank Business Case
+
+# The Monday editorial stream (Issue #142): one real business case, one
+# business mechanism, one bounded consequence.
+#
+# Independent by design. Monday owns this workflow and nothing else runs in
+# it, so a broken Monday cannot stop Tuesday, Wednesday, Thursday or Friday —
+# and none of them can stop Monday.
+#
+# Schedule ownership: this is the ONLY authoritative Monday publisher. The
+# legacy Mon/Wed/Fri scheduler and the canonical multi-day workflow both had
+# Monday removed in the same change (Issue #142), because two publishers on
+# one day is two articles, and the consumption marker is written after a run
+# rather than before it — it can never act as a concurrency guard.
+#
+# The time is the accepted contract from config/schedule.yaml —
+# America/New_York 06:00 — not a new invention.
 
 on:
+  schedule:
+    - cron: "0 10 * * 1"   # 10:00 UTC = 06:00 ET (EDT)
+    - cron: "0 11 * * 1"   # 11:00 UTC = 06:00 ET (EST)
+
   workflow_dispatch:
     inputs:
       signal_id:
-        description: "SIGNAL_ID (leave empty for auto-select from signals_active.jsonl)"
+        description: "SIGNAL_ID (leave empty to auto-select an unused eligible signal)"
         required: false
         default: ""
         type: string
       dry_run:
-        description: "dry_run=true: generate + validate only, no publish (needs only OpenAI key)"
+        description: "dry_run=true: generate + validate only, no publish"
         required: false
         default: "false"
         type: choice
         options: ["false", "true"]
-      from_package:
-        description: "from_package=true: skip LLM, publish the existing _generated.json (editorial pass)"
-        required: false
-        default: "false"
-        type: choice
-        options: ["false", "true"]
-      delete_wix_post_id:
-        description: "Wix post ID to delete before publishing (use when replacing an existing post)"
-        required: false
-        default: ""
-        type: string
-  schedule:
-    # 3am ET (EDT = UTC-4): Wed, Fri, Sun at 07:00 UTC
-    # During EST (winter, UTC-5) this fires at 2am ET — acceptable
-    #
-    # Monday removed by Issue #142: monday_publish.yml is the single
-    # authoritative Monday owner. Wednesday, Friday and Sunday are unchanged.
-    - cron: "0 7 * * 3,5,0"
 
-# Serialize publish runs to prevent concurrent writes to published_content_index.jsonl
+# Serialize against the other publish streams: they share the published-content
+# index and the signal consumption marker.
 concurrency:
   group: never-blank-publish
   cancel-in-progress: false
 
 jobs:
-  generate-and-publish:
-    name: "Generate + Publish"
+  monday-publish:
+    name: "Monday — Never Blank Business Case"
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     permissions:
       contents: write
 
@@ -51,10 +54,32 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      # GitHub cron is UTC, so the schedule above fires twice — once correct
+      # under EDT, once under EST. This decides which firing is the real one,
+      # before anything is generated or any credential is read. A manual
+      # dispatch is always the real one.
+      - name: Monday publish window
+        id: window
+        run: |
+          if python scripts/streams/due_check.py \
+               --day monday --time "$MONDAY_TIME" --timezone "$MONDAY_TZ" \
+               ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}; then
+            echo "due=true" >> $GITHUB_OUTPUT
+          else
+            echo "due=false" >> $GITHUB_OUTPUT
+            echo "Not the Monday window — no work will run."
+          fi
+        env:
+          MONDAY_TIME: "06:00"
+          MONDAY_TZ: "America/New_York"
+
       - run: pip install --quiet -r requirements.txt
+        if: steps.window.outputs.due == 'true'
 
       # Auto-select signal if none provided (scheduled runs)
       - name: Resolve signal ID
+        if: steps.window.outputs.due == 'true'
         id: resolve
         run: |
           SIGNAL_ID="${{ inputs.signal_id }}"
@@ -86,6 +111,7 @@ jobs:
 
       # Always required: OpenAI for LLM generation
       - name: Check OpenAI secret
+        if: steps.window.outputs.due == 'true'
         run: |
           if [ -z "$NB_OPENAI_API_KEY" ]; then
             echo "ERROR: NB_OPENAI_API_KEY is not set"
@@ -97,7 +123,7 @@ jobs:
 
       # Only required when publishing (dry_run=false)
       - name: Check publish secrets
-        if: inputs.dry_run == 'false'
+        if: steps.window.outputs.due == 'true' && (inputs.dry_run != 'true')
         run: |
           MISSING=""
           [ -z "$NB_WIX_API_KEY" ]                && MISSING="$MISSING NB_WIX_API_KEY"
@@ -129,8 +155,10 @@ jobs:
           NB_TELEGRAM_BOT_TOKEN:          ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
           NB_TELEGRAM_CHANNEL_ID:         ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
 
-      - name: "Generate + Publish — ${{ steps.resolve.outputs.signal_id }}"
+      - name: "Monday — Generate + Publish ${{ steps.resolve.outputs.signal_id }}"
+        if: steps.window.outputs.due == 'true'
         env:
+          MONDAY_ROLE:                    monday_business_case
           NB_OPENAI_API_KEY:              ${{ secrets.NB_OPENAI_API_KEY }}
           # Story #11 research evidence. Without it the canonical Exa
           # adapter fails closed and the research gate blocks generation —
@@ -164,14 +192,14 @@ jobs:
           NB_FORCE_REGENERATE_RESEARCH_IMAGES: ${{ secrets.NB_FORCE_REGENERATE_RESEARCH_IMAGES }}
         run: |
           FLAGS=""
-          [ "${{ inputs.dry_run }}"       = "true" ] && FLAGS="$FLAGS --dry-run"
-          [ "${{ inputs.from_package }}"  = "true" ] && FLAGS="$FLAGS --from-package"
-          [ -n "${{ inputs.delete_wix_post_id }}" ] && FLAGS="$FLAGS --delete-wix-post-id ${{ inputs.delete_wix_post_id }}"
-          python scripts/generate_and_publish.py --signal-id "${{ steps.resolve.outputs.signal_id }}" $FLAGS
+          [ "${{ inputs.dry_run }}" = "true" ] && FLAGS="$FLAGS --dry-run"
+          python scripts/generate_and_publish.py \
+            --signal-id "${{ steps.resolve.outputs.signal_id }}" \
+            --editorial-role "$MONDAY_ROLE" $FLAGS
 
       # Mark signal as published so next scheduled run picks the next one
       - name: Mark signal as published
-        if: success() && inputs.dry_run != 'true'
+        if: steps.window.outputs.due == 'true' && (success() && inputs.dry_run != 'true')
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -208,7 +236,7 @@ jobs:
       # be able to veto bookkeeping; always() keeps it running regardless of
       # what happened upstream.
       - name: Preserve canonical run evidence
-        if: always()
+        if: steps.window.outputs.due == 'true' && (always())
         uses: actions/upload-artifact@v4
         with:
           name: "run-evidence-${{ steps.resolve.outputs.signal_id }}"
@@ -217,7 +245,7 @@ jobs:
           retention-days: 90
 
       - name: Upload generated package
-        if: always()
+        if: steps.window.outputs.due == 'true' && (always())
         uses: actions/upload-artifact@v4
         with:
           name: "generated-${{ steps.resolve.outputs.signal_id }}"

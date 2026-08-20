@@ -86,7 +86,7 @@ def test_platform_composer_uses_distinct_wix_and_linkedin_rules():
     execution = _execution()
     calls = []
 
-    def compose(structured, format_key, cta_mode="none", strategy_rules=()):
+    def compose(structured, format_key, cta_mode="none", strategy_rules=(), **kwargs):
         calls.append((format_key, strategy_rules))
         return {"word_count": 1, "body": "ok", "echo_included": False}
 

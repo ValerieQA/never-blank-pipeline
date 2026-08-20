@@ -139,6 +139,11 @@ from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
+from src.editorial.editorial_role import (
+    EditorialRoleError,
+    render_editorial_role_rules,
+    resolve_editorial_role,
+)
 from src.editorial.pipeline import ArticleGenerationError, generate_article
 from src.editorial.decision_lens_evaluator import (
     DecisionLensEvaluator,
@@ -687,6 +692,9 @@ def _run(
                         help="run_id of the source generated.json to load (required with --from-package)")
     parser.add_argument("--legacy-package", action="store_true",
                         help="Read legacy flat artifact {signal_id}_generated.json (explicit adapter; never auto-fallback)")
+    parser.add_argument("--editorial-role", default="",
+                        help="Editorial role id declared by the business configuration "
+                             "(Issue #142); recorded on the run and applied to composition")
     parser.add_argument("--delete-wix-post-id",
                         help="Delete this Wix post ID before publishing (use when replacing an existing post)")
     args = parser.parse_args()
@@ -724,6 +732,24 @@ def _run(
     except (BusinessStrategyConfigurationError, StrategyExecutionError) as exc:
         print(f"  ERROR: {exc}")
         return 1
+
+    # Issue #142: which editorial role this run produces. Requested explicitly
+    # by the caller and resolved against the declared roles — never inferred
+    # from the weekday, the cron, the source title, or the prompt. An unknown
+    # role fails closed: a run with no rules to follow must not quietly
+    # produce a default article under a role name it never honoured.
+    _editorial_role_identity = None
+    _editorial_role_rules = None
+    if args.editorial_role:
+        try:
+            _editorial_role_identity, _role = resolve_editorial_role(
+                business_configuration, args.editorial_role
+            )
+        except EditorialRoleError as exc:
+            print(f"  ERROR: {exc}")
+            return 1
+        _editorial_role_rules = render_editorial_role_rules(_role)
+        print(f"  ✓  editorial role: {_editorial_role_identity.role_id}")
 
     active_strategy = load_active_strategy()
     if active_strategy is None:
@@ -818,6 +844,7 @@ def _run(
             configuration_identity=strategy_execution.identity,
             assignment=assignment,
             code_identity=resolve_code_identity(),
+            editorial_role=_editorial_role_identity,
         )
         write_assignment_json(
             run_dir, json.loads(_assignment_record.model_dump_json())
@@ -1370,6 +1397,7 @@ def _run(
                 linkedin_strategy=strategy_execution.linkedin,
                 audience_selection=audience_selection,
                 research_artifact=research_artifact,
+                editorial_role_rules=_editorial_role_rules,
             )
             platforms  = article["platforms"]
             structured = article["structured_article"]

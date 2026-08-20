@@ -1,7 +1,8 @@
 schedule:
   timezone: America/New_York
   days:
-    - monday
+    # Monday moved to its own stream (Issue #142); this legacy schedule now
+    # covers only the days that still run through it.
     - wednesday
     - friday
   time: "06:00"

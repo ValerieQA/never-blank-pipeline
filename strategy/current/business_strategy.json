@@ -339,5 +339,33 @@
       "path": "docs/PLATFORM_AND_VISUAL_STRATEGY.md",
       "version": "r1-2026-08-13"
     }
+  ],
+  "editorial_roles": [
+    {
+      "role_id": "monday_business_case",
+      "intent": "Take one real business case — an experiment, a company decision, a study, a documented observation — and extract one interesting business mechanism with one bounded consequence. It does not need to be breaking news.",
+      "structure": [
+        "Hook or business tension: open on a fact, contradiction, surprising consequence or tension. Never restate the source headline.",
+        "What happened: the factual case, only as much as the mechanism requires.",
+        "Why this is interesting: the non-obvious business significance.",
+        "The mechanism: exactly ONE underlying business mechanism, explained.",
+        "Bounded transfer: the question or consequence another business should inspect. The source company's result is never proof of the configured audience's result.",
+        "Practical consequence: ONE thing the reader can inspect or change.",
+        "Never Blank close: reconnect to the Never Blank idea in this article's own language.",
+        "Website invitation: the canonical configured destination.",
+        "The whole article is one case, one mechanism, one consequence. Section headings are not required; the movement is."
+      ],
+      "forbidden": [
+        "News recap or source summary.",
+        "'5 lessons from X', '3 takeaways', or any list of lessons.",
+        "Generic small-business advice that would fit any article.",
+        "More than one mechanism, or several unrelated mechanisms.",
+        "Background beyond what the mechanism needs.",
+        "Presenting the source company's outcome as the reader's outcome.",
+        "Interpretation the accepted evidence does not support.",
+        "Generic AI-business-blog prose.",
+        "Padding to reach a length."
+      ]
+    }
   ]
 }
