@@ -256,26 +256,40 @@ def _revise_article(
     article_body: str,
     review: EditorialReview,
     run_id: str,
+    sources_of_record: str | None = None,
 ) -> str:
-    """Perform the single controlled revision of the Wix article body only."""
+    """Perform the single controlled revision of the Wix article body only.
+
+    ``sources_of_record`` (#155) carries the run's actual citable sources so a
+    revision addressing one criterion cannot delete the attribution the
+    publication gate requires — nor invent a replacement for it.
+    """
 
     failed = [
         {"criterion_id": c.criterion_id, "description": c.description}
         for c in rubric.criteria
         if c.criterion_id in review.failed_criterion_ids
     ]
+    payload = {
+        "run_id": run_id,
+        "article": article_body,
+        "failed_criteria": failed,
+        "revision_guidance": review.revision_guidance,
+        "rationale": review.rationale,
+        "note": (
+            "Revise this one article to address the failed criteria. Do not "
+            "invent facts or evidence. Return only the revised article text."
+        ),
+    }
+    if sources_of_record:
+        payload["sources_of_record"] = sources_of_record
+        payload["note"] += (
+            " Keep the article's source attribution intact: the sources of "
+            "record below are the only ones that may appear, and the article "
+            "must still name them after your revision."
+        )
     request = json.dumps(
-        {
-            "run_id": run_id,
-            "article": article_body,
-            "failed_criteria": failed,
-            "revision_guidance": review.revision_guidance,
-            "rationale": review.rationale,
-            "note": (
-                "Revise this one article to address the failed criteria. Do not "
-                "invent facts or evidence. Return only the revised article text."
-            ),
-        },
+        payload,
         ensure_ascii=False,
         sort_keys=True,
     )
@@ -303,6 +317,7 @@ def run_editorial_acceptance(
     rubric: EditorialAcceptanceRubric,
     reviewer: EditorialReviewTransport,
     revisor: ArticleRevisionTransport,
+    sources_of_record: str | None = None,
 ) -> EditorialAcceptanceOutcome:
     """Run the complete Release 1 acceptance lifecycle for one generated article.
 
@@ -342,7 +357,8 @@ def run_editorial_acceptance(
 
     # REVISE: exactly one controlled revision, then exactly one recheck.
     revised_body = _revise_article(
-        revisor, rubric, article_body=article_body, review=initial, run_id=run_id
+        revisor, rubric, article_body=article_body, review=initial, run_id=run_id,
+        sources_of_record=sources_of_record,
     )
     final = _review_article(
         reviewer, rubric, article_body=revised_body, research=research, run_id=run_id

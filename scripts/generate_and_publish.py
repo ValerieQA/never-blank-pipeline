@@ -149,6 +149,7 @@ from src.editorial.editorial_role import (
     render_editorial_role_rules,
     resolve_editorial_role,
 )
+from src.editorial.sources_of_record import render_sources_of_record
 from src.editorial.source_transparency import (
     SourceTransparencyError,
     validate_source_transparency,
@@ -750,6 +751,7 @@ def _run(
     # produce a default article under a role name it never honoured.
     _editorial_role_identity = None
     _editorial_role_rules = None
+    _role = None
     if args.editorial_role:
         try:
             _editorial_role_identity, _role = resolve_editorial_role(
@@ -1475,6 +1477,18 @@ def _run(
         try:
             editorial = rc.to_editorial(editorial_package)
             _assert_run_id_match(run_ctx.run_id, editorial.run_id, "editorial-context")
+            # #155: the role's rules demand attribution; only here — after
+            # research is READY — can the run say WHAT to attribute. The
+            # sources come from the persisted research artifact, never from
+            # model memory or invented prompt text, and only roles that
+            # require source transparency receive the block.
+            if _role is not None and _role.require_source_transparency:
+                _editorial_role_rules = {
+                    "long": _editorial_role_rules["long"]
+                    + render_sources_of_record(research_artifact, surface="wix"),
+                    "medium": _editorial_role_rules["medium"]
+                    + render_sources_of_record(research_artifact, surface="linkedin"),
+                }
             article    = generate_article(
                 editorial.to_legacy_dict(),
                 cta_mode=cta_mode,
@@ -1520,6 +1534,14 @@ def _run(
                 article_body=blog_body,
                 research=research_artifact,
                 run_id=run_ctx.run_id,
+                # #155: the reviser sees the run's real sources, so a fix for
+                # one criterion cannot quietly remove the attribution the
+                # publication gate requires — and cannot invent a new one.
+                sources_of_record=(
+                    render_sources_of_record(research_artifact, surface="wix")
+                    if _role is not None and _role.require_source_transparency
+                    else None
+                ),
                 rubric=_acceptance_rubric,
                 reviewer=(
                     editorial_reviewer
