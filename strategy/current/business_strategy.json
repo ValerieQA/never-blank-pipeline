@@ -339,5 +339,53 @@
       "path": "docs/PLATFORM_AND_VISUAL_STRATEGY.md",
       "version": "r1-2026-08-13"
     }
+  ],
+  "editorial_roles": [
+    {
+      "role_id": "never-blank-monday-documented-case",
+      "intent": "A documented small-business, owner-led, or early-stage business story: verified facts, one observable mechanism, the Compound Presence lens applied with explicit bounds, one bounded reflection for an owner-led reader, and published sources. It does not need to be breaking news.",
+      "structure": [
+        "Hook or business tension: open on a fact, contradiction, surprising consequence or tension. Never restate the source headline.",
+        "Verified account of what happened: only documented, verifiable facts, and only as much as the mechanism requires.",
+        "Why this case is worth examining: the non-obvious business significance.",
+        "The one observable mechanism: exactly ONE mechanism actually visible in the documented case — never a broader pattern the case does not show.",
+        "Compound Presence lens, explicitly bounded: what this mechanism suggests about consistent presence and being remembered, stated as an interpretation of this case, never as a proven law.",
+        "One practical question or consequence an owner-led reader can examine. One, not several.",
+        "Keep three things distinguishable throughout: documented facts, the observable mechanism, and the bounded Never Blank reflection. The reflection may say what is worth examining; it may never present this company's outcome as evidence of the reader's likely result.",
+        "Never Blank close: reconnect to the Never Blank idea in this article's own language.",
+        "Website invitation: the canonical configured destination.",
+        "Source attribution: name the published sources the facts came from.",
+        "Section headings are not required in the prose; the movement through the structure is what matters."
+      ],
+      "forbidden": [
+        "News recap or source summary.",
+        "'5 lessons from X', '3 takeaways', or any list of lessons.",
+        "Generic small-business advice that would fit any article.",
+        "More than one mechanism, or several unrelated mechanisms.",
+        "Background beyond what the mechanism needs.",
+        "A large-company outcome transferred, silently or openly, to smaller businesses.",
+        "Analogy represented as evidence.",
+        "An unsupported universal pattern or causal law derived from one case.",
+        "Citation used as a substitute for verification.",
+        "Forcing Compound Presence onto a story it does not fit.",
+        "Generic AI-business-blog prose.",
+        "Padding to reach a length."
+      ],
+      "eligibility_criteria": [
+        "Eligible: a documented case genuinely about a small business, an owner-led business, a founder-led operating business at a meaningfully small or early stage, or an early-stage company.",
+        "A company that is large today is eligible ONLY when the documented episode occurred while it was still meaningfully small, founder-led, or early-stage.",
+        "Ineligible: current large-company or public-company/major-corporate behaviour, however recognizable the company or interesting the analogy.",
+        "Ineligible: any case whose connection to an owner-led/small-business audience exists only by analogy.",
+        "Ineligible: any case whose business scale, stage, or ownership the available material does not establish. Unknown is ineligible; never classify an unestablished company as small."
+      ],
+      "wix_rules": [
+        "Materially verifiable external claims keep publishable provenance: the article carries a visible Sources section and/or appropriate inline source links naming where the facts came from.",
+        "Attribution never substitutes for verification, and no source or URL is ever invented."
+      ],
+      "linkedin_rules": [
+        "Carry compact source attribution sufficient to identify the source case — one clear reference, not citation-heavy prose."
+      ],
+      "require_source_transparency": true
+    }
   ]
 }

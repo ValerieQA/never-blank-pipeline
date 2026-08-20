@@ -87,6 +87,37 @@ class CallToAction(_ContractModel):
     rules: NonEmptyTextTuple
 
 
+class EditorialRole(_ContractModel):
+    """One declared editorial role a run may be produced under (Issue #142).
+
+    Generic by construction: the engine knows a role has an intent, a
+    structure and a list of prohibitions. What any particular role means is
+    the configured business's decision, so a different business declares
+    different roles — or none — without changing this contract.
+    """
+
+    role_id: NonBlankStr
+    intent: NonBlankStr
+    structure: NonEmptyTextTuple
+    forbidden: NonEmptyTextTuple
+    #: What source material this role may be produced from (Issue #142).
+    #: Empty means the role imposes no source-class restriction — the prior
+    #: behaviour. The criteria are policy text the configured business owns;
+    #: the engine only carries them to the judgment that applies them.
+    eligibility_criteria: tuple[NonBlankStr, ...] = ()
+    #: Surface-scoped additions a role may make to its own composition rules
+    #: (Issue #142 review round 1). These belong to the ROLE, not to the
+    #: shared channel configuration: a role-specific requirement placed on
+    #: ``channels.*`` would silently change every other stream's output.
+    wix_rules: tuple[NonBlankStr, ...] = ()
+    linkedin_rules: tuple[NonBlankStr, ...] = ()
+    #: When true, generated output is verified against the run's actual
+    #: sources before any publisher is called (Issue #142 review round 2).
+    #: The prompt asks for attribution; this makes ignoring the ask a
+    #: fail-closed stop instead of a published article without provenance.
+    require_source_transparency: bool = False
+
+
 class WixChannelRules(_ContractModel):
     article_rules: NonEmptyTextTuple
     metadata_rules: NonEmptyTextTuple
@@ -133,6 +164,10 @@ class BusinessStrategyConfiguration(_ContractModel):
     calls_to_action: tuple[CallToAction, ...]
     channels: ChannelRules
     prompt_rule_references: tuple[PromptRuleReference, ...]
+    #: Declared editorial roles (Issue #142). Optional and empty by default:
+    #: a configuration that declares none keeps its exact prior behaviour, and
+    #: a run simply has no role to record.
+    editorial_roles: tuple[EditorialRole, ...] = ()
 
     @model_validator(mode="after")
     def _validate_required_collections_and_ids(self) -> "BusinessStrategyConfiguration":
@@ -145,6 +180,9 @@ class BusinessStrategyConfiguration(_ContractModel):
         for name, values in required_collections.items():
             if not values:
                 raise ValueError(f"{name} must contain at least one item")
+        role_ids = [role.role_id for role in self.editorial_roles]
+        if len(set(role_ids)) != len(role_ids):
+            raise ValueError("editorial role IDs must be unique")
 
         self._require_unique("product_id", self.products_services)
         self._require_unique("audience_id", self.audiences)

@@ -156,6 +156,7 @@ def _build_user_prompt(
     format_key: str,
     cta_mode: str,
     strategy_rules: tuple[str, ...] = (),
+    editorial_role_rules: str | None = None,
 ) -> str:
     lo, hi = _WORD_RANGE[format_key]
     lines = [
@@ -191,6 +192,10 @@ def _build_user_prompt(
         lines.append("ECHO MODE: none; do not invent an echo.")
 
     lines.append("Write the native platform body now. Do not copy sentences from another format.")
+    if editorial_role_rules:
+        # Issue #142: which editorial role this run is producing. The rules are
+        # configured by the business, never inferred here from a weekday.
+        lines.append(editorial_role_rules)
     return "\n".join(lines)
 
 
@@ -199,12 +204,14 @@ def _compose_one(
     format_key: str,
     cta_mode: str = "none",
     strategy_rules: tuple[str, ...] = (),
+    editorial_role_rules: str | None = None,
 ) -> dict:
     model = model_article() if format_key in ("long", "reading") else model_social()
     raw = chat(
         system=_SYSTEM_PROMPT,
         user=_build_user_prompt(
-            structured_article, format_key, cta_mode, strategy_rules
+            structured_article, format_key, cta_mode, strategy_rules,
+            editorial_role_rules=editorial_role_rules,
         ),
         json_mode=True,
         model=model,
@@ -275,6 +282,7 @@ def compose_platforms(
     *,
     wix_strategy: "WixStrategyView | None" = None,
     linkedin_strategy: "LinkedInStrategyView | None" = None,
+    editorial_role_rules: "str | dict[str, str] | None" = None,
 ) -> dict:
     result = {}
     for format_key in ("long", "reading", "medium", "instagram", "short"):
@@ -292,6 +300,17 @@ def compose_platforms(
             format_key,
             cta_mode=cta_mode,
             strategy_rules=strategy_rules,
+            # The Release 1 published surfaces: the Wix article and the
+            # LinkedIn artifact. Other formats keep their prior prompts. A
+            # mapping carries per-surface renderings; a plain string applies
+            # to both published surfaces unchanged.
+            editorial_role_rules=(
+                editorial_role_rules.get(format_key)
+                if isinstance(editorial_role_rules, dict)
+                else (
+                    editorial_role_rules if format_key in ("long", "medium") else None
+                )
+            ),
         )
         log.info("Platform Composer: %s -> %d words", format_key, result[format_key]["word_count"])
     return result
