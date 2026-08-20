@@ -43,7 +43,12 @@ class SourceTransparencyError(RuntimeError):
     """A required surface lacks usable, run-grounded source attribution."""
 
 
-_URL_PATTERN = re.compile(r"https?://[^\s)\]>\"']+")
+# Publication surfaces can render absolute HTTP(S) URLs case-insensitively and
+# protocol-relative URLs.  Both forms must reach the same fail-closed parser;
+# otherwise an unchecked link can bypass the allow-list simply by changing its
+# spelling.  Protocol-relative links are deliberately extracted and then
+# rejected by ``_parse`` because the configured scheme is part of the policy.
+_URL_PATTERN = re.compile(r"(?:https?:)?//[^\s)\]>\"']+", re.IGNORECASE)
 
 #: Minimum length for a title to participate in name-based attribution — a
 #: very short title matches prose too easily even at word boundaries.
@@ -125,27 +130,37 @@ def _is_ambiguous(name: str) -> bool:
 
 
 def _attribution_present(name: str, body: str) -> bool:
-    """Explicit attribution constructions only, at word boundaries."""
+    """Explicit attribution constructions with an exact source identity."""
 
     escaped = re.escape(name.strip()).replace(r"\ ", r"\s+")
+    # A word boundary alone is insufficient: ``According to HubSpot Evil``
+    # would otherwise attest the real publisher ``HubSpot``.  Prefix forms
+    # therefore require the exact identity to end the construction (possibly
+    # followed by normal punctuation).  Publisher-first forms remain explicit
+    # because a declared reporting verb must immediately follow the identity.
+    exact_end = r"(?=\s*(?:$|[,.;:!?\)\]\}]))"
     constructions = (
-        rf"\bsources?\s*:\s*[^\n]*\b{escaped}\b",
-        rf"\baccording\s+to\s+(?:the\s+)?{escaped}\b",
-        rf"\bper\s+(?:the\s+)?{escaped}\b",
+        rf"\bsources?\s*:\s*{escaped}{exact_end}",
+        rf"\baccording\s+to\s+(?:the\s+)?{escaped}{exact_end}",
+        rf"\bper\s+(?:the\s+)?{escaped}{exact_end}",
         rf"\b{escaped}\b['’s]*\s+(?:reports?|reported|describes?|described|"
         rf"publishes?|published|writes?|wrote|notes?|noted|documents?|"
         rf"documented|found|data|case\s+study|article)\b",
         rf"\b(?:reported|documented|described|published|written|cited)\s+by\s+"
-        rf"(?:the\s+)?{escaped}\b",
+        rf"(?:the\s+)?{escaped}{exact_end}",
     )
     if any(re.search(pattern, body, re.IGNORECASE) for pattern in constructions):
         return True
-    # a Sources section: a heading line, then the name anywhere after it
+    # A Sources section is line-oriented.  The identity must be the complete
+    # entry (apart from a bullet and terminal punctuation), not a substring of
+    # a fabricated longer publisher name.
     heading = re.search(r"(?mi)^\s*(?:#{1,6}\s*)?sources?\s*:?\s*$", body)
     if heading is not None:
-        return re.search(
-            rf"\b{escaped}\b", body[heading.end():], re.IGNORECASE
-        ) is not None
+        entry = re.compile(
+            rf"(?mi)^\s*(?:(?:[-*])\s+|\d+[.)]\s+)?"
+            rf"{escaped}\s*[.,;:]?\s*$"
+        )
+        return entry.search(body[heading.end():]) is not None
     return False
 
 

@@ -1365,6 +1365,8 @@ def test_sibling_and_lookalike_hosts_are_refused_structurally():
     "https://evil.test/https://www.inneros.online",
     "https://inneros.online.evil.test/",
     "https://www.inneros.online:444/",
+    "//evil.test/phish",
+    "HTTPS://evil.test/phish",
 ])
 def test_url_confusion_attacks_fail(attack):
     body = ATTRIBUTED_BODY + f" See {attack} for more."
@@ -1435,6 +1437,38 @@ def test_an_unambiguous_publisher_needs_an_explicit_construction():
             linkedin_body="A nice building.",
             research=_research_artifact(),
         )
+
+
+@pytest.mark.parametrize("body", [
+    "According to SBA Office of Advocacy Evil Institute, firms grow.",
+    "Per SBA Office of Advocacy Evil Institute, firms grow.",
+    "Sources:\nFake SBA Office of Advocacy Institute",
+])
+def test_a_real_source_identity_cannot_prefix_a_fabricated_identity(body):
+    with pytest.raises(SourceTransparencyError):
+        validate_source_transparency(
+            article_body=body,
+            linkedin_body="Per the SBA Office of Advocacy.",
+            research=_research_artifact(),
+        )
+
+
+@pytest.mark.parametrize("body", [
+    "Source: SBA Office of Advocacy",
+    "According to SBA Office of Advocacy",
+    "According to the SBA Office of Advocacy, firms grow.",
+    "Per SBA Office of Advocacy.",
+    "SBA Office of Advocacy reported steady gains.",
+    "SBA Office of Advocacy documented the case.",
+    "The case was documented by SBA Office of Advocacy.",
+    "Sources:\n- SBA Office of Advocacy",
+])
+def test_declared_exact_attribution_constructions_remain_valid(body):
+    validate_source_transparency(
+        article_body=body,
+        linkedin_body="Per the SBA Office of Advocacy.",
+        research=_research_artifact(),
+    )
 
 
 def _research_with(**source_overrides):
@@ -1567,3 +1601,47 @@ def test_entrypoint_blocks_a_fabricated_link_beside_real_attribution(tmp_path):
     assert code == 1
     assert not patches["WixPublisher"].called
     assert not patches["append_published_entry"].called
+
+
+@pytest.mark.parametrize("attack", [
+    "[malicious](//evil.test/phish)",
+    "HTTPS://evil.test/phish",
+])
+def test_entrypoint_blocks_alternate_external_link_spellings(tmp_path, attack):
+    article = _attributed_article()
+    article["platforms"]["long"]["body"] += f" Continue at {attack}."
+
+    code, patches = _blocked_monday_run(
+        tmp_path,
+        article,
+        env={"NB_WIX_SITE_BASE_URL": "https://www.inneros.online"},
+    )
+
+    assert code == 1
+    assert not patches["WixPublisher"].called
+    assert not patches["LinkedInPublisher"].called
+    assert not patches["append_published_entry"].called
+    assert not list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+@pytest.mark.parametrize("construction", [
+    "According to Verified report Evil Institute, the result held.",
+    "Per Verified report Evil Institute, the result held.",
+    "Sources:\nFake Verified report Institute",
+])
+def test_entrypoint_blocks_fabricated_identity_extending_a_real_title(
+    tmp_path, construction,
+):
+    article = _attributed_article()
+    article["platforms"]["long"]["body"] = construction
+    article["platforms"]["medium"]["body"] = (
+        "Case documented by Verified report."
+    )
+
+    code, patches = _blocked_monday_run(tmp_path, article)
+
+    assert code == 1
+    assert not patches["WixPublisher"].called
+    assert not patches["LinkedInPublisher"].called
+    assert not patches["append_published_entry"].called
+    assert not list(tmp_path.glob("*/runs/*/generated.json"))
