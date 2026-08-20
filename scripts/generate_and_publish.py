@@ -144,6 +144,10 @@ from src.editorial.editorial_role import (
     render_editorial_role_rules,
     resolve_editorial_role,
 )
+from src.editorial.source_transparency import (
+    SourceTransparencyError,
+    validate_source_transparency,
+)
 from src.editorial.pipeline import ArticleGenerationError, generate_article
 from src.editorial.decision_lens_evaluator import (
     DecisionLensEvaluator,
@@ -1532,6 +1536,32 @@ def _run(
             f"({'after one revision' if _acceptance.revised else 'original article'}) "
             f"[{_acceptance_rubric.identity}]"
         )
+
+        # Issue #142 review round 2: a role may require source transparency
+        # as a fail-closed publication condition. The prompt asked for
+        # attribution; here the accepted article and the LinkedIn body are
+        # verified against the run's ACTUAL sources — a model that ignored the
+        # instruction, or invented a link, stops the run before any publisher
+        # is called. Roles without the requirement (every other stream, and
+        # every run with no role) are never checked.
+        if _editorial_role_identity is not None and _role.require_source_transparency:
+            try:
+                validate_source_transparency(
+                    article_body=blog_body,
+                    linkedin_body=linkedin_text,
+                    research=research_artifact,
+                    allowed_url_prefixes=tuple(
+                        prefix for prefix in (
+                            os.environ.get("NB_WIX_SITE_BASE_URL", ""),
+                        ) if prefix
+                    ),
+                )
+            except SourceTransparencyError as exc:
+                print(f"  ERROR: source transparency blocked publication: {exc}")
+                state.ended(TerminalStage.EDITORIAL, TerminalDisposition.BLOCKED,
+                            f"source transparency: {type(exc).__name__}")
+                return 1
+            print("  ✓  source transparency: attribution verified against run sources")
 
         print(f"  ✓  blog:      {len(blog_body)} chars")
         print(f"  ✓  linkedin:  {len(linkedin_text)} chars")

@@ -15,11 +15,14 @@ a rerun.
 Exit codes:
   0  — an eligible candidate was selected (its SIGNAL_ID is on stdout's last
        ``selected=`` line, and in the audit record)
-  3  — the evaluated candidates were all genuinely judged ineligible, with no
-       judgment failures; the truthful outcome is "publish nothing", never
-       "take the best ineligible one". When the search was bounded by
-       ``--max-candidates`` this claims only that the evaluated set held no
-       eligible candidate — never the whole queue.
+  3  — EVERY available unused candidate was evaluated, every judgment
+       completed, and all were genuinely ineligible. Only this complete search
+       may claim a clean "publish nothing" outcome.
+  5  — no eligible candidate among the evaluated candidates, but unevaluated
+       candidates remain beyond ``--max-candidates``. An INCOMPLETE search:
+       candidate N+1 may be eligible, so this must fail visibly rather than
+       masquerade as a healthy empty run — "no eligible candidate in the
+       evaluated window" is not "no eligible candidate in the queue".
   4  — no candidate was selected AND at least one eligibility judgment failed.
        This is infrastructure failure, not a clean empty result: unattended
        automation must fail visibly rather than report "nothing to publish"
@@ -52,6 +55,7 @@ from src.strategy.business_config import load_business_strategy_configuration
 
 NO_ELIGIBLE = 3
 ELIGIBILITY_FAILURE = 4
+SEARCH_TRUNCATED = 5
 
 #: Judging a candidate costs a model call, so a single selection bounds how far
 #: down the queue it will look. Recorded in the audit when the cap is reached —
@@ -156,6 +160,8 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
         1 for item in audit["dispositions"] if item["disposition"] == "judgment_failed"
     )
     evaluated = len(audit["dispositions"])
+    audit["evaluated"] = evaluated
+    audit["remaining"] = max(0, audit["candidates_available"] - evaluated)
     if selected is not None:
         audit["outcome"] = "selected"
     elif failures:
@@ -163,7 +169,7 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
         # be a claim the evidence does not support.
         audit["outcome"] = "eligibility_failure"
     elif audit["truncated"]:
-        audit["outcome"] = "no_eligible_in_evaluated_set"
+        audit["outcome"] = "search_truncated"
     else:
         audit["outcome"] = "no_eligible_complete"
     if args.audit_out:
@@ -182,13 +188,15 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
         )
         return ELIGIBILITY_FAILURE
     if audit["truncated"]:
-        remaining = audit["candidates_available"] - evaluated
         print(
-            f"No eligible candidate among the {evaluated} evaluated "
-            f"({remaining} unevaluated candidates remain beyond the search "
-            "bound). Publishing nothing is the correct outcome for this run."
+            f"Incomplete eligibility search: no eligible candidate among the "
+            f"{evaluated} evaluated, but {audit['remaining']} unused "
+            "candidates remain unevaluated beyond the search bound. One of "
+            "them may be eligible, so this is NOT a clean nothing-to-publish "
+            "outcome — it needs an operator (raise --max-candidates, dispatch "
+            "an explicit signal, or curate the queue)."
         )
-        return NO_ELIGIBLE
+        return SEARCH_TRUNCATED
     print(
         f"All {evaluated} unused candidates were judged ineligible — "
         "publishing nothing is the correct outcome."

@@ -384,7 +384,8 @@
       ],
       "linkedin_rules": [
         "Carry compact source attribution sufficient to identify the source case — one clear reference, not citation-heavy prose."
-      ]
+      ],
+      "require_source_transparency": true
     }
   ]
 }

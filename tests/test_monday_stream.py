@@ -507,6 +507,7 @@ def test_no_work_runs_outside_the_window():
     [
         "src/editorial/editorial_role.py",
         "src/editorial/source_eligibility.py",
+        "src/editorial/source_transparency.py",
         "src/editorial/platform_composer.py",
         "src/editorial/pipeline.py",
         "src/strategy/business_config.py",
@@ -587,9 +588,33 @@ def _monday_step(name: str) -> dict:
     raise AssertionError(f"no step named {name!r}")
 
 
-def _run_with_role(tmp_path, role: str):
+#: What the ReadyProvider fixture's single source actually is — the identities
+#: a source-transparent article must reference.
+FIXTURE_SOURCE_URL = "https://source.example/report"
+FIXTURE_SOURCE_TITLE = "Verified report"
+
+def _attributed_article() -> dict:
+    import copy
+
+    from tests.test_generate_and_publish import _FAKE_ARTICLE
+
+    article = copy.deepcopy(_FAKE_ARTICLE)
+    article["platforms"]["long"]["body"] = (
+        f"Blog body text grounded in the case. Source: {FIXTURE_SOURCE_TITLE} "
+        f"({FIXTURE_SOURCE_URL})."
+    )
+    article["platforms"]["medium"]["body"] = (
+        f"LinkedIn body text. Case documented by {FIXTURE_SOURCE_TITLE}."
+    )
+    return article
+
+
+def _run_with_role(tmp_path, role: str, article: dict | None = None):
     argv, patches = _entry_patches(tmp_path)
     argv = argv + ["--editorial-role", role]
+    if article is None:
+        article = _attributed_article()
+    patches["generate_article"] = mock.MagicMock(return_value=article)
     evaluator, _ = _evaluator(_model_output())
     with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
         code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
@@ -1017,7 +1042,9 @@ def test_a_completed_all_ineligible_search_is_a_clean_empty_result(tmp_path):
     assert audit["truncated"] is False
 
 
-def test_a_truncated_all_ineligible_search_does_not_claim_the_whole_queue(tmp_path):
+def test_a_truncated_all_ineligible_search_is_not_a_clean_empty_monday(tmp_path):
+    # candidate 2 is eligible but sits beyond the search bound: the run must
+    # NOT report the same healthy nothing-to-publish as an exhausted queue
     fixtures = [SPACEX_FIXTURE, ELIGIBLE_FIXTURES["small"]]
 
     code, audit = _select(
@@ -1026,13 +1053,12 @@ def test_a_truncated_all_ineligible_search_does_not_claim_the_whole_queue(tmp_pa
         max_candidates=1,
     )
 
-    # still a clean nothing-to-publish for THIS run — but the audit says the
-    # search was bounded, not that the queue holds nothing eligible
-    assert code == select_eligible_signal.NO_ELIGIBLE
-    assert audit["outcome"] == "no_eligible_in_evaluated_set"
+    assert code == select_eligible_signal.SEARCH_TRUNCATED
+    assert audit["outcome"] == "search_truncated"
     assert audit["truncated"] is True
     assert audit["candidates_available"] == 2
-    assert len(audit["dispositions"]) == 1
+    assert audit["evaluated"] == 1
+    assert audit["remaining"] == 1
 
 
 def test_a_failed_judgment_followed_by_an_eligible_candidate_still_selects(tmp_path):
@@ -1088,3 +1114,230 @@ def test_the_execution_step_keeps_the_credentials_the_r1_path_needs():
                      "NB_CLOUDINARY_CLOUD_NAME", "NB_CLOUDINARY_API_KEY",
                      "NB_CLOUDINARY_API_SECRET"):
         assert required in env, required
+
+
+# ===========================================================================
+# Blocker 1 (final review round): truncation matrix
+# ===========================================================================
+
+
+def test_an_eligible_candidate_beyond_the_cap_is_never_a_clean_empty_result(tmp_path):
+    # 16 candidates: first 15 ineligible, candidate 16 eligible. The bounded
+    # search must not report the queue as holding nothing eligible.
+    fixtures = [
+        {**SPACEX_FIXTURE, "SIGNAL_ID": f"sig-large-{i}"} for i in range(15)
+    ] + [ELIGIBLE_FIXTURES["small"]]
+    verdicts = {f"sig-large-{i}": (False, "Current public-company case.")
+                for i in range(15)}
+    verdicts["sig-small-bakery"] = (True, "Documented small business.")
+
+    code, audit = _select(tmp_path, fixtures, verdicts=verdicts, max_candidates=15)
+
+    assert code == select_eligible_signal.SEARCH_TRUNCATED
+    assert audit["outcome"] == "search_truncated"
+    assert audit["evaluated"] == 15 and audit["remaining"] == 1
+
+
+def test_exactly_the_cap_all_ineligible_is_a_clean_complete_search(tmp_path):
+    fixtures = [
+        {**SPACEX_FIXTURE, "SIGNAL_ID": f"sig-large-{i}"} for i in range(15)
+    ]
+    verdicts = {f"sig-large-{i}": (False, "Current public-company case.")
+                for i in range(15)}
+
+    code, audit = _select(tmp_path, fixtures, verdicts=verdicts, max_candidates=15)
+
+    # every available candidate was actually evaluated — this one may be green
+    assert code == select_eligible_signal.NO_ELIGIBLE
+    assert audit["outcome"] == "no_eligible_complete"
+    assert audit["truncated"] is False
+    assert audit["remaining"] == 0
+
+
+def test_an_eligible_candidate_inside_the_window_is_selected(tmp_path):
+    fixtures = [SPACEX_FIXTURE, ELIGIBLE_FIXTURES["small"]]
+
+    code, audit = _select(
+        tmp_path, fixtures,
+        verdicts={
+            SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case."),
+            "sig-small-bakery": (True, "Documented small business."),
+        },
+        max_candidates=15,
+    )
+
+    assert code == 0
+    assert audit["outcome"] == "selected"
+
+
+def test_judgment_failure_outranks_truncation(tmp_path):
+    # a failed judgment inside a truncated window is infrastructure failure,
+    # not a truncation report — the stronger signal wins
+    fixtures = [SPACEX_FIXTURE, ELIGIBLE_FIXTURES["small"], ELIGIBLE_FIXTURES["owner_led"]]
+
+    code, audit = _select(
+        tmp_path, fixtures,
+        verdicts={SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case.")},
+        failures={"sig-small-bakery"},
+        max_candidates=2,
+    )
+
+    assert code == select_eligible_signal.ELIGIBILITY_FAILURE
+    assert audit["outcome"] == "eligibility_failure"
+    assert audit["truncated"] is True  # the fact is still recorded
+
+
+def test_the_workflow_propagates_the_truncated_outcome_as_a_failure():
+    resolve = _monday_step("Select eligible signal")["run"]
+
+    # only exit 3 becomes a green nothing-to-publish; 5 propagates
+    assert 'if [ "$RC" = "3" ]' in resolve
+    assert '"$RC" = "5"' not in resolve
+
+
+# ===========================================================================
+# Blocker 2 (final review round): source transparency is enforced
+# ===========================================================================
+
+from src.editorial.source_transparency import (
+    SourceTransparencyError,
+    validate_source_transparency,
+)
+
+
+def _research_artifact():
+    # a validated artifact with one real source: url
+    # https://advocacy.sba.gov/report, publisher "SBA Office of Advocacy",
+    # title "Small-business operating constraints"
+    from tests import test_decision_lens_evaluator as evaluator_fixtures
+
+    return evaluator_fixtures._research()  # noqa: SLF001
+
+
+ATTRIBUTED_BODY = (
+    "The documented case shows one mechanism. "
+    "Source: SBA Office of Advocacy (https://advocacy.sba.gov/report)."
+)
+UNATTRIBUTED_BODY = "A confident article that cites nothing at all."
+FABRICATED_BODY = (
+    "According to the Global Business Institute (https://invented.example/study), "
+    "small firms behave this way."
+)
+
+
+def test_valid_attribution_on_both_surfaces_passes():
+    validate_source_transparency(
+        article_body=ATTRIBUTED_BODY,
+        linkedin_body="Case documented by the SBA Office of Advocacy.",
+        research=_research_artifact(),
+    )
+
+
+@pytest.mark.parametrize(
+    "article, linkedin, failing_surface",
+    [
+        (UNATTRIBUTED_BODY, "Case documented by the SBA Office of Advocacy.", "article"),
+        (ATTRIBUTED_BODY, UNATTRIBUTED_BODY, "linkedin"),
+    ],
+)
+def test_a_surface_without_attribution_blocks(article, linkedin, failing_surface):
+    with pytest.raises(SourceTransparencyError) as exc:
+        validate_source_transparency(
+            article_body=article, linkedin_body=linkedin,
+            research=_research_artifact(),
+        )
+
+    assert failing_surface in str(exc.value)
+
+
+def test_a_fabricated_source_does_not_satisfy_the_rule():
+    # it "looks cited" — named institute, plausible URL — but neither belongs
+    # to this run's sources
+    with pytest.raises(SourceTransparencyError):
+        validate_source_transparency(
+            article_body=FABRICATED_BODY,
+            linkedin_body="Case documented by the SBA Office of Advocacy.",
+            research=_research_artifact(),
+        )
+
+
+def test_an_invented_link_beside_real_attribution_still_blocks():
+    body = ATTRIBUTED_BODY + " See also https://invented.example/extra."
+
+    with pytest.raises(SourceTransparencyError) as exc:
+        validate_source_transparency(
+            article_body=body, linkedin_body="Per the SBA Office of Advocacy.",
+            research=_research_artifact(),
+        )
+
+    assert "invented" in str(exc.value) or "not one of this run's sources" in str(exc.value)
+
+
+def test_the_configured_site_destination_is_not_treated_as_invented():
+    body = ATTRIBUTED_BODY + " Continue at https://www.inneros.online/about."
+
+    validate_source_transparency(
+        article_body=body, linkedin_body="Per the SBA Office of Advocacy.",
+        research=_research_artifact(),
+        allowed_url_prefixes=("https://www.inneros.online",),
+    )
+
+
+def test_a_monday_run_with_attribution_publishes_normally(tmp_path):
+    code, patches, _ = _run_with_role(tmp_path, MONDAY_ROLE)
+
+    assert code == 0
+    assert list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+def test_a_monday_run_without_attribution_blocks_before_any_publisher(tmp_path):
+    import copy
+
+    from tests.test_generate_and_publish import _FAKE_ARTICLE
+
+    argv, patches = _entry_patches(tmp_path, dry_run=False)
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    patches["generate_article"] = mock.MagicMock(
+        return_value=copy.deepcopy(_FAKE_ARTICLE)  # "Blog body text." — cites nothing
+    )
+    argv = argv + ["--editorial-role", MONDAY_ROLE]
+    evaluator, _ = _evaluator(_model_output())
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+
+    assert code == 1
+    # 7. no publisher was called; 8. nothing was consumed
+    assert not patches["WixPublisher"].called
+    assert not patches["LinkedInPublisher"].called
+    assert not patches["append_published_entry"].called
+    assert not list(tmp_path.glob("*/runs/*/generated.json"))
+    # truthful run evidence: the report records the editorial-stage block
+    report = json.loads(next(tmp_path.glob("*/runs/*/run_report.json")).read_text())
+    assert report["terminal_stage"] == "editorial"
+    assert report["completed"] is False
+
+
+def test_a_non_monday_run_is_not_subjected_to_the_source_rule(tmp_path):
+    # the exact article that blocks a Monday run publishes normally with no
+    # role — prior behaviour, byte for byte
+    argv, patches = _entry_patches(tmp_path)
+    evaluator, _ = _evaluator(_model_output())
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+
+    assert code == 0
+    assert list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+def test_the_requirement_is_declared_by_the_role_not_by_code():
+    role = _monday_role_object()
+
+    assert role.require_source_transparency is True
+    # and the flag is generic: a role without it is never checked
+    from src.strategy.business_config import EditorialRole
+
+    plain = EditorialRole(role_id="r", intent="i", structure=("s",), forbidden=("f",))
+    assert plain.require_source_transparency is False

@@ -110,9 +110,10 @@ jobs:
             echo "No eligible Monday candidate — publishing nothing."
             exit 0
           elif [ "$RC" != "0" ]; then
-            # Exit 4 (eligibility infrastructure failure) and any other error
-            # fail the run visibly — never converted into a quiet
-            # "nothing to publish".
+            # Exit 4 (eligibility infrastructure failure), exit 5 (incomplete
+            # search — unevaluated candidates remain, one of which may be
+            # eligible) and any other error fail the run visibly — never
+            # converted into a quiet "nothing to publish".
             exit "$RC"
           fi
           SIGNAL_ID=$(grep '^selected=' selection.log | tail -1 | cut -d= -f2)

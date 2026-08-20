@@ -111,6 +111,11 @@ class EditorialRole(_ContractModel):
     #: ``channels.*`` would silently change every other stream's output.
     wix_rules: tuple[NonBlankStr, ...] = ()
     linkedin_rules: tuple[NonBlankStr, ...] = ()
+    #: When true, generated output is verified against the run's actual
+    #: sources before any publisher is called (Issue #142 review round 2).
+    #: The prompt asks for attribution; this makes ignoring the ask a
+    #: fail-closed stop instead of a published article without provenance.
+    require_source_transparency: bool = False
 
 
 class WixChannelRules(_ContractModel):
