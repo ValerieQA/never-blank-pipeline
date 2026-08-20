@@ -9,7 +9,7 @@ is the same decision, made available to a single stream instead of a shared
 weekday list.
 
 Generic on purpose: the day, time and timezone are arguments. Nothing here
-knows what Monday means, and a business publishing on Sunday at 19:00 in
+knows what any particular day means, and a business publishing at 19:00 in
 Europe/Kyiv uses the same script.
 
 Exit code 0 means "publish now"; 78 (EX_TEMPFAIL-ish, chosen so it can never

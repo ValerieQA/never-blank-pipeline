@@ -44,7 +44,7 @@ from tests.test_research_artifact_lifecycle import ReadyProvider
 
 CONFIG_PATH = Path("strategy/current/business_strategy.json")
 WORKFLOWS = Path(".github/workflows")
-MONDAY_ROLE = "monday_business_case"
+MONDAY_ROLE = "never-blank-monday-documented-case"
 ET = ZoneInfo("America/New_York")
 
 
@@ -200,7 +200,7 @@ def test_the_role_rules_are_handed_to_generation(tmp_path):
 
     rules = patches["generate_article"].call_args.kwargs["editorial_role_rules"]
     assert MONDAY_ROLE in rules
-    assert "one case, one mechanism, one consequence" in rules.lower()
+    assert "exactly one mechanism actually visible" in rules.lower()
 
 
 # ===========================================================================
@@ -240,14 +240,19 @@ def test_the_role_reaches_composition_through_the_real_call():
     assert len(carrying) == 2
 
 
-def test_the_one_case_one_mechanism_contract_is_present():
+def test_the_documented_case_contract_is_present():
     rules = _role_rules().lower()
 
-    assert "one case, one mechanism, one consequence" in rules
-    assert "exactly one underlying business mechanism" in rules
-    assert "one thing the reader can inspect or change" in rules
-    # bounded transfer, stated as a prohibition too
-    assert "never proof of the configured audience's result" in rules
+    # verified facts, one observable mechanism, one bounded consequence
+    assert "only documented, verifiable facts" in rules
+    assert "exactly one mechanism actually visible" in rules
+    assert "one practical question or consequence" in rules
+    # the three-way separation the corrected contract demands
+    assert "documented facts, the observable mechanism, and the bounded" in rules
+    assert (
+        "never present this company's outcome as evidence of the reader's likely result"
+        in rules
+    )
 
 
 def test_the_anti_listicle_rules_are_present():
@@ -257,6 +262,11 @@ def test_the_anti_listicle_rules_are_present():
         "'5 lessons from x'", "'3 takeaways'", "news recap or source summary",
         "generic small-business advice", "more than one mechanism",
         "padding to reach a length",
+        # the corrected contract's evidence-boundary prohibitions
+        "analogy represented as evidence",
+        "citation used as a substitute for verification",
+        "unsupported universal pattern",
+        "forcing compound presence",
     ):
         assert forbidden in rules
 
@@ -277,6 +287,23 @@ def test_headings_are_not_demanded_in_the_prose():
     assert "section headings are not required" in rules
 
 
+def test_the_compound_presence_lens_is_encoded_in_the_profile():
+    # the corrected #142 requirement: the Monday product lens must live in the
+    # Monday configuration, not lean on the pre-existing universal composer
+    # prompt happening to mention it
+    rules = _role_rules().lower()
+
+    assert "compound presence lens, explicitly bounded" in rules
+    assert "never as a proven law" in rules
+
+
+def test_source_attribution_is_part_of_the_role():
+    rules = _role_rules().lower()
+
+    assert "source attribution" in rules
+    assert "published sources" in rules
+
+
 # ===========================================================================
 # H. Monday does not need breaking news
 # ===========================================================================
@@ -286,11 +313,11 @@ def test_monday_does_not_require_same_day_news():
     rules = _role_rules().lower()
     assert "does not need to be breaking news" in rules
 
-    resolve = _monday_step("Resolve signal ID")["run"]
+    selector = Path("scripts/streams/select_eligible_signal.py").read_text()
     # selection is "eligible and unused", never "found today"
-    assert "published_signal_ids" in resolve
-    for forbidden in ("DATE_FOUND", "today", "date.today"):
-        assert forbidden not in resolve
+    assert "published_signal_ids" in selector or "published-path" in selector
+    for forbidden in ("DATE_FOUND", "date.today"):
+        assert forbidden not in selector
 
 
 # ===========================================================================
@@ -461,17 +488,25 @@ def test_no_work_runs_outside_the_window():
     "module",
     [
         "src/editorial/editorial_role.py",
+        "src/editorial/source_eligibility.py",
         "src/editorial/platform_composer.py",
         "src/editorial/pipeline.py",
         "src/strategy/business_config.py",
         "src/intake/assignment_record.py",
         "scripts/streams/due_check.py",
+        "scripts/streams/select_eligible_signal.py",
     ],
 )
 def test_no_engine_module_knows_what_monday_means(module):
     text = Path(module).read_text().lower()
 
-    assert "monday_business_case" not in text
+    assert "never-blank-monday" not in text
+    if module.endswith("due_check.py"):
+        # the generic day gate legitimately enumerates all seven weekday names
+        # as argument vocabulary; what it must not contain is any day *logic*
+        assert text.count("monday") == 1  # the _DAYS tuple entry only
+    else:
+        assert "monday" not in text
     # a weekday may appear only as a neutral example or argument name, never as
     # a branch on the day
     assert "if day ==" not in text
@@ -484,7 +519,8 @@ def test_the_role_content_lives_only_in_configuration():
     assert [role["role_id"] for role in declared] == [MONDAY_ROLE]
     # the phrases the tests above assert on come from configuration, not code
     role_text = json.dumps(declared).lower()
-    assert "one case, one mechanism, one consequence" in role_text
+    assert "one mechanism actually visible" in role_text
+    assert "compound presence lens" in role_text
 
 
 # ===========================================================================
@@ -564,3 +600,329 @@ def _assignment():
         submitted_at=datetime(2026, 8, 24, 6, 0, tzinfo=timezone.utc),
         strategy_ref="2026-07-presence-debt-campaign-1", strategy_version="1",
     )
+
+
+# ===========================================================================
+# Eligibility (corrected #142): the allowed R1 Monday source class
+# ===========================================================================
+#
+# What a deterministic test can prove here, and what it cannot: it proves the
+# policy is declared, that the judgment mechanism fails closed, and that the
+# selector honours verdicts — skipping ineligible candidates, stopping at an
+# eligible one, and publishing nothing when none exists. It cannot prove the
+# live model classifies a given real company correctly; that judgment is made
+# by the production transport against the configured criteria, and the
+# criteria themselves are what these tests pin.
+
+from src.editorial.source_eligibility import (
+    SourceEligibilityError,
+    SourceEligibilityVerdict,
+    judge_source_eligibility,
+)
+from scripts.streams import select_eligible_signal
+
+
+SPACEX_FIXTURE = {
+    "SIGNAL_ID": "4c39b34194e08b43",
+    "HEADLINE": "The average SpaceX buyer post-IPO is almost under water after a two-day slide",
+    "CORE_FACT": "SpaceX shares slid for two sessions after the IPO.",
+    "REAL_COMPANY_EXAMPLE": "SpaceX",
+    "SOURCE_NAME": "Market wire",
+}
+
+ELIGIBLE_FIXTURES = {
+    "small": {
+        "SIGNAL_ID": "sig-small-bakery",
+        "HEADLINE": "A neighbourhood bakery doubled repeat orders after posting its baking schedule",
+        "CORE_FACT": "A three-person bakery documented its weekly schedule publicly.",
+        "REAL_COMPANY_EXAMPLE": "Corner bakery",
+    },
+    "owner_led": {
+        "SIGNAL_ID": "sig-owner-led-agency",
+        "HEADLINE": "An owner-led design agency published every project retro for a year",
+        "CORE_FACT": "The founder runs delivery and wrote each retro personally.",
+        "REAL_COMPANY_EXAMPLE": "Owner-led agency",
+    },
+    "early_stage": {
+        "SIGNAL_ID": "sig-early-stage",
+        "HEADLINE": "A two-year-old bookkeeping startup grew through weekly client teardowns",
+        "CORE_FACT": "The early-stage firm documented its client acquisition path.",
+        "REAL_COMPANY_EXAMPLE": "Early-stage bookkeeping firm",
+    },
+    "founder_stage_episode": {
+        "SIGNAL_ID": "sig-founder-episode",
+        "HEADLINE": "Before it was a household name, the company's founder answered every order email",
+        "CORE_FACT": "The documented episode occurred while the company was founder-led and small.",
+        "REAL_COMPANY_EXAMPLE": "Now-large company, founder-stage episode",
+    },
+}
+
+
+class PolicyTransport:
+    """Scripted judgment: verdicts keyed by SIGNAL_ID; records every request."""
+
+    def __init__(self, verdicts: dict, failures: set | None = None) -> None:
+        self.verdicts = verdicts
+        self.failures = failures or set()
+        self.requests: list[dict] = []
+
+    def complete(self, *, instructions: str, request: str) -> str:
+        payload = json.loads(request)
+        self.requests.append(payload)
+        signal_id = payload["source_case"].get("SIGNAL_ID", "")
+        if signal_id in self.failures:
+            raise RuntimeError("judgment transport failed")
+        eligible, reason = self.verdicts[signal_id]
+        return json.dumps({"eligible": eligible, "reason": reason})
+
+
+def _monday_role_object():
+    return resolve_editorial_role(_configuration(), MONDAY_ROLE)[1]
+
+
+def test_the_eligibility_policy_names_the_disallowed_classes():
+    criteria = " ".join(_monday_role_object().eligibility_criteria).lower()
+
+    # the classes the correction rules out, by name — including the class the
+    # current queue head belongs to
+    assert "public-company/major-corporate" in criteria
+    assert "only by analogy" in criteria
+    assert "unknown is ineligible" in criteria
+    assert "never classify an unestablished company as small" in criteria
+    # and the classes it allows
+    for allowed in ("small business", "owner-led", "founder-led", "early-stage"):
+        assert allowed in criteria
+    assert "only when the documented episode occurred" in criteria
+
+
+def test_the_spacex_candidate_is_rejected_and_skipped(tmp_path):
+    # under the declared policy a current public-company market story is
+    # ineligible; the scripted transport applies exactly that policy
+    code, audit = _select(
+        tmp_path,
+        [SPACEX_FIXTURE, ELIGIBLE_FIXTURES["small"]],
+        verdicts={
+            SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case."),
+            "sig-small-bakery": (True, "Documented small business."),
+        },
+    )
+
+    assert code == 0
+    assert audit["selected_signal_id"] == "sig-small-bakery"
+    dispositions = {d["signal_id"]: d["disposition"] for d in audit["dispositions"]}
+    assert dispositions[SPACEX_FIXTURE["SIGNAL_ID"]] == "ineligible"
+
+
+@pytest.mark.parametrize("kind", sorted(ELIGIBLE_FIXTURES))
+def test_each_eligible_class_passes_selection(tmp_path, kind):
+    fixture = ELIGIBLE_FIXTURES[kind]
+
+    code, audit = _select(
+        tmp_path, [fixture],
+        verdicts={fixture["SIGNAL_ID"]: (True, f"Documented {kind} case.")},
+    )
+
+    assert code == 0
+    assert audit["selected_signal_id"] == fixture["SIGNAL_ID"]
+
+
+def test_unknown_scale_fails_closed_at_the_judgment():
+    # the judgment contract: uncertainty is ineligibility, stated in the
+    # instructions the model receives
+    from src.editorial.source_eligibility import _INSTRUCTIONS
+
+    assert "Uncertainty is ineligibility" in _INSTRUCTIONS
+    assert "Never manufacture, assume or infer facts" in _INSTRUCTIONS
+
+
+def test_a_failed_judgment_is_a_rejection_never_an_eligibility(tmp_path):
+    code, audit = _select(
+        tmp_path,
+        [ELIGIBLE_FIXTURES["small"], ELIGIBLE_FIXTURES["owner_led"]],
+        verdicts={"sig-owner-led-agency": (True, "Documented owner-led case.")},
+        failures={"sig-small-bakery"},
+    )
+
+    assert code == 0
+    assert audit["selected_signal_id"] == "sig-owner-led-agency"
+    dispositions = {d["signal_id"]: d["disposition"] for d in audit["dispositions"]}
+    # distinguishable from a real ineligibility finding
+    assert dispositions["sig-small-bakery"] == "judgment_failed"
+
+
+def test_malformed_judgment_output_never_becomes_a_verdict():
+    class Malformed:
+        def complete(self, *, instructions, request):
+            return json.dumps({"eligible": "yes", "reason": "shape is wrong"})
+
+    with pytest.raises(SourceEligibilityError):
+        judge_source_eligibility(
+            ELIGIBLE_FIXTURES["small"], _monday_role_object(), Malformed()
+        )
+
+
+def test_eligibility_runs_before_any_canonical_stage():
+    # analogy cannot enter merely because the Decision Lens could later bound
+    # it: selection happens in a standalone script that never imports the
+    # decision machinery, and the workflow orders it before generation
+    selector = Path("scripts/streams/select_eligible_signal.py").read_text()
+    assert "decision" not in selector.lower()
+
+    steps = [s.get("name") for s in _monday_workflow()["jobs"]["monday-publish"]["steps"]]
+    assert steps.index("Select eligible signal") < steps.index(
+        "Monday — Generate + Publish ${{ steps.resolve.outputs.signal_id }}"
+    )
+
+
+def test_no_eligible_candidate_means_no_publication_attempt(tmp_path):
+    code, audit = _select(
+        tmp_path, [SPACEX_FIXTURE],
+        verdicts={SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case.")},
+    )
+
+    assert code == select_eligible_signal.NO_ELIGIBLE
+    assert audit["selected_signal_id"] is None
+    # and the workflow turns exit 3 into "no signal", which every downstream
+    # step is guarded on
+    resolve = _monday_step("Select eligible signal")["run"]
+    assert 'if [ "$RC" = "3" ]' in resolve
+    for name in ("Check OpenAI secret",
+                 "Monday — Generate + Publish ${{ steps.resolve.outputs.signal_id }}",
+                 "Mark signal as published"):
+        assert "steps.resolve.outputs.signal_id != ''" in _monday_step(name)["if"]
+
+
+def test_rejected_candidates_are_not_marked_published(tmp_path):
+    published = tmp_path / "published_signal_ids.txt"
+    published.write_text("already-done\n")
+
+    _select(
+        tmp_path, [SPACEX_FIXTURE],
+        verdicts={SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case.")},
+        published=published,
+    )
+
+    # skipping is not consuming
+    assert published.read_text() == "already-done\n"
+
+
+def test_an_explicitly_dispatched_ineligible_signal_is_still_refused(tmp_path):
+    code, audit = _select(
+        tmp_path,
+        [SPACEX_FIXTURE, ELIGIBLE_FIXTURES["small"]],
+        verdicts={
+            SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case."),
+            "sig-small-bakery": (True, "Documented small business."),
+        },
+        signal_id=SPACEX_FIXTURE["SIGNAL_ID"],
+    )
+
+    # explicitness is not a bypass — and the selector does not silently
+    # substitute the eligible candidate the operator did not ask for
+    assert code == select_eligible_signal.NO_ELIGIBLE
+    assert audit["selected_signal_id"] is None
+
+
+def test_the_audit_records_why_each_candidate_was_judged(tmp_path):
+    _, audit = _select(
+        tmp_path,
+        [SPACEX_FIXTURE, ELIGIBLE_FIXTURES["small"]],
+        verdicts={
+            SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case."),
+            "sig-small-bakery": (True, "Documented small business."),
+        },
+    )
+
+    assert audit["role_id"] == MONDAY_ROLE
+    reasons = {d["signal_id"]: d.get("reason") for d in audit["dispositions"]}
+    assert reasons[SPACEX_FIXTURE["SIGNAL_ID"]] == "Current public-company case."
+    assert reasons["sig-small-bakery"] == "Documented small business."
+
+
+def test_the_judgment_sees_source_material_not_pipeline_scores():
+    transport = PolicyTransport({"sig-small-bakery": (True, "ok")})
+    signal = {**ELIGIBLE_FIXTURES["small"], "ARTICLE_READINESS_SCORE": "9",
+              "SCORE_RECOMMENDED_FOR_ARTICLE": "true"}
+
+    judge_source_eligibility(signal, _monday_role_object(), transport)
+
+    shown = transport.requests[0]["source_case"]
+    assert "ARTICLE_READINESS_SCORE" not in shown
+    assert "SCORE_RECOMMENDED_FOR_ARTICLE" not in shown
+    assert shown["HEADLINE"]
+
+
+def test_a_role_without_criteria_cannot_be_eligibility_judged():
+    from src.strategy.business_config import EditorialRole
+
+    role = EditorialRole(
+        role_id="role-without-criteria", intent="i",
+        structure=("s",), forbidden=("f",),
+    )
+
+    with pytest.raises(SourceEligibilityError):
+        judge_source_eligibility(
+            ELIGIBLE_FIXTURES["small"], role, PolicyTransport({})
+        )
+
+
+# ===========================================================================
+# Source transparency reaches the output rules
+# ===========================================================================
+
+
+def test_wix_source_transparency_reaches_the_real_prompt():
+    from src.editorial.platform_composer import _wix_rules
+    from src.strategy.execution_context import StrategyExecutionContext
+
+    execution = StrategyExecutionContext.from_configuration(_configuration())
+    prompt = _build_user_prompt(
+        {"hook": "h", "discovery": {}, "echo_line": "E."},
+        "long", "reflection", _wix_rules(execution.wix),
+    ).lower()
+
+    assert "visible sources section" in prompt
+    assert "attribution never substitutes for verification" in prompt
+    assert "no source or url is ever invented" in prompt
+
+
+def test_linkedin_source_attribution_reaches_the_real_prompt():
+    from src.editorial.platform_composer import _linkedin_rules
+    from src.strategy.execution_context import StrategyExecutionContext
+
+    execution = StrategyExecutionContext.from_configuration(_configuration())
+    prompt = _build_user_prompt(
+        {"hook": "h", "discovery": {}, "echo_line": "E."},
+        "medium", "reflection", _linkedin_rules(execution.linkedin),
+    ).lower()
+
+    assert "compact source attribution" in prompt
+    assert "not citation-heavy prose" in prompt
+
+
+# ===========================================================================
+# selector harness
+# ===========================================================================
+
+
+def _select(tmp_path, signals, *, verdicts, failures=None, signal_id="",
+            published=None):
+    active = tmp_path / "signals_active.jsonl"
+    active.write_text("\n".join(json.dumps(s) for s in signals) + "\n")
+    if published is None:
+        published = tmp_path / "published_signal_ids.txt"
+        published.write_text("")
+    audit_path = tmp_path / "audit.json"
+
+    argv = [
+        "--editorial-role", MONDAY_ROLE,
+        "--active-path", str(active),
+        "--published-path", str(published),
+        "--audit-out", str(audit_path),
+    ]
+    if signal_id:
+        argv += ["--signal-id", signal_id]
+    code = select_eligible_signal.main(
+        argv, transport=PolicyTransport(verdicts, failures)
+    )
+    return code, json.loads(audit_path.read_text())

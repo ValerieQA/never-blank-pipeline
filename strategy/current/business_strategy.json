@@ -251,7 +251,9 @@
       "link_rules": [
         "Preserve source attribution for factual claims.",
         "Use internal links only when the destination is relevant and verified.",
-        "Do not publish empty, placeholder, malformed, or unverified links."
+        "Do not publish empty, placeholder, malformed, or unverified links.",
+        "Materially verifiable external claims keep publishable provenance: the article carries a visible Sources section and/or appropriate inline source links naming where the facts came from.",
+        "Attribution never substitutes for verification, and no source or URL is ever invented."
       ],
       "cta_rules": [
         "Follow the configured CTA mode exactly.",
@@ -287,7 +289,8 @@
       "link_rules": [
         "Use the verified Wix article URL when the composition calls for a link.",
         "Place source or article links according to the approved composition without placeholder URLs.",
-        "Do not report a generic LinkedIn feed URL as the created publication URL."
+        "Do not report a generic LinkedIn feed URL as the created publication URL.",
+        "Carry compact source attribution sufficient to identify the source case — one clear reference, not citation-heavy prose."
       ],
       "cta_rules": [
         "Follow the configured CTA mode exactly.",
@@ -342,18 +345,20 @@
   ],
   "editorial_roles": [
     {
-      "role_id": "monday_business_case",
-      "intent": "Take one real business case — an experiment, a company decision, a study, a documented observation — and extract one interesting business mechanism with one bounded consequence. It does not need to be breaking news.",
+      "role_id": "never-blank-monday-documented-case",
+      "intent": "A documented small-business, owner-led, or early-stage business story: verified facts, one observable mechanism, the Compound Presence lens applied with explicit bounds, one bounded reflection for an owner-led reader, and published sources. It does not need to be breaking news.",
       "structure": [
         "Hook or business tension: open on a fact, contradiction, surprising consequence or tension. Never restate the source headline.",
-        "What happened: the factual case, only as much as the mechanism requires.",
-        "Why this is interesting: the non-obvious business significance.",
-        "The mechanism: exactly ONE underlying business mechanism, explained.",
-        "Bounded transfer: the question or consequence another business should inspect. The source company's result is never proof of the configured audience's result.",
-        "Practical consequence: ONE thing the reader can inspect or change.",
+        "Verified account of what happened: only documented, verifiable facts, and only as much as the mechanism requires.",
+        "Why this case is worth examining: the non-obvious business significance.",
+        "The one observable mechanism: exactly ONE mechanism actually visible in the documented case — never a broader pattern the case does not show.",
+        "Compound Presence lens, explicitly bounded: what this mechanism suggests about consistent presence and being remembered, stated as an interpretation of this case, never as a proven law.",
+        "One practical question or consequence an owner-led reader can examine. One, not several.",
+        "Keep three things distinguishable throughout: documented facts, the observable mechanism, and the bounded Never Blank reflection. The reflection may say what is worth examining; it may never present this company's outcome as evidence of the reader's likely result.",
         "Never Blank close: reconnect to the Never Blank idea in this article's own language.",
         "Website invitation: the canonical configured destination.",
-        "The whole article is one case, one mechanism, one consequence. Section headings are not required; the movement is."
+        "Source attribution: name the published sources the facts came from.",
+        "Section headings are not required in the prose; the movement through the structure is what matters."
       ],
       "forbidden": [
         "News recap or source summary.",
@@ -361,10 +366,20 @@
         "Generic small-business advice that would fit any article.",
         "More than one mechanism, or several unrelated mechanisms.",
         "Background beyond what the mechanism needs.",
-        "Presenting the source company's outcome as the reader's outcome.",
-        "Interpretation the accepted evidence does not support.",
+        "A large-company outcome transferred, silently or openly, to smaller businesses.",
+        "Analogy represented as evidence.",
+        "An unsupported universal pattern or causal law derived from one case.",
+        "Citation used as a substitute for verification.",
+        "Forcing Compound Presence onto a story it does not fit.",
         "Generic AI-business-blog prose.",
         "Padding to reach a length."
+      ],
+      "eligibility_criteria": [
+        "Eligible: a documented case genuinely about a small business, an owner-led business, a founder-led operating business at a meaningfully small or early stage, or an early-stage company.",
+        "A company that is large today is eligible ONLY when the documented episode occurred while it was still meaningfully small, founder-led, or early-stage.",
+        "Ineligible: current large-company or public-company/major-corporate behaviour, however recognizable the company or interesting the analogy.",
+        "Ineligible: any case whose connection to an owner-led/small-business audience exists only by analogy.",
+        "Ineligible: any case whose business scale, stage, or ownership the available material does not establish. Unknown is ineligible; never classify an unestablished company as small."
       ]
     }
   ]

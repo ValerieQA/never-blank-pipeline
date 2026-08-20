@@ -78,40 +78,53 @@ jobs:
         if: steps.window.outputs.due == 'true'
 
       # Auto-select signal if none provided (scheduled runs)
-      - name: Resolve signal ID
-        if: steps.window.outputs.due == 'true'
+      # Corrected #142: Monday does not take the first unused signal — it takes
+      # the first unused signal in the allowed R1 Monday source class. The
+      # selector judges each candidate against the role's configured
+      # eligibility criteria, fails closed on uncertainty, and exits 3 when no
+      # eligible candidate exists — in which case publishing nothing is the
+      # correct outcome, never a fallback to an analogy case. An explicitly
+      # dispatched signal_id is judged too; explicitness is not an eligibility
+      # bypass. Rejected candidates are only skipped — nothing here marks
+      # anything published.
+      - name: Select eligible signal
         id: resolve
+        if: steps.window.outputs.due == 'true'
+        env:
+          NB_OPENAI_API_KEY:    ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_OPENAI_CHAT_MODEL: ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          MONDAY_ROLE:          never-blank-monday-documented-case
         run: |
-          SIGNAL_ID="${{ inputs.signal_id }}"
-          if [ -z "$SIGNAL_ID" ]; then
-            SIGNAL_ID=$(python - <<'EOF'
-          import json, pathlib
-
-          active = pathlib.Path("data/research/signals_active.jsonl")
-          published = pathlib.Path("data/research/published_signal_ids.txt")
-          done = set(published.read_text().splitlines()) if published.exists() else set()
-
-          for line in active.read_text().splitlines():
-              line = line.strip()
-              if not line:
-                  continue
-              try:
-                  obj = json.loads(line)
-                  sid = obj.get("SIGNAL_ID", "")
-                  if sid and sid not in done:
-                      print(sid)
-                      break
-              except Exception:
-                  pass
-          EOF
-            )
-            echo "Auto-selected signal: $SIGNAL_ID"
+          set +e
+          python scripts/streams/select_eligible_signal.py \
+            --editorial-role "$MONDAY_ROLE" \
+            --signal-id "${{ inputs.signal_id }}" \
+            --audit-out reports/stream_selection/monday_selection.json \
+            | tee selection.log
+          RC=${PIPESTATUS[0]}
+          set -e
+          if [ "$RC" = "3" ]; then
+            echo "signal_id=" >> $GITHUB_OUTPUT
+            echo "No eligible Monday candidate — publishing nothing."
+            exit 0
+          elif [ "$RC" != "0" ]; then
+            exit "$RC"
           fi
+          SIGNAL_ID=$(grep '^selected=' selection.log | tail -1 | cut -d= -f2)
           echo "signal_id=$SIGNAL_ID" >> $GITHUB_OUTPUT
 
-      # Always required: OpenAI for LLM generation
+      # Why a signal was selected or skipped must be answerable from evidence.
+      - name: Preserve selection audit
+        if: steps.window.outputs.due == 'true' && (always())
+        uses: actions/upload-artifact@v4
+        with:
+          name: monday-selection-audit
+          path: reports/stream_selection/monday_selection.json
+          if-no-files-found: warn
+          retention-days: 90
+
       - name: Check OpenAI secret
-        if: steps.window.outputs.due == 'true'
+        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != ''
         run: |
           if [ -z "$NB_OPENAI_API_KEY" ]; then
             echo "ERROR: NB_OPENAI_API_KEY is not set"
@@ -123,7 +136,7 @@ jobs:
 
       # Only required when publishing (dry_run=false)
       - name: Check publish secrets
-        if: steps.window.outputs.due == 'true' && (inputs.dry_run != 'true')
+        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && (inputs.dry_run != 'true')
         run: |
           MISSING=""
           [ -z "$NB_WIX_API_KEY" ]                && MISSING="$MISSING NB_WIX_API_KEY"
@@ -156,9 +169,9 @@ jobs:
           NB_TELEGRAM_CHANNEL_ID:         ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
 
       - name: "Monday — Generate + Publish ${{ steps.resolve.outputs.signal_id }}"
-        if: steps.window.outputs.due == 'true'
+        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != ''
         env:
-          MONDAY_ROLE:                    monday_business_case
+          MONDAY_ROLE:                    never-blank-monday-documented-case
           NB_OPENAI_API_KEY:              ${{ secrets.NB_OPENAI_API_KEY }}
           # Story #11 research evidence. Without it the canonical Exa
           # adapter fails closed and the research gate blocks generation —
@@ -199,7 +212,7 @@ jobs:
 
       # Mark signal as published so next scheduled run picks the next one
       - name: Mark signal as published
-        if: steps.window.outputs.due == 'true' && (success() && inputs.dry_run != 'true')
+        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && (success() && inputs.dry_run != 'true')
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -236,7 +249,7 @@ jobs:
       # be able to veto bookkeeping; always() keeps it running regardless of
       # what happened upstream.
       - name: Preserve canonical run evidence
-        if: steps.window.outputs.due == 'true' && (always())
+        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && (always())
         uses: actions/upload-artifact@v4
         with:
           name: "run-evidence-${{ steps.resolve.outputs.signal_id }}"
@@ -245,7 +258,7 @@ jobs:
           retention-days: 90
 
       - name: Upload generated package
-        if: steps.window.outputs.due == 'true' && (always())
+        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && (always())
         uses: actions/upload-artifact@v4
         with:
           name: "generated-${{ steps.resolve.outputs.signal_id }}"

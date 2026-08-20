@@ -100,6 +100,11 @@ class EditorialRole(_ContractModel):
     intent: NonBlankStr
     structure: NonEmptyTextTuple
     forbidden: NonEmptyTextTuple
+    #: What source material this role may be produced from (Issue #142).
+    #: Empty means the role imposes no source-class restriction — the prior
+    #: behaviour. The criteria are policy text the configured business owns;
+    #: the engine only carries them to the judgment that applies them.
+    eligibility_criteria: tuple[NonBlankStr, ...] = ()
 
 
 class WixChannelRules(_ContractModel):
