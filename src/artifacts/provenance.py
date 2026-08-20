@@ -33,6 +33,11 @@ from src.editorial.decision_contract import (
 )
 from src.editorial.linkedin_composition import LinkedInCompositionRecord
 from src.intake.assignment_record import AssignmentRecord
+from src.run.decision_policy import (
+    DecisionPolicyError,
+    DecisionPolicyRecord,
+    verify_decision_policy_record,
+)
 from src.research.provider import ResearchResultEnvelope
 from src.strategy.business_config import BusinessStrategyConfiguration
 from src.strategy.execution_context import ConfigurationIdentity
@@ -254,22 +259,53 @@ def verify_run_provenance(
     verified.append("research")
 
     if decision_raw is None and decision_policy_raw is not None:
-        # Explicit role decision policy (#152): the record must bind to this
-        # exact run and name its policy, or it is corruption, not evidence.
-        for field, expected in (
-            ("run_id", run_id),
-            ("assignment_id", assignment_id),
-            ("signal_id", research.signal_id),
-        ):
-            _require(
-                decision_policy_raw.get(field) == expected,
-                f"decision_policy.json {field} does not match the run",
+        # Explicit role decision policy (#152): the record is a decision
+        # AUTHORITY and is held to the same standard as decision.json — the
+        # strict typed contract must load, and every identity must bind to
+        # this run's independently persisted evidence, or it is corruption.
+        try:
+            policy_record = DecisionPolicyRecord.model_validate(
+                decision_policy_raw
             )
+        except Exception as exc:  # noqa: BLE001 — an authority that will not strict-load is not evidence
+            raise ProvenanceError(
+                f"decision_policy.json violates the strict contract: {exc}"
+            ) from exc
         _require(
-            bool(str(decision_policy_raw.get("decision_policy", "")).strip())
-            and bool(str(decision_policy_raw.get("role_id", "")).strip()),
-            "decision_policy.json names no policy or role",
+            assignment_record.editorial_role is not None,
+            "decision_policy.json exists although the assignment records no "
+            "editorial role",
         )
+        _require(
+            assignment_record.editorial_role.decision_policy
+            == policy_record.decision_policy,
+            "decision_policy.json policy does not match the policy the "
+            "assignment's resolved role recorded",
+        )
+        _require(
+            assignment_record.editorial_role.role_id == policy_record.role_id,
+            "decision_policy.json role does not match the assignment's "
+            "resolved editorial role",
+        )
+        _require(
+            assignment_record.editorial_role.configuration_version
+            == policy_record.configuration_version,
+            "decision_policy.json configuration version does not match the "
+            "assignment's resolved role configuration",
+        )
+        try:
+            verify_decision_policy_record(
+                policy_record,
+                run_id=run_id,
+                assignment_id=assignment_id,
+                signal_id=research.signal_id,
+                role_id=policy_record.role_id,
+                configuration_version=policy_record.configuration_version,
+                configuration_identity=config,
+                research_readiness=getattr(research.readiness, "value", None),
+            )
+        except DecisionPolicyError as exc:
+            raise ProvenanceError(str(exc)) from exc
         verified.append("decision_policy")
         if editorial is None:
             return RunProvenanceReport(

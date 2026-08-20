@@ -123,6 +123,11 @@ from src.intake import (
 from src.intake.assignment_record import AssignmentRecord
 from src.intake.audience_routing import audience_request
 from src.run.code_identity import resolve_code_identity
+from src.run.decision_policy import (
+    DecisionPolicyError,
+    DecisionPolicyRecord,
+    verify_decision_policy_record,
+)
 from src.lifecycle.signal_lifecycle import ResearchContext
 from src.research.provider import ResearchProvider
 from src.research.adapters.exa import ExaResearchAdapter
@@ -1004,21 +1009,46 @@ def _run(
         ):
             # The explicit chain link decision.json would otherwise be: a run
             # that skipped the lens with no record would read as corruption to
-            # Story #16 provenance — and should.
+            # Story #16 provenance — and should. The record is an AUTHORITY,
+            # so it is held to the canonical standard: strict typed construct
+            # → create-once write → strict reload from disk → identity
+            # verification against independently known values. Generation is
+            # authorized by the verified on-disk record, never the in-memory
+            # object alone.
             try:
-                write_decision_policy_json(run_dir, {
-                    "schema_version": "1.0",
-                    "run_id": run_ctx.run_id,
-                    "assignment_id": assignment.assignment_id,
-                    "signal_id": research_artifact.signal_id,
-                    "role_id": _editorial_role_identity.role_id,
-                    "configuration_version": _editorial_role_identity.configuration_version,
-                    "decision_policy": "role_bounded_r1",
-                    "research_readiness": research_artifact.readiness.value,
-                    "reconciliation": "#151",
-                })
-            except (ArtifactCollisionError, OSError) as exc:
-                print(f"  ERROR: decision policy record could not be persisted: {exc}")
+                _policy_record = DecisionPolicyRecord(
+                    run_id=run_ctx.run_id,
+                    assignment_id=assignment.assignment_id,
+                    signal_id=research_artifact.signal_id,
+                    role_id=_editorial_role_identity.role_id,
+                    configuration_version=(
+                        _editorial_role_identity.configuration_version
+                    ),
+                    configuration_identity=strategy_execution.identity,
+                    decision_policy="role_bounded_r1",
+                    research_readiness=research_artifact.readiness.value,
+                )
+                write_decision_policy_json(
+                    run_dir, json.loads(_policy_record.canonical_json())
+                )
+                _policy_reloaded = DecisionPolicyRecord.model_validate_json(
+                    (run_dir / "decision_policy.json").read_bytes()
+                )
+                verify_decision_policy_record(
+                    _policy_reloaded,
+                    run_id=run_ctx.run_id,
+                    assignment_id=assignment.assignment_id,
+                    signal_id=research_artifact.signal_id,
+                    role_id=_editorial_role_identity.role_id,
+                    configuration_version=(
+                        _editorial_role_identity.configuration_version
+                    ),
+                    configuration_identity=strategy_execution.identity,
+                    research_readiness=research_artifact.readiness.value,
+                )
+            except (DecisionPolicyError, ArtifactCollisionError, OSError,
+                    ValueError) as exc:
+                print(f"  ERROR: decision policy authority is not valid: {exc}")
                 state.ended(TerminalStage.DECISION, TerminalDisposition.STOPPED,
                             f"decision policy record: {type(exc).__name__}")
                 return 1
