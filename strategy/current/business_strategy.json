@@ -385,7 +385,8 @@
       "linkedin_rules": [
         "Carry compact source attribution sufficient to identify the source case — one clear reference, not citation-heavy prose."
       ],
-      "require_source_transparency": true
+      "require_source_transparency": true,
+      "decision_policy": "role_bounded_r1"
     },
     {
       "role_id": "never-blank-wednesday-golden",
@@ -431,6 +432,7 @@
         "Preserve X, Y, the primary mechanism, the evidence boundary, the bounded question, and the contextual Never Blank close.",
         "Use the configured reflection CTA and canonical website destination https://www.inneros.online."
       ],
+      "require_source_transparency": true,
       "acceptance_rubric_path": "config/prompts/editorial_acceptance/never_blank_golden_wednesday.yaml",
       "acceptance_rubric_identity": "never-blank-golden-wednesday-acceptance/1.0"
     }

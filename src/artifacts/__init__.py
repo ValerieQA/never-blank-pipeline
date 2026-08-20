@@ -200,6 +200,18 @@ def load_decision_json(packages_dir: Path, signal_id: str, source_run_id: str) -
     return path.read_bytes()
 
 
+def write_decision_policy_json(run_dir: Path, data: dict) -> None:
+    """Commit the run's explicit decision-policy record exactly once (#152).
+
+    Written when a configured editorial role's declared decision policy —
+    not the Decision Lens — authorized continuation past READY research. The
+    record is the auditable chain link ``decision.json`` would otherwise be:
+    a run that skipped the lens silently would be indistinguishable from a
+    corrupted one, and Story #16 provenance would rightly refuse it.
+    """
+    atomic_write_json(run_dir / "decision_policy.json", data)
+
+
 def write_editorial_acceptance_json(run_dir: Path, data: dict) -> None:
     """Commit the run's editorial acceptance audit record exactly once.
 

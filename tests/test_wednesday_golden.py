@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sys
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from unittest import mock
@@ -44,6 +45,7 @@ from src.strategy.business_config import load_business_strategy_configuration
 from src.strategy.execution_context import StrategyExecutionContext
 from tests.test_decision_lifecycle import _entry_patches, _evaluator, _model_output
 from tests.test_research_artifact_lifecycle import ReadyProvider
+from tests.test_generate_and_publish import _FAKE_ARTICLE
 
 
 PROFILE_PATH = Path("config/never_blank/wednesday_golden.yaml")
@@ -74,6 +76,18 @@ def _article() -> dict:
         "echo_line": "A contextual close.",
         "cta_line": "Continue the reflection.",
     }
+
+
+def _attributed_article() -> dict:
+    article = deepcopy(_FAKE_ARTICLE)
+    article["platforms"]["long"]["body"] = (
+        "The documented case shows one mechanism. Source: Verified report "
+        "(https://source.example/report)."
+    )
+    article["platforms"]["medium"]["body"] = (
+        "The same discovery, documented by Verified report."
+    )
+    return article
 
 
 def _workflow(name: str) -> dict:
@@ -207,6 +221,8 @@ def test_wednesday_role_resolves_explicitly_from_strict_configuration(profile):
     )
     assert role.role_id == profile.editorial_role_id
     assert tuple(role.eligibility_criteria) == profile.source_eligibility_rules()
+    assert role.decision_policy == "decision_lens"
+    assert role.require_source_transparency is True
     assert role.acceptance_rubric_path == profile.acceptance_rubric_path
     assert role.acceptance_rubric_identity == profile.acceptance_rubric_identity
 
@@ -220,6 +236,7 @@ def test_unknown_or_blank_editorial_role_fails_closed():
 
 def test_canonical_entrypoint_records_role_and_routes_real_rules(tmp_path):
     argv, patches = _entry_patches(tmp_path)
+    patches["generate_article"] = mock.MagicMock(return_value=_attributed_article())
     argv += ["--editorial-role", ROLE_ID]
     evaluator, _ = _evaluator(_model_output())
 
@@ -234,6 +251,7 @@ def test_canonical_entrypoint_records_role_and_routes_real_rules(tmp_path):
         "configuration_version": load_business_strategy_configuration(
             BUSINESS_CONFIG
         ).configuration_version,
+        "decision_policy": "decision_lens",
     }
 
     role_rules = patches["generate_article"].call_args.kwargs[
@@ -244,9 +262,40 @@ def test_canonical_entrypoint_records_role_and_routes_real_rules(tmp_path):
     assert "exactly one primary mechanism" in role_rules["medium"]
     assert "evidence-grounded title tension" in role_rules["long"]
     assert "native compressed LinkedIn" in role_rules["medium"]
+    assert "SOURCES OF RECORD" in role_rules["long"]
+    assert "SOURCES OF RECORD" in role_rules["medium"]
+    assert "Verified report" in role_rules["long"]
+    assert "https://source.example/report" in role_rules["medium"]
+    assert "Sources section" in role_rules["long"]
+    assert "compactly" in role_rules["medium"]
+    assert "close the article with a short Sources section" not in role_rules["medium"]
 
     rubric = patches["run_editorial_acceptance"].call_args.kwargs["rubric"]
     assert rubric.identity == "never-blank-golden-wednesday-acceptance/1.0"
+    revision_sources = patches["run_editorial_acceptance"].call_args.kwargs[
+        "sources_of_record"
+    ]
+    assert "Verified report" in revision_sources
+    assert "https://source.example/report" in revision_sources
+
+
+def test_wednesday_source_transparency_blocks_before_publish_and_consumption(tmp_path):
+    argv, patches = _entry_patches(tmp_path, dry_run=False)
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    patches["generate_article"] = mock.MagicMock(return_value=deepcopy(_FAKE_ARTICLE))
+    argv += ["--editorial-role", ROLE_ID]
+    evaluator, _ = _evaluator(_model_output())
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main(
+            research_provider=ReadyProvider(), decision_evaluator=evaluator
+        ) == 1
+
+    assert not patches["WixPublisher"].called
+    assert not patches["LinkedInPublisher"].called
+    assert not patches["append_published_entry"].called
+    assert not list(tmp_path.glob("*/runs/*/generated.json"))
 
 
 def test_unknown_role_stops_before_generation_and_run_artifacts(tmp_path):

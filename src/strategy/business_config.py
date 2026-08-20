@@ -116,6 +116,15 @@ class EditorialRole(_ContractModel):
     #: The prompt asks for attribution; this makes ignoring the ask a
     #: fail-closed stop instead of a published article without provenance.
     require_source_transparency: bool = False
+    #: Which decision policy governs the run between READY research and
+    #: generation (Issue #152). "decision_lens" is today's behaviour for every
+    #: role and for role-less runs: the canonical Decision Lens must return
+    #: PROCEED. "role_bounded_r1" lets an explicitly configured role proceed
+    #: on READY research alone — an R1 product decision recorded in run
+    #: evidence, pending the R2 reconciliation in #151. Nothing downstream is
+    #: relaxed: acceptance, source transparency, preflight and publishers are
+    #: unchanged.
+    decision_policy: Literal["decision_lens", "role_bounded_r1"] = "decision_lens"
     #: Optional role-scoped Editorial Acceptance rubric. Both fields are one
     #: reference and therefore must be declared together. The Engine remains
     #: generic: product-specific criteria live in the referenced strict file.

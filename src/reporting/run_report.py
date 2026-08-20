@@ -51,6 +51,7 @@ CANONICAL_ARTIFACTS = (
     "business_strategy.json",
     "research.json",
     "decision.json",
+    "decision_policy.json",
     "editorial_acceptance.json",
     "generated.json",
     "linkedin_composition.json",

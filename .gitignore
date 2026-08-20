@@ -15,6 +15,8 @@ data/memory/*
 data/research/*
 !data/research/.gitkeep
 !data/research/signals_active.jsonl
+# Audit record of the 2026-08-20 corporate-backlog archive (Issue #142)
+!data/research/signals_archived_corporate_backlog.jsonl
 !data/research/selected_signals.jsonl
 !data/research/seen_index.json
 !data/research/image_library.json
