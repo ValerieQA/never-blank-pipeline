@@ -33,6 +33,11 @@ from src.editorial.decision_contract import (
 )
 from src.editorial.linkedin_composition import LinkedInCompositionRecord
 from src.intake.assignment_record import AssignmentRecord
+from src.run.decision_policy import (
+    DecisionPolicyError,
+    DecisionPolicyRecord,
+    verify_decision_policy_record,
+)
 from src.research.provider import ResearchResultEnvelope
 from src.strategy.business_config import BusinessStrategyConfiguration
 from src.strategy.execution_context import ConfigurationIdentity
@@ -175,13 +180,22 @@ def verify_run_provenance(
     # ═══════════════════════════ generation run ═════════════════════════════
     research_raw = _load(run_dir, "research.json")
     decision_raw = _load(run_dir, "decision.json")
+    decision_policy_raw = _load(run_dir, "decision_policy.json")
     editorial = _load(run_dir, "editorial_acceptance.json")
     linkedin_raw = _load(run_dir, "linkedin_composition.json")
     generated = _load(run_dir, "generated.json")
 
-    # later evidence without its upstream chain is corruption, not a stop
+    _require(
+        decision_raw is None or decision_policy_raw is None,
+        "decision.json and decision_policy.json both exist — a run has exactly "
+        "one decision authority",
+    )
+    # later evidence without its upstream chain is corruption, not a stop.
+    # The decision link is satisfied by EITHER the Decision Lens artifact or
+    # an explicit role decision-policy record (#152) — never by absence.
     ladder = [
-        ("research", research_raw), ("decision", decision_raw),
+        ("research", research_raw),
+        ("decision", decision_raw if decision_raw is not None else decision_policy_raw),
         ("editorial_acceptance", editorial),
         ("linkedin_composition", linkedin_raw),
         ("visual_assets", visual_raw), ("generated", generated),
@@ -244,51 +258,110 @@ def verify_run_provenance(
     )
     verified.append("research")
 
-    if decision_raw is None:
+    if decision_raw is None and decision_policy_raw is not None:
+        # Explicit role decision policy (#152): the record is a decision
+        # AUTHORITY and is held to the same standard as decision.json — the
+        # strict typed contract must load, and every identity must bind to
+        # this run's independently persisted evidence, or it is corruption.
+        try:
+            policy_record = DecisionPolicyRecord.model_validate(
+                decision_policy_raw
+            )
+        except Exception as exc:  # noqa: BLE001 — an authority that will not strict-load is not evidence
+            raise ProvenanceError(
+                f"decision_policy.json violates the strict contract: {exc}"
+            ) from exc
+        _require(
+            assignment_record.editorial_role is not None,
+            "decision_policy.json exists although the assignment records no "
+            "editorial role",
+        )
+        _require(
+            assignment_record.editorial_role.decision_policy
+            == policy_record.decision_policy,
+            "decision_policy.json policy does not match the policy the "
+            "assignment's resolved role recorded",
+        )
+        _require(
+            assignment_record.editorial_role.role_id == policy_record.role_id,
+            "decision_policy.json role does not match the assignment's "
+            "resolved editorial role",
+        )
+        _require(
+            assignment_record.editorial_role.configuration_version
+            == policy_record.configuration_version,
+            "decision_policy.json configuration version does not match the "
+            "assignment's resolved role configuration",
+        )
+        try:
+            verify_decision_policy_record(
+                policy_record,
+                run_id=run_id,
+                assignment_id=assignment_id,
+                signal_id=research.signal_id,
+                role_id=policy_record.role_id,
+                configuration_version=policy_record.configuration_version,
+                configuration_identity=config,
+                research_readiness=getattr(research.readiness, "value", None),
+            )
+        except DecisionPolicyError as exc:
+            raise ProvenanceError(str(exc)) from exc
+        verified.append("decision_policy")
+        if editorial is None:
+            return RunProvenanceReport(
+                run_id=run_id, run_kind="generation",
+                verified_artifacts=tuple(verified), stopped_after="decision",
+            )
+        # fall through to the same editorial chain a PROCEED decision reaches
+
+    elif decision_raw is None:
         return RunProvenanceReport(
             run_id=run_id, run_kind="generation",
             verified_artifacts=tuple(verified), stopped_after="research",
         )
-    try:
-        decision = DecisionLensDecisionArtifact.model_validate(decision_raw)
-    except Exception as exc:  # noqa: BLE001
-        raise ProvenanceError(f"decision.json violates the strict contract: {exc}") from exc
-    _require(decision.run_id == run_id, "decision.json belongs to a different run")
-    _require(
-        decision.assignment_id == assignment_id,
-        "decision assignment identity does not match the persisted assignment",
-    )
-    _require(
-        decision.signal_id == research.signal_id,
-        "decision signal identity does not match the research artifact",
-    )
-    _require(
-        decision.configuration_identity == config,
-        "decision configuration identity does not match the run configuration",
-    )
-    _require(
-        decision.research_digest == research_artifact_digest(research),
-        "decision.json does not reference this run's research state "
-        "(research digest mismatch)",
-    )
-    verified.append("decision")
-
-    if decision.disposition is not DecisionDisposition.PROCEED:
+    if decision_raw is not None:
+        try:
+            decision = DecisionLensDecisionArtifact.model_validate(decision_raw)
+        except Exception as exc:  # noqa: BLE001
+            raise ProvenanceError(
+                f"decision.json violates the strict contract: {exc}"
+            ) from exc
+        _require(decision.run_id == run_id, "decision.json belongs to a different run")
         _require(
-            editorial is None and generated is None and linkedin_raw is None
-            and visual_raw is None and publication is None,
-            "downstream artifacts exist although the Decision Lens did not PROCEED",
+            decision.assignment_id == assignment_id,
+            "decision assignment identity does not match the persisted assignment",
         )
-        return RunProvenanceReport(
-            run_id=run_id, run_kind="generation",
-            verified_artifacts=tuple(verified), stopped_after="decision",
+        _require(
+            decision.signal_id == research.signal_id,
+            "decision signal identity does not match the research artifact",
         )
+        _require(
+            decision.configuration_identity == config,
+            "decision configuration identity does not match the run configuration",
+        )
+        _require(
+            decision.research_digest == research_artifact_digest(research),
+            "decision.json does not reference this run's research state "
+            "(research digest mismatch)",
+        )
+        verified.append("decision")
 
-    if editorial is None:
-        return RunProvenanceReport(
-            run_id=run_id, run_kind="generation",
-            verified_artifacts=tuple(verified), stopped_after="decision",
-        )
+        if decision.disposition is not DecisionDisposition.PROCEED:
+            _require(
+                editorial is None and generated is None and linkedin_raw is None
+                and visual_raw is None and publication is None,
+                "downstream artifacts exist although the Decision Lens did not PROCEED",
+            )
+            return RunProvenanceReport(
+                run_id=run_id, run_kind="generation",
+                verified_artifacts=tuple(verified), stopped_after="decision",
+            )
+
+        if editorial is None:
+            return RunProvenanceReport(
+                run_id=run_id, run_kind="generation",
+                verified_artifacts=tuple(verified), stopped_after="decision",
+            )
     _require(
         editorial.get("run_id") == run_id,
         "editorial_acceptance.json belongs to a different run",

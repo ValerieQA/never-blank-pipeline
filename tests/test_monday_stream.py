@@ -128,7 +128,8 @@ def test_the_role_is_not_derivable_from_anything_but_the_record():
     stored = json.loads(record.model_dump_json())
     # no weekday, no timestamp, no cron, no source title feeding the identity
     assert stored["editorial_role"] == {
-        "role_id": MONDAY_ROLE, "configuration_version": "1"
+        "role_id": MONDAY_ROLE, "configuration_version": "1",
+        "decision_policy": "decision_lens",  # the identity's explicit default
     }
     assert "weekday" not in json.dumps(stored).lower()
 
@@ -1645,3 +1646,348 @@ def test_entrypoint_blocks_fabricated_identity_extending_a_real_title(
     assert not patches["LinkedInPublisher"].called
     assert not patches["append_published_entry"].called
     assert not list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+# ===========================================================================
+# R1 decision policy (#152): explicit, role-scoped, auditable — never silent
+# ===========================================================================
+
+
+def test_the_monday_role_declares_the_r1_decision_policy():
+    identity, role = resolve_editorial_role(_configuration(), MONDAY_ROLE)
+
+    assert role.decision_policy == "role_bounded_r1"
+    assert identity.decision_policy == "role_bounded_r1"
+    # and the default is today's behaviour, for every role that doesn't ask
+    from src.strategy.business_config import EditorialRole
+
+    plain = EditorialRole(role_id="r", intent="i", structure=("s",), forbidden=("f",))
+    assert plain.decision_policy == "decision_lens"
+
+
+def test_a_monday_run_proceeds_past_the_decision_point_on_ready_research(tmp_path):
+    code, patches, _ = _run_with_role(tmp_path, MONDAY_ROLE)
+
+    assert code == 0
+    # the Decision Lens was never consulted; the policy record is the chain link
+    run_dir = next(tmp_path.glob("*/runs/*/"))
+    assert not (run_dir / "decision.json").exists()
+    policy = json.loads((run_dir / "decision_policy.json").read_text())
+    assert policy["decision_policy"] == "role_bounded_r1"
+    assert policy["role_id"] == MONDAY_ROLE
+    assert policy["run_id"] == run_dir.name
+    assert policy["research_readiness"] == "ready"
+    assert policy["reconciliation"] == "#151"
+    # and assignment.json records which policy governed the run
+    assert _assignment_json(tmp_path)["editorial_role"]["decision_policy"] == "role_bounded_r1"
+
+
+def test_the_policy_run_is_provenance_verifiable(tmp_path):
+    # verified at the transparency-blocked point, where the on-disk chain is
+    # complete (the dry-run harness mocks the later channel writers away)
+    import copy
+
+    from src.artifacts.provenance import verify_run_provenance
+    from tests.test_generate_and_publish import _FAKE_ARTICLE
+
+    _blocked_monday_run(tmp_path, copy.deepcopy(_FAKE_ARTICLE))
+    run_dir = next(tmp_path.glob("*/runs/*/"))
+
+    report = verify_run_provenance(tmp_path, run_dir.parent.parent.name, run_dir.name)
+
+    assert "decision_policy" in report.verified_artifacts
+    assert "decision" not in report.verified_artifacts
+    assert report.stopped_after == "editorial_acceptance"
+
+
+def test_acceptance_without_any_decision_authority_is_still_corruption(tmp_path):
+    import copy
+
+    from src.artifacts.provenance import ProvenanceError, verify_run_provenance
+    from tests.test_generate_and_publish import _FAKE_ARTICLE
+
+    _blocked_monday_run(tmp_path, copy.deepcopy(_FAKE_ARTICLE))
+    run_dir = next(tmp_path.glob("*/runs/*/"))
+    (run_dir / "decision_policy.json").unlink()  # simulate the silent bypass
+
+    with pytest.raises(ProvenanceError) as exc:
+        verify_run_provenance(tmp_path, run_dir.parent.parent.name, run_dir.name)
+
+    assert "cannot exist without its upstream chain" in str(exc.value)
+
+
+def test_a_run_cannot_carry_both_decision_authorities(tmp_path):
+    from src.artifacts import write_decision_policy_json
+    from src.artifacts.provenance import ProvenanceError, verify_run_provenance
+
+    # a normal decision-lens run (no role)…
+    argv, patches = _entry_patches(tmp_path)
+    evaluator, _ = _evaluator(_model_output())
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 0
+    run_dir = next(tmp_path.glob("*/runs/*/"))
+    assert (run_dir / "decision.json").exists()
+    # …with a policy record smuggled in beside the decision
+    write_decision_policy_json(run_dir, {"run_id": run_dir.name})
+
+    with pytest.raises(ProvenanceError) as exc:
+        verify_run_provenance(tmp_path, run_dir.parent.parent.name, run_dir.name)
+
+    assert "exactly one decision authority" in str(exc.value)
+
+
+def test_a_run_without_the_monday_role_still_takes_the_decision_lens(tmp_path):
+    argv, patches = _entry_patches(tmp_path, dry_run=False)
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    # a non-PROCEED disposition must still block the role-less run
+    evaluator, transport = _evaluator(_model_output(disposition="hold"))
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 1
+
+    assert len(transport.calls) == 1  # the lens WAS consulted
+    assert not patches["WixPublisher"].called
+    run_dir = next(tmp_path.glob("*/runs/*/"))
+    assert (run_dir / "decision.json").exists()
+    assert not (run_dir / "decision_policy.json").exists()
+
+
+def test_non_ready_research_still_blocks_the_monday_role(tmp_path):
+    from src.research.lifecycle import ResearchGateError
+
+    argv, patches = _entry_patches(tmp_path, dry_run=False)
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    patches["generate_article"] = mock.MagicMock(return_value=_attributed_article())
+    # the canonical research gate refuses (non-READY) — the policy must
+    # authorize nothing on top of that
+    patches["execute_and_persist_research"] = mock.MagicMock(
+        side_effect=ResearchGateError("research readiness is needs_review")
+    )
+    argv = argv + ["--editorial-role", MONDAY_ROLE]
+    evaluator, _ = _evaluator(_model_output())
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+
+    assert code == 1
+    assert not patches["generate_article"].called
+    assert not patches["WixPublisher"].called
+    assert not list(tmp_path.glob("*/runs/*/decision_policy.json"))
+
+
+def test_the_policy_does_not_relax_acceptance_or_source_transparency(tmp_path):
+    import copy
+
+    from tests.test_generate_and_publish import _FAKE_ARTICLE
+
+    # unattributed article under the Monday role: the run passes the decision
+    # point on policy, then source transparency still blocks the publishers
+    code, patches = _blocked_monday_run(tmp_path, copy.deepcopy(_FAKE_ARTICLE))
+
+    assert code == 1
+    assert not patches["WixPublisher"].called
+    assert not patches["append_published_entry"].called
+    # and the blocked run now has an authoritative report again
+    report = json.loads(next(tmp_path.glob("*/runs/*/run_report.json")).read_text())
+    assert report["terminal_stage"] == "editorial"
+    assert report["completed"] is False
+    assert any(a["name"] == "decision_policy.json" for a in report["artifacts"])
+
+
+# ===========================================================================
+# The policy record is a strict authority (#152 blocking review)
+# ===========================================================================
+#
+# decision_policy.json is one of exactly two decision authorities. These
+# regressions hold it to the authority standard through the REAL paths: the
+# canonical entrypoint's write→reload→verify order, and the provenance
+# verifier's strict reload — never only unit constructors.
+
+from src.run.decision_policy import (
+    DecisionPolicyError,
+    DecisionPolicyRecord,
+    verify_decision_policy_record,
+)
+
+
+def _entrypoint_with_tampered_policy_write(tmp_path, mutate):
+    """Run the real entrypoint, letting the policy write persist a tampered
+    record — the reload/verify step must stop the run before generation."""
+
+    import scripts.generate_and_publish as gap_module
+    from src.artifacts import write_decision_policy_json as real_writer
+
+    def tampered_writer(run_dir, data):
+        real_writer(run_dir, mutate(dict(data)))
+
+    argv, patches = _entry_patches(tmp_path, dry_run=False)
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    patches["generate_article"] = mock.MagicMock(return_value=_attributed_article())
+    patches["write_decision_policy_json"] = tampered_writer
+    argv = argv + ["--editorial-role", MONDAY_ROLE]
+    evaluator, _ = _evaluator(_model_output())
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+    return code, patches
+
+
+TAMPER_CASES = {
+    "extra_unknown_field": lambda d: {**d, "surprise": "field"},
+    "credential_shaped_field": lambda d: {**d, "api_key": "sk-not-a-real-key"},
+    "tampered_role_id": lambda d: {**d, "role_id": "some-other-role"},
+    "tampered_decision_policy": lambda d: {**d, "decision_policy": "decision_lens"},
+    "tampered_run_id": lambda d: {**d, "run_id": "11111111-1111-4111-8111-111111111111"},
+    "tampered_assignment_id": lambda d: {**d, "assignment_id": "someone-elses"},
+    "tampered_schema_version": lambda d: {**d, "schema_version": "9.9"},
+    "tampered_configuration_version": lambda d: {**d, "configuration_version": "999"},
+    "tampered_readiness": lambda d: {**d, "research_readiness": "needs_review"},
+}
+
+
+@pytest.mark.parametrize("case", sorted(TAMPER_CASES))
+def test_a_tampered_policy_record_stops_the_run_before_generation(tmp_path, case):
+    code, patches = _entrypoint_with_tampered_policy_write(
+        tmp_path, TAMPER_CASES[case]
+    )
+
+    assert code == 1, case
+    assert not patches["generate_article"].called, case
+    assert not patches["WixPublisher"].called
+    assert not patches["append_published_entry"].called
+    assert not list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+def test_a_valid_policy_record_authorizes_generation_without_the_lens(tmp_path):
+    argv, patches = _entry_patches(tmp_path)
+    patches["generate_article"] = mock.MagicMock(return_value=_attributed_article())
+    argv = argv + ["--editorial-role", MONDAY_ROLE]
+    evaluator, transport = _evaluator(_model_output())
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+
+    assert code == 0
+    assert patches["generate_article"].called
+    assert transport.calls == []  # the Decision Lens was never consulted
+    # the on-disk record strict-reloads as the typed contract
+    run_dir = next(tmp_path.glob("*/runs/*/"))
+    record = DecisionPolicyRecord.model_validate_json(
+        (run_dir / "decision_policy.json").read_bytes()
+    )
+    assert record.decision_policy == "role_bounded_r1"
+    assert record.research_readiness == "ready"
+
+
+def test_a_failed_policy_write_stops_before_generation(tmp_path):
+    argv, patches = _entry_patches(tmp_path)
+    patches["generate_article"] = mock.MagicMock(return_value=_attributed_article())
+    patches["write_decision_policy_json"] = mock.MagicMock(
+        side_effect=OSError("disk full")
+    )
+    argv = argv + ["--editorial-role", MONDAY_ROLE]
+    evaluator, _ = _evaluator(_model_output())
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+
+    assert code == 1
+    assert not patches["generate_article"].called
+    assert not list(tmp_path.glob("*/runs/*/decision_policy.json"))
+
+
+def _blocked_policy_run_dir(tmp_path):
+    import copy
+
+    from tests.test_generate_and_publish import _FAKE_ARTICLE
+
+    _blocked_monday_run(tmp_path, copy.deepcopy(_FAKE_ARTICLE))
+    return next(tmp_path.glob("*/runs/*/"))
+
+
+@pytest.mark.parametrize("case", sorted(TAMPER_CASES))
+def test_provenance_refuses_a_tampered_policy_record(tmp_path, case):
+    from src.artifacts.provenance import ProvenanceError, verify_run_provenance
+
+    run_dir = _blocked_policy_run_dir(tmp_path)
+    path = run_dir / "decision_policy.json"
+    data = json.loads(path.read_text())
+    path.write_text(json.dumps(TAMPER_CASES[case](data)))
+
+    with pytest.raises(ProvenanceError):
+        verify_run_provenance(tmp_path, run_dir.parent.parent.name, run_dir.name)
+
+
+def test_provenance_refuses_a_malformed_policy_record(tmp_path):
+    from src.artifacts.provenance import ProvenanceError, verify_run_provenance
+
+    run_dir = _blocked_policy_run_dir(tmp_path)
+    (run_dir / "decision_policy.json").write_text("{not json at all")
+
+    with pytest.raises(ProvenanceError):
+        verify_run_provenance(tmp_path, run_dir.parent.parent.name, run_dir.name)
+
+
+def test_the_record_binds_to_the_assignments_resolved_role(tmp_path):
+    # the record's role must match what assignment.json says the run resolved —
+    # a policy record claiming a different (even declared) role is corruption
+    from src.artifacts.provenance import ProvenanceError, verify_run_provenance
+
+    run_dir = _blocked_policy_run_dir(tmp_path)
+    path = run_dir / "decision_policy.json"
+    data = json.loads(path.read_text())
+    data["role_id"] = "never-blank-wednesday-golden"
+    path.write_text(json.dumps(data))
+
+    with pytest.raises(ProvenanceError) as exc:
+        verify_run_provenance(tmp_path, run_dir.parent.parent.name, run_dir.name)
+
+    assert "resolved editorial role" in str(exc.value) or "does not match" in str(exc.value)
+
+
+def test_the_typed_contract_is_strict_frozen_and_versioned():
+    from src.strategy.execution_context import ConfigurationIdentity
+
+    identity = _configuration_identity()
+    record = DecisionPolicyRecord(
+        run_id="12345678-1234-4123-8123-123456789012",
+        assignment_id="sig-1", signal_id="sig-1",
+        role_id=MONDAY_ROLE, configuration_version="1",
+        configuration_identity=identity,
+        decision_policy="role_bounded_r1", research_readiness="ready",
+    )
+
+    assert record.schema_version == "1.0"
+    with pytest.raises(Exception):
+        record.role_id = "other"  # frozen
+    with pytest.raises(Exception):
+        DecisionPolicyRecord.model_validate(
+            {**json.loads(record.canonical_json()), "extra": 1}
+        )
+    with pytest.raises(Exception):
+        DecisionPolicyRecord.model_validate(
+            {**json.loads(record.canonical_json()), "decision_policy": "anything_else"}
+        )
+    # canonical serialize → strict reload round-trips
+    assert DecisionPolicyRecord.model_validate_json(record.canonical_json()) == record
+
+
+def test_verification_is_against_independent_values_not_self_claims():
+    identity = _configuration_identity()
+    record = DecisionPolicyRecord(
+        run_id="12345678-1234-4123-8123-123456789012",
+        assignment_id="sig-1", signal_id="sig-1",
+        role_id=MONDAY_ROLE, configuration_version="1",
+        configuration_identity=identity,
+        decision_policy="role_bounded_r1", research_readiness="ready",
+    )
+
+    with pytest.raises(DecisionPolicyError):
+        verify_decision_policy_record(
+            record, run_id="different-run", assignment_id="sig-1",
+            signal_id="sig-1", role_id=MONDAY_ROLE, configuration_version="1",
+            configuration_identity=identity, research_readiness="ready",
+        )
