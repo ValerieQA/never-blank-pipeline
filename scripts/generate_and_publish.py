@@ -221,6 +221,7 @@ from src.artifacts import (
     load_visual_assets_json,
     write_assignment_json,
     write_editorial_acceptance_json,
+    write_decision_policy_json,
     write_editorial_review_content_json,
     write_generated_json,
     write_linkedin_composition_json,
@@ -986,44 +987,88 @@ def _run(
         print(f"  ✓  research: READY ({run_dir / 'research.json'})")
         state.reached(TerminalStage.RESEARCH)
 
-        # ── Decision Lens gate (Issue #60) ────────────────────────────────────
-        # The Decision Lens verdict is the mandatory business gate between
-        # research and all narrative/editorial/downstream work. The persisted
-        # and strict-reloaded decision.json — not the in-memory result — is
-        # the artifact that authorizes continuation, and only PROCEED passes.
-        try:
-            evaluator = (
-                decision_evaluator
-                if decision_evaluator is not None
-                else production_evaluator()
+        # ── Decision policy (Issue #152) ─────────────────────────────────────
+        # A role may declare which decision policy governs the run between
+        # READY research and generation. "role_bounded_r1" is the explicit R1
+        # product decision for the Monday documented-case role: the Decision
+        # Lens's audience-transfer semantics predate the corrected Monday
+        # strategy (reconciliation is #151), so the role proceeds on READY
+        # research alone. This is auditable, not silent — the policy is
+        # persisted on assignment.json's editorial_role — and it relaxes
+        # nothing downstream: acceptance, source transparency, preflight and
+        # the publishers are exactly as strict as before. Every other role,
+        # and every run with no role, takes the Decision Lens gate unchanged.
+        if (
+            _editorial_role_identity is not None
+            and _role.decision_policy == "role_bounded_r1"
+        ):
+            # The explicit chain link decision.json would otherwise be: a run
+            # that skipped the lens with no record would read as corruption to
+            # Story #16 provenance — and should.
+            try:
+                write_decision_policy_json(run_dir, {
+                    "schema_version": "1.0",
+                    "run_id": run_ctx.run_id,
+                    "assignment_id": assignment.assignment_id,
+                    "signal_id": research_artifact.signal_id,
+                    "role_id": _editorial_role_identity.role_id,
+                    "configuration_version": _editorial_role_identity.configuration_version,
+                    "decision_policy": "role_bounded_r1",
+                    "research_readiness": research_artifact.readiness.value,
+                    "reconciliation": "#151",
+                })
+            except (ArtifactCollisionError, OSError) as exc:
+                print(f"  ERROR: decision policy record could not be persisted: {exc}")
+                state.ended(TerminalStage.DECISION, TerminalDisposition.STOPPED,
+                            f"decision policy record: {type(exc).__name__}")
+                return 1
+            print(
+                "  ✓  decision policy: role_bounded_r1 — READY research "
+                f"authorizes generation for role {_editorial_role_identity.role_id!r} "
+                f"({run_dir / 'decision_policy.json'}); the Decision Lens is not "
+                "consulted on this run (R1 product decision; R2 reconciliation "
+                "tracked in #151)"
             )
-            decision_artifact = evaluate_and_persist_decision(
-                evaluator,
-                research=research_artifact,
-                strategy_view=strategy_execution.decision_lens_editorial,
-                audience=audience_selection,
-                configuration_identity=strategy_execution.identity,
-                lens_profile=RELEASE1_LENS_PROFILE,
-                run_id=run_ctx.run_id,
-                assignment_id=assignment.assignment_id,
-                # The authoritative signal identity is the one carried by the
-                # validated current-run research artifact — never derived from
-                # the assignment identity. run/assignment/signal remain three
-                # independently correct identities in decision.json.
-                signal_id=research_artifact.signal_id,
-                run_dir=run_dir,
-            )
-            require_proceed(decision_artifact)
-        except (DecisionGateError, ArtifactCollisionError, OSError, ValueError) as exc:
-            print(f"  ERROR: decision gate blocked generation: {exc}")
-            state.ended(TerminalStage.DECISION, TerminalDisposition.STOPPED,
-                        f"decision gate: {type(exc).__name__}")
-            return 1
-        state.reached(TerminalStage.DECISION)
-        print(
-            f"  ✓  decision: PROCEED ({run_dir / 'decision.json'}) "
-            f"[{decision_artifact.decision_lens_version}]"
-        )
+            state.reached(TerminalStage.DECISION)
+        else:
+          # ── Decision Lens gate (Issue #60) ────────────────────────────────
+          # The Decision Lens verdict is the mandatory business gate between
+          # research and all narrative/editorial/downstream work. The persisted
+          # and strict-reloaded decision.json — not the in-memory result — is
+          # the artifact that authorizes continuation, and only PROCEED passes.
+          try:
+              evaluator = (
+                  decision_evaluator
+                  if decision_evaluator is not None
+                  else production_evaluator()
+              )
+              decision_artifact = evaluate_and_persist_decision(
+                  evaluator,
+                  research=research_artifact,
+                  strategy_view=strategy_execution.decision_lens_editorial,
+                  audience=audience_selection,
+                  configuration_identity=strategy_execution.identity,
+                  lens_profile=RELEASE1_LENS_PROFILE,
+                  run_id=run_ctx.run_id,
+                  assignment_id=assignment.assignment_id,
+                  # The authoritative signal identity is the one carried by the
+                  # validated current-run research artifact — never derived from
+                  # the assignment identity. run/assignment/signal remain three
+                  # independently correct identities in decision.json.
+                  signal_id=research_artifact.signal_id,
+                  run_dir=run_dir,
+              )
+              require_proceed(decision_artifact)
+          except (DecisionGateError, ArtifactCollisionError, OSError, ValueError) as exc:
+              print(f"  ERROR: decision gate blocked generation: {exc}")
+              state.ended(TerminalStage.DECISION, TerminalDisposition.STOPPED,
+                          f"decision gate: {type(exc).__name__}")
+              return 1
+          state.reached(TerminalStage.DECISION)
+          print(
+              f"  ✓  decision: PROCEED ({run_dir / 'decision.json'}) "
+              f"[{decision_artifact.decision_lens_version}]"
+          )
     elif args.legacy_package:
         print("  ERROR: legacy prepared packages have no canonical research lineage")
         return 1

@@ -128,7 +128,8 @@ def test_the_role_is_not_derivable_from_anything_but_the_record():
     stored = json.loads(record.model_dump_json())
     # no weekday, no timestamp, no cron, no source title feeding the identity
     assert stored["editorial_role"] == {
-        "role_id": MONDAY_ROLE, "configuration_version": "1"
+        "role_id": MONDAY_ROLE, "configuration_version": "1",
+        "decision_policy": "decision_lens",  # the identity's explicit default
     }
     assert "weekday" not in json.dumps(stored).lower()
 
@@ -1645,3 +1646,151 @@ def test_entrypoint_blocks_fabricated_identity_extending_a_real_title(
     assert not patches["LinkedInPublisher"].called
     assert not patches["append_published_entry"].called
     assert not list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+# ===========================================================================
+# R1 decision policy (#152): explicit, role-scoped, auditable — never silent
+# ===========================================================================
+
+
+def test_the_monday_role_declares_the_r1_decision_policy():
+    identity, role = resolve_editorial_role(_configuration(), MONDAY_ROLE)
+
+    assert role.decision_policy == "role_bounded_r1"
+    assert identity.decision_policy == "role_bounded_r1"
+    # and the default is today's behaviour, for every role that doesn't ask
+    from src.strategy.business_config import EditorialRole
+
+    plain = EditorialRole(role_id="r", intent="i", structure=("s",), forbidden=("f",))
+    assert plain.decision_policy == "decision_lens"
+
+
+def test_a_monday_run_proceeds_past_the_decision_point_on_ready_research(tmp_path):
+    code, patches, _ = _run_with_role(tmp_path, MONDAY_ROLE)
+
+    assert code == 0
+    # the Decision Lens was never consulted; the policy record is the chain link
+    run_dir = next(tmp_path.glob("*/runs/*/"))
+    assert not (run_dir / "decision.json").exists()
+    policy = json.loads((run_dir / "decision_policy.json").read_text())
+    assert policy["decision_policy"] == "role_bounded_r1"
+    assert policy["role_id"] == MONDAY_ROLE
+    assert policy["run_id"] == run_dir.name
+    assert policy["research_readiness"] == "ready"
+    assert policy["reconciliation"] == "#151"
+    # and assignment.json records which policy governed the run
+    assert _assignment_json(tmp_path)["editorial_role"]["decision_policy"] == "role_bounded_r1"
+
+
+def test_the_policy_run_is_provenance_verifiable(tmp_path):
+    # verified at the transparency-blocked point, where the on-disk chain is
+    # complete (the dry-run harness mocks the later channel writers away)
+    import copy
+
+    from src.artifacts.provenance import verify_run_provenance
+    from tests.test_generate_and_publish import _FAKE_ARTICLE
+
+    _blocked_monday_run(tmp_path, copy.deepcopy(_FAKE_ARTICLE))
+    run_dir = next(tmp_path.glob("*/runs/*/"))
+
+    report = verify_run_provenance(tmp_path, run_dir.parent.parent.name, run_dir.name)
+
+    assert "decision_policy" in report.verified_artifacts
+    assert "decision" not in report.verified_artifacts
+    assert report.stopped_after == "editorial_acceptance"
+
+
+def test_acceptance_without_any_decision_authority_is_still_corruption(tmp_path):
+    import copy
+
+    from src.artifacts.provenance import ProvenanceError, verify_run_provenance
+    from tests.test_generate_and_publish import _FAKE_ARTICLE
+
+    _blocked_monday_run(tmp_path, copy.deepcopy(_FAKE_ARTICLE))
+    run_dir = next(tmp_path.glob("*/runs/*/"))
+    (run_dir / "decision_policy.json").unlink()  # simulate the silent bypass
+
+    with pytest.raises(ProvenanceError) as exc:
+        verify_run_provenance(tmp_path, run_dir.parent.parent.name, run_dir.name)
+
+    assert "cannot exist without its upstream chain" in str(exc.value)
+
+
+def test_a_run_cannot_carry_both_decision_authorities(tmp_path):
+    from src.artifacts import write_decision_policy_json
+    from src.artifacts.provenance import ProvenanceError, verify_run_provenance
+
+    # a normal decision-lens run (no role)…
+    argv, patches = _entry_patches(tmp_path)
+    evaluator, _ = _evaluator(_model_output())
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 0
+    run_dir = next(tmp_path.glob("*/runs/*/"))
+    assert (run_dir / "decision.json").exists()
+    # …with a policy record smuggled in beside the decision
+    write_decision_policy_json(run_dir, {"run_id": run_dir.name})
+
+    with pytest.raises(ProvenanceError) as exc:
+        verify_run_provenance(tmp_path, run_dir.parent.parent.name, run_dir.name)
+
+    assert "exactly one decision authority" in str(exc.value)
+
+
+def test_a_run_without_the_monday_role_still_takes_the_decision_lens(tmp_path):
+    argv, patches = _entry_patches(tmp_path, dry_run=False)
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    # a non-PROCEED disposition must still block the role-less run
+    evaluator, transport = _evaluator(_model_output(disposition="hold"))
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 1
+
+    assert len(transport.calls) == 1  # the lens WAS consulted
+    assert not patches["WixPublisher"].called
+    run_dir = next(tmp_path.glob("*/runs/*/"))
+    assert (run_dir / "decision.json").exists()
+    assert not (run_dir / "decision_policy.json").exists()
+
+
+def test_non_ready_research_still_blocks_the_monday_role(tmp_path):
+    from src.research.lifecycle import ResearchGateError
+
+    argv, patches = _entry_patches(tmp_path, dry_run=False)
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    patches["generate_article"] = mock.MagicMock(return_value=_attributed_article())
+    # the canonical research gate refuses (non-READY) — the policy must
+    # authorize nothing on top of that
+    patches["execute_and_persist_research"] = mock.MagicMock(
+        side_effect=ResearchGateError("research readiness is needs_review")
+    )
+    argv = argv + ["--editorial-role", MONDAY_ROLE]
+    evaluator, _ = _evaluator(_model_output())
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+
+    assert code == 1
+    assert not patches["generate_article"].called
+    assert not patches["WixPublisher"].called
+    assert not list(tmp_path.glob("*/runs/*/decision_policy.json"))
+
+
+def test_the_policy_does_not_relax_acceptance_or_source_transparency(tmp_path):
+    import copy
+
+    from tests.test_generate_and_publish import _FAKE_ARTICLE
+
+    # unattributed article under the Monday role: the run passes the decision
+    # point on policy, then source transparency still blocks the publishers
+    code, patches = _blocked_monday_run(tmp_path, copy.deepcopy(_FAKE_ARTICLE))
+
+    assert code == 1
+    assert not patches["WixPublisher"].called
+    assert not patches["append_published_entry"].called
+    # and the blocked run now has an authoritative report again
+    report = json.loads(next(tmp_path.glob("*/runs/*/run_report.json")).read_text())
+    assert report["terminal_stage"] == "editorial"
+    assert report["completed"] is False
+    assert any(a["name"] == "decision_policy.json" for a in report["artifacts"])

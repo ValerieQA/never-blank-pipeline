@@ -37,6 +37,14 @@ class EditorialRoleIdentity(BaseModel):
 
     role_id: str = Field(min_length=1, max_length=120)
     configuration_version: str = Field(min_length=1, max_length=80)
+    #: The decision policy the run executed under (Issue #152). Persisted so a
+    #: reviewer can see from assignment.json alone which policy governed the
+    #: run — an R1 role policy is an auditable product decision, never a
+    #: silent bypass. Defaults to the pre-existing behaviour so records
+    #: written before this field reload unchanged.
+    decision_policy: str = Field(
+        default="decision_lens", min_length=1, max_length=40
+    )
 
 
 def resolve_editorial_role(
@@ -59,6 +67,7 @@ def resolve_editorial_role(
                 EditorialRoleIdentity(
                     role_id=role.role_id,
                     configuration_version=configuration.configuration_version,
+                    decision_policy=role.decision_policy,
                 ),
                 role,
             )
