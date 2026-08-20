@@ -201,7 +201,8 @@
         "Keep the invitation soft and specific to the article.",
         "Do not request a call, form submission, or purchase.",
         "Reconnect to the Never Blank idea in the article's own language before inviting the reader onward.",
-        "Name https://www.inneros.online as the destination and no other URL."
+        "Name https://www.inneros.online as the destination and no other URL.",
+        "Invite; never assert a capability. No 'we can help you…', no promised outcome, no implied diagnosis."
       ]
     },
     {
@@ -236,7 +237,10 @@
         "Use 400–600 words. A shorter article that earns every sentence is correct; padding an argument to reach a length is not.",
         "Never structure the article as a list of lessons, takeaways, or tips. Follow the arc: observation, tension, question, mechanism, evidence, reframe, one focused practical consequence, close.",
         "Open with an H1 that creates a real reason to read — a tension, contradiction, surprising observation, or business consequence — without manufactured drama and without giving away the reframe. A title that merely names the subject is not a hook.",
-        "Use clear H2 structure and short paragraphs, and keep factual claims traceable so the article stays quotable without losing necessary context."
+        "Use clear H2 structure and short paragraphs, and keep factual claims traceable so the article stays quotable without losing necessary context.",
+        "Attribute every external fact to the exact source recorded in the accepted evidence. Never credit the company or platform the case is about as the reporter of the result unless the accepted evidence is that party's own document.",
+        "State the evidence as a principle it supports, never as a proven result for the reader's own category, market, or channel.",
+        "Any description of what owners or buyers typically do, feel, or receive must be written as a hypothetical scenario addressed to the reader — 'if', 'you might', 'suppose' — never as reported market behaviour. Only the accepted evidence may be stated as fact."
       ],
       "metadata_rules": [
         "Provide a descriptive headline and slug that accurately represent the article.",
@@ -253,8 +257,9 @@
         "Follow the configured CTA mode exactly.",
         "When present, express the CTA as a natural paragraph tied to the article and place it before the Echo.",
         "Close by reconnecting the article's own mechanism to the Never Blank idea — that consistent presence is what turns attention into something a business can continue. Write it fresh for this article; never paste a standard slogan.",
+        "When CTA mode is none, do not add an invitation.",
         "End the invitation with the canonical destination https://www.inneros.online and no other URL.",
-        "When CTA mode is none, do not add an invitation."
+        "The invitation makes no claim about what Never Blank can do, achieve, diagnose, or help with. Invite the reader onward; do not describe a capability the evidence has not established."
       ],
       "visual_rules": [
         "Use the approved current-run Wix cover asset with verified identity, dimensions, and format.",
@@ -271,7 +276,8 @@
       "length_rules": [
         "Use only the length required for one complete LinkedIn argument, and express the same single idea as the article — never a second argument and never a list of takeaways.",
         "The artifact must be independently composed from the approved editorial decision, not truncated from the Wix article.",
-        "Follow hook, tension, mechanism or reframe, one concise implication, Never Blank close, website invitation."
+        "Follow hook, tension, mechanism or reframe, one concise implication, Never Blank close, website invitation.",
+        "Only the accepted evidence may be stated as fact, attributed to its recorded source. Everything about the reader's situation is a hypothetical scenario or the author's interpretation, and must read as one."
       ],
       "formatting_rules": [
         "Use short paragraphs and deliberate white space for feed reading.",
@@ -287,7 +293,8 @@
         "Follow the configured CTA mode exactly.",
         "When present, use a paragraph-length invitation tied to the post and place it before the Echo.",
         "Close by reconnecting to the Never Blank idea in this post's own terms, then invite the reader to continue at https://www.inneros.online.",
-        "When CTA mode is none, do not add an invitation."
+        "When CTA mode is none, do not add an invitation.",
+        "The invitation makes no claim about what Never Blank can do or achieve for the reader."
       ],
       "visual_rules": [
         "Use the approved current-run LinkedIn asset or an explicitly validated link composition.",
