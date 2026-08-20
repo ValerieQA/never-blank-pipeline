@@ -91,7 +91,9 @@ def _validate(data: dict) -> dict:
     }
 
 
-def build_narrative_spine(decision_lens: dict, signal: dict) -> dict:
+def build_narrative_spine(
+    decision_lens: dict, signal: dict, claim_boundary: str | None = None
+) -> dict:
     """
     Produce the Narrative Spine dict from Decision Lens output.
 
@@ -121,6 +123,9 @@ customer_memory_consequence (from Decision Lens): {decision_lens.get('customer_m
 structural_cause (from Decision Lens): {decision_lens.get('structural_cause', '')}
 never_blank_insight: {decision_lens.get('never_blank_insight', '')}{strategy_section}
 Produce the Narrative Spine JSON for this small business visibility pattern."""
+
+    if claim_boundary:
+        user = f"{user}\n{claim_boundary}"
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_enrich())
     try:

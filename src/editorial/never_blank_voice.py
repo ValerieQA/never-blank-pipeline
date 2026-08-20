@@ -117,6 +117,7 @@ def finalize_article(
     strategy_view: DecisionLensEditorialStrategyView | None = None,
     audience: AudienceSelection | None = None,
     selected_cta: CallToAction | None = None,
+    claim_boundary: str | None = None,
 ) -> dict:
     """
     Generate the Echo, optional CTA, run the Voice checklist, and assemble the
@@ -159,6 +160,9 @@ business_translation: {story.get('business_translation', '')}
 {strategy_section}
 
 Produce the Never Blank Voice JSON. Follow cta_mode exactly."""
+
+    if claim_boundary:
+        user = f"{user}\n{claim_boundary}"
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_article())
     try:

@@ -820,7 +820,7 @@ class TestPipeline:
                 "delivery_vs_presence_conflict": "conflict", "customer_memory_consequence": "c",
                 "structural_cause": "s", "never_blank_insight": "i",
             },
-            build_narrative_spine=lambda dl, signal: {
+            build_narrative_spine=lambda dl, signal, claim_boundary=None: {
                 "core_pattern": "d", "narrative_spine": "spine sentence",
                 "target_feeling": "recognition",
                 "pattern_as_evidence_of": "x",
@@ -832,17 +832,17 @@ class TestPipeline:
                 "selected_hook": "hook",
             },
             build_reader_context=lambda signal: None,
-            build_discovery=lambda hook, spine, dl, signal: {
+            build_discovery=lambda hook, spine, dl, signal, claim_boundary=None: {
                 "first_wrong_explanation": "a", "puzzle": "b",
                 "investigation_sequence": ["c1", "c2", "c3"], "aha_setup": "d",
             },
-            assemble_story=lambda discovery, spine, dl, signal: {
+            assemble_story=lambda discovery, spine, dl, signal, claim_boundary=None: {
                 "surviving_explanation": "e",
                 "reframe": "This is a system-design problem.",
                 "remaining_uncertainty": None,
                 "business_translation": "f",
             },
-            finalize_article=lambda hook, ctx, discovery, story, spine, dl, signal, cta_mode="none": {
+            finalize_article=lambda hook, ctx, discovery, story, spine, dl, signal, cta_mode="none", claim_boundary=None: {
                 "signal_id": signal.get("SIGNAL_ID", ""),
                 "cta_mode": cta_mode,
                 "narrative_spine": "spine sentence",
