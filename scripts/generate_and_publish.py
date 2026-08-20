@@ -1379,6 +1379,14 @@ def _run(
 
         blog_body      = platforms["long"]["body"]
         linkedin_text  = platforms["medium"]["body"]
+        # The published title is the article's own hook when the composition
+        # produced one. Before this, Wix received the source signal's headline —
+        # the RSS feed's words on our page. An absent title keeps the previous
+        # behaviour rather than inventing one.
+        _composed_title = platforms["long"].get("title")
+        if _composed_title:
+            headline = _composed_title
+            print(f"  ✓  article title: {headline[:70]}")
         facebook_text  = platforms["reading"]["body"]
         instagram_text = platforms["instagram"]["body"]
         threads_seq    = _build_threads(structured)
