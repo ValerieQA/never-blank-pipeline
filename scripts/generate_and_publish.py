@@ -139,6 +139,11 @@ from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
+from src.editorial.editorial_role import (
+    EditorialRoleError,
+    render_editorial_role_rules,
+    resolve_editorial_role,
+)
 from src.editorial.pipeline import ArticleGenerationError, generate_article
 from src.editorial.decision_lens_evaluator import (
     DecisionLensEvaluator,
@@ -687,6 +692,9 @@ def _run(
                         help="run_id of the source generated.json to load (required with --from-package)")
     parser.add_argument("--legacy-package", action="store_true",
                         help="Read legacy flat artifact {signal_id}_generated.json (explicit adapter; never auto-fallback)")
+    parser.add_argument("--editorial-role", default="",
+                        help="Editorial role id declared by the business configuration; "
+                             "recorded on the run and applied to composition")
     parser.add_argument("--delete-wix-post-id",
                         help="Delete this Wix post ID before publishing (use when replacing an existing post)")
     args = parser.parse_args()
@@ -724,6 +732,28 @@ def _run(
     except (BusinessStrategyConfigurationError, StrategyExecutionError) as exc:
         print(f"  ERROR: {exc}")
         return 1
+
+    # Role selection is explicit and configuration-bound. Unknown roles stop
+    # before intake, generation, visual preparation, or publisher construction.
+    _editorial_role_identity = None
+    _editorial_role_rules = None
+    _editorial_acceptance_path = None
+    _editorial_acceptance_identity = None
+    if args.editorial_role:
+        try:
+            _editorial_role_identity, _role = resolve_editorial_role(
+                business_configuration, args.editorial_role
+            )
+        except EditorialRoleError as exc:
+            print(f"  ERROR: {exc}")
+            return 1
+        _editorial_role_rules = {
+            "long": render_editorial_role_rules(_role, surface="wix"),
+            "medium": render_editorial_role_rules(_role, surface="linkedin"),
+        }
+        _editorial_acceptance_path = _role.acceptance_rubric_path
+        _editorial_acceptance_identity = _role.acceptance_rubric_identity
+        print(f"  ✓  editorial role: {_editorial_role_identity.role_id}")
 
     active_strategy = load_active_strategy()
     if active_strategy is None:
@@ -818,6 +848,7 @@ def _run(
             configuration_identity=strategy_execution.identity,
             assignment=assignment,
             code_identity=resolve_code_identity(),
+            editorial_role=_editorial_role_identity,
         )
         write_assignment_json(
             run_dir, json.loads(_assignment_record.model_dump_json())
@@ -1370,6 +1401,7 @@ def _run(
                 linkedin_strategy=strategy_execution.linkedin,
                 audience_selection=audience_selection,
                 research_artifact=research_artifact,
+                editorial_role_rules=_editorial_role_rules,
             )
             platforms  = article["platforms"]
             structured = article["structured_article"]
@@ -1401,7 +1433,20 @@ def _run(
         # Revision touches the Wix article body only — no other channel is
         # regenerated.
         try:
-            _acceptance_rubric = EditorialAcceptanceRubric.load()
+            _acceptance_rubric = (
+                EditorialAcceptanceRubric.load(Path(_editorial_acceptance_path))
+                if _editorial_acceptance_path
+                else EditorialAcceptanceRubric.load()
+            )
+            if (
+                _editorial_acceptance_identity is not None
+                and _acceptance_rubric.identity != _editorial_acceptance_identity
+            ):
+                raise EditorialAcceptanceError(
+                    "configured editorial-role rubric identity mismatch: "
+                    f"expected {_editorial_acceptance_identity!r}, "
+                    f"loaded {_acceptance_rubric.identity!r}"
+                )
             _acceptance = run_editorial_acceptance(
                 article_body=blog_body,
                 research=research_artifact,

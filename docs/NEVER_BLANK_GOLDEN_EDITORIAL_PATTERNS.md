@@ -121,76 +121,44 @@ Wednesday run is expected to inherit the canonical Never Blank path:
 7. Cloudinary upload and recorded URLs;
 8. existing Wix and LinkedIn publishers consume the validated derivatives.
 
-Editorial role selection does not participate in that call chain on current
-`main`. Therefore no additional Wednesday visual wiring is proven necessary.
+Editorial role selection does not participate in that visual call chain.
+Therefore no additional Wednesday visual wiring is necessary.
 A future Golden-specific visual treatment would be a separate product decision;
 it must not be invented under #143, and #136 remains out of scope.
 
-## Pending shared integration
+## Canonical integration
 
-**PENDING MONDAY SEAM: generic editorial-role identity and strict resolution**
+`never-blank-wednesday-golden` is declared in the strict business strategy
+configuration and selected explicitly by the Wednesday workflow through
+`scripts/generate_and_publish.py --editorial-role`. The generic resolver fails
+closed on unknown roles. The selected `EditorialRoleIdentity` is stored in the
+immutable run-scoped `assignment.json`; a weekday is never used as evidence.
 
-Wednesday consumer: resolve `never-blank-wednesday-golden` from the accepted
-business configuration without inferring it from the weekday.
+The generic renderer carries the configured structure and prohibitions into
+the real Wix and LinkedIn composition prompts. Surface-specific rules reach
+only their own surface. The role also selects
+`never-blank-golden-wednesday-acceptance/1.0`; the entrypoint verifies that the
+loaded rubric identity matches configuration before review. Roles without a
+configured rubric retain the accepted default acceptance behavior.
 
-Expected integration after #142: reuse the accepted role model/resolver; do not
-create another identity contract.
+The dedicated workflow owns Wednesday at 06:00 America/New_York through the
+repository's two-UTC-cron DST convention and generic due check. Wednesday was
+removed, and only Wednesday was removed, from both previous shared scheduled
+publishers and from the legacy schedule configuration. Daily discovery remains
+active, but its optional non-canonical publishing stage is disabled on
+Wednesday. Tue/Thu, Monday, Friday, and Sunday schedules retain their prior
+days.
 
-**PENDING MONDAY SEAM: run-scoped role persistence**
-
-Wednesday consumer: assignment/run evidence must record the selected Wednesday
-role.
-
-Expected integration after #142: populate the accepted AssignmentRecord field
-and preserve its schema/version semantics.
-
-**PENDING MONDAY SEAM: canonical generation/composition propagation**
-
-Wednesday consumer: `WednesdayGoldenProfile.generation_rules()` must reach the
-real Wix and LinkedIn prompt path.
-
-Expected integration after #142: adapt the profile into the accepted generic
-role configuration/renderer and pass it through the canonical
-`--editorial-role` path. No competing propagation code is introduced here.
-
-**PENDING MONDAY SEAM: shared canonical entrypoint available for profile-specific acceptance selection**
-
-Wednesday consumer: the configured
-`never-blank-golden-wednesday-acceptance/1.0` artifact must replace the default
-rubric for this role only. Current `main` calls `EditorialAcceptanceRubric.load()`
-with the default path inside the same entrypoint Monday is editing.
-
-Expected integration after #142: add the narrow profile-resolved rubric path
-on the accepted shared entrypoint, while keeping the existing acceptance
-lifecycle, one-revision limit, evidence boundary, and default profile intact.
-
-**PENDING MONDAY SEAM: canonical Wednesday candidate selection wiring**
-
-Wednesday consumer: `WednesdayGoldenProfile.source_eligibility_rules()` supplies
-the declared product criteria while the selector chooses a qualifying signal
-from the canonical research queue.
-
-Expected integration after #142: reuse its accepted generic eligibility verdict
-and selector, wiring this product policy at the Wednesday workflow boundary
-without changing generic research, inventing keyword-based quality inference,
-or coupling Wednesday state to Monday. No parallel eligibility verdict or
-selector exists in this branch.
-
-**PENDING MONDAY SEAM: isolated local-time workflow and due check**
-
-Wednesday consumer: one workflow at Wednesday 06:00 America/New_York, with no
-runtime dependency on Monday, Tuesday/Thursday, or Friday.
-
-Expected integration after #142: reuse the accepted generic due-check and
-remove Wednesday only from the then-current shared schedule owners before the
-new cron is activated.
-
-The Wednesday workflow is intentionally not activated while current main still
-has two scheduled Wednesday owners. `published_signal_ids.txt` is post-run
-bookkeeping, not a race lock.
+Input remains `data/research/signals_active.jsonl`. Automatic selection chooses
+the next unused item that already carries the canonical `ARTICLE_READY=true`
+signal. It does not pretend to infer editorial quality from keywords. The
+canonical research, Decision Lens, and Golden acceptance gates must still
+authorize the run. Wednesday uses its own post-success consumption record;
+Monday success, failure, no-signal result, or marker cannot suppress Wednesday.
+The marker is bookkeeping after successful publication, never a race lock.
 
 Deterministic tests prove that the configured movement, prohibitions, title
-rules, source policy, and acceptance criteria reach the existing prompt/review
-constructors. They do not claim to judge whether arbitrary generated prose has
-achieved the Golden turn; that remains the configured editorial acceptance
-decision applied to the current run's evidence.
+rules, source policy, and acceptance criteria reach the canonical prompt/review
+boundaries. They do not claim to judge arbitrary prose by string counting; the
+configured editorial acceptance decision remains responsible for the Golden
+turn against the current run's evidence.

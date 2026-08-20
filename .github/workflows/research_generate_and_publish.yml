@@ -26,9 +26,10 @@ on:
         default: ""
         type: string
   schedule:
-    # 3am ET (EDT = UTC-4): Mon, Wed, Fri, Sun at 07:00 UTC
+    # 3am ET (EDT = UTC-4): Mon, Fri, Sun at 07:00 UTC.
+    # Wednesday is owned exclusively by wednesday_golden.yml (Issue #143).
     # During EST (winter, UTC-5) this fires at 2am ET — acceptable
-    - cron: "0 7 * * 1,3,5,0"
+    - cron: "0 7 * * 1,5,0"
 
 # Serialize publish runs to prevent concurrent writes to published_content_index.jsonl
 concurrency:

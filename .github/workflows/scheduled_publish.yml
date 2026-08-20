@@ -1,13 +1,14 @@
 name: Scheduled Publisher
 
-# Cron fires at 10:00 UTC Mon/Wed/Fri (covers both EST=UTC-5 and EDT=UTC-4).
+# Cron fires at 10:00 UTC Mon/Fri (covers both EST=UTC-5 and EDT=UTC-4).
+# Wednesday is owned exclusively by wednesday_golden.yml (Issue #143).
 # The Python script performs the authoritative timezone check and exits cleanly
 # if it is not within the configured publish window in America/New_York.
 
 on:
   schedule:
-    - cron: "0 10 * * 1,3,5"   # 10:00 UTC = 06:00 ET (DST) / 05:00 ET (std)
-    - cron: "0 11 * * 1,3,5"   # 11:00 UTC = 06:00 ET (std) / 07:00 ET (DST)
+    - cron: "0 10 * * 1,5"   # 10:00 UTC = 06:00 ET (DST) / 05:00 ET (std)
+    - cron: "0 11 * * 1,5"   # 11:00 UTC = 06:00 ET (std) / 07:00 ET (DST)
 
   workflow_dispatch:
     inputs:

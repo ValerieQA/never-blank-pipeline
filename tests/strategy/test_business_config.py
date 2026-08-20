@@ -110,7 +110,10 @@ def test_complete_contract_is_strict_immutable_and_serializable():
 
     assert configuration.configuration_id == "fictional-r1-business"
     assert configuration.channels.wix != configuration.channels.linkedin
-    assert configuration.model_dump(mode="json") == _valid_config()
+    assert configuration.model_dump(mode="json") == {
+        **_valid_config(),
+        "editorial_roles": [],
+    }
     with pytest.raises(ValidationError):
         configuration.configuration_version = "2"
 

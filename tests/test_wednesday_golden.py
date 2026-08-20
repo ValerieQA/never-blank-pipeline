@@ -1,21 +1,33 @@
-"""Issue #143 parallel phase: Never Blank Wednesday product contract.
+"""Issue #143: Never Blank Wednesday Golden stream.
 
-These tests exercise the strict product profile, deterministic eligibility
-boundary, the existing strict editorial-acceptance loader, and the real
-platform prompt constructor. They intentionally do not claim that the profile
-is selected or persisted by the canonical run yet: those integration points
-reuse the generic seam currently under review in Issue #142.
+These tests exercise the strict product profile, explicit persisted role,
+canonical composition and acceptance paths, workflow ownership, and the
+Wednesday-only product/Engine boundary.
 """
 
 from __future__ import annotations
 
 import json
+import sys
+from datetime import datetime
 from pathlib import Path
+from unittest import mock
+from zoneinfo import ZoneInfo
 
 import pytest
 import yaml
 from pydantic import ValidationError
 
+import scripts.generate_and_publish as gap
+from scripts.generate_and_publish import main
+from scripts.streams import due_check
+from scripts.streams.due_check import NOT_DUE, is_due
+from src.editorial.editorial_role import (
+    EditorialRoleError,
+    EditorialRoleIdentity,
+    render_editorial_role_rules,
+    resolve_editorial_role,
+)
 from src.editorial.editorial_acceptance import (
     EditorialAcceptanceRubric,
     _review_article,
@@ -30,6 +42,8 @@ from src.never_blank.wednesday_golden import (
 )
 from src.strategy.business_config import load_business_strategy_configuration
 from src.strategy.execution_context import StrategyExecutionContext
+from tests.test_decision_lifecycle import _entry_patches, _evaluator, _model_output
+from tests.test_research_artifact_lifecycle import ReadyProvider
 
 
 PROFILE_PATH = Path("config/never_blank/wednesday_golden.yaml")
@@ -40,6 +54,8 @@ FIXTURE_DIR = Path("tests/fixtures/golden_wednesday")
 BUSINESS_CONFIG = Path("strategy/current/business_strategy.json")
 WORKFLOW = Path(".github/workflows/wednesday_golden.yml")
 SITE = "https://www.inneros.online"
+ROLE_ID = "never-blank-wednesday-golden"
+ET = ZoneInfo("America/New_York")
 
 
 @pytest.fixture(scope="module")
@@ -58,6 +74,20 @@ def _article() -> dict:
         "echo_line": "A contextual close.",
         "cta_line": "Continue the reflection.",
     }
+
+
+def _workflow(name: str) -> dict:
+    return yaml.safe_load((Path(".github/workflows") / name).read_text())
+
+
+def _schedule(workflow: dict) -> list[str]:
+    triggers = workflow.get("on") or workflow.get(True) or {}
+    return [item["cron"] for item in (triggers.get("schedule") or [])]
+
+
+def _fires_on(cron: str, weekday: str) -> bool:
+    field = cron.split()[4]
+    return field == "*" or weekday in {item.strip() for item in field.split(",")}
 
 
 # Product structure and strictness -------------------------------------------------
@@ -128,7 +158,7 @@ def test_anti_flattening_and_title_contract_are_explicit(profile):
     assert "manufacture a contradiction" in title_text
 
 
-# Declarative source eligibility for the pending generic selector -----------------
+# Declarative source eligibility ---------------------------------------------------
 
 
 def test_policy_allows_historical_and_large_company_cases_without_same_day_news(profile):
@@ -164,6 +194,72 @@ def test_all_authorized_documented_source_classes_are_configured(profile):
     assert set(profile.source_policy.allowed_source_kinds) == set(SourceKind)
 
 
+# Generic role seam and canonical run evidence ------------------------------------
+
+
+def test_wednesday_role_resolves_explicitly_from_strict_configuration(profile):
+    configuration = load_business_strategy_configuration(BUSINESS_CONFIG)
+    identity, role = resolve_editorial_role(configuration, ROLE_ID)
+
+    assert identity == EditorialRoleIdentity(
+        role_id=ROLE_ID,
+        configuration_version=configuration.configuration_version,
+    )
+    assert role.role_id == profile.editorial_role_id
+    assert role.acceptance_rubric_path == profile.acceptance_rubric_path
+    assert role.acceptance_rubric_identity == profile.acceptance_rubric_identity
+
+
+def test_unknown_or_blank_editorial_role_fails_closed():
+    configuration = load_business_strategy_configuration(BUSINESS_CONFIG)
+    for requested in ("", "   ", "never-blank-unknown"):
+        with pytest.raises(EditorialRoleError):
+            resolve_editorial_role(configuration, requested)
+
+
+def test_canonical_entrypoint_records_role_and_routes_real_rules(tmp_path):
+    argv, patches = _entry_patches(tmp_path)
+    argv += ["--editorial-role", ROLE_ID]
+    evaluator, _ = _evaluator(_model_output())
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 0
+
+    assignment_path = next(tmp_path.glob("*/runs/*/assignment.json"))
+    assignment = json.loads(assignment_path.read_text())
+    assert assignment["schema_version"] == "1.2"
+    assert assignment["editorial_role"] == {
+        "role_id": ROLE_ID,
+        "configuration_version": load_business_strategy_configuration(
+            BUSINESS_CONFIG
+        ).configuration_version,
+    }
+
+    role_rules = patches["generate_article"].call_args.kwargs[
+        "editorial_role_rules"
+    ]
+    assert set(role_rules) == {"long", "medium"}
+    assert "obvious public interpretation X" in role_rules["long"]
+    assert "exactly one primary mechanism" in role_rules["medium"]
+    assert "evidence-grounded title tension" in role_rules["long"]
+    assert "native compressed LinkedIn" in role_rules["medium"]
+
+    rubric = patches["run_editorial_acceptance"].call_args.kwargs["rubric"]
+    assert rubric.identity == "never-blank-golden-wednesday-acceptance/1.0"
+
+
+def test_unknown_role_stops_before_generation_and_run_artifacts(tmp_path):
+    argv, patches = _entry_patches(tmp_path)
+    argv += ["--editorial-role", "never-blank-unknown"]
+    evaluator, _ = _evaluator(_model_output())
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 1
+
+    assert not patches["generate_article"].called
+    assert not list(tmp_path.glob("*/runs/*"))
+
+
 # Real existing prompt/acceptance consumers --------------------------------------
 
 
@@ -171,28 +267,39 @@ def test_golden_rules_reach_the_existing_wix_and_linkedin_prompt_constructor(pro
     execution = StrategyExecutionContext.from_configuration(
         load_business_strategy_configuration(BUSINESS_CONFIG)
     )
-    wix_rules = _wix_rules(execution.wix) + profile.generation_rules("wix")
-    linkedin_rules = _linkedin_rules(execution.linkedin) + profile.generation_rules(
-        "linkedin"
-    )
+    role = resolve_editorial_role(
+        load_business_strategy_configuration(BUSINESS_CONFIG), ROLE_ID
+    )[1]
+    wix_role = render_editorial_role_rules(role, surface="wix")
+    linkedin_role = render_editorial_role_rules(role, surface="linkedin")
 
-    wix_prompt = _build_user_prompt(_article(), "long", profile.cta_id, wix_rules)
+    wix_prompt = _build_user_prompt(
+        _article(),
+        "long",
+        profile.cta_id,
+        _wix_rules(execution.wix),
+        editorial_role_rules=wix_role,
+    )
     linkedin_prompt = _build_user_prompt(
-        _article(), "medium", profile.cta_id, linkedin_rules
+        _article(),
+        "medium",
+        profile.cta_id,
+        _linkedin_rules(execution.linkedin),
+        editorial_role_rules=linkedin_role,
     )
 
     for prompt in (wix_prompt, linkedin_prompt):
         assert "CONFIGURED CHANNEL RULES:" in prompt
-        assert "obvious_reading_x" in prompt
-        assert "overlooked_y" in prompt
-        assert "evidence_for_y" in prompt
+        assert f"EDITORIAL ROLE — {ROLE_ID}" in prompt
+        assert "obvious public interpretation X" in prompt
+        assert "overlooked Y" in prompt
+        assert "what supports Y" in prompt
         assert "exactly one primary mechanism" in prompt
         assert "5 lessons from X" in prompt
         assert "3 takeaways" in prompt
-        assert profile.text_shape.shared_discovery_key in prompt
         assert SITE in prompt
-    assert "WIX rule:" in wix_prompt
-    assert "LINKEDIN rule:" in linkedin_prompt
+    assert "evidence-grounded title tension" in wix_prompt
+    assert "native compressed LinkedIn" in linkedin_prompt
 
 
 class _AcceptingReviewer:
@@ -266,14 +373,113 @@ def test_golden_reference_fixtures_are_reasoning_annotations_not_prose_templates
     assert any("without a defensible X-to-Y" in item for item in negative["diagnosis"])
 
 
-def test_prepared_workflow_is_manual_only_and_cannot_publish():
-    workflow = yaml.load(WORKFLOW.read_text(), Loader=yaml.BaseLoader)
-    assert set(workflow["on"]) == {"workflow_dispatch"}
-    assert "schedule" not in workflow["on"]
+def test_wednesday_has_its_own_canonical_workflow_and_role():
+    workflow = _workflow("wednesday_golden.yml")
+    assert list(workflow["jobs"]) == ["wednesday-golden"]
+    assert _schedule(workflow) == ["0 10 * * 3", "0 11 * * 3"]
+
     text = WORKFLOW.read_text()
-    assert "generate_and_publish.py" not in text
+    assert "scripts/generate_and_publish.py" in text
+    assert '--editorial-role "$WEDNESDAY_ROLE"' in text
+    assert "WEDNESDAY_ROLE: never-blank-wednesday-golden" in text
+    assert "--from-package" not in text
+    assert "--legacy-package" not in text
     assert "scripts/publish.py" not in text
-    assert "python3 -m pytest tests/test_wednesday_golden.py" in text
+
+
+def test_wednesday_workflow_uses_canonical_visual_and_r1_publish_surfaces():
+    workflow = _workflow("wednesday_golden.yml")
+    steps = workflow["jobs"]["wednesday-golden"]["steps"]
+    generation = next(
+        step for step in steps
+        if str(step.get("name", "")).startswith("Wednesday Golden — Generate")
+    )
+    env = generation["env"]
+    for name in (
+        "NB_CLOUDINARY_CLOUD_NAME",
+        "NB_CLOUDINARY_API_KEY",
+        "NB_CLOUDINARY_API_SECRET",
+        "NB_WIX_API_KEY",
+        "NB_ZERNIO_API_KEY",
+    ):
+        assert name in env
+    for excluded in ("NB_META", "NB_THREADS", "NB_TELEGRAM"):
+        assert excluded not in json.dumps(env)
+
+
+def test_exactly_one_authoritative_scheduled_wednesday_publisher():
+    owners = []
+    for name in ("wednesday_golden.yml", "scheduled_publish.yml", "research_generate_and_publish.yml"):
+        if any(_fires_on(cron, "3") for cron in _schedule(_workflow(name))):
+            owners.append(name)
+    assert owners == ["wednesday_golden.yml"]
+
+    # Daily discovery still fires, but its optional non-canonical publication
+    # is deterministically disabled on Wednesday local time.
+    daily = Path(".github/workflows/daily_signal_research.yml").read_text()
+    assert 'TZ=America/New_York date +%u)" = "3"' in daily
+    assert "export NB_RESEARCH_PUBLISH_ENABLED=false" in daily
+
+
+def test_legacy_owners_remove_only_wednesday_and_preserve_other_days():
+    assert _schedule(_workflow("scheduled_publish.yml")) == [
+        "0 10 * * 1,5",
+        "0 11 * * 1,5",
+    ]
+    assert _schedule(_workflow("research_generate_and_publish.yml")) == [
+        "0 7 * * 1,5,0"
+    ]
+    schedule = yaml.safe_load(Path("config/schedule.yaml").read_text())["schedule"]
+    assert schedule["days"] == ["monday", "friday"]
+    assert schedule["time"] == "06:00"
+    assert schedule["timezone"] == "America/New_York"
+
+    visibility = _workflow("visibility_publish.yml")
+    assert _schedule(visibility) == ["0 7 * * 2", "0 7 * * 4"]
+    assert "wednesday" not in Path(
+        ".github/workflows/visibility_publish.yml"
+    ).read_text().lower()
+
+
+@pytest.mark.parametrize(
+    "moment, expected",
+    [
+        (datetime(2026, 8, 26, 6, 0, tzinfo=ET), True),
+        (datetime(2026, 1, 7, 6, 0, tzinfo=ET), True),
+        (datetime(2026, 8, 26, 6, 40, tzinfo=ET), True),
+        (datetime(2026, 8, 26, 5, 30, tzinfo=ET), False),
+        (datetime(2026, 8, 26, 7, 30, tzinfo=ET), False),
+        (datetime(2026, 8, 24, 6, 0, tzinfo=ET), False),
+    ],
+)
+def test_wednesday_dst_window(moment, expected):
+    assert is_due(moment, day="wednesday", time="06:00")[0] is expected
+
+
+def test_due_check_not_due_and_manual_force_are_unambiguous():
+    with mock.patch.object(
+        due_check,
+        "datetime",
+        mock.Mock(now=lambda tz: datetime(2026, 8, 24, 6, 0, tzinfo=tz)),
+    ):
+        assert due_check.main(
+            ["--day", "wednesday", "--time", "06:00", "--timezone", "America/New_York"]
+        ) == NOT_DUE
+    assert due_check.main(
+        [
+            "--day", "wednesday", "--time", "06:00",
+            "--timezone", "America/New_York", "--force",
+        ]
+    ) == 0
+
+
+def test_wednesday_runtime_state_is_independent_from_monday():
+    text = WORKFLOW.read_text()
+    assert "data/research/wednesday_published_signal_ids.txt" in text
+    assert "data/research/published_signal_ids.txt" not in text
+    assert "monday_selection" not in text
+    assert "select_eligible_signal.py" not in text
+    assert "never-blank-monday" not in text
 
 
 def test_wednesday_semantics_do_not_leak_into_frozen_universal_modules():
@@ -293,3 +499,28 @@ def test_wednesday_semantics_do_not_leak_into_frozen_universal_modules():
     for path in frozen_paths:
         text = path.read_text(encoding="utf-8").lower()
         assert not any(term in text for term in forbidden), path
+
+
+def test_monday_policy_was_not_imported_with_the_generic_seam():
+    changed_generic = [
+        Path("src/editorial/editorial_role.py"),
+        Path("src/editorial/platform_composer.py"),
+        Path("src/editorial/pipeline.py"),
+        Path("src/strategy/business_config.py"),
+        Path("src/intake/assignment_record.py"),
+        Path("scripts/streams/due_check.py"),
+    ]
+    forbidden = (
+        "never-blank-monday-documented-case",
+        "monday eligibility",
+        "source transparency",
+        "small-business evidence",
+    )
+    for path in changed_generic:
+        text = path.read_text().lower()
+        assert not any(term in text for term in forbidden), path
+
+    assert not Path("scripts/streams/select_eligible_signal.py").exists()
+    assert not Path("src/editorial/source_eligibility.py").exists()
+    assert not Path("src/editorial/source_transparency.py").exists()
+    assert not Path(".github/workflows/monday_publish.yml").exists()

@@ -1,8 +1,8 @@
 # Never Blank product profile: Wednesday Golden (Issue #143).
 #
 # Product semantics only. Generic editorial-role identity, run persistence,
-# pipeline propagation and scheduling hooks are supplied by the Engine seam
-# owned by Issue #142 and are intentionally not duplicated here.
+# pipeline propagation and scheduling hooks are reused from the Engine seam
+# introduced on the Issue #142 branch; none of its Monday policy is copied.
 
 profile_id: never-blank-wednesday-golden
 profile_version: "1.0"

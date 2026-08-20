@@ -87,6 +87,35 @@ class CallToAction(_ContractModel):
     rules: NonEmptyTextTuple
 
 
+class EditorialRole(_ContractModel):
+    """One configured editorial role the generic pipeline can execute.
+
+    The contract carries only portable role primitives. Product meaning stays
+    in ``business_strategy.json``: another business may declare different
+    roles, or none, without changing Engine code.
+    """
+
+    role_id: NonBlankStr
+    intent: NonBlankStr
+    structure: NonEmptyTextTuple
+    forbidden: NonEmptyTextTuple
+    wix_rules: tuple[NonBlankStr, ...] = ()
+    linkedin_rules: tuple[NonBlankStr, ...] = ()
+    acceptance_rubric_path: NonBlankStr | None = None
+    acceptance_rubric_identity: NonBlankStr | None = None
+
+    @model_validator(mode="after")
+    def _complete_acceptance_reference(self) -> "EditorialRole":
+        if (self.acceptance_rubric_path is None) != (
+            self.acceptance_rubric_identity is None
+        ):
+            raise ValueError(
+                "editorial role acceptance rubric path and identity must be "
+                "declared together"
+            )
+        return self
+
+
 class WixChannelRules(_ContractModel):
     article_rules: NonEmptyTextTuple
     metadata_rules: NonEmptyTextTuple
@@ -133,6 +162,7 @@ class BusinessStrategyConfiguration(_ContractModel):
     calls_to_action: tuple[CallToAction, ...]
     channels: ChannelRules
     prompt_rule_references: tuple[PromptRuleReference, ...]
+    editorial_roles: tuple[EditorialRole, ...] = ()
 
     @model_validator(mode="after")
     def _validate_required_collections_and_ids(self) -> "BusinessStrategyConfiguration":
@@ -145,6 +175,10 @@ class BusinessStrategyConfiguration(_ContractModel):
         for name, values in required_collections.items():
             if not values:
                 raise ValueError(f"{name} must contain at least one item")
+
+        role_ids = [role.role_id for role in self.editorial_roles]
+        if len(set(role_ids)) != len(role_ids):
+            raise ValueError("editorial role IDs must be unique")
 
         self._require_unique("product_id", self.products_services)
         self._require_unique("audience_id", self.audiences)

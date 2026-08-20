@@ -101,6 +101,7 @@ def test_assignment_record_is_persisted_strict_and_run_bound(tmp_path):
     assert set(raw) == {
         "schema_version", "run_id", "execution_mode",
         "configuration_identity", "assignment", "code_identity",
+        "editorial_role",
     }
 
 

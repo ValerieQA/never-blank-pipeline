@@ -2,14 +2,15 @@
 
 This module deliberately lives in the Never Blank product namespace.  It
 defines the configured editorial movement and the source-selection questions
-for this one product stream.  It does not define generic editorial-role
+for this one product stream. It does not define generic editorial-role
 identity, assignment persistence, scheduler semantics, or pipeline wiring;
-those shared capabilities are owned by Issue #142 while it is under review.
+Wednesday reuses those generic capabilities without importing Monday policy.
 
-The source policy is declarative. Runtime eligibility judgment is deliberately
-not implemented here because Issue #142 owns the generic verdict and selector
-seam. This module renders the product's configured criteria for that accepted
-seam without creating a parallel selection boundary.
+The source policy remains declarative. Runtime eligibility judgment is not
+implemented here: the Wednesday workflow selects a ready item from the
+canonical queue, and the existing research, Decision Lens, and configured
+Golden acceptance boundaries decide whether it may continue. No parallel
+eligibility verdict or Monday selector is introduced.
 """
 
 from __future__ import annotations
@@ -191,10 +192,10 @@ class WednesdayGoldenProfile(_ProductModel):
     def generation_rules(self, surface: Literal["wix", "linkedin"]) -> tuple[str, ...]:
         """Render deterministic product rules for the existing prompt constructor.
 
-        Issue #142 will supply the accepted generic role propagation into the
-        canonical entrypoint.  Until then this method lets the product contract
-        and existing platform prompt construction be tested without inventing
-        a competing shared seam.
+        The canonical entrypoint now carries the corresponding declared role
+        through the generic renderer. This product renderer remains useful for
+        strict profile tests and for proving equivalence of the configured
+        product contract without placing Golden vocabulary in Engine code.
         """
 
         rules = [

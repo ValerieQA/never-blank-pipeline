@@ -1,28 +1,168 @@
-name: "Wednesday Golden — contract verification (activation pending #142)"
+name: Wednesday — Never Blank Golden
 
-# Issue #143 parallel phase: manual-only and publication-safe.
-#
-# There is deliberately no schedule and no generation/publishing command while
-# current main still has two scheduled Wednesday owners and while the generic
-# editorial-role seam is unmerged. After #142 lands, this workflow will reuse
-# its accepted due check and canonical --editorial-role path, then Wednesday
-# alone will be removed from the shared owners before a cron is activated.
+# Independent Never Blank product stream (Issue #143). The generic Engine
+# resolves the explicit role; this workflow owns only Wednesday runtime.
 
 on:
+  schedule:
+    - cron: "0 10 * * 3"   # 06:00 America/New_York under EDT
+    - cron: "0 11 * * 3"   # 06:00 America/New_York under EST
   workflow_dispatch:
+    inputs:
+      signal_id:
+        description: "SIGNAL_ID (leave empty for the next unused ready Wednesday candidate)"
+        required: false
+        default: ""
+        type: string
+      dry_run:
+        description: "Generate and validate without publishing"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+
+concurrency:
+  group: never-blank-publish
+  cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  verify-wednesday-product-contract:
+  wednesday-golden:
+    name: Wednesday — Never Blank Golden
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install --quiet -r requirements.txt
-      - name: Verify Wednesday Golden product contract
-        run: python3 -m pytest tests/test_wednesday_golden.py
+
+      - name: Wednesday publish window
+        id: window
+        run: |
+          if python scripts/streams/due_check.py \
+               --day wednesday --time "$WEDNESDAY_TIME" --timezone "$WEDNESDAY_TZ" \
+               ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}; then
+            echo "due=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "due=false" >> "$GITHUB_OUTPUT"
+            echo "Not the Wednesday window — no work will run."
+          fi
+        env:
+          WEDNESDAY_TIME: "06:00"
+          WEDNESDAY_TZ: "America/New_York"
+
+      - name: Install dependencies
+        if: steps.window.outputs.due == 'true'
+        run: pip install --quiet -r requirements.txt
+
+      # Input remains the canonical signal queue. Wednesday has its own
+      # post-success marker so Monday success, failure or no-signal cannot
+      # decide which Wednesday run starts. The canonical readiness, research,
+      # Decision Lens and Golden acceptance gates still fail closed.
+      - name: Resolve Wednesday signal
+        id: resolve
+        if: steps.window.outputs.due == 'true'
+        run: |
+          SIGNAL_ID="${{ inputs.signal_id }}"
+          if [ -z "$SIGNAL_ID" ]; then
+            SIGNAL_ID=$(python - <<'PY'
+          import json
+          from pathlib import Path
+
+          active = Path("data/research/signals_active.jsonl")
+          consumed = Path("data/research/wednesday_published_signal_ids.txt")
+          done = set(consumed.read_text().splitlines()) if consumed.exists() else set()
+
+          for line in active.read_text().splitlines():
+              try:
+                  signal = json.loads(line)
+              except json.JSONDecodeError:
+                  continue
+              signal_id = str(signal.get("SIGNAL_ID", "")).strip()
+              ready = str(signal.get("ARTICLE_READY", "")).strip().lower() == "true"
+              if signal_id and ready and signal_id not in done:
+                  print(signal_id)
+                  break
+          PY
+            )
+          fi
+          if [ -z "$SIGNAL_ID" ]; then
+            echo "No unused ready Wednesday candidate — publishing nothing."
+          fi
+          echo "signal_id=$SIGNAL_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Check OpenAI secret
+        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != ''
+        run: |
+          test -n "$NB_OPENAI_API_KEY" || { echo "ERROR: NB_OPENAI_API_KEY is not set"; exit 1; }
+          echo "✓ NB_OPENAI_API_KEY = [SET]"
+        env:
+          NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
+
+      - name: Check R1 publish secrets
+        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && inputs.dry_run != 'true'
+        run: |
+          MISSING=""
+          [ -z "$NB_WIX_API_KEY" ]                && MISSING="$MISSING NB_WIX_API_KEY"
+          [ -z "$NB_WIX_SITE_ID" ]                && MISSING="$MISSING NB_WIX_SITE_ID"
+          [ -z "$NB_WIX_POST_OWNER_ID" ]          && MISSING="$MISSING NB_WIX_POST_OWNER_ID"
+          [ -z "$NB_ZERNIO_API_KEY" ]             && MISSING="$MISSING NB_ZERNIO_API_KEY"
+          [ -z "$NB_ZERNIO_LINKEDIN_ACCOUNT_ID" ] && MISSING="$MISSING NB_ZERNIO_LINKEDIN_ACCOUNT_ID"
+          [ -z "$MISSING" ] || { echo "ERROR: missing publish secrets:$MISSING"; exit 1; }
+          echo "✓ R1 publish secrets (Wix + LinkedIn) = [SET]"
+        env:
+          NB_WIX_API_KEY: ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID: ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_POST_OWNER_ID: ${{ secrets.NB_WIX_POST_OWNER_ID }}
+          NB_ZERNIO_API_KEY: ${{ secrets.NB_ZERNIO_API_KEY }}
+          NB_ZERNIO_LINKEDIN_ACCOUNT_ID: ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
+
+      - name: "Wednesday Golden — Generate + Publish ${{ steps.resolve.outputs.signal_id }}"
+        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != ''
+        env:
+          WEDNESDAY_ROLE: never-blank-wednesday-golden
+          NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_EXA_API_KEY: ${{ secrets.NB_EXA_API_KEY }}
+          NB_OPENAI_CHAT_MODEL: ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          NB_WIX_API_KEY: ${{ secrets.NB_WIX_API_KEY }}
+          NB_WIX_SITE_ID: ${{ secrets.NB_WIX_SITE_ID }}
+          NB_WIX_POST_OWNER_ID: ${{ secrets.NB_WIX_POST_OWNER_ID }}
+          NB_WIX_BLOG_CATEGORY_ID: ${{ secrets.NB_WIX_BLOG_CATEGORY_ID }}
+          NB_WIX_BLOG_TAG_IDS: ${{ secrets.NB_WIX_BLOG_TAG_IDS }}
+          NB_WIX_SITE_BASE_URL: ${{ secrets.NB_WIX_SITE_BASE_URL }}
+          NB_ZERNIO_API_KEY: ${{ secrets.NB_ZERNIO_API_KEY }}
+          NB_ZERNIO_LINKEDIN_ACCOUNT_ID: ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
+          NB_CLOUDINARY_CLOUD_NAME: ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
+          NB_CLOUDINARY_API_KEY: ${{ secrets.NB_CLOUDINARY_API_KEY }}
+          NB_CLOUDINARY_API_SECRET: ${{ secrets.NB_CLOUDINARY_API_SECRET }}
+          NB_FORCE_REGENERATE_RESEARCH_IMAGES: ${{ secrets.NB_FORCE_REGENERATE_RESEARCH_IMAGES }}
+        run: |
+          FLAGS=""
+          [ "${{ inputs.dry_run }}" = "true" ] && FLAGS="--dry-run"
+          python scripts/generate_and_publish.py \
+            --signal-id "${{ steps.resolve.outputs.signal_id }}" \
+            --editorial-role "$WEDNESDAY_ROLE" $FLAGS
+
+      - name: Mark Wednesday signal as published
+        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && success() && inputs.dry_run != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash origin main
+          echo "${{ steps.resolve.outputs.signal_id }}" >> data/research/wednesday_published_signal_ids.txt
+          git add data/research/wednesday_published_signal_ids.txt
+          git add strategy/published_content_index.jsonl 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "Publish Wednesday ${{ steps.resolve.outputs.signal_id }} [skip ci]"
+          git push
+
+      - name: Preserve canonical run evidence
+        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "wednesday-run-evidence-${{ steps.resolve.outputs.signal_id }}"
+          path: "reports/content_packages/${{ steps.resolve.outputs.signal_id }}/runs/"
+          if-no-files-found: warn
+          retention-days: 90

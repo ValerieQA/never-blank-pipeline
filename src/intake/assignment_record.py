@@ -18,18 +18,18 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from src.editorial.editorial_role import EditorialRoleIdentity
 from src.intake.content_assignment import ContentAssignment
 from src.run.code_identity import CodeIdentity
 from src.strategy.execution_context import ConfigurationIdentity
 
 
-ASSIGNMENT_RECORD_SCHEMA_VERSION = "1.1"
+ASSIGNMENT_RECORD_SCHEMA_VERSION = "1.2"
 
-#: Schema versions this contract can still read. ``1.1`` added the optional
-#: code identity (Issue #114). Earlier records are immutable create-once
-#: evidence and are never rewritten, so both shapes must stay loadable — and
-#: the version keeps recording which shape was actually written.
-KNOWN_ASSIGNMENT_RECORD_SCHEMA_VERSIONS = frozenset({"1.0", "1.1"})
+#: Schema versions this contract can still read. ``1.1`` added code identity;
+#: ``1.2`` added the optional editorial role. Immutable historical records are
+#: never rewritten, so every accepted shape stays loadable.
+KNOWN_ASSIGNMENT_RECORD_SCHEMA_VERSIONS = frozenset({"1.0", "1.1", "1.2"})
 
 
 class AssignmentRecord(BaseModel):
@@ -49,6 +49,10 @@ class AssignmentRecord(BaseModel):
     #: prove its code identity is not Story #21 acceptance evidence, and a
     #: fabricated identity would corrupt exactly the claim it supports.
     code_identity: Optional[CodeIdentity] = None
+
+    #: Explicit role identity for this run. Absent preserves legacy/default
+    #: execution; it is never inferred from a weekday or source.
+    editorial_role: Optional[EditorialRoleIdentity] = None
 
     @field_validator("schema_version")
     @classmethod
