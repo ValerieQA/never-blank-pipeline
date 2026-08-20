@@ -45,8 +45,11 @@ _BLOCK_TABLE = {
     },
 }
 
+# Release 1 product decision: the website article is one idea, not an anthology.
+# 400-600 keeps it within roughly 2x the LinkedIn artifact, so the two read as
+# the same thought at two lengths instead of two different products.
 _WORD_RANGE = {
-    "long": (700, 1000), "reading": (350, 600), "medium": (120, 220),
+    "long": (400, 600), "reading": (350, 600), "medium": (120, 220),
     "instagram": (80, 150), "short": (20, 80),
 }
 
@@ -65,8 +68,12 @@ LINKEDIN_COMPOSITION_RULES_VERSION = "linkedin-medium-native/1.0"
 
 _FORMAT_CONSTRAINTS = {
     "long": (
-        "Develop the full owner-centered argument. Corporate evidence, if present, may occupy at most "
-        "20 percent of the body. The article must remain coherent without the company example."
+        "Develop ONE central owner-centered idea with ONE primary mechanism or reframe. If the "
+        "material suggests several arguments, choose the strongest and leave the rest for other "
+        "articles. Never write a list of lessons, takeaways, or tips. Corporate evidence, if "
+        "present, may occupy at most 20 percent of the body, and the article must remain coherent "
+        "without the company example. Open with an H1 that gives a real reason to read — tension, "
+        "contradiction, or business consequence — without manufactured drama."
     ),
     # Canonical Release 1 mapping (Issue #93): ``medium`` IS the LinkedIn
     # artifact consumed by the orchestrator; ``reading`` is the non-R1
@@ -116,8 +123,12 @@ CTA and Echo:
   Do not also include the original wording.
 - If no Echo is provided, do not invent one.
 
+For the blog format, also return "title": the article's own H1 — the hook, not a
+description of the subject, and not the source headline you were given as context.
+Other formats return "title": null.
+
 Return ONLY valid JSON:
-{"body": "string", "echo_included": true|false}
+{"body": "string", "echo_included": true|false, "title": "string or null"}
 """
 
 
@@ -222,7 +233,15 @@ def _compose_one(
     lo, hi = _WORD_RANGE[format_key]
     if not (lo * 0.6 <= word_count <= hi * 1.4):
         log.warning("Platform Composer (%s): word_count=%d outside %d-%d", format_key, word_count, lo, hi)
-    return {"word_count": word_count, "body": body, "echo_included": echo_included}
+    # The blog article names itself. Publishing the source headline as the title
+    # ships the RSS feed's words instead of the article's own hook; an absent or
+    # unusable title falls back to prior behaviour rather than inventing one.
+    title = data.get("title")
+    title = title.strip() if isinstance(title, str) and title.strip() else None
+    return {
+        "word_count": word_count, "body": body,
+        "echo_included": echo_included, "title": title,
+    }
 
 
 def _wix_rules(view: "WixStrategyView | None") -> tuple[str, ...]:
