@@ -15,8 +15,15 @@ a rerun.
 Exit codes:
   0  — an eligible candidate was selected (its SIGNAL_ID is on stdout's last
        ``selected=`` line, and in the audit record)
-  3  — no eligible candidate exists; the truthful outcome is "publish
-       nothing", never "take the best ineligible one"
+  3  — the evaluated candidates were all genuinely judged ineligible, with no
+       judgment failures; the truthful outcome is "publish nothing", never
+       "take the best ineligible one". When the search was bounded by
+       ``--max-candidates`` this claims only that the evaluated set held no
+       eligible candidate — never the whole queue.
+  4  — no candidate was selected AND at least one eligibility judgment failed.
+       This is infrastructure failure, not a clean empty result: unattended
+       automation must fail visibly rather than report "nothing to publish"
+       over judgments that never completed.
   1  — the selection itself failed (bad role, unreadable queue)
 
 Rejected candidates are only ever *skipped*. Nothing here writes the
@@ -44,6 +51,7 @@ from src.strategy.business_config import load_business_strategy_configuration
 
 
 NO_ELIGIBLE = 3
+ELIGIBILITY_FAILURE = 4
 
 #: Judging a candidate costs a model call, so a single selection bounds how far
 #: down the queue it will look. Recorded in the audit when the cap is reached —
@@ -144,16 +152,48 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
         print(f"  ✗  {signal_id}: ineligible — {verdict.reason}")
 
     audit["selected_signal_id"] = selected
+    failures = sum(
+        1 for item in audit["dispositions"] if item["disposition"] == "judgment_failed"
+    )
+    evaluated = len(audit["dispositions"])
+    if selected is not None:
+        audit["outcome"] = "selected"
+    elif failures:
+        # One or more judgments never completed. "No eligible candidate" would
+        # be a claim the evidence does not support.
+        audit["outcome"] = "eligibility_failure"
+    elif audit["truncated"]:
+        audit["outcome"] = "no_eligible_in_evaluated_set"
+    else:
+        audit["outcome"] = "no_eligible_complete"
     if args.audit_out:
         out = Path(args.audit_out)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(audit, indent=2, ensure_ascii=False) + "\n")
 
-    if selected is None:
-        print("No eligible candidate — publishing nothing is the correct outcome.")
+    if selected is not None:
+        print(f"selected={selected}")
+        return 0
+    if failures:
+        print(
+            f"Eligibility infrastructure failure: {failures} of {evaluated} "
+            "judgments did not complete and no eligible candidate was selected. "
+            "This is not a clean nothing-to-publish outcome."
+        )
+        return ELIGIBILITY_FAILURE
+    if audit["truncated"]:
+        remaining = audit["candidates_available"] - evaluated
+        print(
+            f"No eligible candidate among the {evaluated} evaluated "
+            f"({remaining} unevaluated candidates remain beyond the search "
+            "bound). Publishing nothing is the correct outcome for this run."
+        )
         return NO_ELIGIBLE
-    print(f"selected={selected}")
-    return 0
+    print(
+        f"All {evaluated} unused candidates were judged ineligible — "
+        "publishing nothing is the correct outcome."
+    )
+    return NO_ELIGIBLE
 
 
 if __name__ == "__main__":  # pragma: no cover - CLI entry

@@ -282,7 +282,7 @@ def compose_platforms(
     *,
     wix_strategy: "WixStrategyView | None" = None,
     linkedin_strategy: "LinkedInStrategyView | None" = None,
-    editorial_role_rules: str | None = None,
+    editorial_role_rules: "str | dict[str, str] | None" = None,
 ) -> dict:
     result = {}
     for format_key in ("long", "reading", "medium", "instagram", "short"):
@@ -301,9 +301,15 @@ def compose_platforms(
             cta_mode=cta_mode,
             strategy_rules=strategy_rules,
             # The Release 1 published surfaces: the Wix article and the
-            # LinkedIn artifact. Other formats keep their prior prompts.
+            # LinkedIn artifact. Other formats keep their prior prompts. A
+            # mapping carries per-surface renderings; a plain string applies
+            # to both published surfaces unchanged.
             editorial_role_rules=(
-                editorial_role_rules if format_key in ("long", "medium") else None
+                editorial_role_rules.get(format_key)
+                if isinstance(editorial_role_rules, dict)
+                else (
+                    editorial_role_rules if format_key in ("long", "medium") else None
+                )
             ),
         )
         log.info("Platform Composer: %s -> %d words", format_key, result[format_key]["word_count"])

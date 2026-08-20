@@ -199,8 +199,14 @@ def test_the_role_rules_are_handed_to_generation(tmp_path):
     _, patches, _ = _run_with_role(tmp_path, MONDAY_ROLE)
 
     rules = patches["generate_article"].call_args.kwargs["editorial_role_rules"]
-    assert MONDAY_ROLE in rules
-    assert "exactly one mechanism actually visible" in rules.lower()
+    # a per-format mapping: the Wix article and the LinkedIn artifact each get
+    # their own rendering, carrying their own surface-scoped rules
+    assert set(rules) == {"long", "medium"}
+    for rendering in rules.values():
+        assert MONDAY_ROLE in rendering
+        assert "exactly one mechanism actually visible" in rendering.lower()
+    assert "sources section" in rules["long"].lower()
+    assert "compact source attribution" in rules["medium"].lower()
 
 
 # ===========================================================================
@@ -222,6 +228,18 @@ def test_the_published_surfaces_receive_the_role(format_key):
     )
 
     assert f"EDITORIAL ROLE — {MONDAY_ROLE}" in prompt
+
+
+def test_surface_rules_reach_their_surface_and_only_their_surface():
+    role = _monday_role_object()
+    wix_rendering = render_editorial_role_rules(role, surface="wix")
+    linkedin_rendering = render_editorial_role_rules(role, surface="linkedin")
+
+    assert "Sources section" in wix_rendering
+    assert "compact source attribution" in linkedin_rendering
+    # no cross-surface leak in either direction
+    assert "compact source attribution" not in wix_rendering
+    assert "Sources section" not in linkedin_rendering
 
 
 def test_the_role_reaches_composition_through_the_real_call():
@@ -871,14 +889,13 @@ def test_a_role_without_criteria_cannot_be_eligibility_judged():
 # ===========================================================================
 
 
-def test_wix_source_transparency_reaches_the_real_prompt():
-    from src.editorial.platform_composer import _wix_rules
-    from src.strategy.execution_context import StrategyExecutionContext
-
-    execution = StrategyExecutionContext.from_configuration(_configuration())
+def test_wix_source_transparency_reaches_the_monday_prompt():
     prompt = _build_user_prompt(
         {"hook": "h", "discovery": {}, "echo_line": "E."},
-        "long", "reflection", _wix_rules(execution.wix),
+        "long", "reflection", (),
+        editorial_role_rules=render_editorial_role_rules(
+            _monday_role_object(), surface="wix"
+        ),
     ).lower()
 
     assert "visible sources section" in prompt
@@ -886,18 +903,44 @@ def test_wix_source_transparency_reaches_the_real_prompt():
     assert "no source or url is ever invented" in prompt
 
 
-def test_linkedin_source_attribution_reaches_the_real_prompt():
-    from src.editorial.platform_composer import _linkedin_rules
-    from src.strategy.execution_context import StrategyExecutionContext
-
-    execution = StrategyExecutionContext.from_configuration(_configuration())
+def test_linkedin_source_attribution_reaches_the_monday_prompt():
     prompt = _build_user_prompt(
         {"hook": "h", "discovery": {}, "echo_line": "E."},
-        "medium", "reflection", _linkedin_rules(execution.linkedin),
+        "medium", "reflection", (),
+        editorial_role_rules=render_editorial_role_rules(
+            _monday_role_object(), surface="linkedin"
+        ),
     ).lower()
 
     assert "compact source attribution" in prompt
     assert "not citation-heavy prose" in prompt
+
+
+def test_monday_source_rules_do_not_leak_into_shared_channel_composition():
+    # a run without the Monday role — any other stream, today's Tue/Thu
+    # included — composes from the shared channel rules alone, and those must
+    # not have inherited Monday's #142 source semantics
+    from src.editorial.platform_composer import _linkedin_rules, _wix_rules
+    from src.strategy.execution_context import StrategyExecutionContext
+
+    execution = StrategyExecutionContext.from_configuration(_configuration())
+    article = {"hook": "h", "discovery": {}, "echo_line": "E."}
+    wix_prompt = _build_user_prompt(
+        article, "long", "reflection", _wix_rules(execution.wix)
+    ).lower()
+    linkedin_prompt = _build_user_prompt(
+        article, "medium", "reflection", _linkedin_rules(execution.linkedin)
+    ).lower()
+
+    for prompt in (wix_prompt, linkedin_prompt):
+        assert "visible sources section" not in prompt
+        assert "compact source attribution" not in prompt
+        assert "editorial role" not in prompt
+    # the shared channel configuration itself stayed as it was
+    channels = json.loads(CONFIG_PATH.read_text())["channels"]
+    shared = json.dumps(channels).lower()
+    assert "sources section" not in shared
+    assert "compact source attribution" not in shared
 
 
 # ===========================================================================
@@ -906,7 +949,7 @@ def test_linkedin_source_attribution_reaches_the_real_prompt():
 
 
 def _select(tmp_path, signals, *, verdicts, failures=None, signal_id="",
-            published=None):
+            published=None, max_candidates=None):
     active = tmp_path / "signals_active.jsonl"
     active.write_text("\n".join(json.dumps(s) for s in signals) + "\n")
     if published is None:
@@ -922,7 +965,126 @@ def _select(tmp_path, signals, *, verdicts, failures=None, signal_id="",
     ]
     if signal_id:
         argv += ["--signal-id", signal_id]
+    if max_candidates is not None:
+        argv += ["--max-candidates", str(max_candidates)]
     code = select_eligible_signal.main(
         argv, transport=PolicyTransport(verdicts, failures)
     )
     return code, json.loads(audit_path.read_text())
+
+
+# ===========================================================================
+# Selector outcomes (review round 1): failure is never a clean empty result
+# ===========================================================================
+
+
+def test_all_judgments_failing_is_infrastructure_failure_not_empty_queue(tmp_path):
+    code, audit = _select(
+        tmp_path,
+        [ELIGIBLE_FIXTURES["small"], ELIGIBLE_FIXTURES["owner_led"]],
+        verdicts={},
+        failures={"sig-small-bakery", "sig-owner-led-agency"},
+    )
+
+    assert code == select_eligible_signal.ELIGIBILITY_FAILURE
+    assert audit["outcome"] == "eligibility_failure"
+    assert audit["selected_signal_id"] is None
+
+
+def test_mixed_ineligible_and_failed_judgments_still_fail_visibly(tmp_path):
+    # one candidate genuinely ineligible, one judgment that never completed:
+    # "no eligible candidate" is a claim the evidence does not support
+    code, audit = _select(
+        tmp_path,
+        [SPACEX_FIXTURE, ELIGIBLE_FIXTURES["small"]],
+        verdicts={SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case.")},
+        failures={"sig-small-bakery"},
+    )
+
+    assert code == select_eligible_signal.ELIGIBILITY_FAILURE
+    assert audit["outcome"] == "eligibility_failure"
+
+
+def test_a_completed_all_ineligible_search_is_a_clean_empty_result(tmp_path):
+    code, audit = _select(
+        tmp_path,
+        [SPACEX_FIXTURE],
+        verdicts={SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case.")},
+    )
+
+    assert code == select_eligible_signal.NO_ELIGIBLE
+    assert audit["outcome"] == "no_eligible_complete"
+    assert audit["truncated"] is False
+
+
+def test_a_truncated_all_ineligible_search_does_not_claim_the_whole_queue(tmp_path):
+    fixtures = [SPACEX_FIXTURE, ELIGIBLE_FIXTURES["small"]]
+
+    code, audit = _select(
+        tmp_path, fixtures,
+        verdicts={SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case.")},
+        max_candidates=1,
+    )
+
+    # still a clean nothing-to-publish for THIS run — but the audit says the
+    # search was bounded, not that the queue holds nothing eligible
+    assert code == select_eligible_signal.NO_ELIGIBLE
+    assert audit["outcome"] == "no_eligible_in_evaluated_set"
+    assert audit["truncated"] is True
+    assert audit["candidates_available"] == 2
+    assert len(audit["dispositions"]) == 1
+
+
+def test_a_failed_judgment_followed_by_an_eligible_candidate_still_selects(tmp_path):
+    code, audit = _select(
+        tmp_path,
+        [ELIGIBLE_FIXTURES["small"], ELIGIBLE_FIXTURES["owner_led"]],
+        verdicts={"sig-owner-led-agency": (True, "Documented owner-led case.")},
+        failures={"sig-small-bakery"},
+    )
+
+    assert code == 0
+    assert audit["outcome"] == "selected"
+    assert audit["selected_signal_id"] == "sig-owner-led-agency"
+
+
+def test_the_workflow_fails_visibly_on_eligibility_failure():
+    resolve = _monday_step("Select eligible signal")["run"]
+
+    # exit 3 alone becomes a green nothing-to-publish; every other nonzero
+    # code — 4 included — propagates and fails the run
+    assert 'if [ "$RC" = "3" ]' in resolve
+    assert 'exit "$RC"' in resolve
+    assert '"$RC" = "4"' not in resolve  # no special-casing failure into success
+
+
+# ===========================================================================
+# R1 publish secrets (review round 1): Wix + LinkedIn only
+# ===========================================================================
+
+
+def test_the_required_publish_secrets_are_wix_and_linkedin_only():
+    gate = _monday_step("Check publish secrets")["run"]
+
+    for required in ("NB_WIX_API_KEY", "NB_WIX_SITE_ID", "NB_WIX_POST_OWNER_ID",
+                     "NB_ZERNIO_API_KEY", "NB_ZERNIO_LINKEDIN_ACCOUNT_ID"):
+        assert required in gate
+    # a missing non-R1 credential must never block a Monday Wix/LinkedIn run
+    text = (WORKFLOWS / "monday_publish.yml").read_text()
+    for absent in ("NB_META_FB_PAGE_ID", "NB_META_FB_PAGE_TOKEN",
+                   "NB_META_IG_USER_ID", "NB_THREADS_ACCESS_TOKEN",
+                   "NB_TELEGRAM_BOT_TOKEN", "NB_TELEGRAM_CHANNEL_ID"):
+        assert absent not in text
+
+
+def test_the_execution_step_keeps_the_credentials_the_r1_path_needs():
+    env = _monday_step(
+        "Monday — Generate + Publish ${{ steps.resolve.outputs.signal_id }}"
+    )["env"]
+
+    for required in ("NB_OPENAI_API_KEY", "NB_EXA_API_KEY", "NB_WIX_API_KEY",
+                     "NB_WIX_SITE_ID", "NB_WIX_POST_OWNER_ID", "NB_WIX_SITE_BASE_URL",
+                     "NB_ZERNIO_API_KEY", "NB_ZERNIO_LINKEDIN_ACCOUNT_ID",
+                     "NB_CLOUDINARY_CLOUD_NAME", "NB_CLOUDINARY_API_KEY",
+                     "NB_CLOUDINARY_API_SECRET"):
+        assert required in env, required

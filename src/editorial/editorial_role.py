@@ -69,12 +69,17 @@ def resolve_editorial_role(
     )
 
 
-def render_editorial_role_rules(role: EditorialRole) -> str:
+def render_editorial_role_rules(
+    role: EditorialRole, surface: str | None = None
+) -> str:
     """Render a declared role as deterministic prompt text.
 
     Structure and prohibitions travel together: a structure without its
     prohibitions is an invitation to produce the shape the role exists to
-    avoid.
+    avoid. ``surface`` ("wix" or "linkedin") appends that surface's
+    role-scoped rules — rules that belong to this role only, deliberately not
+    written into the shared channel configuration where every other stream
+    would inherit them.
     """
 
     lines = [
@@ -87,5 +92,12 @@ def render_editorial_role_rules(role: EditorialRole) -> str:
     lines.append("")
     lines.append("Never do any of the following:")
     lines.extend(f"- {item}" for item in role.forbidden)
+    surface_rules = {
+        "wix": role.wix_rules, "linkedin": role.linkedin_rules,
+    }.get(surface or "", ())
+    if surface_rules:
+        lines.append("")
+        lines.append("For this surface:")
+        lines.extend(f"- {item}" for item in surface_rules)
     lines.append("")
     return "\n".join(lines)

@@ -105,6 +105,12 @@ class EditorialRole(_ContractModel):
     #: behaviour. The criteria are policy text the configured business owns;
     #: the engine only carries them to the judgment that applies them.
     eligibility_criteria: tuple[NonBlankStr, ...] = ()
+    #: Surface-scoped additions a role may make to its own composition rules
+    #: (Issue #142 review round 1). These belong to the ROLE, not to the
+    #: shared channel configuration: a role-specific requirement placed on
+    #: ``channels.*`` would silently change every other stream's output.
+    wix_rules: tuple[NonBlankStr, ...] = ()
+    linkedin_rules: tuple[NonBlankStr, ...] = ()
 
 
 class WixChannelRules(_ContractModel):

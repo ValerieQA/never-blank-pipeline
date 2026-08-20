@@ -251,9 +251,7 @@
       "link_rules": [
         "Preserve source attribution for factual claims.",
         "Use internal links only when the destination is relevant and verified.",
-        "Do not publish empty, placeholder, malformed, or unverified links.",
-        "Materially verifiable external claims keep publishable provenance: the article carries a visible Sources section and/or appropriate inline source links naming where the facts came from.",
-        "Attribution never substitutes for verification, and no source or URL is ever invented."
+        "Do not publish empty, placeholder, malformed, or unverified links."
       ],
       "cta_rules": [
         "Follow the configured CTA mode exactly.",
@@ -289,8 +287,7 @@
       "link_rules": [
         "Use the verified Wix article URL when the composition calls for a link.",
         "Place source or article links according to the approved composition without placeholder URLs.",
-        "Do not report a generic LinkedIn feed URL as the created publication URL.",
-        "Carry compact source attribution sufficient to identify the source case — one clear reference, not citation-heavy prose."
+        "Do not report a generic LinkedIn feed URL as the created publication URL."
       ],
       "cta_rules": [
         "Follow the configured CTA mode exactly.",
@@ -380,6 +377,13 @@
         "Ineligible: current large-company or public-company/major-corporate behaviour, however recognizable the company or interesting the analogy.",
         "Ineligible: any case whose connection to an owner-led/small-business audience exists only by analogy.",
         "Ineligible: any case whose business scale, stage, or ownership the available material does not establish. Unknown is ineligible; never classify an unestablished company as small."
+      ],
+      "wix_rules": [
+        "Materially verifiable external claims keep publishable provenance: the article carries a visible Sources section and/or appropriate inline source links naming where the facts came from.",
+        "Attribution never substitutes for verification, and no source or URL is ever invented."
+      ],
+      "linkedin_rules": [
+        "Carry compact source attribution sufficient to identify the source case — one clear reference, not citation-heavy prose."
       ]
     }
   ]

@@ -70,7 +70,7 @@ def generate_article(
     linkedin_strategy: LinkedInStrategyView | None = None,
     audience_selection: AudienceSelection | None = None,
     research_artifact: NormalizedResearchArtifact | None = None,
-    editorial_role_rules: str | None = None,
+    editorial_role_rules: "str | dict[str, str] | None" = None,
 ) -> dict:
     """
     Run the full Editorial Engine V2 pipeline for one enriched signal.

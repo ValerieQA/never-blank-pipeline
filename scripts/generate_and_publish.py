@@ -748,7 +748,14 @@ def _run(
         except EditorialRoleError as exc:
             print(f"  ERROR: {exc}")
             return 1
-        _editorial_role_rules = render_editorial_role_rules(_role)
+        # Per-format rendering: the role's surface-scoped rules reach exactly
+        # the surface they are for. ``long`` is the Wix article and ``medium``
+        # the LinkedIn artifact — the same mapping this entrypoint already
+        # relies on when it publishes them.
+        _editorial_role_rules = {
+            "long": render_editorial_role_rules(_role, surface="wix"),
+            "medium": render_editorial_role_rules(_role, surface="linkedin"),
+        }
         print(f"  ✓  editorial role: {_editorial_role_identity.role_id}")
 
     active_strategy = load_active_strategy()

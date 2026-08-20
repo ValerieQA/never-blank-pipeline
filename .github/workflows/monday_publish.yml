@@ -104,10 +104,15 @@ jobs:
           RC=${PIPESTATUS[0]}
           set -e
           if [ "$RC" = "3" ]; then
+            # A completed all-ineligible search: publishing nothing is the
+            # correct outcome, and the run stays green.
             echo "signal_id=" >> $GITHUB_OUTPUT
             echo "No eligible Monday candidate — publishing nothing."
             exit 0
           elif [ "$RC" != "0" ]; then
+            # Exit 4 (eligibility infrastructure failure) and any other error
+            # fail the run visibly — never converted into a quiet
+            # "nothing to publish".
             exit "$RC"
           fi
           SIGNAL_ID=$(grep '^selected=' selection.log | tail -1 | cut -d= -f2)
@@ -134,7 +139,9 @@ jobs:
         env:
           NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
 
-      # Only required when publishing (dry_run=false)
+      # Release 1 Monday publishes Wix + LinkedIn only. Required secrets are
+      # exactly those two surfaces' — a missing Meta/Threads/Telegram credential
+      # must never block a valid Monday run.
       - name: Check publish secrets
         if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && (inputs.dry_run != 'true')
         run: |
@@ -144,29 +151,17 @@ jobs:
           [ -z "$NB_WIX_POST_OWNER_ID" ]          && MISSING="$MISSING NB_WIX_POST_OWNER_ID"
           [ -z "$NB_ZERNIO_API_KEY" ]             && MISSING="$MISSING NB_ZERNIO_API_KEY"
           [ -z "$NB_ZERNIO_LINKEDIN_ACCOUNT_ID" ] && MISSING="$MISSING NB_ZERNIO_LINKEDIN_ACCOUNT_ID"
-          [ -z "$NB_META_FB_PAGE_ID" ]            && MISSING="$MISSING NB_META_FB_PAGE_ID"
-          [ -z "$NB_META_FB_PAGE_TOKEN" ]         && MISSING="$MISSING NB_META_FB_PAGE_TOKEN"
-          [ -z "$NB_META_IG_USER_ID" ]            && MISSING="$MISSING NB_META_IG_USER_ID"
-          [ -z "$NB_THREADS_ACCESS_TOKEN" ]       && MISSING="$MISSING NB_THREADS_ACCESS_TOKEN"
-          [ -z "$NB_TELEGRAM_BOT_TOKEN" ]         && MISSING="$MISSING NB_TELEGRAM_BOT_TOKEN"
-          [ -z "$NB_TELEGRAM_CHANNEL_ID" ]        && MISSING="$MISSING NB_TELEGRAM_CHANNEL_ID"
           if [ -n "$MISSING" ]; then
             echo "ERROR: missing publish secrets:$MISSING"
             exit 1
           fi
-          echo "✓ All publish secrets = [SET]"
+          echo "✓ R1 publish secrets (Wix + LinkedIn) = [SET]"
         env:
           NB_WIX_API_KEY:                 ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID:                 ${{ secrets.NB_WIX_SITE_ID }}
           NB_WIX_POST_OWNER_ID:           ${{ secrets.NB_WIX_POST_OWNER_ID }}
           NB_ZERNIO_API_KEY:              ${{ secrets.NB_ZERNIO_API_KEY }}
           NB_ZERNIO_LINKEDIN_ACCOUNT_ID:  ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
-          NB_META_FB_PAGE_ID:             ${{ secrets.NB_META_FB_PAGE_ID }}
-          NB_META_FB_PAGE_TOKEN:          ${{ secrets.NB_META_FB_PAGE_TOKEN }}
-          NB_META_IG_USER_ID:             ${{ secrets.NB_META_IG_USER_ID }}
-          NB_THREADS_ACCESS_TOKEN:        ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
-          NB_TELEGRAM_BOT_TOKEN:          ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
-          NB_TELEGRAM_CHANNEL_ID:         ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
 
       - name: "Monday — Generate + Publish ${{ steps.resolve.outputs.signal_id }}"
         if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != ''
@@ -187,12 +182,6 @@ jobs:
           NB_WIX_SITE_BASE_URL:           ${{ secrets.NB_WIX_SITE_BASE_URL }}
           NB_ZERNIO_API_KEY:              ${{ secrets.NB_ZERNIO_API_KEY }}
           NB_ZERNIO_LINKEDIN_ACCOUNT_ID:  ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
-          NB_META_FB_PAGE_ID:             ${{ secrets.NB_META_FB_PAGE_ID }}
-          NB_META_FB_PAGE_TOKEN:          ${{ secrets.NB_META_FB_PAGE_TOKEN }}
-          NB_META_IG_USER_ID:             ${{ secrets.NB_META_IG_USER_ID }}
-          NB_THREADS_ACCESS_TOKEN:        ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
-          NB_TELEGRAM_BOT_TOKEN:          ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
-          NB_TELEGRAM_CHANNEL_ID:         ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
           NB_CLOUDINARY_CLOUD_NAME:       ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
           NB_CLOUDINARY_API_KEY:          ${{ secrets.NB_CLOUDINARY_API_KEY }}
           NB_CLOUDINARY_API_SECRET:       ${{ secrets.NB_CLOUDINARY_API_SECRET }}
