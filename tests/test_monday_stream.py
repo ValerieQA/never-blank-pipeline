@@ -1991,3 +1991,208 @@ def test_verification_is_against_independent_values_not_self_claims():
             signal_id="sig-1", role_id=MONDAY_ROLE, configuration_version="1",
             configuration_identity=identity, research_readiness="ready",
         )
+
+
+# ===========================================================================
+# Sources of record reach the writers (#155)
+# ===========================================================================
+#
+# The role required attribution; nothing told the writer what to attribute,
+# because the rules were rendered before research existed. Live run
+# 32416078767 produced an accepted article naming no source and was stopped by
+# the transparency gate. These regressions prove the run's real sources now
+# reach both surfaces and survive the single controlled revision — through the
+# real generation and acceptance paths, not constructors.
+
+from src.editorial.editorial_acceptance import (
+    EditorialAcceptanceRubric,
+    run_editorial_acceptance,
+)
+from src.editorial.sources_of_record import render_sources_of_record, source_records
+from tests import test_editorial_acceptance as acceptance_fixtures
+
+RUBRIC = EditorialAcceptanceRubric.load()
+
+
+def _captured_role_rules(tmp_path):
+    """Run the real entrypoint and return the rules each surface received."""
+
+    argv, patches = _entry_patches(tmp_path)
+    generated = mock.MagicMock(return_value=_attributed_article())
+    patches["generate_article"] = generated
+    argv = argv + ["--editorial-role", MONDAY_ROLE]
+    evaluator, _ = _evaluator(_model_output())
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+    return code, generated.call_args.kwargs["editorial_role_rules"]
+
+
+def test_monday_wix_receives_the_runs_actual_source_identity(tmp_path):
+    code, rules = _captured_role_rules(tmp_path)
+
+    assert code == 0
+    wix = rules["long"]
+    assert "SOURCES OF RECORD" in wix
+    # the run's real source, field by field, from the persisted artifact
+    assert "Verified report" in wix
+    assert "https://source.example/report" in wix
+    assert "Sources section" in wix
+
+
+def test_monday_linkedin_receives_compact_attribution_instructions(tmp_path):
+    _, rules = _captured_role_rules(tmp_path)
+
+    medium = rules["medium"]
+    assert "Verified report" in medium
+    assert "https://source.example/report" in medium
+    assert "compactly" in medium
+    assert "citation-heavy prose" in medium
+    # the article-only Sources-section requirement does not leak to LinkedIn
+    assert "close the article with a short Sources section" not in medium
+
+
+def test_the_block_carries_only_what_the_artifact_holds():
+    # the fixture artifact has no publisher: the block contributes exactly the
+    # title and URL it holds — nothing completed, guessed or substituted
+    rendered = render_sources_of_record(_research_artifact(), surface="wix")
+
+    assert "Small-business operating constraints" in rendered
+    assert "https://advocacy.sba.gov/report" in rendered
+    assert "never invent, guess, complete, or substitute" in rendered
+
+
+def test_source_records_never_exceed_the_artifact():
+    records = source_records(_research_artifact())
+
+    assert len(records) == 1
+    record = records[0]
+    assert record["source_id"] == "source-sba"
+    assert record["title"] == "Small-business operating constraints"
+    assert record["url"] == "https://advocacy.sba.gov/report"
+    # only the keys the artifact actually populated
+    assert set(record) <= {"source_id", "title", "publisher", "url"}
+
+
+def test_the_controlled_revision_receives_the_sources_of_record():
+    reviewer = acceptance_fixtures.FakeReviewTransport(
+        acceptance_fixtures._review_payload(  # noqa: SLF001
+            disposition="revise", failed=["evidence-use"], guidance="Tighten it.",
+        ),
+        acceptance_fixtures._review_payload(),  # noqa: SLF001
+    )
+    revisor = acceptance_fixtures.FakeRevisionTransport(ATTRIBUTED_BODY)
+
+    outcome = run_editorial_acceptance(
+        article_body=ATTRIBUTED_BODY, research=_research_artifact(),
+        run_id="run-1", rubric=RUBRIC, reviewer=reviewer, revisor=revisor,
+        sources_of_record=render_sources_of_record(
+            _research_artifact(), surface="wix"
+        ),
+    )
+
+    assert outcome.accepted
+    request = json.loads(revisor.calls[0]["request"])
+    assert "SBA Office of Advocacy" in request["sources_of_record"]
+    assert "must still name them after your revision" in request["note"]
+
+
+def test_the_revision_prompt_is_unchanged_without_sources_of_record():
+    reviewer = acceptance_fixtures.FakeReviewTransport(
+        acceptance_fixtures._review_payload(  # noqa: SLF001
+            disposition="revise", failed=["evidence-use"], guidance="Tighten it.",
+        ),
+        acceptance_fixtures._review_payload(),  # noqa: SLF001
+    )
+    revisor = acceptance_fixtures.FakeRevisionTransport(ATTRIBUTED_BODY)
+
+    run_editorial_acceptance(
+        article_body=ATTRIBUTED_BODY, research=_research_artifact(),
+        run_id="run-1", rubric=RUBRIC, reviewer=reviewer, revisor=revisor,
+    )
+
+    request = json.loads(revisor.calls[0]["request"])
+    assert "sources_of_record" not in request
+    assert "must still name them" not in request["note"]
+
+
+def test_a_revision_that_keeps_attribution_passes_the_transparency_gate(tmp_path):
+    # the end-to-end shape of the live failure, now succeeding: revise → the
+    # revised body keeps the run's real attribution → publication proceeds
+    revised = (
+        "A documented owner-led case. According to Verified report, the "
+        "constraint is real. Sources: Verified report "
+        "(https://source.example/report)."
+    )
+    article = _attributed_article()
+    article["platforms"]["long"]["body"] = "An unattributed first draft."
+    article["platforms"]["medium"]["body"] = (
+        "Per Verified report, the constraint is real."
+    )
+
+    argv, patches = _entry_patches(tmp_path)
+    patches["generate_article"] = mock.MagicMock(return_value=article)
+    argv = argv + ["--editorial-role", MONDAY_ROLE]
+    evaluator, _ = _evaluator(_model_output())
+    reviewer = acceptance_fixtures.FakeReviewTransport(
+        acceptance_fixtures._review_payload(  # noqa: SLF001
+            disposition="revise", failed=["evidence-use"], guidance="Attribute it.",
+        ),
+        acceptance_fixtures._review_payload(),  # noqa: SLF001
+    )
+    revisor = acceptance_fixtures.FakeRevisionTransport(revised)
+    del patches["run_editorial_acceptance"]  # exercise the real gate
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main(
+            research_provider=ReadyProvider(), decision_evaluator=evaluator,
+            editorial_reviewer=reviewer, article_revisor=revisor,
+        )
+
+    assert code == 0  # transparency gate satisfied by the revised body
+    generated = json.loads(next(tmp_path.glob("*/runs/*/generated.json")).read_text())
+    assert "Verified report" in generated["blog_article"]
+
+
+def test_a_revision_that_strips_attribution_is_still_blocked(tmp_path):
+    # the reviser is told to keep it; if it strips it anyway, the unchanged
+    # gate still refuses — this correction adds instruction, not permission
+    article = _attributed_article()
+    argv, patches = _entry_patches(tmp_path, dry_run=False)
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    patches["generate_article"] = mock.MagicMock(return_value=article)
+    argv = argv + ["--editorial-role", MONDAY_ROLE]
+    evaluator, _ = _evaluator(_model_output())
+    reviewer = acceptance_fixtures.FakeReviewTransport(
+        acceptance_fixtures._review_payload(  # noqa: SLF001
+            disposition="revise", failed=["evidence-use"], guidance="Tighten.",
+        ),
+        acceptance_fixtures._review_payload(),  # noqa: SLF001
+    )
+    revisor = acceptance_fixtures.FakeRevisionTransport(
+        "A tightened article that no longer names any source."
+    )
+    del patches["run_editorial_acceptance"]
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main(
+            research_provider=ReadyProvider(), decision_evaluator=evaluator,
+            editorial_reviewer=reviewer, article_revisor=revisor,
+        )
+
+    assert code == 1
+    assert not patches["WixPublisher"].called
+    assert not patches["append_published_entry"].called
+
+
+def test_a_role_without_source_transparency_receives_no_sources_block(tmp_path):
+    # non-Monday behaviour: no role → no role rules at all, unchanged path
+    argv, patches = _entry_patches(tmp_path)
+    generated = mock.MagicMock(return_value=_attributed_article())
+    patches["generate_article"] = generated
+    evaluator, _ = _evaluator(_model_output())
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 0
+
+    assert generated.call_args.kwargs["editorial_role_rules"] is None
