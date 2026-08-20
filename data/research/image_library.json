@@ -653,5 +653,35 @@
     "visual_family": "sand_pause_card",
     "design_version": "3",
     "hook_text": "Most people lose their job and panic. He lost his job and baked $85,000 worth of bagels in his kitchen."
+  },
+  "ee22ba8ea360dec3": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215423/never-blank/posts/research/ee22ba8ea360dec3/blog/1787215422.png",
+    "signal_type": "platform reach change for small business",
+    "headline": "Meta AI Adds Small Business Tools for Ads, Analytics and Reports",
+    "created_at": "2026-08-20",
+    "method": "quote_card",
+    "visual_family": "dark_insight_card",
+    "design_version": "3",
+    "hook_text": "When every small business runs on the same AI, the only thing left to optimize is your sameness."
+  },
+  "e54608b23609bdfe": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215478/never-blank/posts/research/e54608b23609bdfe/blog/1787215476.png",
+    "signal_type": "trust accumulation pattern",
+    "headline": "Brands at Risk: New Report Reveals Hidden Costs of Data Fragmentation",
+    "created_at": "2026-08-20",
+    "method": "gpt-image-1",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "Data fragmentation costs brands trust and integrity."
+  },
+  "c9e4081138032ab2": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215556/never-blank/posts/research/c9e4081138032ab2/blog/1787215556.png",
+    "signal_type": "visibility interruption",
+    "headline": "ChatGPT Is an Advertising Platform Now. Here’s What That Means for Your Business.",
+    "created_at": "2026-08-20",
+    "method": "gpt-image-1",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "ChatGPT transforms into an advertising platform for businesses."
   }
 }

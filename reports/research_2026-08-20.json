@@ -1,0 +1,324 @@
+{
+  "date": "2026-08-20",
+  "candidates_found": 6,
+  "duplicates_skipped": 0,
+  "new_signals_added": 6,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Meta AI Adds Small Business Tools for Ads, Analytics and Reports",
+    "Brands at Risk: New Report Reveals Hidden Costs of Data Fragmentation",
+    "ChatGPT Is an Advertising Platform Now. Here\u2019s What That Means for Your Business"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "ee22ba8ea360dec3",
+      "headline": "Meta AI Adds Small Business Tools for Ads, Analytics and Reports",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'every time your marketing blends in, you pay twice: once for the ad, and again when no one remembers it was yours.'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "publish_failures": [
+    "editorial_gate: Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'every time your marketing blends in, you pay twice: once for the ad, and again when no one remembers it was yours.'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "ee22ba8ea360dec3",
+      "HEADLINE": "Meta AI Adds Small Business Tools for Ads, Analytics and Reports",
+      "prepared_at": "2026-08-20 08:43 UTC",
+      "content": {
+        "blog": {
+          "headline": "Meta\u2019s AI Tools for Small Business: Efficiency at the Cost of Differentiation",
+          "angle": "Meta\u2019s launch of AI-powered ads and analytics tools promises efficiency for small businesses but raises the risk of losing unique brand identity; founders must balance adopting these tools with maintaining distinctiveness to avoid blending into the platform\u2019s uniformity."
+        },
+        "linkedin": {
+          "headline": "When every small business runs on the same AI, the only thing left to optimize is your sameness.",
+          "angle": "Meta\u2019s AI tools simplify marketing and analytics for small businesses, but founders face a trade-off between operational efficiency and preserving their unique market position."
+        },
+        "facebook": {
+          "headline": "Meta just rolled out AI tools to help small businesses with ads and analytics. But is this a shortcut to success or a fast track to blending in?",
+          "angle": "Meta\u2019s new AI features promise easier marketing for small businesses\u2014so how do founders avoid losing their edge when everyone\u2019s using the same tools?"
+        },
+        "instagram": {
+          "headline": "AI Tools: Efficiency or Sameness?",
+          "angle": "Meta\u2019s AI-driven marketing tools make small business operations smoother, but founders risk turning their brands into indistinguishable copies."
+        },
+        "threads": {
+          "thread_hook": "Meta\u2019s AI tools for small businesses are everywhere. But is this the start of smarter marketing or just more sameness?",
+          "angle": "The thread breaks down how Meta\u2019s AI offerings simplify ads and analytics but also pressure founders to rethink how they maintain brand distinction in a homogenized platform environment."
+        },
+        "stories": {
+          "story_question": "Are Meta\u2019s AI tools helping your business\u2014or making it just another face in the crowd?",
+          "angle": "Explores the tension founders face between gaining efficiency through AI and risking loss of unique brand identity on dominant platforms."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215423/never-blank/posts/research/ee22ba8ea360dec3/blog/1787215422.png",
+            "path": "reports/content_packages/images/ee22ba8ea360dec3_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215424/never-blank/posts/research/ee22ba8ea360dec3/linkedin/1787215424.png",
+            "path": "reports/content_packages/images/ee22ba8ea360dec3_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215425/never-blank/posts/research/ee22ba8ea360dec3/facebook/1787215424.png",
+            "path": "reports/content_packages/images/ee22ba8ea360dec3_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215426/never-blank/posts/research/ee22ba8ea360dec3/instagram/1787215426.png",
+            "path": "reports/content_packages/images/ee22ba8ea360dec3_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215427/never-blank/posts/research/ee22ba8ea360dec3/threads/1787215427.png",
+            "path": "reports/content_packages/images/ee22ba8ea360dec3_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215428/never-blank/posts/research/ee22ba8ea360dec3/stories/1787215428.png",
+            "path": "reports/content_packages/images/ee22ba8ea360dec3_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "dark_insight_card",
+        "hook_text": "When every small business runs on the same AI, the only thing left to optimize is your sameness."
+      }
+    },
+    {
+      "SIGNAL_ID": "e54608b23609bdfe",
+      "HEADLINE": "Brands at Risk: New Report Reveals Hidden Costs of Data Fragmentation",
+      "prepared_at": "2026-08-20 08:45 UTC",
+      "content": {
+        "blog": {
+          "headline": "Brands at Risk: The Hidden Price of Ignoring Data Fragmentation",
+          "angle": "Data fragmentation forces brands into a costly catch-up game, risking trust and efficiency; founders must confront integration challenges head-on to protect their business\u2019s core value."
+        },
+        "linkedin": {
+          "headline": "Most brands don\u2019t notice the damage until the trust is already gone.",
+          "angle": "Data fragmentation isn\u2019t just a technical headache\u2014it quietly erodes brand integrity and operational efficiency, threatening long-term growth."
+        },
+        "facebook": {
+          "headline": "Data fragmentation is draining your brand\u2019s value\u2014are you aware?",
+          "angle": "A new report exposes hidden costs brands face from fragmented data systems; how are you addressing this silent threat before trust slips away?"
+        },
+        "instagram": {
+          "headline": "Data Fragmentation: The Invisible Brand Killer",
+          "angle": "Ignoring fragmented data systems invites hidden risks that chip away at customer trust and operational strength."
+        },
+        "threads": {
+          "thread_hook": "Data fragmentation isn\u2019t just messy\u2014it\u2019s quietly bleeding your brand dry.",
+          "angle": "This thread breaks down why patchwork fixes fail, how hidden costs accumulate, and what founders must do to safeguard brand trust and efficiency."
+        },
+        "stories": {
+          "story_question": "Is your brand losing trust without you realizing it?",
+          "angle": "Exploring how fragmented data systems create unseen risks that can erode customer confidence and operational control."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215478/never-blank/posts/research/e54608b23609bdfe/blog/1787215476.png",
+            "path": "reports/content_packages/images/e54608b23609bdfe_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215482/never-blank/posts/research/e54608b23609bdfe/linkedin/1787215482.png",
+            "path": "reports/content_packages/images/e54608b23609bdfe_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215485/never-blank/posts/research/e54608b23609bdfe/facebook/1787215485.png",
+            "path": "reports/content_packages/images/e54608b23609bdfe_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215492/never-blank/posts/research/e54608b23609bdfe/instagram/1787215492.png",
+            "path": "reports/content_packages/images/e54608b23609bdfe_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215498/never-blank/posts/research/e54608b23609bdfe/threads/1787215498.png",
+            "path": "reports/content_packages/images/e54608b23609bdfe_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215506/never-blank/posts/research/e54608b23609bdfe/stories/1787215506.png",
+            "path": "reports/content_packages/images/e54608b23609bdfe_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Data fragmentation costs brands trust and integrity."
+      }
+    },
+    {
+      "SIGNAL_ID": "c9e4081138032ab2",
+      "HEADLINE": "ChatGPT Is an Advertising Platform Now. Here\u2019s What That Means for Your Business.",
+      "prepared_at": "2026-08-20 08:46 UTC",
+      "content": {
+        "blog": {
+          "headline": "ChatGPT Just Became an Ad Platform. Here\u2019s Why That Changes Everything for Founders.",
+          "angle": "OpenAI\u2019s move to embed ads in ChatGPT creates tension between monetization and user trust, forcing founders to rethink how they engage audiences without breaking the conversational flow or credibility."
+        },
+        "linkedin": {
+          "headline": "The next time you ask ChatGPT for advice, it might be selling you something.",
+          "angle": "AI platforms turning into ad channels shift the rules of engagement, demanding founders balance innovation with preserving trust to stay relevant."
+        },
+        "facebook": {
+          "headline": "ChatGPT is no longer just a chatbot\u2014it\u2019s an advertising platform. What does that mean for your business?",
+          "angle": "OpenAI\u2019s ad integration in ChatGPT raises the stakes for brands: How do you advertise without alienating users? Is your business ready for this new trust test?"
+        },
+        "instagram": {
+          "headline": "ChatGPT: From Chatbot to Ad Platform",
+          "angle": "When AI conversations carry ads, founders must rethink how to keep user trust while innovating their marketing."
+        },
+        "threads": {
+          "thread_hook": "ChatGPT just flipped the script\u2014it\u2019s now an advertising platform, not just a chatbot.",
+          "angle": "This thread breaks down why founders can\u2019t treat AI ads like traditional ones and how trust becomes the new currency in conversational marketing."
+        },
+        "stories": {
+          "story_question": "What happens when ChatGPT starts selling instead of just helping?",
+          "angle": "Exploring the tension between monetizing AI conversations and maintaining user trust in a new advertising landscape."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215556/never-blank/posts/research/c9e4081138032ab2/blog/1787215556.png",
+            "path": "reports/content_packages/images/c9e4081138032ab2_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215560/never-blank/posts/research/c9e4081138032ab2/linkedin/1787215560.png",
+            "path": "reports/content_packages/images/c9e4081138032ab2_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215563/never-blank/posts/research/c9e4081138032ab2/facebook/1787215563.png",
+            "path": "reports/content_packages/images/c9e4081138032ab2_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215570/never-blank/posts/research/c9e4081138032ab2/instagram/1787215570.png",
+            "path": "reports/content_packages/images/c9e4081138032ab2_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215575/never-blank/posts/research/c9e4081138032ab2/threads/1787215575.png",
+            "path": "reports/content_packages/images/c9e4081138032ab2_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787215583/never-blank/posts/research/c9e4081138032ab2/stories/1787215583.png",
+            "path": "reports/content_packages/images/c9e4081138032ab2_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "particle_flow",
+        "hook_text": "ChatGPT transforms into an advertising platform for businesses."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "ee22ba8ea360dec3",
+      "headline": "Meta AI Adds Small Business Tools for Ads, Analytics and Reports",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'every time your marketing blends in, you pay twice: once for the ad, and again when no one remembers it was yours.'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ]
+}
