@@ -1279,7 +1279,7 @@ def test_the_configured_site_destination_is_not_treated_as_invented():
     validate_source_transparency(
         article_body=body, linkedin_body="Per the SBA Office of Advocacy.",
         research=_research_artifact(),
-        allowed_url_prefixes=("https://www.inneros.online",),
+        allowed_destinations=("https://www.inneros.online",),
     )
 
 
@@ -1341,3 +1341,229 @@ def test_the_requirement_is_declared_by_the_role_not_by_code():
 
     plain = EditorialRole(role_id="r", intent="i", structure=("s",), forbidden=("f",))
     assert plain.require_source_transparency is False
+
+
+# ===========================================================================
+# Blocking review (comment 5359239851): URL structure and attribution contract
+# ===========================================================================
+
+
+def test_sibling_and_lookalike_hosts_are_refused_structurally():
+    body = ATTRIBUTED_BODY + " Continue at https://www.inneros.online.evil.test/phish."
+
+    with pytest.raises(SourceTransparencyError):
+        validate_source_transparency(
+            article_body=body, linkedin_body="Per the SBA Office of Advocacy.",
+            research=_research_artifact(),
+            allowed_destinations=("https://www.inneros.online",),
+        )
+
+
+@pytest.mark.parametrize("attack", [
+    "https://www.inneros.online.evil.test/phish",
+    "https://www.inneros.online@evil.test/",
+    "https://evil.test/https://www.inneros.online",
+    "https://inneros.online.evil.test/",
+    "https://www.inneros.online:444/",
+])
+def test_url_confusion_attacks_fail(attack):
+    body = ATTRIBUTED_BODY + f" See {attack} for more."
+
+    with pytest.raises(SourceTransparencyError):
+        validate_source_transparency(
+            article_body=body, linkedin_body="Per the SBA Office of Advocacy.",
+            research=_research_artifact(),
+            allowed_destinations=("https://www.inneros.online",),
+        )
+
+
+@pytest.mark.parametrize("legitimate", [
+    "https://www.inneros.online",
+    "https://www.inneros.online/",
+    "https://www.inneros.online/some/path",
+])
+def test_the_exact_configured_origin_and_subpaths_pass(legitimate):
+    body = ATTRIBUTED_BODY + f" Continue at {legitimate} today."
+
+    validate_source_transparency(
+        article_body=body, linkedin_body="Per the SBA Office of Advocacy.",
+        research=_research_artifact(),
+        allowed_destinations=("https://www.inneros.online",),
+    )
+
+
+def test_a_generic_publisher_is_never_satisfied_by_ordinary_prose():
+    # publisher "Research": "our research shows" is lexical overlap, not
+    # attribution — and a fully generic name is excluded from name matching
+    research = _research_with(publisher="Research", title="Research")
+
+    with pytest.raises(SourceTransparencyError):
+        validate_source_transparency(
+            article_body="Our research shows steady gains for small firms.",
+            linkedin_body="Our research shows the same.",
+            research=research,
+        )
+
+
+def test_a_generic_publisher_is_refused_even_inside_an_attribution_construction():
+    research = _research_with(publisher="Research", title="Research")
+
+    with pytest.raises(SourceTransparencyError):
+        validate_source_transparency(
+            article_body="According to Research, firms grow.",
+            linkedin_body="Per Research.",
+            research=research,
+        )
+
+
+def test_a_generic_publisher_can_still_be_attested_by_its_exact_url():
+    research = _research_with(publisher="Research", title="Research")
+
+    validate_source_transparency(
+        article_body="The case is documented at https://advocacy.sba.gov/report.",
+        linkedin_body="Details: https://advocacy.sba.gov/report",
+        research=research,
+    )
+
+
+def test_an_unambiguous_publisher_needs_an_explicit_construction():
+    # boundary-matched mention without an attribution construction is not
+    # attribution either
+    with pytest.raises(SourceTransparencyError):
+        validate_source_transparency(
+            article_body="We visited the SBA Office of Advocacy building last week.",
+            linkedin_body="A nice building.",
+            research=_research_artifact(),
+        )
+
+
+def _research_with(**source_overrides):
+    raw = json.loads(_research_artifact().model_dump_json())
+    raw["sources"][0].update(source_overrides)
+    from src.research.evidence import NormalizedResearchArtifact
+
+    return NormalizedResearchArtifact.model_validate(raw)
+
+
+# --- the same attacks through the real canonical entrypoint ---------------
+
+
+class _GenericPublisherProvider(ReadyProvider):
+    """ReadyProvider whose single source has an unusably generic identity."""
+
+    def research(self, request):
+        result = super().research(request)
+        raw = json.loads(result.artifact.model_dump_json())
+        raw["sources"][0]["publisher"] = "Research"
+        raw["sources"][0]["title"] = "Research"
+        from src.research.evidence import NormalizedResearchArtifact
+
+        artifact = NormalizedResearchArtifact.model_validate(raw)
+        return result.model_copy(update={"artifact": artifact})
+
+
+def _blocked_monday_run(tmp_path, article, provider=None, env=None):
+    import copy
+
+    argv, patches = _entry_patches(tmp_path, dry_run=False)
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    patches["generate_article"] = mock.MagicMock(return_value=copy.deepcopy(article))
+    argv = argv + ["--editorial-role", MONDAY_ROLE]
+    evaluator, _ = _evaluator(_model_output())
+    import os as _os
+
+    with mock.patch.object(sys, "argv", argv), \
+         mock.patch.dict(_os.environ, env or {}, clear=False), \
+         mock.patch.multiple(gap, **patches):
+        code = main(
+            research_provider=provider or ReadyProvider(),
+            decision_evaluator=evaluator,
+        )
+    return code, patches
+
+
+def test_entrypoint_blocks_a_sibling_domain_cta_before_any_publisher(tmp_path):
+    article = _attributed_article()
+    article["platforms"]["long"]["body"] += (
+        " Continue at https://www.inneros.online.evil.test/phish today."
+    )
+
+    code, patches = _blocked_monday_run(
+        tmp_path, article,
+        env={"NB_WIX_SITE_BASE_URL": "https://www.inneros.online"},
+    )
+
+    assert code == 1
+    assert not patches["WixPublisher"].called
+    assert not patches["LinkedInPublisher"].called
+    assert not patches["append_published_entry"].called
+    assert not list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+def test_entrypoint_blocks_generic_publisher_prose(tmp_path):
+    import copy
+
+    from tests.test_generate_and_publish import _FAKE_ARTICLE
+
+    article = copy.deepcopy(_FAKE_ARTICLE)
+    article["platforms"]["long"]["body"] = (
+        "Our research shows small firms benefit from clear paths."
+    )
+    article["platforms"]["medium"]["body"] = "Our research shows the same."
+
+    code, patches = _blocked_monday_run(
+        tmp_path, article, provider=_GenericPublisherProvider(),
+    )
+
+    assert code == 1
+    assert not patches["WixPublisher"].called
+    assert not patches["append_published_entry"].called
+
+
+def test_entrypoint_passes_the_exact_configured_cta_and_source_url(tmp_path):
+    article = _attributed_article()  # attributes via the exact fixture source URL
+    article["platforms"]["long"]["body"] += (
+        " Continue at https://www.inneros.online/some/path today."
+    )
+
+    argv, patches = _entry_patches(tmp_path)
+    patches["generate_article"] = mock.MagicMock(return_value=article)
+    argv = argv + ["--editorial-role", MONDAY_ROLE]
+    evaluator, _ = _evaluator(_model_output())
+    import os as _os
+
+    with mock.patch.object(sys, "argv", argv), \
+         mock.patch.dict(_os.environ,
+                         {"NB_WIX_SITE_BASE_URL": "https://www.inneros.online"}), \
+         mock.patch.multiple(gap, **patches):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+
+    assert code == 0
+    assert list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+def test_entrypoint_passes_explicit_publisher_attribution(tmp_path):
+    # no URL anywhere: attribution rests on the explicit construction alone
+    article = _attributed_article()
+    article["platforms"]["long"]["body"] = (
+        "One documented mechanism. Case documented by Verified report."
+    )
+    article["platforms"]["medium"]["body"] = "According to Verified report, it held."
+
+    code, patches, _ = _run_with_role(tmp_path, MONDAY_ROLE, article=article)
+
+    assert code == 0
+
+
+def test_entrypoint_blocks_a_fabricated_link_beside_real_attribution(tmp_path):
+    article = _attributed_article()
+    article["platforms"]["long"]["body"] += (
+        " See also https://invented.example/study for context."
+    )
+
+    code, patches = _blocked_monday_run(tmp_path, article)
+
+    assert code == 1
+    assert not patches["WixPublisher"].called
+    assert not patches["append_published_entry"].called

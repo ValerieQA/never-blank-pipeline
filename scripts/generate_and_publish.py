@@ -1550,10 +1550,10 @@ def _run(
                     article_body=blog_body,
                     linkedin_body=linkedin_text,
                     research=research_artifact,
-                    allowed_url_prefixes=tuple(
-                        prefix for prefix in (
+                    allowed_destinations=tuple(
+                        destination for destination in (
                             os.environ.get("NB_WIX_SITE_BASE_URL", ""),
-                        ) if prefix
+                        ) if destination
                     ),
                 )
             except SourceTransparencyError as exc:
