@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import json
 
-import httpx
 import openai
 import pytest
 
@@ -42,36 +41,31 @@ CANDIDATES = [
 ]
 
 
-def _rate_limit_error() -> openai.RateLimitError:
-    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
-    return openai.RateLimitError(
-        "Rate limit reached",
-        response=httpx.Response(429, request=request),
-        body=None,
-    )
+def _sdk_error(cls: type, message: str) -> BaseException:
+    # The classifier tests only the exception's TYPE. Constructing these the
+    # SDK's own way needs an httpx response object, and which httpx package
+    # that is differs across the openai versions installed locally and in CI
+    # (2.x uses httpx, 3.x uses httpx2). Bypassing the constructor keeps the
+    # test independent of that, while isinstance and str(exc) work the same.
+    exc = cls.__new__(cls)
+    Exception.__init__(exc, message)
+    return exc
 
 
-def _auth_error() -> openai.AuthenticationError:
-    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
-    return openai.AuthenticationError(
-        "Invalid API key",
-        response=httpx.Response(401, request=request),
-        body=None,
-    )
+def _rate_limit_error() -> BaseException:
+    return _sdk_error(openai.RateLimitError, "Rate limit reached")
 
 
-def _server_error() -> openai.InternalServerError:
-    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
-    return openai.InternalServerError(
-        "Server error",
-        response=httpx.Response(500, request=request),
-        body=None,
-    )
+def _auth_error() -> BaseException:
+    return _sdk_error(openai.AuthenticationError, "Invalid API key")
 
 
-def _connection_error() -> openai.APIConnectionError:
-    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
-    return openai.APIConnectionError(request=request)
+def _server_error() -> BaseException:
+    return _sdk_error(openai.InternalServerError, "Server error")
+
+
+def _connection_error() -> BaseException:
+    return _sdk_error(openai.APIConnectionError, "Connection error")
 
 
 class ScriptedTransport:
