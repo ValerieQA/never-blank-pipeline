@@ -303,8 +303,11 @@ class TestCTADistribution:
 
 class TestValidatePackageCPCBlocking:
     """
-    _validate_package must block publication when blog/linkedin text has no
-    Compound Presence Connection (0 presence keywords → clear fail).
+    #157 removed the Compound Presence keyword gate from the publication
+    contract: prose whose supported mechanism is not presence-related is
+    publishable. These tests keep the coverage and invert the expectation —
+    what used to block must now pass, while the deterministic package checks
+    the gate never owned still fail.
     """
 
     _BLOG_WITH_CPC = (
@@ -345,33 +348,49 @@ class TestValidatePackageCPCBlocking:
             threads=[self._INSTAGRAM, self._LINKEDIN, self._FACEBOOK],
         )
 
-    def test_blog_without_cpc_blocks_publication(self):
+    def test_blog_without_compound_presence_now_publishes(self):
         from scripts.research.publish_packages import _validate_package
-        with pytest.raises(ValueError, match="Compound Presence"):
+        # previously blocked by the keyword gate; now a valid article whose
+        # mechanism simply is not presence
+        _validate_package(
+            {
+                    "blog":     self._BLOG_WITHOUT_CPC,
+                    "linkedin": self._LINKEDIN,
+                    "facebook": self._FACEBOOK,
+                    "instagram": self._INSTAGRAM,
+                    "telegram": self._TELEGRAM,
+            },
+            threads=[self._INSTAGRAM, self._LINKEDIN, self._FACEBOOK],
+        )
+
+    def test_linkedin_without_compound_presence_now_publishes(self):
+        from scripts.research.publish_packages import _validate_package
+        linkedin_no_cpc = "Agency went dark in Q4. Client chose another agency."
+        _validate_package(
+            {
+                "blog":     self._BLOG_WITH_CPC,
+                "linkedin": linkedin_no_cpc,
+                "facebook": self._FACEBOOK,
+                "instagram": self._INSTAGRAM,
+                "telegram": self._TELEGRAM,
+            },
+            threads=[self._INSTAGRAM, linkedin_no_cpc, self._FACEBOOK],
+        )
+
+    def test_deterministic_package_validation_still_blocks(self):
+        # what the removed gate never owned is unchanged: an empty required
+        # channel is still a hard failure
+        from scripts.research.publish_packages import _validate_package
+        with pytest.raises(ValueError):
             _validate_package(
                 {
-                    "blog":     self._BLOG_WITHOUT_CPC,
+                    "blog":     "",
                     "linkedin": self._LINKEDIN,
                     "facebook": self._FACEBOOK,
                     "instagram": self._INSTAGRAM,
                     "telegram": self._TELEGRAM,
                 },
                 threads=[self._INSTAGRAM, self._LINKEDIN, self._FACEBOOK],
-            )
-
-    def test_linkedin_without_cpc_blocks_publication(self):
-        from scripts.research.publish_packages import _validate_package
-        linkedin_no_cpc = "Agency went dark in Q4. Client chose another agency."
-        with pytest.raises(ValueError, match="Compound Presence"):
-            _validate_package(
-                {
-                    "blog":     self._BLOG_WITH_CPC,
-                    "linkedin": linkedin_no_cpc,
-                    "facebook": self._FACEBOOK,
-                    "instagram": self._INSTAGRAM,
-                    "telegram": self._TELEGRAM,
-                },
-                threads=[self._INSTAGRAM, linkedin_no_cpc, self._FACEBOOK],
             )
 
 

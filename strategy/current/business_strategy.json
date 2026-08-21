@@ -343,17 +343,17 @@
   "editorial_roles": [
     {
       "role_id": "never-blank-monday-documented-case",
-      "intent": "A documented small-business, owner-led, or early-stage business story: verified facts, one observable mechanism, the Compound Presence lens applied with explicit bounds, one bounded reflection for an owner-led reader, and published sources. It does not need to be breaking news.",
+      "intent": "A documented small-business, owner-led, or early-stage business story. The governing question is: what happened here that another business owner should notice? Verified facts, the strongest observable mechanism the case actually supports, one bounded consequence or question for another owner, and published sources. It does not need to be breaking news.",
       "structure": [
         "Hook or business tension: open on a fact, contradiction, surprising consequence or tension. Never restate the source headline.",
         "Verified account of what happened: only documented, verifiable facts, and only as much as the mechanism requires.",
         "Why this case is worth examining: the non-obvious business significance.",
-        "The one observable mechanism: exactly ONE mechanism actually visible in the documented case — never a broader pattern the case does not show.",
-        "Compound Presence lens, explicitly bounded: what this mechanism suggests about consistent presence and being remembered, stated as an interpretation of this case, never as a proven law.",
+        "The one observable mechanism: exactly ONE mechanism actually visible in the documented case, whichever mechanism the evidence most strongly supports — never a broader pattern the case does not show.",
+        "The Never Blank reading, only where the material earns it: if the case genuinely supports a presence, visibility, recognition or memory mechanism, say so as an interpretation of this case and never as a proven law. If the strongest supported mechanism is something else — pricing, capacity, supply, regulation, distribution, operations, customer behaviour, a founder decision — write about that mechanism instead. Never Blank is the publisher, not the predetermined conclusion.",
         "One practical question or consequence an owner-led reader can examine. One, not several.",
         "Keep three things distinguishable throughout: documented facts, the observable mechanism, and the bounded Never Blank reflection. The reflection may say what is worth examining; it may never present this company's outcome as evidence of the reader's likely result.",
-        "Never Blank close: reconnect to the Never Blank idea in this article's own language.",
-        "Website invitation: the canonical configured destination.",
+        "Never Blank close: a short Never Blank perspective on THIS story — one or two fresh sentences, written for this case. It is an editorial signature, never a claim that presence caused the outcome, and never a generic brand manifesto.",
+        "Website invitation: close with a natural invitation to continue at https://www.inneros.online — the canonical configured destination, and no other URL.",
         "Source attribution: name the published sources the facts came from.",
         "Section headings are not required in the prose; the movement through the structure is what matters."
       ],
@@ -369,7 +369,8 @@
         "Citation used as a substitute for verification.",
         "Forcing Compound Presence onto a story it does not fit.",
         "Generic AI-business-blog prose.",
-        "Padding to reach a length."
+        "Padding to reach a length.",
+        "Adding presence, visibility, recognition or memory language to satisfy a house style when the case does not support that mechanism."
       ],
       "eligibility_criteria": [
         "Eligible: a documented case genuinely about a small business, an owner-led business, a founder-led operating business at a meaningfully small or early stage, or an early-stage company.",
@@ -380,10 +381,12 @@
       ],
       "wix_rules": [
         "Materially verifiable external claims keep publishable provenance: the article carries a visible Sources section and/or appropriate inline source links naming where the facts came from.",
-        "Attribution never substitutes for verification, and no source or URL is ever invented."
+        "Attribution never substitutes for verification, and no source or URL is ever invented.",
+        "End in this order: the Never Blank perspective on this story, then the invitation to https://www.inneros.online, then the Sources section last."
       ],
       "linkedin_rules": [
-        "Carry compact source attribution sufficient to identify the source case — one clear reference, not citation-heavy prose."
+        "Carry compact source attribution sufficient to identify the source case — one clear reference, not citation-heavy prose.",
+        "End in this order: the Never Blank perspective on this story, then the invitation to https://www.inneros.online, then hashtags last — nothing after the hashtags."
       ],
       "require_source_transparency": true,
       "decision_policy": "role_bounded_r1"

@@ -306,13 +306,13 @@ def test_headings_are_not_demanded_in_the_prose():
     assert "section headings are not required" in rules
 
 
-def test_the_compound_presence_lens_is_encoded_in_the_profile():
-    # the corrected #142 requirement: the Monday product lens must live in the
-    # Monday configuration, not lean on the pre-existing universal composer
-    # prompt happening to mention it
+def test_the_never_blank_lens_is_encoded_in_the_profile_as_optional():
+    # #157 superseded the mandatory form: the lens still lives in Monday
+    # configuration (not in engine code), but as a reading the material must
+    # earn rather than a required conclusion
     rules = _role_rules().lower()
 
-    assert "compound presence lens, explicitly bounded" in rules
+    assert "the never blank reading, only where the material earns it" in rules
     assert "never as a proven law" in rules
 
 
@@ -540,7 +540,7 @@ def test_the_role_content_lives_only_in_configuration():
     # the phrases the tests above assert on come from configuration, not code
     role_text = json.dumps(declared).lower()
     assert "one mechanism actually visible" in role_text
-    assert "compound presence lens" in role_text
+    assert "the never blank reading, only where the material earns it" in role_text
 
 
 # ===========================================================================
@@ -2196,3 +2196,69 @@ def test_a_role_without_source_transparency_receives_no_sources_block(tmp_path):
         assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 0
 
     assert generated.call_args.kwargs["editorial_role_rules"] is None
+
+
+# ===========================================================================
+# Never Blank is the publisher, not the conclusion (#157)
+# ===========================================================================
+
+
+def test_monday_no_longer_requires_compound_presence_as_the_mechanism():
+    rules = _role_rules().lower()
+
+    # the governing question, and the two valid modes
+    assert "what happened here that another business owner should notice" in rules
+    assert "only where the material earns it" in rules
+    assert "if the strongest supported mechanism is something else" in rules
+    for alternative in ("pricing", "capacity", "supply", "regulation",
+                        "distribution", "operations"):
+        assert alternative in rules
+    assert "never blank is the publisher, not the predetermined conclusion" in rules
+
+
+def test_compound_presence_remains_available_when_the_case_supports_it():
+    rules = _role_rules().lower()
+
+    assert "if the case genuinely supports a presence, visibility, recognition or memory mechanism" in rules
+    assert "never as a proven law" in rules
+
+
+def test_forcing_the_lens_is_still_prohibited():
+    rules = _role_rules().lower()
+
+    assert "forcing compound presence onto a story it does not fit" in rules
+    # and the house-style variant of the same error
+    assert "to satisfy a house style when the case does not support that mechanism" in rules
+
+
+def test_the_never_blank_close_is_an_editorial_signature_not_a_causal_claim():
+    rules = _role_rules().lower()
+
+    assert "a short never blank perspective on this story" in rules
+    assert "never a claim that presence caused the outcome" in rules
+    assert "never a generic brand manifesto" in rules
+
+
+def test_the_closing_order_reaches_each_surface():
+    role = _monday_role_object()
+    wix = render_editorial_role_rules(role, surface="wix").lower()
+    linkedin = render_editorial_role_rules(role, surface="linkedin").lower()
+
+    assert "then the sources section last" in wix
+    assert "then hashtags last" in linkedin
+    assert "hashtags last" not in wix
+    assert "sources section last" not in linkedin
+    for surface in (wix, linkedin):
+        assert "https://www.inneros.online" in surface
+
+
+def test_unsupported_facts_and_source_transparency_are_untouched():
+    role = _monday_role_object()
+    rules = _role_rules().lower()
+
+    # the factual discipline this correction must not relax
+    assert "only documented, verifiable facts" in rules
+    assert "an unsupported universal pattern or causal law derived from one case" in rules
+    assert "citation used as a substitute for verification" in rules
+    assert "analogy represented as evidence" in rules
+    assert role.require_source_transparency is True
