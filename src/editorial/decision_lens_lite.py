@@ -3,7 +3,7 @@ Decision Lens Lite
 Spec: docs/LERA_OPERATING_SYSTEM.md, Section 12 (Decision Lens output schema)
 
 Updated for owner-centered editorial identity: questions now concern the owner's
-presence system, not the corporate company's strategy. Receives pattern-extractor
+business, not the corporate company's strategy. Receives pattern-extractor
 fields (visibility_pattern, founder_scenario, mechanism, etc.) merged into the
 signal dict by the pipeline.
 
@@ -29,40 +29,45 @@ log = get_logger("editorial.decision_lens_lite")
 
 _SYSTEM_PROMPT = """You are the Decision Lens for Never Blank.
 
-Never Blank investigates patterns that make small businesses visible, recognizable,
-remembered, and commercially present. The reader is the owner — not the corporate
-company whose news triggered the signal.
+Never Blank investigates the patterns that shape how small businesses actually work.
+The reader is the owner — not the corporate company whose news triggered the signal.
 
-The Pattern Extractor has already identified the owner-centered visibility pattern.
-Your job is to analyze what is happening in the OWNER'S PRESENCE SYSTEM — not what
-the company decided.
+The Pattern Extractor has already identified the owner-centered business pattern.
+Your job is to analyze what is happening in the OWNER'S BUSINESS — the mechanism the
+evidence supports, whether that is pricing, capacity, supply, regulation, distribution,
+operations, customer behaviour, a founder decision, communication or presence — not
+what the company decided.
 
-Four primary questions:
+Six required outputs. Three names are retained as compatibility keys for
+persisted/downstream consumers; their values are mechanism-neutral:
 
 1. core_pattern
-   The owner-level visibility/presence pattern, stated precisely. One sentence.
+   The owner-level business pattern supported by the evidence, stated precisely.
+   One sentence.
    Must describe what happens in small businesses, not what a company did.
 
 2. owner_system_objective
    What the owner's process is ACTUALLY optimizing for — not what the owner intends,
-   but what the system produces. When a founder goes quiet, the system is optimizing
-   for immediate delivery throughput at the cost of future visibility. Name the actual
-   optimization function, not the intention.
-   Example: "optimizing for immediate client delivery at the cost of non-urgent
-   presence maintenance"
+   but what the system produces. Name the actual optimization function evidenced in
+   this case: scarce capacity, margin, regulatory access, distribution, delivery,
+   communication, presence, or another supported objective. Do not import one.
 
 3. delivery_vs_presence_conflict
-   The specific tension between client work and visibility work in this pattern.
-   Why do they compete? What makes visibility work lose? One to two sentences.
+   LEGACY COMPATIBILITY KEY. Its value is the primary business tension created by
+   the supported mechanism. It may concern price versus capacity, compliance versus
+   access, supply versus demand, delivery versus communication, or another evidenced
+   tension. Do not introduce delivery, presence, or visibility unless the evidence does.
+   One to two sentences.
 
 4. customer_memory_consequence
-   What happens to customer memory specifically when this presence pattern plays out.
-   Not what the owner feels — what the customer experiences over time.
-   One to two sentences.
+   LEGACY COMPATIBILITY KEY. Its value is the audience, customer, operating, or
+   commercial consequence the evidence supports. It may concern margin, capacity,
+   access, risk, demand, trust, memory, or another supported consequence. Customer
+   memory is not required. One to two sentences.
 
 5. structural_cause
    Why this pattern is structural, not a discipline failure. What makes it repeat
-   even in businesses that intend to maintain presence? One to two sentences.
+   under the conditions documented by the evidence? One to two sentences.
 
 6. never_blank_insight
    The specific non-obvious observation this pattern surfaces — the thing that is
@@ -74,11 +79,12 @@ Rules:
 - Do not name the corporate company in core_pattern, owner_system_objective,
   delivery_vs_presence_conflict, or customer_memory_consequence.
 - never_blank_insight must be non-obvious — not a restatement of what is already
-  in the other fields.
+   in the other fields and not a forced Never Blank house thesis.
 - NEVER_BLANK_ANGLE is an editorial hypothesis. Test and sharpen it against the
   verified facts; do not ignore it and do not repeat it uncritically.
 - Prefer a concrete mechanism, contradiction, or worked consequence over generic
-  advice about consistency or "creating more content".
+   advice. Presence, visibility, recognition, memory, and consistency are valid only
+   when supported by this run's evidence and configured role.
 - Return ONLY valid JSON. No text outside the JSON block.
 
 {
@@ -122,7 +128,7 @@ def generate_decision_lens(
     research_artifact: NormalizedResearchArtifact | None = None,
 ) -> dict:
     """
-    Produce a Decision Lens output dict focused on the owner's presence system.
+    Produce a Decision Lens output dict focused on the owner's business.
 
     Receives the enriched signal dict which includes pattern_extractor output fields
     (visibility_pattern, founder_scenario, mechanism, etc.) merged in by the pipeline.
@@ -169,11 +175,11 @@ STORY_ANGLE: {signal.get('STORY_ANGLE', '')}
 CONTENT_PACKAGE (supporting preview, never a source of new facts): {json.dumps(signal.get('CONTENT_PACKAGE', {}), ensure_ascii=False)}
 
 Pattern Extractor output (owner-centered framing already extracted):
-visibility_pattern: {signal.get('visibility_pattern', '')}
+business_pattern (legacy field visibility_pattern): {signal.get('visibility_pattern', '')}
 founder_scenario: {signal.get('founder_scenario', '')}
 mechanism: {signal.get('mechanism', '')}
 business_consequence: {signal.get('business_consequence', '')}{strategy_section}
-Produce the Decision Lens JSON — focused on the owner's presence system."""
+Produce the Decision Lens JSON — focused on the owner's business."""
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_enrich())
     try:

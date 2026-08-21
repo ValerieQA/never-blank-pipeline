@@ -143,7 +143,7 @@ def _decision_payload(
                 "documented_direct_consequence": direct_consequence,
             }],
             "criterion_results": [{
-                "criterion_id": "nb-owner-presence",
+                "criterion_id": "nb-supported-mechanism",
                 "assessment": "satisfied",
                 "conclusion": "The evidence shows an owner-presence decision the audience must make.",
                 "evidence_ids": ["evidence-smb"],
@@ -565,7 +565,7 @@ def test_deterministic_bytes_and_strict_contextual_round_trip():
     dumped = json.loads(first)
     assert dumped == artifact.model_dump(mode="json")
     assert dumped["lens_profile"] == _lens_profile().model_dump(mode="json")
-    assert dumped["judgment"]["criterion_results"][0]["criterion_id"] == "nb-owner-presence"
+    assert dumped["judgment"]["criterion_results"][0]["criterion_id"] == "nb-supported-mechanism"
 
 
 def test_strict_json_reload_cannot_bypass_proceed_invariants():

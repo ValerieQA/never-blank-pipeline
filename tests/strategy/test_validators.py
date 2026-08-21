@@ -30,7 +30,7 @@ from src.strategy.models import (
     WeeklyReview,
 )
 from src.strategy.validators import (
-    validate_compound_presence_semantic,
+    validate_article_for_publish,
     validate_content_plan,
     validate_content_plan_item,
     validate_strategy,
@@ -238,41 +238,68 @@ class TestValidateContentPlan:
             validate_content_plan(items, "2026-08-test-strategy")
 
 
-# ── Compound Presence semantic tests ───────────────────────────────────────────
+# ── Publication validation no longer judges editorial content (#157) ──────────
 
-class TestCompoundPresenceSemantic:
-    _GOOD = (
-        "Fully booked founders go quiet. Clients read quiet as available. "
-        "That is how you lose the next project to someone with a worse product. "
-        "Consistent presence is not about posting when you have time — "
-        "it is what accumulates over time into recognition and trust. "
-        "A single viral moment is not a presence system. Presence is what remains "
-        "when the wave recedes. The competitor who won that client was not better. "
-        "They were just present, week after week, when you were not."
-    )
+class TestPublicationValidationIsDeterministicOnly:
+    """The Compound Presence keyword gate was removed from the publication
+    contract. These tests replace its coverage rather than deleting it: what
+    used to fail must now pass, and everything the gate never owned must still
+    fail exactly as before."""
 
-    _BAD = (
+    # the exact text the removed validator rejected — zero presence vocabulary
+    _NO_PRESENCE_VOCABULARY = (
         "The restaurant got a lot of views on their croissant photo. "
         "This shows that food photography can be effective for marketing. "
         "The owner was pleased with the result. Business increased significantly."
     )
 
-    _AMBIGUOUS = (
-        "Business owners sometimes struggle with marketing. "
-        "Visibility is important for success. "
-        "The restaurant example shows that one post can work well."
+    _OTHER_MECHANISM = (
+        "The bakery raised prices twice in one quarter and lost no orders. "
+        "The constraint was never demand; it was oven capacity. Once the owner "
+        "priced for the constraint, the queue shortened and margin rose. "
+        "The question for another owner is which constraint their price is "
+        "actually rationing."
     )
 
-    def test_good_text_passes(self):
-        validate_compound_presence_semantic(self._GOOD)
+    def test_the_removed_gate_is_gone_from_the_module(self):
+        from src.strategy import validators
 
-    def test_bad_text_fails(self):
-        with pytest.raises(ValueError, match="Compound Presence Connection"):
-            validate_compound_presence_semantic(self._BAD)
+        assert not hasattr(validators, "validate_compound_presence_semantic")
+        assert not hasattr(validators, "_PRESENCE_KEYWORDS")
+        assert not hasattr(validators, "_CONTRAST_SIGNALS")
 
-    def test_ambiguous_text_warns_but_does_not_fail(self):
-        # Ambiguous text without LLM should log warning but not raise
-        validate_compound_presence_semantic(self._AMBIGUOUS)
+    @pytest.mark.parametrize("platform", ["blog", "linkedin"])
+    def test_prose_with_zero_compound_presence_vocabulary_passes(self, platform):
+        # previously a hard ValueError; now publishable
+        validate_article_for_publish(self._NO_PRESENCE_VOCABULARY, platform=platform)
+
+    @pytest.mark.parametrize("platform", ["blog", "linkedin"])
+    def test_a_different_supported_mechanism_passes(self, platform):
+        # pricing/capacity, no presence language anywhere
+        validate_article_for_publish(self._OTHER_MECHANISM, platform=platform)
+        lowered = self._OTHER_MECHANISM.lower()
+        for word in ("presence", "visibility", "compound", "memory", "recognition"):
+            assert word not in lowered
+
+    def test_presence_language_is_still_allowed_when_the_case_supports_it(self):
+        supported = (
+            "Fully booked founders go quiet. Clients read quiet as available. "
+            "Consistent presence is what accumulates over time into recognition "
+            "and trust. A single viral moment is not a presence system."
+        )
+
+        validate_article_for_publish(supported, platform="blog")
+
+    def test_deterministic_platform_validation_still_fails(self):
+        # the checks the removed gate never owned are untouched
+        with pytest.raises(ValueError):
+            validate_article_for_publish("", platform="blog")
+
+    def test_the_publication_validator_takes_no_compound_presence_arguments(self):
+        import inspect
+
+        parameters = inspect.signature(validate_article_for_publish).parameters
+        assert set(parameters) == {"text", "platform", "run_id"}
 
 
 # ── Strategy decision fixtures ─────────────────────────────────────────────────

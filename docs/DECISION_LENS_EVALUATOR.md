@@ -96,11 +96,14 @@ refuses to run — before any transport call — when the expected
 in full (ID and version). Changing judgment semantics requires a version bump
 in a reviewed commit.
 
-Never Blank is the Release 1 lens profile; its judgment criteria
-(`nb-owner-presence`, `nb-customer-memory`) live in the instruction artifact
-and surface through the generic `criterion_results` collection — the universal
-canonical contract is unchanged. A Release 2 profile registry or generalized
-profile loading (Epic #63 / Story #67) is explicitly out of scope.
+Never Blank is the Release 1 lens profile; its mechanism-neutral judgment
+criteria (`nb-supported-mechanism`, `nb-supported-business-consequence`) live
+in the instruction artifact and surface through the generic
+`criterion_results` collection — the universal canonical contract is
+unchanged. The profile permits presence or customer-memory interpretations when
+the run evidence supports them, but never requires those interpretations. A
+Release 2 profile registry or generalized profile loading (Epic #63 / Story
+#67) is explicitly out of scope.
 
 ## Legacy compatibility
 

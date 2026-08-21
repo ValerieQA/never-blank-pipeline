@@ -136,11 +136,13 @@ def test_metadata_is_never_body_text(wix_text):
 # ===========================================================================
 
 
-def test_both_surfaces_must_close_on_the_never_blank_idea(wix_text, linkedin_text):
-    assert "never blank idea" in wix_text
-    assert "never blank idea" in linkedin_text
-    # written fresh, not pasted
-    assert "never paste a standard slogan" in wix_text
+def test_both_surfaces_require_a_contextual_never_blank_close(wix_text, linkedin_text):
+    for surface in (wix_text, linkedin_text):
+        assert "never blank" in surface
+        assert "perspective" in surface
+        assert "evidence-supported mechanism" in surface
+    # Never Blank is the publisher perspective, not a mandatory conclusion.
+    assert "standard house thesis" in wix_text
 
 
 def test_both_surfaces_name_the_canonical_destination_and_no_other(wix_text, linkedin_text):
@@ -155,7 +157,8 @@ def test_both_surfaces_name_the_canonical_destination_and_no_other(wix_text, lin
     )
     joined = " ".join(reflection["rules"])
     assert SITE in joined
-    assert "Reconnect to the Never Blank idea" in joined
+    assert "contextual Never Blank perspective" in joined
+    assert "evidence-supported mechanism" in joined
 
 
 def test_the_cta_stays_an_invitation_not_a_sales_ask():
@@ -207,7 +210,9 @@ def test_the_configured_rules_reach_the_composer_prompt_for_both_surfaces():
     for prompt in (blog_prompt, li_prompt):
         assert "CONFIGURED CHANNEL RULES:" in prompt
         assert SITE in prompt
-        assert "Never Blank idea" in prompt
+        assert "Never Blank" in prompt
+        assert "perspective" in prompt
+        assert "evidence-supported mechanism" in prompt
     assert "one central idea" in blog_prompt.lower()
     assert "same single idea" in li_prompt.lower()
 

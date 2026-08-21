@@ -99,6 +99,5 @@ source_policy:
   require_obvious_reading_x: true
   require_overlooked_y: true
   require_evidence_supporting_y: true
-  require_compound_presence_relevance: true
   required_primary_mechanisms: 1
   required_transfer_mode: bounded_business_question

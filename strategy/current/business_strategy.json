@@ -133,16 +133,16 @@
   },
   "content": {
     "objectives": [
-      "Make the reader recognize a concrete presence pattern in their own business.",
-      "Explain the mechanism and commercial consequence behind that pattern.",
+      "Make the reader recognize one concrete, evidence-supported business pattern.",
+      "Explain the mechanism and commercial consequence behind that pattern without imposing a house thesis.",
       "Demonstrate Never Blank through quality of investigation and editorial judgment rather than direct product pitching.",
       "Create a defensible path from recognition to reflection, diagnostic interest, example request, or direct conversation."
     ],
     "territories": [
-      "Owner-dependent visibility and the periods when busy businesses disappear.",
-      "The gap between work performed and work visible to prospective clients.",
-      "Customer memory, accumulated recognition, trust, and continuity of presence.",
-      "The systems and decisions that allow market presence to continue during delivery work.",
+      "Pricing, capacity, supply, regulation, distribution, operations, customer behaviour, founder decisions, communication, and presence when supported by evidence.",
+      "The gap between the obvious reading of a documented case and the mechanism the evidence actually supports.",
+      "Specific operating, customer, market, or commercial consequences that follow from the supported mechanism.",
+      "Bounded questions that let an owner examine a documented mechanism without transferring an external outcome.",
       "Evidence quality, editorial judgment, and the difference between useful content and generic output."
     ]
   },
@@ -151,7 +151,7 @@
       "Sharp: every sentence earns its place and the point arrives without a wind-up.",
       "Observational: name what is happening before prescribing what should happen.",
       "Direct and clean: avoid corporate language, inflated claims, and obscuring metaphors.",
-      "Commercially aware: connect the mechanism to recognition, pipeline, referrals, trust, or revenue timing when evidence supports that connection.",
+      "Commercially aware: connect the mechanism to the operating, customer, market, or commercial consequence the evidence supports.",
       "Reader-centered: the founder or owner is the central character; Never Blank is the observer."
     ],
     "editorial_principles": [
@@ -200,14 +200,14 @@
       "rules": [
         "Keep the invitation soft and specific to the article.",
         "Do not request a call, form submission, or purchase.",
-        "Reconnect to the Never Blank idea in the article's own language before inviting the reader onward.",
+        "Use a contextual Never Blank perspective grounded in the article's evidence-supported mechanism before inviting the reader onward.",
         "Name https://www.inneros.online as the destination and no other URL.",
         "Invite; never assert a capability. No 'we can help you…', no promised outcome, no implied diagnosis."
       ]
     },
     {
       "cta_id": "diagnostic",
-      "intent": "Invite the reader to show the current presence system and identify where it breaks.",
+      "intent": "Invite the reader to examine the specific business system or mechanism described by the article and identify where it breaks.",
       "rules": [
         "Describe the diagnostic action concretely.",
         "Do not promise an outcome or manufacture urgency."
@@ -256,7 +256,7 @@
       "cta_rules": [
         "Follow the configured CTA mode exactly.",
         "When present, express the CTA as a natural paragraph tied to the article and place it before the Echo.",
-        "Close by reconnecting the article's own mechanism to the Never Blank idea — that consistent presence is what turns attention into something a business can continue. Write it fresh for this article; never paste a standard slogan.",
+        "Close with a fresh Never Blank editorial perspective on the article's own evidence-supported mechanism; never replace that mechanism with a standard house thesis or slogan.",
         "When CTA mode is none, do not add an invitation.",
         "End the invitation with the canonical destination https://www.inneros.online and no other URL.",
         "The invitation makes no claim about what Never Blank can do, achieve, diagnose, or help with. Invite the reader onward; do not describe a capability the evidence has not established."
@@ -292,7 +292,7 @@
       "cta_rules": [
         "Follow the configured CTA mode exactly.",
         "When present, use a paragraph-length invitation tied to the post and place it before the Echo.",
-        "Close by reconnecting to the Never Blank idea in this post's own terms, then invite the reader to continue at https://www.inneros.online.",
+        "Close with a contextual Never Blank perspective grounded in this post's evidence-supported mechanism, then invite the reader to continue at https://www.inneros.online.",
         "When CTA mode is none, do not add an invitation.",
         "The invitation makes no claim about what Never Blank can do or achieve for the reader."
       ],
@@ -343,17 +343,17 @@
   "editorial_roles": [
     {
       "role_id": "never-blank-monday-documented-case",
-      "intent": "A documented small-business, owner-led, or early-stage business story: verified facts, one observable mechanism, the Compound Presence lens applied with explicit bounds, one bounded reflection for an owner-led reader, and published sources. It does not need to be breaking news.",
+      "intent": "A documented small-business, owner-led, or early-stage business story. The governing question is: what happened here that another business owner should notice? Verified facts, the strongest observable mechanism the case actually supports, one bounded consequence or question for another owner, and published sources. It does not need to be breaking news.",
       "structure": [
         "Hook or business tension: open on a fact, contradiction, surprising consequence or tension. Never restate the source headline.",
         "Verified account of what happened: only documented, verifiable facts, and only as much as the mechanism requires.",
         "Why this case is worth examining: the non-obvious business significance.",
-        "The one observable mechanism: exactly ONE mechanism actually visible in the documented case — never a broader pattern the case does not show.",
-        "Compound Presence lens, explicitly bounded: what this mechanism suggests about consistent presence and being remembered, stated as an interpretation of this case, never as a proven law.",
+        "The one observable mechanism: exactly ONE mechanism actually visible in the documented case, whichever mechanism the evidence most strongly supports — never a broader pattern the case does not show.",
+        "The Never Blank reading, only where the material earns it: if the case genuinely supports a presence, visibility, recognition or memory mechanism, say so as an interpretation of this case and never as a proven law. If the strongest supported mechanism is something else — pricing, capacity, supply, regulation, distribution, operations, customer behaviour, a founder decision — write about that mechanism instead. Never Blank is the publisher, not the predetermined conclusion.",
         "One practical question or consequence an owner-led reader can examine. One, not several.",
         "Keep three things distinguishable throughout: documented facts, the observable mechanism, and the bounded Never Blank reflection. The reflection may say what is worth examining; it may never present this company's outcome as evidence of the reader's likely result.",
-        "Never Blank close: reconnect to the Never Blank idea in this article's own language.",
-        "Website invitation: the canonical configured destination.",
+        "Never Blank close: a short Never Blank perspective on THIS story — one or two fresh sentences, written for this case. It is an editorial signature, never a claim that presence caused the outcome, and never a generic brand manifesto.",
+        "Website invitation: close with a natural invitation to continue at https://www.inneros.online — the canonical configured destination, and no other URL.",
         "Source attribution: name the published sources the facts came from.",
         "Section headings are not required in the prose; the movement through the structure is what matters."
       ],
@@ -369,7 +369,8 @@
         "Citation used as a substitute for verification.",
         "Forcing Compound Presence onto a story it does not fit.",
         "Generic AI-business-blog prose.",
-        "Padding to reach a length."
+        "Padding to reach a length.",
+        "Adding presence, visibility, recognition or memory language to satisfy a house style when the case does not support that mechanism."
       ],
       "eligibility_criteria": [
         "Eligible: a documented case genuinely about a small business, an owner-led business, a founder-led operating business at a meaningfully small or early stage, or an early-stage company.",
@@ -380,10 +381,12 @@
       ],
       "wix_rules": [
         "Materially verifiable external claims keep publishable provenance: the article carries a visible Sources section and/or appropriate inline source links naming where the facts came from.",
-        "Attribution never substitutes for verification, and no source or URL is ever invented."
+        "Attribution never substitutes for verification, and no source or URL is ever invented.",
+        "End in this order: the Never Blank perspective on this story, then the invitation to https://www.inneros.online, then the Sources section last."
       ],
       "linkedin_rules": [
-        "Carry compact source attribution sufficient to identify the source case — one clear reference, not citation-heavy prose."
+        "Carry compact source attribution sufficient to identify the source case — one clear reference, not citation-heavy prose.",
+        "End in this order: the Never Blank perspective on this story, then the invitation to https://www.inneros.online, then hashtags last — nothing after the hashtags."
       ],
       "require_source_transparency": true,
       "decision_policy": "role_bounded_r1"
@@ -418,7 +421,7 @@
         "The source is a documented case in one of these classes: current_business_event, business_decision, acquisition, strategic_shift, historical_business_case, product_market_behavior, credible_corporate_case, other_documented_event.",
         "The case contains a recognizable obvious reading X and enough factual substance to investigate one overlooked Y and exactly one primary mechanism.",
         "The documented material can support Y; surprise or analogy alone is not eligibility.",
-        "The case has a genuine documented connection to Compound Presence; do not force an unrelated interesting story into the role.",
+        "The case supports a real business mechanism relevant to the configured audience — Compound Presence when the material genuinely carries it, or another supported mechanism such as pricing, capacity, supply, regulation, distribution, operations, customer behaviour or a founder decision. Do not force an unrelated interesting story into the role, and do not force Compound Presence onto a case that does not support it.",
         "Same-day or breaking-news status is not required; historical cases may qualify.",
         "A credible large-company case may qualify, but its outcome may transfer only as a bounded question for the configured audience, never as their predicted result."
       ],

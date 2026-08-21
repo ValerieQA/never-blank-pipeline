@@ -184,7 +184,7 @@ def _model_output(*, disposition: str = "proceed") -> dict:
             "documented_direct_consequence": None,
         }],
         "criterion_results": [{
-            "criterion_id": "nb-owner-presence",
+            "criterion_id": "nb-supported-mechanism",
             "assessment": "satisfied",
             "conclusion": "The evidence exposes a real owner presence decision.",
             "evidence_ids": ["evidence-smb"],
@@ -271,7 +271,7 @@ def test_valid_proceed_returns_canonically_validated_artifact():
     assert decision.lens_profile == _lens_profile()
     assert decision.decision_lens_version == "never-blank-decision-lens/1.0"
     assert decision.judgment.relevance_bases[0].audience_id == _audience().audience_id
-    assert decision.judgment.criterion_results[0].criterion_id == "nb-owner-presence"
+    assert decision.judgment.criterion_results[0].criterion_id == "nb-supported-mechanism"
     # the transport received boundaries, not fabricated evidence
     request = json.loads(transport.calls[0]["request"])
     assert request["strategy_boundaries"]["proof_points_boundaries_only"]
@@ -607,15 +607,14 @@ def test_production_instruction_artifact_loads_with_stable_version():
     instructions = DecisionLensInstructions.load()
     assert instructions.instruction_id == "never-blank-decision-lens"
     assert instructions.profile_id == "never-blank-editorial-lens"
-    # Issue #127 bumped the maintained profile to 1.1 — judgment semantics
-    # changed (the editorial claim mode), which this contract requires to be a
-    # reviewed version bump rather than a silent edit. These assertions exist
-    # to notice exactly that, so they move with it.
-    assert instructions.profile_version == "1.1"
-    assert instructions.version == "1.1"
-    assert instructions.decision_lens_version == "never-blank-decision-lens/1.1"
+    # Issue #157 bumped the maintained profile to 1.2 when its judgment
+    # criteria became mechanism-neutral. These assertions make that semantic
+    # revision explicit rather than allowing a silent prompt edit.
+    assert instructions.profile_version == "1.2"
+    assert instructions.version == "1.2"
+    assert instructions.decision_lens_version == "never-blank-decision-lens/1.2"
     assert instructions.profile_identity == DecisionLensProfileIdentity(
-        lens_profile_id="never-blank-editorial-lens", lens_profile_version="1.1"
+        lens_profile_id="never-blank-editorial-lens", lens_profile_version="1.2"
     )
     assert "evidence" in instructions.instructions.lower()
 
@@ -626,7 +625,7 @@ def test_production_evaluator_wires_maintained_instructions_without_live_calls()
     # constructing the production evaluator performs no provider calls; the
     # decision version comes from the maintained artifact
     assert evaluator._instructions.decision_lens_version == (  # noqa: SLF001
-        "never-blank-decision-lens/1.1"
+        "never-blank-decision-lens/1.2"
     )
 
 
@@ -663,7 +662,7 @@ def _bounded_model_output() -> dict:
             "documented_direct_consequence": "Capacity constrains which work is accepted.",
         }],
         "criterion_results": [{
-            "criterion_id": "nb-owner-presence",
+            "criterion_id": "nb-supported-mechanism",
             "assessment": "satisfied",
             "conclusion": "The case raises a real owner decision without asserting transfer.",
             "evidence_ids": ["evidence-smb"],

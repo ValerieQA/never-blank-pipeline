@@ -6,7 +6,7 @@ These three modules are merged into one LLM call: they are sequential text-produ
 steps operating on the same discovery output with no independent-regeneration value
 between them. Python still enforces the constraints the spec assigns to each individually.
 
-For the new editorial identity (small business visibility patterns):
+For the Never Blank editorial identity (small business patterns):
 - surviving_explanation becomes Step 5 (Explanation — the mechanism named clearly)
 - reframe is new: Step 6 (challenging the obvious interpretation)
 - business_translation becomes Step 7 (Business and sales meaning — commercial reality)
@@ -23,27 +23,29 @@ log = get_logger("editorial.story_assembly")
 _SYSTEM_PROMPT = """You are the Story Assembly module for Never Blank (Story Builder +
 Evidence Reveal + Business Translation combined).
 
-Never Blank investigates patterns that make small businesses visible, recognizable,
-remembered, and commercially present. The reader is a small business owner who must
-recognize their own situation — not study someone else's company.
+Never Blank investigates the evidence-supported patterns that shape how small
+businesses actually work. The reader is a small-business owner who must recognize
+their own situation — not study someone else's company.
 
 Given the Discovery Builder output and the Narrative Spine, produce four fields:
 
 1. surviving_explanation - the MECHANISM stated clearly after the reader has already
    arrived at it through the discovery sequence. This is Step 5 (Explanation):
-   - Name WHY this visibility pattern happens specifically
-   - Not "consistency matters" — name the actual mechanism:
-     "non-urgent visibility work is repeatedly displaced by urgent operational work,"
-     "repeated exposure creates recognition before trust, not after,"
-     "silence breaks accumulated familiarity faster than presence builds it"
+   - Name WHY this pattern happens specifically
+   - Do not substitute a generic doctrine — name the actual mechanism. Balanced
+     examples, only when the supplied evidence supports them:
+     "price rations access to the capacity that is actually scarce,"
+     "a licensing threshold changes who can enter the market,"
+     "distribution timing moves demand away from available inventory,"
+     "non-urgent communication work is displaced by urgent delivery work"
    - 2-4 sentences. First-person investigative voice, not analytical summary.
    - Must be traceable to the discovery sequence provided — do not add new facts.
 
 2. reframe - Step 6: a single specific intellectual move that challenges the obvious
    interpretation of the pattern.
-   - Not a discipline problem — a system-design problem.
-   - Not a lack-of-ideas problem — a continuity problem.
-   - Must be specific to THIS pattern, not a generic reframe about content marketing.
+   - Challenge the obvious interpretation with the mechanism the evidence supports.
+   - Must be specific to THIS pattern, not a generic reframe about any Never Blank
+     concept, content marketing, consistency, or visibility.
    - 1-3 sentences. Does not repeat surviving_explanation.
    - If removed, the article loses something important. If it could appear in any
      article about content, it is too generic — rewrite.
@@ -53,10 +55,11 @@ Given the Discovery Builder output and the Narrative Spine, produce four fields:
    Return null (not a placeholder string) if there is nothing material left open.
    Do not invent fake uncertainty just to fill the field.
 
-4. business_translation - Step 7 (Business and sales meaning): what this visibility
+4. business_translation - Step 7 (Business and sales meaning): what this supported
    pattern means for the business owner's commercial reality.
-   - Connect to: trust, recognition, future buying decisions, referrals, pipeline,
-     sales conversations, future revenue.
+   - Connect only to consequences the evidence and mechanism can carry: margin,
+     capacity, risk, access, demand, customer behaviour, trust, recognition,
+     referrals, pipeline, or revenue timing. No listed consequence is mandatory.
    - NOT a product pitch. NOT generic advice. NOT "companies should..."
    - Must clearly rhyme with the narrative_spine — reuse its central image or claim.
    - 1-2 sentences. By this point the reader already understands the lesson;
@@ -110,13 +113,13 @@ def assemble_story(discovery: dict, spine: dict, decision_lens: dict, signal: di
     is present but not a string.
     """
     user = f"""narrative_spine: {spine.get('narrative_spine', '')}
-visibility_pattern: {signal.get('visibility_pattern', '')}
+business_pattern (legacy field visibility_pattern): {signal.get('visibility_pattern', '')}
 founder_scenario: {signal.get('founder_scenario', '')}
 mechanism: {signal.get('mechanism', '')}
 business_consequence: {signal.get('business_consequence', '')}
 owner_system_objective: {decision_lens.get('owner_system_objective', '')}
-delivery_vs_presence_conflict: {decision_lens.get('delivery_vs_presence_conflict', '')}
-customer_memory_consequence: {decision_lens.get('customer_memory_consequence', '')}
+primary_business_tension (legacy field delivery_vs_presence_conflict): {decision_lens.get('delivery_vs_presence_conflict', '')}
+supported_business_consequence (legacy field customer_memory_consequence): {decision_lens.get('customer_memory_consequence', '')}
 structural_cause: {decision_lens.get('structural_cause', '')}
 first_wrong_explanation: {discovery.get('first_wrong_explanation', '')}
 puzzle: {discovery.get('puzzle', '')}

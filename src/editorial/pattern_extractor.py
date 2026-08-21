@@ -1,8 +1,10 @@
 """
 Pattern Extractor — mandatory gate between research enrichment and editorial pipeline.
 
-This module transforms a corporate signal into an owner-centered visibility pattern,
-or rejects the signal entirely. It runs before any editorial stage. If the signal
+This module transforms a signal into an owner-centered business pattern, or rejects
+the signal entirely. The pattern is whichever one the material most strongly supports;
+the field name ``visibility_pattern`` is the established downstream contract and is
+kept for that reason, not because the pattern must be about visibility. It runs before any editorial stage. If the signal
 cannot credibly be reframed as a pattern a small business owner recognizes in their
 own business, the signal is rejected and pipeline skips publishing.
 
@@ -30,21 +32,23 @@ class SignalRejectedError(Exception):
 _SYSTEM_PROMPT = """You are the Pattern Extractor for Never Blank.
 
 Never Blank produces articles for small business owners — not about corporations.
-Your job is to extract a structural visibility pattern that the owner recognizes in
-their own business, or to reject the signal if no credible owner-facing pattern exists.
+Your job is to extract the structural business pattern the owner recognizes in their
+own business, or to reject the signal if no credible owner-facing pattern exists.
 
 THE CENTRAL QUESTION IS:
-"What is the structural visibility pattern a small business owner would recognize
-in their own business?"
+"What happened here that a small business owner would recognize in their own business?"
 NOT "What did the company do?" — that question is forbidden here.
+
+The pattern is whichever one the material most strongly supports — pricing, capacity, supply, regulation, distribution, operations, customer behaviour, a founder decision, communication, presence, or another supported mechanism. Do not force the material into a presence or visibility frame it does not carry.
 
 Produce exactly these fields:
 
 1. visibility_pattern
-   What happens in small businesses — a structural pattern in how presence, recognition,
-   or visibility works (or fails). Must describe what happens in small businesses,
-   not what happened to a specific company. The corporate example may have triggered
-   the signal, but it is not the pattern.
+   (Established field name; the content is the business pattern this material supports.)
+   What happens in small businesses — the structural pattern the evidence actually
+   shows, whichever mechanism that is. Must describe what happens in small businesses,
+   not what happened to a specific company. The example may have triggered the signal,
+   but it is not the pattern.
 
 2. founder_scenario
    A concrete recognizable scene where the owner sees themselves — the moment they
@@ -56,15 +60,18 @@ Produce exactly these fields:
 3. mechanism
    WHY this pattern happens structurally. Not what a company decided. Not what the
    owner should do differently. The underlying structural reason this pattern repeats.
-   Examples of valid mechanism framing:
+   Examples of valid mechanism framing, deliberately spanning different mechanisms:
+   — "price rations the constraint that is actually binding, not the one being measured"
+   — "capacity added ahead of demand converts fixed cost into fragility"
    — "non-urgent visibility work is displaced by urgent delivery work"
-   — "presence systems that depend on owner energy fail when delivery peaks"
    — "customer memory degrades in proportion to exposure frequency, not business performance"
    Do NOT describe what a company did.
 
 4. business_consequence
-   What happens to customer memory, trust, referral pipeline, or future revenue when
-   this pattern plays out. One to two sentences. Specific to this mechanism.
+   The operating, customer, market, or commercial consequence the evidence supports:
+   margin, capacity, risk, access, demand, trust, memory, referrals, pipeline, revenue,
+   or another consequence. No listed consequence is mandatory. One to two sentences,
+   specific to this mechanism.
 
 5. company_as_evidence_of
    ONE sentence — no more. The corporate example proves this pattern exists at scale.
@@ -83,9 +90,9 @@ Produce exactly these fields:
    "use" if a credible owner-recognition scenario exists without forcing a connection.
    "reject" if any of these conditions are true:
    — No credible founder-recognition scenario can be written naturally
-   — The signal is only relevant to large-company strategy with no small-business visibility mechanism
+   — The signal is only relevant to large-company strategy with no small-business mechanism
    — The corporate example cannot be removed without the pattern collapsing
-   — The signal is generic AI/tech news with no owner-facing visibility angle
+   — The signal is generic AI/tech news with no owner-facing mechanism
    — The founder_scenario requires the reader to know the corporate example to make sense
 
 9. rejection_reason
@@ -172,7 +179,7 @@ def _validate(data: dict) -> dict:
 
 def extract_pattern(signal: dict) -> dict:
     """
-    Transform an enriched signal into an owner-centered visibility pattern dict.
+    Transform an enriched signal into an owner-centered business pattern dict.
 
     Returns the pattern dict when signal_fit = "use".
     Raises SignalRejectedError when signal_fit = "reject".
@@ -191,7 +198,7 @@ NEVER_BLANK_ANGLE (editorial hypothesis; validate it against the facts): {signal
 POTENTIAL_HOOK (candidate, not a required opening): {signal.get('POTENTIAL_HOOK', '')}
 TARGET_AUDIENCE: {signal.get('TARGET_AUDIENCE', 'founder')}
 
-Extract the owner-centered visibility pattern from this signal."""
+Extract the owner-centered business pattern from this signal."""
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_enrich())
     try:

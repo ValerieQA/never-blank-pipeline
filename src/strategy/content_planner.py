@@ -43,8 +43,8 @@ _CURRENT_DIR = Path("strategy/current")
 
 _SYSTEM = """You are a content strategist for Never Blank.
 
-Never Blank publishes articles and posts that help small B2B service business owners recognize
-the structural pattern of owner-dependent presence — and feel the commercial cost of it.
+Never Blank publishes evidence-led articles and posts that help small B2B service business
+owners recognize a specific mechanism and its commercial consequence.
 
 Never Blank sells itself through the quality of its analysis, not through direct advertising.
 
@@ -52,15 +52,18 @@ Your task: generate one content plan item for the given week and pattern.
 
 The article arc is:
   Hook → Recognition → Tension → Market Observation → Investigation → Mechanism →
-  Business Consequence → Reframe → Compound Presence Connection → Echo → Soft CTA
+  Business Consequence → Reframe → Contextual Never Blank Perspective → Echo → Soft CTA
 
 Rules:
 - Hook must open a gap immediately. Not a topic statement — the point.
 - Recognition: the reader must see their own situation, specifically.
 - Mechanism: the structural cause, not the symptom.
 - Reframe: must genuinely contest the obvious explanation.
-- Compound Presence Connection: the semantic link between the mechanism and cumulative presence.
-  Can be part of Reframe, or the transition to Echo. Not a required separate paragraph.
+- compound_presence_connection is a legacy compatibility field. Use it for a concise,
+  contextual Never Blank perspective on the supported mechanism. Compound Presence,
+  visibility, recognition or memory may appear only when the evidence supports them.
+  Do not replace pricing, capacity, regulation, operations or another mechanism with a
+  house thesis merely to populate this field.
 - Echo: the thought that remains. Specific to this article. Not a summary, not advice.
   If no strong Echo candidate exists, set echo to null — do not force a weak one.
   A null echo must be accompanied by a brief echo_omission_reason string.

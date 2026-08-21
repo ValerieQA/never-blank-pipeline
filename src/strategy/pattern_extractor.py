@@ -18,7 +18,8 @@ editorial-level pattern_extractor in src/editorial/pattern_extractor.py:
     Gate:   rejects signals outside Never Blank's strategic territory
 
 Decision 42: Pattern Extractor built as a full module, not a stub.
-Decision 13: Territory = visibility, presence, recognition, customer memory only.
+The persisted ``compound_presence_relevance`` name is a compatibility field; it
+does not constrain the mechanism selected from evidence.
 Decision 34: Target segment = small B2B service businesses (agencies, consultants, MSPs).
 """
 
@@ -34,9 +35,9 @@ log = get_logger("strategy.pattern_extractor")
 
 _SYSTEM = """You are a strategic pattern analyst for Never Blank.
 
-Never Blank's territory: visibility, presence, recognition, customer memory,
-consistent communication, owner dependency, and the communication-to-sales
-relationship for small B2B service businesses.
+Never Blank's editorial territory includes evidence-supported mechanisms affecting
+small B2B service businesses: pricing, capacity, supply, regulation, distribution,
+operations, customer behaviour, founder decisions, communication and presence.
 
 Target segment: agencies (digital/web/dev/creative), independent consultants,
 and managed service providers (MSPs) — single decision-maker businesses.
@@ -50,17 +51,17 @@ A strategic pattern is NOT:
 - A corporate strategy observation
 
 A strategic pattern IS:
-- An observed mechanism in how small B2B service businesses lose or maintain visibility
+- An observed mechanism in how small B2B service businesses actually operate or compete
 - A structural cause that repeats across businesses, not an individual company's decision
 - Something a business owner in the target segment would recognize in their own situation
-- Connected to the cumulative effect of consistent presence (Compound Presence)
+- Connected to a specific operating, customer, market, or commercial consequence
 
 REJECTION CRITERIA — return signal_fit: "reject" if:
 - The signal is about large company M&A, earnings, or product launches with no owner-level mechanism
-- The signal is about AI model releases or chip shortages with no presence/visibility angle
+- The signal has no documented mechanism relevant to the configured audience
 - The signal is generic motivational or tips content with no observable mechanism
-- The signal does not connect to visibility, presence, recognition, or customer memory
-- The signal is macro-economic with no specific effect on how service businesses stay visible
+- The signal does not support any specific operating, customer, market, or commercial consequence
+- The signal is macro-economic with no specific documented effect on the configured audience
 
 Return JSON:
 {
@@ -74,7 +75,7 @@ Return JSON:
   "business_opportunity": "what changes if the owner acts against this pattern",
   "sales_relevance": "why this matters for Never Blank's commercial message",
   "content_relevance": "what kind of article or post this enables",
-  "compound_presence_relevance": "how this connects to the cumulative effect of consistent presence",
+  "compound_presence_relevance": "legacy field: contextual Never Blank perspective on the supported mechanism; use presence only when evidenced",
   "confidence": "high" | "medium" | "low"
 }"""
 

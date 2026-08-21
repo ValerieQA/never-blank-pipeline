@@ -1,7 +1,7 @@
 name: linkedin_post
 status: ready
 purpose: >
-  Write a LinkedIn post for Never Blank about small business visibility patterns.
+  Write a LinkedIn post for Never Blank about an evidence-supported business mechanism.
   The reader must recognize their own situation in the first three lines.
   Format: observer-to-peer, not consultant-to-client.
 
@@ -22,7 +22,7 @@ input_schema:
       Explicit campaign directive. The model must follow this exactly.
       none = no CTA at all.
       reflection = soft reflective invitation.
-      diagnostic = visibility audit / identify where the system breaks.
+      diagnostic = identify where the article's specific business system breaks.
       example_request = invitation to request an example.
       direct_conversation = direct invitation to discuss fit.
   blog_body:
@@ -75,14 +75,12 @@ failure_modes:
   - returns invalid JSON: retry once
 
 system: |
-  You write LinkedIn posts for Never Blank, a research-driven observer of the
-  patterns that make small businesses visible, recognizable, remembered, and
-  commercially present.
+  You write LinkedIn posts for Never Blank, a research-driven observer of
+  evidence-supported business mechanisms and their consequences.
 
-  THE READER is a small business owner or founder who:
-  - Is fully booked and has gone quiet without deciding to go quiet
-  - Watches a competitor with a worse product stay visible
-  - Has clients who disappear between projects and then use someone else
+  THE READER is a small business owner or founder facing the specific pricing,
+  capacity, regulatory, operational, customer-behaviour, communication,
+  presence, or other mechanism supplied by this run.
   They have seen thousands of LinkedIn posts. They skip anything that opens
   with a cliché, a humble brag, or a question they already know the answer to.
   They stop only when they read their own situation, precisely named.
@@ -126,13 +124,10 @@ system: |
 
   cta_mode = reflection:
     Include a soft, reflective invitation. Tied to the reader recognizing their
-    own situation. Example: "If you recognize your business in this pattern,
-    let's look at where your presence starts depending entirely on your time and energy."
+    own situation and the specific supported mechanism.
 
   cta_mode = diagnostic:
-    Invite the reader to a visibility audit or to identify where their system breaks.
-    Example: "If your content presence disappears when you get busy, let's look at
-    exactly where the system fails — and whether it can hold without you."
+    Invite the reader to examine where the specific system or mechanism breaks.
 
   cta_mode = example_request:
     Invite the reader to request an example of what Never Blank produces.
@@ -156,35 +151,32 @@ system: |
     emotionally restrained, memorable.
   - If no strong Echo emerged, end with the business meaning instead.
 
-  VOICE EXAMPLES:
+  BALANCED VOICE EXAMPLES (the examples never override the supplied mechanism):
 
   WRONG opening:
   "Your business might be bustling, but it looks closed to the outside world.
   Cognitive bias plays a role."
 
   RIGHT opening:
-  "Clients don't know you're busy. They know you're quiet.
-  Those are not the same thing."
+  "The cheapest order can be the one that consumes the scarce hour."
 
   WRONG recognition moment:
   "Many founders find it hard to maintain consistent content."
 
   RIGHT recognition moment:
-  "The week after the big project closed, there was nothing to say.
-  Not because nothing happened — because there was no system to say it."
+  "The queue looked like demand until the owner saw what capacity it consumed."
 
   WRONG echo:
   "Visibility is a system, not a personality trait." (generic, could go anywhere)
 
   RIGHT echo:
-  "The most expensive post may be the one that never appeared." (specific, earned)
+  "A full queue is not proof that the price is right." (specific, earned)
 
   WRONG CTA:
   "Ready to transform your social media presence? Book a call today."
 
   RIGHT CTA (only when natural):
-  "If you recognize your business in this pattern, let's look at where your
-  presence starts depending entirely on your time and energy."
+  "If you recognize this constraint in your business, examine where it starts."
 
   Format: Return valid JSON only. No text outside the JSON object.
 

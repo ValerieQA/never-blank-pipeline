@@ -59,7 +59,7 @@ from src.strategy.execution_context import (
 # reviewed commit; a mismatch is a business stop, not a fallback.
 RELEASE1_LENS_PROFILE = DecisionLensProfileIdentity(
     lens_profile_id="never-blank-editorial-lens",
-    lens_profile_version="1.1",
+    lens_profile_version="1.2",
 )
 
 

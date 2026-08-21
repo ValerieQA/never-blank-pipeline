@@ -1,22 +1,22 @@
 """
 Never Blank Strategy Engine — Validators.
 
-Three validation layers:
+Two validation layers:
   1. validate_strategy()         — strategy JSON is complete and coherent
   2. validate_content_plan_item() — each topic has all required fields
-  3. validate_compound_presence_semantic() — article contains the semantic connection
 
-Fail-closed semantics:
-- validate_strategy and validate_content_plan_item: always raise on failure.
-- validate_compound_presence_semantic: raises only when the connection is
-  DEFINITIVELY ABSENT (0 presence keywords / LLM high-confidence absent).
-  Ambiguous text (some keywords, no contrast) logs a warning but does not fail —
-  per decision 44: "fail-closed only when ENTIRELY absent."
+Fail-closed semantics: both always raise on failure.
+
+Compound Presence is no longer validated here (Issue #157). A keyword count
+over the finished prose was never evidence that an article had made the
+connection, and requiring it made any other supported business mechanism —
+pricing, capacity, regulation, distribution — unpublishable. Compound Presence
+remains a Never Blank editorial lens, expressed in role configuration where an
+editor can change it, not a deterministic publication gate.
 """
 
 from __future__ import annotations
 
-import json
 import math
 import re
 from dataclasses import dataclass
@@ -181,149 +181,6 @@ def validate_content_plan(items: list[ContentPlanItem], strategy_id: str) -> Non
 # Implementation: keyword heuristic as first-pass filter (fast, no API call).
 # LLM-assisted semantic check is triggered only when keyword check is ambiguous.
 
-_PRESENCE_KEYWORDS = frozenset({
-    "presence", "visibility", "consistent", "consistently", "systematic",
-    "sustained", "repeated", "repeatedly", "accumulated", "accumulate",
-    "ongoing", "regular", "regularly", "compound", "compounding",
-    "over time", "trust", "recognition", "memory", "familiarity",
-    "contact", "cadence", "week after week", "month after month",
-    "never blank",
-})
-
-_CONTRAST_SIGNALS = frozenset({
-    "one-time", "once", "single", "viral", "lucky", "luck", "moment",
-    "accident", "accidental", "spike", "burst", "one post",
-    "not a strategy", "not a system", "not enough", "temporary",
-})
-
-_SYSTEM_PROMPT_SEMANTIC = """You are a content quality reviewer for Never Blank.
-
-Never Blank's core concept: Compound Presence — the cumulative effect of consistent,
-systematic visibility at relevant contact points. Presence that accumulates over time,
-builds recognition and trust, and does not depend on a single lucky moment.
-
-Your task: determine whether the article establishes a genuine connection between
-the mechanism it revealed and the concept of consistent, systematic presence.
-
-The connection does NOT need to be a separate paragraph. It can be:
-- Part of the Reframe
-- The transition from Business Consequence to Echo
-- Meaning distributed across multiple sentences
-
-The connection IS present if the article:
-1. Explains why one-time attention does not equal systematic presence
-2. Shows how repeated visibility, trust, or audience memory accumulates
-3. Connects the revealed mechanism to the consequences of inconsistent presence
-4. Makes the reader feel the gap between a lucky moment and a presence system
-
-The connection IS ABSENT if the article:
-- Only describes what happened (mechanism) without connecting it to presence
-- Ends on a business consequence without any Compound Presence dimension
-- Uses "presence" or "visibility" as decoration rather than as the argument's core
-
-Return JSON:
-{
-  "compound_presence_present": true | false,
-  "confidence": "high" | "medium" | "low",
-  "reasoning": "one sentence explaining why"
-}"""
-
-
-def validate_compound_presence_semantic(
-    text: str,
-    use_llm: bool = False,
-    llm_fn: Optional[callable] = None,
-) -> None:
-    """
-    Validate that the article text contains Compound Presence Connection.
-
-    First pass: keyword heuristic (fast).
-    If ambiguous and use_llm=True: LLM semantic check (accurate but slower).
-
-    Raises ValueError only when the connection is definitively absent.
-    Does not fail on ambiguous or brief connections.
-
-    Args:
-        text: the article body text
-        use_llm: whether to run LLM check when heuristic is ambiguous
-        llm_fn: callable(system, user, json_mode) → str | dict; used for LLM check
-    """
-    lower = text.lower()
-
-    presence_count = sum(1 for kw in _PRESENCE_KEYWORDS if kw in lower)
-    contrast_count = sum(1 for kw in _CONTRAST_SIGNALS if kw in lower)
-
-    # Clear pass: both presence vocabulary AND contrast signals present
-    if presence_count >= 3 and contrast_count >= 1:
-        log.debug("compound_presence check: PASS (heuristic — presence=%d, contrast=%d)",
-                  presence_count, contrast_count)
-        return
-
-    # Clear fail: no presence vocabulary at all → definitively absent.
-    if presence_count == 0:
-        if use_llm and llm_fn:
-            # If LLM disagrees (high-confidence present), accept it. If LLM fails,
-            # the heuristic result stands — treat as absent.
-            _llm_semantic_check(text, llm_fn, heuristic_failed=True)
-            return
-        raise ValueError(
-            "Article missing Compound Presence Connection: no presence/visibility vocabulary found. "
-            "The article must connect its mechanism to the cumulative effect of consistent presence."
-        )
-
-    # Ambiguous zone: some presence keywords but no contrast signal.
-    # Not definitively absent — warn only (decision 44: fail only when ENTIRELY absent).
-    if presence_count >= 1 and contrast_count == 0:
-        if use_llm and llm_fn:
-            # LLM failure in ambiguous zone: warn, do not fail.
-            _llm_semantic_check(text, llm_fn, heuristic_failed=False)
-            return
-        log.warning(
-            "compound_presence check: AMBIGUOUS — presence keywords=%d, contrast signals=%d. "
-            "Consider enabling LLM semantic check for production.",
-            presence_count, contrast_count,
-        )
-
-
-def _llm_semantic_check(
-    text: str,
-    llm_fn: callable,
-    heuristic_failed: bool = False,
-) -> None:
-    """
-    Run LLM semantic check.
-    Raises ValueError if connection is absent with high confidence,
-    or if heuristic_failed=True and LLM call itself fails.
-    """
-    user = f"Article text:\n\n{text[:3000]}"
-    try:
-        raw = llm_fn(_SYSTEM_PROMPT_SEMANTIC, user, json_mode=True)
-        data = json.loads(raw) if isinstance(raw, str) else raw
-    except Exception as exc:
-        if heuristic_failed:
-            raise ValueError(
-                "Article missing Compound Presence Connection (heuristic absent, LLM check failed)"
-            ) from exc
-        log.warning("LLM compound_presence check failed: %s — heuristic was ambiguous, skipping", exc)
-        return
-
-    present = data.get("compound_presence_present", True)
-    confidence = data.get("confidence", "low")
-    reasoning = data.get("reasoning", "")
-
-    if not present and confidence == "high":
-        raise ValueError(
-            f"Article missing Compound Presence Connection (LLM high-confidence): {reasoning}"
-        )
-    if not present:
-        log.warning(
-            "compound_presence check: LLM flagged absent (confidence=%s) — %s",
-            confidence, reasoning,
-        )
-
-
-# ── Echo Memory editorial guard ───────────────────────────────────────────────
-
 def check_echo_uniqueness(
     item: ContentPlanItem,
     strategy_id: str,
@@ -384,13 +241,15 @@ def check_echo_uniqueness(
 def validate_article_for_publish(
     text: str,
     platform: str = "blog",
-    use_llm_compound_check: bool = False,
-    llm_fn: Optional[callable] = None,
     run_id: str = "",
 ) -> None:
     """
     Full pre-publish validation for a single article/post.
-    Calls output_guard checks + compound_presence semantic check.
+
+    Deterministic platform-output checks only. Editorial questions — whether
+    the article made a Compound Presence connection, or any other editorial
+    judgment — belong to the configured role and to Editorial Acceptance, not
+    to a keyword count at the publication boundary (Issue #157).
 
     run_id: propagated from RunContext. When non-empty it is logged at the
     validation gate. Callers outside the canonical path may omit it.
@@ -403,9 +262,6 @@ def validate_article_for_publish(
         log.info("Validation gate: platform=%s run_id=%s", platform, run_id)
 
     validate_platform_output(platform, text)
-
-    if platform in ("blog", "linkedin"):
-        validate_compound_presence_semantic(text, use_llm=use_llm_compound_check, llm_fn=llm_fn)
 
     log.info("Article pre-publish validation passed: platform=%s", platform)
 
