@@ -323,17 +323,75 @@ def test_llm_client_caps_sdk_retries_by_default(monkeypatch):
     monkeypatch.setattr(llm_client, "_client", None)
 
 
-def test_retry_cap_is_configurable_and_deterministic(monkeypatch):
+def test_retry_cap_accepts_exactly_the_r1_policies(monkeypatch):
+    monkeypatch.delenv("NB_OPENAI_MAX_RETRIES", raising=False)
+    assert llm_client.max_retries() == 1  # unset → default
     monkeypatch.setenv("NB_OPENAI_MAX_RETRIES", "0")
     assert llm_client.max_retries() == 0
-    monkeypatch.delenv("NB_OPENAI_MAX_RETRIES", raising=False)
+    monkeypatch.setenv("NB_OPENAI_MAX_RETRIES", "1")
     assert llm_client.max_retries() == 1
 
 
-def test_image_pipeline_clients_share_the_same_cap():
+@pytest.mark.parametrize(
+    "value",
+    ["-1", "2", "3", "999999", "1.0", "0.5", "", " ", " 1", "1 ", "one",
+     "true", "0x1", "+1", "01"],
+    ids=["negative", "two", "three", "million-attempts", "float-one",
+         "float-half", "empty", "whitespace", "leading-space",
+         "trailing-space", "word", "boolean", "hex", "plus-sign",
+         "zero-padded"],
+)
+def test_every_other_retry_value_is_refused_not_clamped(monkeypatch, value):
+    monkeypatch.setenv("NB_OPENAI_MAX_RETRIES", value)
+
+    with pytest.raises(EnvironmentError, match="NB_OPENAI_MAX_RETRIES"):
+        llm_client.max_retries()
+
+
+def test_invalid_retry_configuration_fails_before_client_construction(monkeypatch):
+    constructed = []
+
+    class FakeOpenAI:
+        def __init__(self, **kwargs):
+            constructed.append(kwargs)
+
+    monkeypatch.setattr(llm_client, "OpenAI", FakeOpenAI)
+    monkeypatch.setattr(llm_client, "_client", None)
+    monkeypatch.setenv("NB_OPENAI_API_KEY", "test-key-never-used")
+    monkeypatch.setenv("NB_OPENAI_MAX_RETRIES", "999999")
+
+    with pytest.raises(EnvironmentError, match="NB_OPENAI_MAX_RETRIES"):
+        llm_client._get_client()
+
+    # the refusal happened before any client existed — nothing was built
+    # with the invalid policy, and nothing was built at all
+    assert constructed == []
+    assert llm_client._client is None
+
+
+def test_image_pipeline_clients_share_the_same_validated_contract():
     from pathlib import Path
 
     source = Path("src/publishing/image_pipeline.py").read_text()
     constructions = source.count("OpenAI(")
-    capped = source.count("max_retries=max_retries()")
-    assert constructions == capped == 2
+    assert constructions == 2
+    # both consume the central validated policy — no independent parsing of
+    # the environment variable anywhere outside llm_client
+    assert source.count("max_retries=retry_policy") == 1
+    assert source.count("max_retries=max_retries()") == 1
+    assert "NB_OPENAI_MAX_RETRIES" not in source
+
+
+def test_no_production_client_bypasses_the_retry_contract():
+    import subprocess
+
+    result = subprocess.run(
+        ["grep", "-rn", "--include=*.py", "-E", r"(Async)?OpenAI\(",
+         "src/", "scripts/"],
+        capture_output=True, text=True,
+    )
+    lines = [l for l in result.stdout.splitlines() if l.strip()]
+    # exactly the three known constructions, every one carrying the cap
+    assert len(lines) == 3, lines
+    for line in lines:
+        assert "max_retries=" in line, line

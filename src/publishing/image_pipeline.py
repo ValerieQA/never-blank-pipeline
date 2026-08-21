@@ -469,10 +469,14 @@ def _ai_choose_visual_spec(
     if not api_key:
         return None
 
+    # Validated outside the fallback try: an invalid retry configuration is
+    # a visible error, never a silent fall-through to the deterministic spec.
+    from src.utils.llm_client import max_retries
+    retry_policy = max_retries()
+
     try:
         from openai import OpenAI
-        from src.utils.llm_client import max_retries
-        client = OpenAI(api_key=api_key, max_retries=max_retries())
+        client = OpenAI(api_key=api_key, max_retries=retry_policy)
 
         selection_prompt = img_gen["selection_prompt"].format(
             title=title,
