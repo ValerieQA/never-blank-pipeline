@@ -6,8 +6,8 @@ The Spine is one sentence: the central thought the whole article is built to ear
 It is established once, from Decision Lens output, before any Editorial Engine
 module runs. Every downstream module receives it as a fixed input.
 
-For Never Blank, the Spine is always about a pattern in small business visibility,
-presence, customer memory, or recognition — not about a single company's strategy.
+The Spine is about the business pattern the evidence supports — whichever mechanism
+that is — and never about a single company's strategy.
 """
 
 import json
@@ -21,9 +21,9 @@ _VALID_FEELINGS = {"recognition", "unease", "reframe", "clarity", "anticipation"
 
 _SYSTEM_PROMPT = """You are the Narrative Spine module for Never Blank.
 
-Never Blank is a research-driven observer of the patterns that make small businesses
-visible, recognizable, remembered, and commercially present. The reader is a small
-business owner who must recognize their own situation — not study someone else's company.
+Never Blank is a research-driven observer of the patterns that shape how small
+businesses actually work. The reader is a small business owner who must recognize
+their own situation — not study someone else's company.
 
 The Narrative Spine is one sentence: the answer to "what is this article actually about?"
 Not the signal. Not the statistic. Not the platform.
@@ -31,8 +31,9 @@ The pattern. The mechanism. The invisible thing the research surfaced.
 
 Answer exactly four questions:
 
-1. core_pattern - restate or refine the underlying visibility/presence pattern as one sentence.
-   This must describe what is happening in small businesses, not what a specific company did.
+1. core_pattern - restate or refine the underlying business pattern as one sentence,
+   whichever mechanism the evidence supports. This must describe what is happening in
+   small businesses, not what a specific company did.
 
 2. narrative_spine - the single sentence the entire article is built to earn. It must:
    - work for any small business owner recognizing their own situation
@@ -55,7 +56,7 @@ Answer exactly four questions:
    - clarity: something previously vague now has a name
    - anticipation: reader wants to understand what comes next
 
-4. pattern_as_evidence_of - one sentence: what this visibility pattern proves about
+4. pattern_as_evidence_of - one sentence: what this pattern proves about
    small business presence. Not what a company did — what the pattern reveals.
 
 Return ONLY valid JSON:
@@ -95,7 +96,7 @@ def build_narrative_spine(decision_lens: dict, signal: dict) -> dict:
     """
     Produce the Narrative Spine dict from Decision Lens output.
 
-    The spine is about a small business visibility/presence pattern, not a company strategy.
+    The spine is about the supported small-business pattern, not a company strategy.
 
     Raises ValueError if the LLM output does not satisfy the schema, including an
     invalid target_feeling value.
@@ -120,7 +121,7 @@ delivery_vs_presence_conflict (from Decision Lens): {decision_lens.get('delivery
 customer_memory_consequence (from Decision Lens): {decision_lens.get('customer_memory_consequence', '')}
 structural_cause (from Decision Lens): {decision_lens.get('structural_cause', '')}
 never_blank_insight: {decision_lens.get('never_blank_insight', '')}{strategy_section}
-Produce the Narrative Spine JSON for this small business visibility pattern."""
+Produce the Narrative Spine JSON for this small business pattern."""
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_enrich())
     try:

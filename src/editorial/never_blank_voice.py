@@ -2,7 +2,7 @@
 Never Blank Voice — Editorial Engine V2 Module 6
 Spec: docs/EDITORIAL_ENGINE_V2.md, Module 6
 
-Final pass for small business visibility articles.
+Final pass for Never Blank small-business articles.
 Generates the Echo (article-specific final thought, sometimes absent) and an optional
 CTA (natural invitation, varies by article). Runs a checklist self-assessment.
 
@@ -88,10 +88,9 @@ You do not add analysis. Your job:
      must remain coherent if the company example is removed
    - reframe challenges the obvious explanation with something specific to this pattern
    - business meaning connects to commercial reality (trust, pipeline, future sales)
-   - the article contains a Compound Presence Connection — the semantic link between the
-     mechanism and the cumulative effect of consistent presence. It may be woven into the
-     Reframe or the transition to Echo; it does NOT need to be a separate paragraph.
-     Fail this check only if the concept is entirely absent from the article.
+   - the article resolves the mechanism it revealed into a consequence the reader can act
+     on. Which mechanism that is comes from the evidence and the configured editorial
+     role — never from a house thesis imposed on the material.
    - echo (if present) is specific to this article and not generic
    - cta (if present) precedes the echo and uses none of the forbidden phrases
 

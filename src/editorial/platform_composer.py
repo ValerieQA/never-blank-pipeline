@@ -105,10 +105,12 @@ The small-business owner is the central character. Write a fresh native body for
 format from structured semantic fields. Do not trim or paraphrase another platform's prose.
 
 Article arc (production): Hook → Recognition → Tension → Market Observation → Investigation →
-Mechanism → Business Consequence → Reframe → Compound Presence Connection → Echo → Soft CTA.
-The Compound Presence Connection links the mechanism to the cumulative effect of consistent
-presence. It may be woven into Reframe or the transition to Echo — it is not a required
-standalone paragraph, but it must be semantically present.
+Mechanism → Business Consequence → Reframe → Echo → Soft CTA.
+The mechanism is whichever one the evidence for this run most strongly supports —
+pricing, capacity, supply, regulation, distribution, operations, customer behaviour, a
+founder decision, communication, presence, or another supported mechanism. Do not
+substitute a house thesis for what the material actually shows; the configured editorial
+role decides what this article argues.
 
 Never use the recurring detective template: "I figured", "I went looking", "I expected",
 "But then I found", "That's when I realized", "So I checked". Do not narrate research actions.

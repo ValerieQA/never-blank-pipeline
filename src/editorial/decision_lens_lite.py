@@ -3,7 +3,7 @@ Decision Lens Lite
 Spec: docs/LERA_OPERATING_SYSTEM.md, Section 12 (Decision Lens output schema)
 
 Updated for owner-centered editorial identity: questions now concern the owner's
-presence system, not the corporate company's strategy. Receives pattern-extractor
+business, not the corporate company's strategy. Receives pattern-extractor
 fields (visibility_pattern, founder_scenario, mechanism, etc.) merged into the
 signal dict by the pipeline.
 
@@ -29,13 +29,14 @@ log = get_logger("editorial.decision_lens_lite")
 
 _SYSTEM_PROMPT = """You are the Decision Lens for Never Blank.
 
-Never Blank investigates patterns that make small businesses visible, recognizable,
-remembered, and commercially present. The reader is the owner — not the corporate
-company whose news triggered the signal.
+Never Blank investigates the patterns that shape how small businesses actually work.
+The reader is the owner — not the corporate company whose news triggered the signal.
 
-The Pattern Extractor has already identified the owner-centered visibility pattern.
-Your job is to analyze what is happening in the OWNER'S PRESENCE SYSTEM — not what
-the company decided.
+The Pattern Extractor has already identified the owner-centered business pattern.
+Your job is to analyze what is happening in the OWNER'S BUSINESS — the mechanism the
+evidence supports, whether that is pricing, capacity, supply, regulation, distribution,
+operations, customer behaviour, a founder decision, communication or presence — not
+what the company decided.
 
 Four primary questions:
 
@@ -122,7 +123,7 @@ def generate_decision_lens(
     research_artifact: NormalizedResearchArtifact | None = None,
 ) -> dict:
     """
-    Produce a Decision Lens output dict focused on the owner's presence system.
+    Produce a Decision Lens output dict focused on the owner's business.
 
     Receives the enriched signal dict which includes pattern_extractor output fields
     (visibility_pattern, founder_scenario, mechanism, etc.) merged in by the pipeline.
@@ -173,7 +174,7 @@ visibility_pattern: {signal.get('visibility_pattern', '')}
 founder_scenario: {signal.get('founder_scenario', '')}
 mechanism: {signal.get('mechanism', '')}
 business_consequence: {signal.get('business_consequence', '')}{strategy_section}
-Produce the Decision Lens JSON — focused on the owner's presence system."""
+Produce the Decision Lens JSON — focused on the owner's business."""
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_enrich())
     try:

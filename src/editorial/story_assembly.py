@@ -6,7 +6,7 @@ These three modules are merged into one LLM call: they are sequential text-produ
 steps operating on the same discovery output with no independent-regeneration value
 between them. Python still enforces the constraints the spec assigns to each individually.
 
-For the new editorial identity (small business visibility patterns):
+For the Never Blank editorial identity (small business patterns):
 - surviving_explanation becomes Step 5 (Explanation — the mechanism named clearly)
 - reframe is new: Step 6 (challenging the obvious interpretation)
 - business_translation becomes Step 7 (Business and sales meaning — commercial reality)
@@ -31,7 +31,7 @@ Given the Discovery Builder output and the Narrative Spine, produce four fields:
 
 1. surviving_explanation - the MECHANISM stated clearly after the reader has already
    arrived at it through the discovery sequence. This is Step 5 (Explanation):
-   - Name WHY this visibility pattern happens specifically
+   - Name WHY this pattern happens specifically
    - Not "consistency matters" — name the actual mechanism:
      "non-urgent visibility work is repeatedly displaced by urgent operational work,"
      "repeated exposure creates recognition before trust, not after,"

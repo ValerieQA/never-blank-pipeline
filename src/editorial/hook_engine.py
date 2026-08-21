@@ -2,7 +2,7 @@
 Hook Engine — Editorial Engine V2 Module 1
 Spec: docs/EDITORIAL_ENGINE_V2.md, Module 1
 
-Generates 5-7 candidate hooks across distinct types for small business visibility
+Generates 5-7 candidate hooks across distinct types for small business
 patterns, then selects the one that makes a business owner stop and recognize
 their own situation.
 
@@ -109,7 +109,7 @@ def _validate(data: dict) -> dict:
 
 def generate_hook(spine: dict, decision_lens: dict, signal: dict) -> dict:
     """
-    Produce hook candidates and a selection for a small business visibility pattern.
+    Produce hook candidates and a selection for a small business pattern.
 
     Raises ValueError if fewer than 5 candidates are returned, any candidate has an
     invalid type, or selected_hook does not exactly match a candidate's text.
