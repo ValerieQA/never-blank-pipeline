@@ -12,13 +12,25 @@ log = get_logger("llm_client")
 _client: OpenAI | None = None
 
 
+def max_retries() -> int:
+    """Explicit SDK retry policy (#170).
+
+    The SDK default of 2 silently turns one logical request into up to three
+    HTTP attempts — and it retries 429s, so a rate-limit event is amplified
+    exactly when the provider is asking for less traffic. One retry is the
+    smallest policy that still absorbs a single transient network blip; the
+    SDK backs off and honours Retry-After on the one retry it gets.
+    """
+    return int(os.environ.get("NB_OPENAI_MAX_RETRIES", "1"))
+
+
 def _get_client() -> OpenAI:
     global _client
     if _client is None:
         api_key = os.environ.get("NB_OPENAI_API_KEY")
         if not api_key:
             raise EnvironmentError("NB_OPENAI_API_KEY is not set")
-        _client = OpenAI(api_key=api_key)
+        _client = OpenAI(api_key=api_key, max_retries=max_retries())
     return _client
 
 
