@@ -82,7 +82,7 @@ Reuse preserves historical decision reproducibility:
 ## Expected profile
 
 `RELEASE1_LENS_PROFILE` pins the complete lens profile identity
-(`never-blank-editorial-lens` / `1.0`) that this orchestration expects.
+(`never-blank-editorial-lens` / `1.2`) that this orchestration expects.
 Changing the maintained instruction profile requires updating this expectation
 in a reviewed commit; a mismatch is a business stop, not a fallback.
 

@@ -107,7 +107,7 @@ def _validate(data: dict) -> dict:
 def build_discovery(hook: dict, spine: dict, decision_lens: dict, signal: dict) -> dict:
     user = f"""selected_hook: {hook.get('selected_hook', '')}
 narrative_spine: {spine.get('narrative_spine', '')}
-visibility_pattern: {signal.get('visibility_pattern', '')}
+business_pattern (legacy field visibility_pattern): {signal.get('visibility_pattern', '')}
 founder_scenario: {signal.get('founder_scenario', '')}
 mechanism: {signal.get('mechanism', '')}
 business_consequence: {signal.get('business_consequence', '')}
@@ -119,7 +119,7 @@ RESPONSE_TAKEN: {signal.get('RESPONSE_TAKEN', '')}
 OUTCOME_IF_KNOWN: {signal.get('OUTCOME_IF_KNOWN', '')}
 COUNTER_EXAMPLE: {signal.get('COUNTER_EXAMPLE', '')}
 owner_system_objective: {decision_lens.get('owner_system_objective', '')}
-delivery_vs_presence_conflict: {decision_lens.get('delivery_vs_presence_conflict', '')}
+primary_business_tension (legacy field delivery_vs_presence_conflict): {decision_lens.get('delivery_vs_presence_conflict', '')}
 
 Produce owner-centered structured discovery material. Do not write publishable prose.
 The company is evidence, never protagonist."""

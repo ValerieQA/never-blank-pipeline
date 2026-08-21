@@ -43,11 +43,11 @@ Answer exactly four questions:
    - NOT summarize a signal ("X reduced posting by 40%")
    - NOT repeat a headline-style hook
 
-   Quality examples (register only — do not copy):
-   "If presence depends only on the owner's free time, silence eventually becomes
-   part of the strategy — even when nobody chose it."
-   "Customers rarely decide to forget a business. They simply stop encountering it."
-   "A business can be successful and still be gradually forgotten."
+   Quality examples across different mechanisms (register only — do not copy):
+   "A full order book can hide a price that is rationing the wrong constraint."
+   "A licensing rule can redraw a market before any competitor changes strategy."
+   "When the evidence is genuinely about presence, silence can become an operating
+   choice even when nobody chose it."
 
 3. target_feeling - exactly one of: recognition, unease, reframe, clarity, anticipation.
    - recognition: reader has been in exactly this situation
@@ -56,8 +56,9 @@ Answer exactly four questions:
    - clarity: something previously vague now has a name
    - anticipation: reader wants to understand what comes next
 
-4. pattern_as_evidence_of - one sentence: what this pattern proves about
-   small business presence. Not what a company did — what the pattern reveals.
+4. pattern_as_evidence_of - one sentence: what this pattern reveals about
+   the supported small-business mechanism. Not what a company did, and never
+   a house thesis that the evidence did not establish.
 
 Return ONLY valid JSON:
 {
@@ -104,21 +105,21 @@ def build_narrative_spine(decision_lens: dict, signal: dict) -> dict:
     strategy_section = ""
     if signal.get("STRATEGY_PRIMARY_MESSAGE"):
         strategy_section = f"""
-Active campaign context — the Spine must align to this framing:
+Legacy active campaign context — use only where the evidence and configured role
+support it; never convert it into the article's required mechanism:
 strategy_primary_message: {signal.get("STRATEGY_PRIMARY_MESSAGE", "")}
 strategy_desired_reader_realization: {signal.get("STRATEGY_DESIRED_REALIZATION", "")}
-strategy_compound_presence_role: {signal.get("STRATEGY_COMPOUND_ROLE", "")}
 """
 
     user = f"""HEADLINE: {signal.get('HEADLINE', '')}
 
-visibility_pattern: {signal.get('visibility_pattern', '')}
+business_pattern (legacy field visibility_pattern): {signal.get('visibility_pattern', '')}
 founder_scenario: {signal.get('founder_scenario', '')}
 mechanism: {signal.get('mechanism', '')}
 business_consequence: {signal.get('business_consequence', '')}
 owner_system_objective (from Decision Lens): {decision_lens.get('owner_system_objective', '')}
-delivery_vs_presence_conflict (from Decision Lens): {decision_lens.get('delivery_vs_presence_conflict', '')}
-customer_memory_consequence (from Decision Lens): {decision_lens.get('customer_memory_consequence', '')}
+primary_business_tension (legacy field delivery_vs_presence_conflict, from Decision Lens): {decision_lens.get('delivery_vs_presence_conflict', '')}
+supported_business_consequence (legacy field customer_memory_consequence, from Decision Lens): {decision_lens.get('customer_memory_consequence', '')}
 structural_cause (from Decision Lens): {decision_lens.get('structural_cause', '')}
 never_blank_insight: {decision_lens.get('never_blank_insight', '')}{strategy_section}
 Produce the Narrative Spine JSON for this small business pattern."""

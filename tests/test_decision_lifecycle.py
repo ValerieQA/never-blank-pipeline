@@ -79,7 +79,7 @@ def _model_output(*, disposition: str = "proceed") -> dict:
             "documented_direct_consequence": None,
         }],
         "criterion_results": [{
-            "criterion_id": "nb-owner-presence",
+            "criterion_id": "nb-supported-mechanism",
             "assessment": "satisfied",
             "conclusion": "The evidence exposes a real owner presence decision.",
             "evidence_ids": ["evidence-1"],

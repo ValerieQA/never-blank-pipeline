@@ -68,8 +68,10 @@ Produce exactly these fields:
    Do NOT describe what a company did.
 
 4. business_consequence
-   What happens to customer memory, trust, referral pipeline, or future revenue when
-   this pattern plays out. One to two sentences. Specific to this mechanism.
+   The operating, customer, market, or commercial consequence the evidence supports:
+   margin, capacity, risk, access, demand, trust, memory, referrals, pipeline, revenue,
+   or another consequence. No listed consequence is mandatory. One to two sentences,
+   specific to this mechanism.
 
 5. company_as_evidence_of
    ONE sentence — no more. The corporate example proves this pattern exists at scale.

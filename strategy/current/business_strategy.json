@@ -133,16 +133,16 @@
   },
   "content": {
     "objectives": [
-      "Make the reader recognize a concrete presence pattern in their own business.",
-      "Explain the mechanism and commercial consequence behind that pattern.",
+      "Make the reader recognize one concrete, evidence-supported business pattern.",
+      "Explain the mechanism and commercial consequence behind that pattern without imposing a house thesis.",
       "Demonstrate Never Blank through quality of investigation and editorial judgment rather than direct product pitching.",
       "Create a defensible path from recognition to reflection, diagnostic interest, example request, or direct conversation."
     ],
     "territories": [
-      "Owner-dependent visibility and the periods when busy businesses disappear.",
-      "The gap between work performed and work visible to prospective clients.",
-      "Customer memory, accumulated recognition, trust, and continuity of presence.",
-      "The systems and decisions that allow market presence to continue during delivery work.",
+      "Pricing, capacity, supply, regulation, distribution, operations, customer behaviour, founder decisions, communication, and presence when supported by evidence.",
+      "The gap between the obvious reading of a documented case and the mechanism the evidence actually supports.",
+      "Specific operating, customer, market, or commercial consequences that follow from the supported mechanism.",
+      "Bounded questions that let an owner examine a documented mechanism without transferring an external outcome.",
       "Evidence quality, editorial judgment, and the difference between useful content and generic output."
     ]
   },
@@ -151,7 +151,7 @@
       "Sharp: every sentence earns its place and the point arrives without a wind-up.",
       "Observational: name what is happening before prescribing what should happen.",
       "Direct and clean: avoid corporate language, inflated claims, and obscuring metaphors.",
-      "Commercially aware: connect the mechanism to recognition, pipeline, referrals, trust, or revenue timing when evidence supports that connection.",
+      "Commercially aware: connect the mechanism to the operating, customer, market, or commercial consequence the evidence supports.",
       "Reader-centered: the founder or owner is the central character; Never Blank is the observer."
     ],
     "editorial_principles": [
@@ -200,14 +200,14 @@
       "rules": [
         "Keep the invitation soft and specific to the article.",
         "Do not request a call, form submission, or purchase.",
-        "Reconnect to the Never Blank idea in the article's own language before inviting the reader onward.",
+        "Use a contextual Never Blank perspective grounded in the article's evidence-supported mechanism before inviting the reader onward.",
         "Name https://www.inneros.online as the destination and no other URL.",
         "Invite; never assert a capability. No 'we can help you…', no promised outcome, no implied diagnosis."
       ]
     },
     {
       "cta_id": "diagnostic",
-      "intent": "Invite the reader to show the current presence system and identify where it breaks.",
+      "intent": "Invite the reader to examine the specific business system or mechanism described by the article and identify where it breaks.",
       "rules": [
         "Describe the diagnostic action concretely.",
         "Do not promise an outcome or manufacture urgency."
@@ -256,7 +256,7 @@
       "cta_rules": [
         "Follow the configured CTA mode exactly.",
         "When present, express the CTA as a natural paragraph tied to the article and place it before the Echo.",
-        "Close by reconnecting the article's own mechanism to the Never Blank idea — that consistent presence is what turns attention into something a business can continue. Write it fresh for this article; never paste a standard slogan.",
+        "Close with a fresh Never Blank editorial perspective on the article's own evidence-supported mechanism; never replace that mechanism with a standard house thesis or slogan.",
         "When CTA mode is none, do not add an invitation.",
         "End the invitation with the canonical destination https://www.inneros.online and no other URL.",
         "The invitation makes no claim about what Never Blank can do, achieve, diagnose, or help with. Invite the reader onward; do not describe a capability the evidence has not established."
@@ -292,7 +292,7 @@
       "cta_rules": [
         "Follow the configured CTA mode exactly.",
         "When present, use a paragraph-length invitation tied to the post and place it before the Echo.",
-        "Close by reconnecting to the Never Blank idea in this post's own terms, then invite the reader to continue at https://www.inneros.online.",
+        "Close with a contextual Never Blank perspective grounded in this post's evidence-supported mechanism, then invite the reader to continue at https://www.inneros.online.",
         "When CTA mode is none, do not add an invitation.",
         "The invitation makes no claim about what Never Blank can do or achieve for the reader."
       ],
