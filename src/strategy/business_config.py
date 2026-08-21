@@ -125,6 +125,22 @@ class EditorialRole(_ContractModel):
     #: relaxed: acceptance, source transparency, preflight and publishers are
     #: unchanged.
     decision_policy: Literal["decision_lens", "role_bounded_r1"] = "decision_lens"
+    #: Optional role-scoped Editorial Acceptance rubric. Both fields are one
+    #: reference and therefore must be declared together. The Engine remains
+    #: generic: product-specific criteria live in the referenced strict file.
+    acceptance_rubric_path: NonBlankStr | None = None
+    acceptance_rubric_identity: NonBlankStr | None = None
+
+    @model_validator(mode="after")
+    def _complete_acceptance_reference(self) -> "EditorialRole":
+        if (self.acceptance_rubric_path is None) != (
+            self.acceptance_rubric_identity is None
+        ):
+            raise ValueError(
+                "editorial role acceptance rubric path and identity must be "
+                "declared together"
+            )
+        return self
 
 
 class WixChannelRules(_ContractModel):

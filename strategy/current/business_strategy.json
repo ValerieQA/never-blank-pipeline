@@ -387,6 +387,54 @@
       ],
       "require_source_transparency": true,
       "decision_policy": "role_bounded_r1"
+    },
+    {
+      "role_id": "never-blank-wednesday-golden",
+      "intent": "Demonstrate how Never Blank thinks by moving from a documented event and its obvious public reading X to one evidence-supported overlooked Y, one primary mechanism, and one bounded business question.",
+      "structure": [
+        "Establish the documented event or fact with only the context the discovery needs.",
+        "Name the obvious public interpretation X without treating it as the conclusion.",
+        "Make the turn from what everyone saw to the more interesting business question; literal turn wording and fixed headings are not required.",
+        "State one overlooked Y that the accepted current-run evidence can defend. Surprise or contrarian tone is never evidence.",
+        "Explain exactly one primary mechanism underneath Y: an incentive, behaviour, strategy, market structure, economics, operating assumption, category boundary, customer behaviour, or equivalent.",
+        "Return to the documented facts and identify what supports Y and what the evidence does not establish.",
+        "Ask one bounded business question: if the mechanism is relevant, what should another business examine in itself? Never transfer the source company's outcome.",
+        "Earn one Never Blank insight that changes how the reader sees the case.",
+        "Close with context-specific Never Blank philosophy and the configured website invitation.",
+        "Wix and LinkedIn must preserve the same central discovery and primary mechanism."
+      ],
+      "forbidden": [
+        "News recap, source summary, or long background before the discovery.",
+        "'5 lessons from X', '3 takeaways', or any equivalent listicle frame.",
+        "Generic small-business advice not earned by the case and mechanism.",
+        "More than one primary mechanism or several competing explanations.",
+        "Manufactured controversy, contradiction, or contrarianism.",
+        "An overlooked Y unsupported by accepted current-run evidence.",
+        "A corporate or external-case outcome silently transferred to the configured audience.",
+        "Generic AI or ordinary marketing-business-blog prose and padding.",
+        "A title that copies the source headline, summarizes the whole article, reveals all of Y, or uses cheap clickbait."
+      ],
+      "eligibility_criteria": [
+        "The source is a documented case in one of these classes: current_business_event, business_decision, acquisition, strategic_shift, historical_business_case, product_market_behavior, credible_corporate_case, other_documented_event.",
+        "The case contains a recognizable obvious reading X and enough factual substance to investigate one overlooked Y and exactly one primary mechanism.",
+        "The documented material can support Y; surprise or analogy alone is not eligibility.",
+        "The case has a genuine documented connection to Compound Presence; do not force an unrelated interesting story into the role.",
+        "Same-day or breaking-news status is not required; historical cases may qualify.",
+        "A credible large-company case may qualify, but its outcome may transfer only as a bounded question for the configured audience, never as their predicted result."
+      ],
+      "wix_rules": [
+        "Develop one concise Golden discovery through X, Y, one mechanism, evidence, a bounded question, the Never Blank insight, and the contextual close.",
+        "Create an evidence-grounded title tension that makes the reader wonder what everyone missed without revealing the complete reframe.",
+        "Use the configured reflection CTA and canonical website destination https://www.inneros.online."
+      ],
+      "linkedin_rules": [
+        "Compose a native compressed LinkedIn version of the same central Golden discovery; do not truncate the Wix article or introduce a second argument.",
+        "Preserve X, Y, the primary mechanism, the evidence boundary, the bounded question, and the contextual Never Blank close.",
+        "Use the configured reflection CTA and canonical website destination https://www.inneros.online."
+      ],
+      "require_source_transparency": true,
+      "acceptance_rubric_path": "config/prompts/editorial_acceptance/never_blank_golden_wednesday.yaml",
+      "acceptance_rubric_identity": "never-blank-golden-wednesday-acceptance/1.0"
     }
   ]
 }

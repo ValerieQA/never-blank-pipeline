@@ -1,0 +1,13 @@
+reference_id: versant-full-swing-acquisition
+reference_kind: primary
+signal_id: 37a503640b83be6c
+source_url: https://www.cnbc.com/2026/07/06/versant-to-buy-golf-simulator-company-full-swing.html
+obvious_reading_x: Versant made a $530 million acquisition to diversify its media assets.
+overlooked_y: The strategically interesting move is reducing dependence on revenue tied to a declining legacy distribution model, not merely adding another entertainment asset.
+primary_mechanism: Capital is being reallocated toward an experiential revenue stream whose demand is not structurally tied to cable television distribution.
+evidence_basis:
+  - The documented transaction is Versant's agreement to acquire Full Swing for $530 million.
+  - The recorded purpose is expansion into nontraditional media assets and diversification beyond cable television.
+  - The acquisition outcome and long-term integration result remain unknown.
+bounded_business_question: Which revenue line in another business still depends on an operating assumption that customers are already leaving behind?
+usage_rule: reasoning_reference_only_do_not_imitate_wording
