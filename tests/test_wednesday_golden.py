@@ -192,7 +192,6 @@ def test_policy_requires_x_y_one_mechanism_evidence_and_bounded_transfer(profile
     assert policy.require_obvious_reading_x is True
     assert policy.require_overlooked_y is True
     assert policy.require_evidence_supporting_y is True
-    assert policy.require_compound_presence_relevance is True
     assert policy.required_primary_mechanisms == 1
     assert policy.required_transfer_mode.value == "bounded_business_question"
 
@@ -202,6 +201,46 @@ def test_policy_requires_x_y_one_mechanism_evidence_and_bounded_transfer(profile
     assert "exactly one primary mechanism" in rendered
     assert "surprise or analogy alone is not eligibility" in rendered
     assert "outcome may transfer only as a bounded question" in rendered
+
+
+def test_compound_presence_is_not_a_mandatory_wednesday_mechanism(profile):
+    # #157: the Golden mechanism may be Compound Presence, but it may equally
+    # be another supported business mechanism. The mandate is gone from the
+    # strict policy model, the profile and the eligibility rules.
+    from src.never_blank.wednesday_golden import WednesdaySourcePolicy
+
+    assert "require_compound_presence_relevance" not in WednesdaySourcePolicy.model_fields
+
+    rendered = " ".join(profile.source_eligibility_rules()).lower()
+    assert "genuine documented connection to compound presence" not in rendered
+    for alternative in ("pricing", "capacity", "supply", "regulation",
+                        "distribution", "operations"):
+        assert alternative in rendered
+
+
+def test_compound_presence_remains_available_and_forcing_it_stays_prohibited(profile):
+    rendered = " ".join(profile.source_eligibility_rules()).lower()
+
+    assert "compound presence when the material genuinely carries it" in rendered
+    assert "do not force compound presence onto a case that does not support it" in rendered
+    assert "do not force an unrelated interesting story into the role" in rendered
+
+
+def test_the_golden_movement_and_its_guarantees_are_unchanged(profile):
+    # the approved contract survives the eligibility change intact
+    stages = [stage.stage_id.value for stage in profile.reasoning_movement]
+    assert stages == [
+        "event", "obvious_reading_x", "turn", "overlooked_y", "primary_mechanism",
+        "evidence_for_y", "bounded_business_question", "never_blank_insight",
+        "close_and_cta",
+    ]
+    assert profile.text_shape.primary_mechanisms == 1
+    assert profile.text_shape.central_discoveries == 1
+    assert profile.source_policy.required_transfer_mode.value == "bounded_business_question"
+
+    prohibitions = " ".join(item.rule for item in profile.prohibitions).lower()
+    for forbidden in ("5 lessons", "3 takeaways", "recap", "generic"):
+        assert forbidden in prohibitions
 
 
 def test_all_authorized_documented_source_classes_are_configured(profile):

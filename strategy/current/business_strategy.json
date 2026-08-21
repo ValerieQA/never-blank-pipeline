@@ -421,7 +421,7 @@
         "The source is a documented case in one of these classes: current_business_event, business_decision, acquisition, strategic_shift, historical_business_case, product_market_behavior, credible_corporate_case, other_documented_event.",
         "The case contains a recognizable obvious reading X and enough factual substance to investigate one overlooked Y and exactly one primary mechanism.",
         "The documented material can support Y; surprise or analogy alone is not eligibility.",
-        "The case has a genuine documented connection to Compound Presence; do not force an unrelated interesting story into the role.",
+        "The case supports a real business mechanism relevant to the configured audience — Compound Presence when the material genuinely carries it, or another supported mechanism such as pricing, capacity, supply, regulation, distribution, operations, customer behaviour or a founder decision. Do not force an unrelated interesting story into the role, and do not force Compound Presence onto a case that does not support it.",
         "Same-day or breaking-news status is not required; historical cases may qualify.",
         "A credible large-company case may qualify, but its outcome may transfer only as a bounded question for the configured audience, never as their predicted result."
       ],

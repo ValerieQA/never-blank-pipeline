@@ -99,7 +99,6 @@ class WednesdaySourcePolicy(_ProductModel):
     require_obvious_reading_x: bool
     require_overlooked_y: bool
     require_evidence_supporting_y: bool
-    require_compound_presence_relevance: bool
     required_primary_mechanisms: Literal[1]
     required_transfer_mode: Literal[TransferMode.BOUNDED_QUESTION]
 
@@ -182,8 +181,12 @@ class WednesdayGoldenProfile(_ProductModel):
             "substance to investigate one overlooked Y and exactly one primary mechanism.",
             "The documented material can support Y; surprise or analogy alone is not "
             "eligibility.",
-            "The case has a genuine documented connection to Compound Presence; do not "
-            "force an unrelated interesting story into the role.",
+            "The case supports a real business mechanism relevant to the configured "
+            "audience — Compound Presence when the material genuinely carries it, or "
+            "another supported mechanism such as pricing, capacity, supply, regulation, "
+            "distribution, operations, customer behaviour or a founder decision. Do not "
+            "force an unrelated interesting story into the role, and do not force "
+            "Compound Presence onto a case that does not support it.",
             "Same-day or breaking-news status is not required; historical cases may qualify.",
             "A credible large-company case may qualify, but its outcome may transfer only "
             "as a bounded question for the configured audience, never as their predicted result.",
