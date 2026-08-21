@@ -1,19 +1,19 @@
 name: Scheduled Publisher
 
-# Cron fires at 10:00 UTC Wed/Fri (covers both EST=UTC-5 and EDT=UTC-4).
+# Cron fires at 10:00/11:00 UTC Friday to cover EDT and EST.
 #
 # Monday was removed here by Issue #142: Monday is owned by
 # monday_publish.yml, which runs the canonical pipeline. Leaving Monday on
 # this legacy schedule would publish a second article that never passed the
-# Decision Lens or editorial acceptance. Wednesday and Friday are unchanged
-# and keep this legacy path until their own streams (#143, #144) replace it.
+# Decision Lens or editorial acceptance. Wednesday is likewise owned by
+# wednesday_golden.yml; Friday remains on this legacy path until #144.
 # The Python script performs the authoritative timezone check and exits cleanly
 # if it is not within the configured publish window in America/New_York.
 
 on:
   schedule:
-    - cron: "0 10 * * 3,5"   # 10:00 UTC = 06:00 ET (DST) / 05:00 ET (std)
-    - cron: "0 11 * * 3,5"   # 11:00 UTC = 06:00 ET (std) / 07:00 ET (DST)
+    - cron: "0 10 * * 5"   # 10:00 UTC = 06:00 ET (DST) / 05:00 ET (std)
+    - cron: "0 11 * * 5"   # 11:00 UTC = 06:00 ET (std) / 07:00 ET (DST)
 
   workflow_dispatch:
     inputs:

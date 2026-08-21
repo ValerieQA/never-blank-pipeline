@@ -1,9 +1,7 @@
 schedule:
   timezone: America/New_York
   days:
-    # Monday moved to its own stream (Issue #142); this legacy schedule now
-    # covers only the days that still run through it.
-    - wednesday
+    # Monday and Wednesday moved to independent canonical streams (#142/#143).
     - friday
   time: "06:00"
   jitter_minutes: 0

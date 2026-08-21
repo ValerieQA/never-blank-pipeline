@@ -1,0 +1,104 @@
+# Never Blank product profile: Wednesday Golden (Issue #143).
+#
+# Product semantics only. Generic editorial-role identity, run persistence,
+# pipeline propagation and scheduling hooks are reused from the Engine seam
+# introduced on the Issue #142 branch; none of its Monday policy is copied.
+
+profile_id: never-blank-wednesday-golden
+profile_version: "1.0"
+editorial_role_id: never-blank-wednesday-golden
+acceptance_rubric_path: config/prompts/editorial_acceptance/never_blank_golden_wednesday.yaml
+acceptance_rubric_identity: never-blank-golden-wednesday-acceptance/1.0
+cta_id: reflection
+website_destination: https://www.inneros.online
+
+reasoning_movement:
+  - stage_id: event
+    editorial_function: Establish the documented event or fact with only the context needed for the discovery.
+  - stage_id: obvious_reading_x
+    editorial_function: Name the recognizable public or surface interpretation X without treating it as the article's conclusion.
+  - stage_id: turn
+    editorial_function: Move the reader from what everyone noticed toward the more interesting business question; literal turn wording is optional.
+  - stage_id: overlooked_y
+    editorial_function: State one overlooked observation Y that is defensible from the accepted evidence, never contrarian invention.
+  - stage_id: primary_mechanism
+    editorial_function: Explain exactly one mechanism underneath Y, such as an incentive, behavior, operating assumption, market structure, economics, strategy, category boundary, or customer behavior.
+  - stage_id: evidence_for_y
+    editorial_function: Return to the documented facts and show exactly what supports Y and what the evidence does not establish.
+  - stage_id: bounded_business_question
+    editorial_function: Ask what another business should examine in itself if this mechanism is relevant, without transferring the source company's outcome.
+  - stage_id: never_blank_insight
+    editorial_function: Earn one Never Blank idea that changes how the reader sees the case rather than adding generic advice.
+  - stage_id: close_and_cta
+    editorial_function: Close with context-specific Never Blank philosophy and the configured website invitation.
+
+prohibitions:
+  - prohibition_id: news-recap
+    rule: Do not produce a news recap, source summary, or background-first article.
+  - prohibition_id: five-lessons
+    rule: Do not write “5 lessons from X” or transform the source into a list of lessons.
+  - prohibition_id: three-takeaways
+    rule: Do not write “3 takeaways” or any equivalent numbered-takeaway frame.
+  - prohibition_id: generic-smb-advice
+    rule: Do not append generic small-business advice that is not earned by the case and mechanism.
+  - prohibition_id: multiple-mechanisms
+    rule: Do not explain multiple competing mechanisms; select exactly one primary mechanism.
+  - prohibition_id: manufactured-contrarianism
+    rule: Do not invent a controversy, discrepancy, or hidden Y merely to sound surprising.
+  - prohibition_id: unsupported-y
+    rule: Do not state an overlooked Y that the accepted evidence cannot support.
+  - prohibition_id: outcome-transfer
+    rule: Do not turn a corporate or external-case outcome into a promised or reported outcome for the configured audience.
+  - prohibition_id: generic-ai-language
+    rule: Do not use generic AI/business-blog transitions, filler, or prose that an ordinary marketing-content bot could produce for any subject.
+  - prohibition_id: long-background
+    rule: Do not delay the discovery with background beyond what the mechanism needs.
+  - prohibition_id: source-headline-title
+    rule: Do not copy or lightly rephrase the source headline as the article title.
+  - prohibition_id: reveal-y-title
+    rule: Do not reveal the complete overlooked Y in the title.
+
+title:
+  intent: Create honest curiosity around the discrepancy between obvious X and overlooked Y so the reader asks what everyone missed.
+  required:
+    - Create tension or curiosity grounded in the documented case.
+    - Leave the complete reframe to be discovered in the article.
+    - Stay accurate to the accepted evidence.
+  forbidden:
+    - Copy or lightly rephrase the source headline.
+    - Summarize the entire article.
+    - Reveal the complete overlooked Y.
+    - Use cheap clickbait or manufacture a contradiction.
+
+text_shape:
+  central_discoveries: 1
+  primary_mechanisms: 1
+  shared_discovery_key: wednesday-golden-central-discovery
+  wix:
+    - Use the accepted concise Never Blank Wix range and no padding.
+    - Develop one discovery through X, Y, mechanism, evidence, bounded question, insight, and close.
+    - Preserve publishable source attribution for material externally verifiable claims.
+  linkedin:
+    - Compose a native compressed LinkedIn artifact rather than truncating the Wix article.
+    - Preserve the same central discovery and primary mechanism as Wix; do not introduce a second argument.
+    - Keep compact source attribution suitable for LinkedIn.
+
+source_policy:
+  allowed_source_kinds:
+    - current_business_event
+    - business_decision
+    - acquisition
+    - strategic_shift
+    - historical_business_case
+    - product_market_behavior
+    - credible_corporate_case
+    - other_documented_event
+  same_day_required: false
+  large_company_cases_allowed: true
+  require_documented_fact: true
+  require_obvious_reading_x: true
+  require_overlooked_y: true
+  require_evidence_supporting_y: true
+  require_compound_presence_relevance: true
+  required_primary_mechanisms: 1
+  required_transfer_mode: bounded_business_question

@@ -26,12 +26,12 @@ on:
         default: ""
         type: string
   schedule:
-    # 3am ET (EDT = UTC-4): Wed, Fri, Sun at 07:00 UTC
+    # 3am ET (EDT = UTC-4): Fri and Sun at 07:00 UTC.
     # During EST (winter, UTC-5) this fires at 2am ET — acceptable
     #
-    # Monday removed by Issue #142: monday_publish.yml is the single
-    # authoritative Monday owner. Wednesday, Friday and Sunday are unchanged.
-    - cron: "0 7 * * 3,5,0"
+    # Monday and Wednesday are owned by their independent canonical streams
+    # (Issues #142 and #143). Friday and Sunday remain unchanged here.
+    - cron: "0 7 * * 5,0"
 
 # Serialize publish runs to prevent concurrent writes to published_content_index.jsonl
 concurrency:

@@ -406,22 +406,23 @@ def test_exactly_one_workflow_publishes_on_monday():
     assert owners == ["monday_publish.yml"]
 
 
-def test_the_legacy_scheduler_kept_wednesday_and_friday():
+def test_the_legacy_scheduler_kept_friday_after_independent_streams_split_out():
     crons = _schedule(_workflow("scheduled_publish.yml"))
 
-    assert crons == ["0 10 * * 3,5", "0 11 * * 3,5"]
+    assert crons == ["0 10 * * 5", "0 11 * * 5"]
     assert not any(_fires_on(cron, "1") for cron in crons)
+    assert not any(_fires_on(cron, "3") for cron in crons)
     # and the configuration its script actually reads agrees
     schedule = yaml.safe_load(Path("config/schedule.yaml").read_text())["schedule"]
-    assert schedule["days"] == ["wednesday", "friday"]
+    assert schedule["days"] == ["friday"]
     assert schedule["time"] == "06:00"
     assert schedule["timezone"] == "America/New_York"
 
 
-def test_the_canonical_multiday_workflow_kept_wednesday_friday_and_sunday():
+def test_the_canonical_multiday_workflow_kept_friday_and_sunday():
     crons = _schedule(_workflow("research_generate_and_publish.yml"))
 
-    assert crons == ["0 7 * * 3,5,0"]
+    assert crons == ["0 7 * * 5,0"]
 
 
 def test_the_tuesday_thursday_stream_is_untouched():
@@ -536,9 +537,10 @@ def test_no_engine_module_knows_what_monday_means(module):
 def test_the_role_content_lives_only_in_configuration():
     declared = json.loads(CONFIG_PATH.read_text())["editorial_roles"]
 
-    assert [role["role_id"] for role in declared] == [MONDAY_ROLE]
+    declared_by_id = {role["role_id"]: role for role in declared}
+    assert MONDAY_ROLE in declared_by_id
     # the phrases the tests above assert on come from configuration, not code
-    role_text = json.dumps(declared).lower()
+    role_text = json.dumps(declared_by_id[MONDAY_ROLE]).lower()
     assert "one mechanism actually visible" in role_text
     assert "the never blank reading, only where the material earns it" in role_text
 

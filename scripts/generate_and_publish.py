@@ -751,6 +751,8 @@ def _run(
     # produce a default article under a role name it never honoured.
     _editorial_role_identity = None
     _editorial_role_rules = None
+    _editorial_acceptance_path = None
+    _editorial_acceptance_identity = None
     _role = None
     if args.editorial_role:
         try:
@@ -768,6 +770,8 @@ def _run(
             "long": render_editorial_role_rules(_role, surface="wix"),
             "medium": render_editorial_role_rules(_role, surface="linkedin"),
         }
+        _editorial_acceptance_path = _role.acceptance_rubric_path
+        _editorial_acceptance_identity = _role.acceptance_rubric_identity
         print(f"  ✓  editorial role: {_editorial_role_identity.role_id}")
 
     active_strategy = load_active_strategy()
@@ -1529,7 +1533,20 @@ def _run(
         # Revision touches the Wix article body only — no other channel is
         # regenerated.
         try:
-            _acceptance_rubric = EditorialAcceptanceRubric.load()
+            _acceptance_rubric = (
+                EditorialAcceptanceRubric.load(Path(_editorial_acceptance_path))
+                if _editorial_acceptance_path
+                else EditorialAcceptanceRubric.load()
+            )
+            if (
+                _editorial_acceptance_identity is not None
+                and _acceptance_rubric.identity != _editorial_acceptance_identity
+            ):
+                raise EditorialAcceptanceError(
+                    "configured editorial-role rubric identity mismatch: "
+                    f"expected {_editorial_acceptance_identity!r}, "
+                    f"loaded {_acceptance_rubric.identity!r}"
+                )
             _acceptance = run_editorial_acceptance(
                 article_body=blog_body,
                 research=research_artifact,

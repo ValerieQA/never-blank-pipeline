@@ -75,7 +75,14 @@ jobs:
           NB_TELEGRAM_BOT_TOKEN:             ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
           NB_TELEGRAM_CHANNEL_ID:            ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
         id: research
-        run: python scripts/research/run_daily_research.py
+        run: |
+          # Daily discovery remains active, but its optional legacy Stage 11
+          # is not a second Wednesday publisher. Other days preserve the
+          # repository's configured behavior unchanged.
+          if [ "$(TZ=America/New_York date +%u)" = "3" ]; then
+            export NB_RESEARCH_PUBLISH_ENABLED=false
+          fi
+          python scripts/research/run_daily_research.py
 
       # Discovery results must survive a failure in the optional, explicitly
       # non-canonical Stage 11 publishing (see run_daily_research.py's module
