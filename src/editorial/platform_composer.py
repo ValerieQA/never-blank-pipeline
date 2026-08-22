@@ -278,6 +278,11 @@ def _linkedin_rules(view: "LinkedInStrategyView | None") -> tuple[str, ...]:
     )
 
 
+#: Every format the composer knows how to write. Future channels re-enable
+#: by passing their formats to compose_platforms — the tables stay complete.
+ALL_FORMATS = ("long", "reading", "medium", "instagram", "short")
+
+
 def compose_platforms(
     structured_article: dict,
     cta_mode: str = "none",
@@ -285,9 +290,20 @@ def compose_platforms(
     wix_strategy: "WixStrategyView | None" = None,
     linkedin_strategy: "LinkedInStrategyView | None" = None,
     editorial_role_rules: "str | dict[str, str] | None" = None,
+    formats: "tuple[str, ...] | None" = None,
 ) -> dict:
+    """Compose one native body per requested format.
+
+    ``formats=None`` keeps the historical all-formats behaviour for legacy
+    callers. The canonical Release 1 entrypoint passes only the formats its
+    active surfaces consume (#175): a format that is not requested makes no
+    model call and produces no output — execution scope is reduced, the
+    format architecture is not.
+    """
     result = {}
-    for format_key in ("long", "reading", "medium", "instagram", "short"):
+    for format_key in (ALL_FORMATS if formats is None else formats):
+        if format_key not in ALL_FORMATS:
+            raise ValueError(f"unknown composer format: {format_key!r}")
         strategy_rules = (
             _wix_rules(wix_strategy)
             if format_key == "long"

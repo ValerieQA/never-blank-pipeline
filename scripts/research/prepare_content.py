@@ -122,7 +122,7 @@ def _find_existing_image(signal: dict, library: dict) -> tuple[str | None, str]:
     return None, "none"
 
 
-def _generate_signal_image(signal: dict) -> dict:
+def _generate_signal_image(signal: dict, platforms: list[str] | None = None) -> dict:
     """
     Generate a full Never Blank branded image for this signal.
     Uses the proven image_pipeline: visual family → base image → composite → platform sizes → Cloudinary.
@@ -193,7 +193,7 @@ def _generate_signal_image(signal: dict) -> dict:
     master_url: str = ""
 
     prepared_hook = prepare_photo_overlay_hook(hook_text)
-    for platform in PLATFORMS:
+    for platform in (PLATFORMS if platforms is None else platforms):
         if is_card:
             sized_img = compose_quote_card(hook_text, platform, visual_family, card_texture_family)
         else:
@@ -272,7 +272,8 @@ def _generate_signal_image(signal: dict) -> dict:
     }
 
 
-def _build_image_plan(signal: dict, library: dict) -> tuple[dict, dict | None]:
+def _build_image_plan(signal: dict, library: dict,
+                      platforms: list[str] | None = None) -> tuple[dict, dict | None]:
     """
     Determine image for this signal: reuse (same signal only) or generate fresh.
     Returns (image_plan, library_entry_or_None).
@@ -284,6 +285,7 @@ def _build_image_plan(signal: dict, library: dict) -> tuple[dict, dict | None]:
         log.info("Image reused (same signal, same design_version) for %s", signal.get("SIGNAL_ID"))
         from src.publishing.image_pipeline import PLATFORM_SIZES, CURRENT_DESIGN_VERSION
         lib_entry = library.get(signal.get("SIGNAL_ID", ""), {})
+        _active = PLATFORMS if platforms is None else platforms
         platform_images = {
             p: {
                 "url":    existing_url,
@@ -291,12 +293,12 @@ def _build_image_plan(signal: dict, library: dict) -> tuple[dict, dict | None]:
                 "size":   "%dx%d" % PLATFORM_SIZES.get(p, (1080, 1080)),
                 "reused": True,
             }
-            for p in PLATFORMS
+            for p in _active
         }
         return {
             "platform_images": platform_images,
             "new_images":      0,
-            "reused_images":   len(PLATFORMS),
+            "reused_images":   len(_active),
             "reuse_rate":      "100%",
             "image_method":    "reused",
             "reuse_source":    reuse_source,
@@ -307,11 +309,12 @@ def _build_image_plan(signal: dict, library: dict) -> tuple[dict, dict | None]:
 
     log.info("Generating new image for signal %s", signal.get("SIGNAL_ID"))
     try:
-        result = _generate_signal_image(signal)
+        result = _generate_signal_image(signal, platforms=platforms)
     except Exception as exc:
         log.error("Image generation failed for %s: %s", signal.get("SIGNAL_ID"), exc)
         # Return empty image plan — publishing will proceed without images
-        empty = {p: {"url": "", "path": "", "size": "", "reused": False} for p in PLATFORMS}
+        empty = {p: {"url": "", "path": "", "size": "", "reused": False}
+                 for p in (PLATFORMS if platforms is None else platforms)}
         return {
             "platform_images": empty,
             "new_images":      0,
@@ -341,10 +344,16 @@ def prepare_content_packages(
     signals: list[dict],
     strategy_view: ResearchStrategyView | None = None,
     audience: AudienceSelection | None = None,
+    platforms: list[str] | None = None,
 ) -> list[dict]:
     """
     Main entry point. For each signal: generate content + image (one per signal).
     Returns list of content package dicts.
+
+    platforms: image surfaces to compose/upload for. None keeps the full
+    historical set; the canonical R1 entrypoint passes only its active
+    surfaces (#175). The single billed base-image generation is unchanged —
+    only per-platform composites and uploads are scoped.
     """
     if not signals:
         return []
@@ -359,7 +368,7 @@ def prepare_content_packages(
         log.info("Preparing content package: %s", headline[:60])
 
         content    = _generate_content_package(signal, strategy_view, audience)
-        image_plan, library_entry = _build_image_plan(signal, library)
+        image_plan, library_entry = _build_image_plan(signal, library, platforms=platforms)
 
         if library_entry:
             library[sig_id] = library_entry

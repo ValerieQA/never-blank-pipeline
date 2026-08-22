@@ -420,6 +420,13 @@ def _save_generated(
 _R1_PUBLISHERS = ("wix", "linkedin")
 _NON_R1_PUBLISHERS = ("facebook", "instagram", "threads", "telegram")
 
+# #175: the composer formats and image surfaces the active R1 publishers
+# actually consume. Inactive surfaces execute nothing — no composition
+# transport, no image composite/upload — while their package fields and the
+# composer/image architecture remain for future configuration.
+_R1_COMPOSER_FORMATS = ("long", "medium")
+_R1_IMAGE_PLATFORMS = ["blog", "linkedin"]
+
 
 def _stop_with_preflight(
     *,
@@ -1477,7 +1484,8 @@ def _run(
             try:
                 from scripts.research.prepare_content import prepare_content_packages
                 pkgs = prepare_content_packages(
-                    [signal], strategy_execution.research, research_audience
+                    [signal], strategy_execution.research, research_audience,
+                    platforms=_R1_IMAGE_PLATFORMS,
                 )
                 if pkgs:
                     editorial_package = pkgs[0]
@@ -1529,6 +1537,7 @@ def _run(
                 audience_selection=audience_selection,
                 research_artifact=research_artifact,
                 editorial_role_rules=_editorial_role_rules,
+                composer_formats=_R1_COMPOSER_FORMATS,
             )
             platforms  = article["platforms"]
             structured = article["structured_article"]
@@ -1546,8 +1555,10 @@ def _run(
         if _composed_title:
             headline = _composed_title
             print(f"  ✓  article title: {headline[:70]}")
-        facebook_text  = platforms["reading"]["body"]
-        instagram_text = platforms["instagram"]["body"]
+        # #175: inactive surfaces were not composed; their package fields
+        # stay present and empty.
+        facebook_text  = platforms.get("reading", {}).get("body", "")
+        instagram_text = platforms.get("instagram", {}).get("body", "")
         threads_seq    = _build_threads(structured)
         telegram_text  = _build_telegram(structured)
         echo_line      = structured.get("echo_line", "")
@@ -1745,10 +1756,11 @@ def _run(
             formatting.bold_signature_prefix(facebook_text, "unicode") +
             formatting.source_line(source_name, source_url, "bare_url")
         )
-        instagram_text  = formatting.append_hashtags(
-            formatting.bold_signature_prefix(instagram_text, "unicode"),
-            generate_hashtags(signal, "instagram"),
-        )
+        if instagram_text:
+            instagram_text = formatting.append_hashtags(
+                formatting.bold_signature_prefix(instagram_text, "unicode"),
+                generate_hashtags(signal, "instagram"),
+            )
 
         # ── LinkedIn composition acceptance (Issue #93 / Story #14) ──────────
         # The canonical Release 1 LinkedIn artifact (the composer `medium`
