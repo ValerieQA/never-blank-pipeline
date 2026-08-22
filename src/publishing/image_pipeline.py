@@ -469,9 +469,14 @@ def _ai_choose_visual_spec(
     if not api_key:
         return None
 
+    # Validated outside the fallback try: an invalid retry configuration is
+    # a visible error, never a silent fall-through to the deterministic spec.
+    from src.utils.llm_client import max_retries
+    retry_policy = max_retries()
+
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, max_retries=retry_policy)
 
         selection_prompt = img_gen["selection_prompt"].format(
             title=title,
@@ -1239,7 +1244,8 @@ def _generate_ai_image(prompt: str, negative_prompt: str = "", log=print) -> tup
     """
     import base64
     from openai import OpenAI
-    client = OpenAI(api_key=os.environ["NB_OPENAI_API_KEY"])
+    from src.utils.llm_client import max_retries
+    client = OpenAI(api_key=os.environ["NB_OPENAI_API_KEY"], max_retries=max_retries())
 
     # NB_IMAGE_MODEL selects primary model; fallback chain preserves existing behaviour.
     primary = os.environ.get("NB_IMAGE_MODEL", "gpt-image-1")

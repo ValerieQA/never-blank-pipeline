@@ -12,13 +12,48 @@ log = get_logger("llm_client")
 _client: OpenAI | None = None
 
 
+#: The complete set of retry policies Release 1 permits. This is a strict
+#: string-to-value table, not a numeric parse: only the exact canonical
+#: representations are configuration.
+_ALLOWED_MAX_RETRIES = {"0": 0, "1": 1}
+
+
+def max_retries() -> int:
+    """Explicit SDK retry policy (#170).
+
+    The SDK default of 2 silently turns one logical request into up to three
+    HTTP attempts — and it retries 429s, so a rate-limit event is amplified
+    exactly when the provider is asking for less traffic. One retry is the
+    smallest policy that still absorbs a single transient network blip; the
+    SDK backs off and honours Retry-After on the one retry it gets.
+
+    Release 1 accepts exactly ``NB_OPENAI_MAX_RETRIES=0`` or ``=1`` (unset
+    means 1). Everything else — negatives, 2 or more, floats, empty or
+    malformed strings, whitespace variants — is refused before any OpenAI
+    client is constructed. A bad value is a configuration error to surface,
+    never a policy to silently adjust: clamping ``999999`` to 1 would hide
+    the mistake, and honouring it would permit a million HTTP attempts for
+    one logical request.
+    """
+    raw = os.environ.get("NB_OPENAI_MAX_RETRIES")
+    if raw is None:
+        return 1
+    if raw in _ALLOWED_MAX_RETRIES:
+        return _ALLOWED_MAX_RETRIES[raw]
+    raise EnvironmentError(
+        "NB_OPENAI_MAX_RETRIES must be exactly '0' or '1' for Release 1; "
+        f"got {raw!r}. Refusing to construct an OpenAI client from an "
+        "invalid retry configuration."
+    )
+
+
 def _get_client() -> OpenAI:
     global _client
     if _client is None:
         api_key = os.environ.get("NB_OPENAI_API_KEY")
         if not api_key:
             raise EnvironmentError("NB_OPENAI_API_KEY is not set")
-        _client = OpenAI(api_key=api_key)
+        _client = OpenAI(api_key=api_key, max_retries=max_retries())
     return _client
 
 

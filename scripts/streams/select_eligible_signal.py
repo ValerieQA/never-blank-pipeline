@@ -132,6 +132,23 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
         try:
             verdict = judge_source_eligibility(signal, role, judge)
         except SourceEligibilityError as exc:
+            if exc.scope == "provider":
+                # Circuit breaker (#170): the provider refused this call, so
+                # every remaining candidate would fail identically — and each
+                # further attempt makes a rate limit worse. Stop the sweep on
+                # the first provider-scope failure; the honest evaluated/
+                # remaining counts below record how far the search got.
+                audit["dispositions"].append(
+                    {"signal_id": signal_id,
+                     "disposition": "provider_unavailable",
+                     "detail": str(exc)[:300]}
+                )
+                print(f"  ✗  {signal_id}: provider unavailable — {exc}")
+                print(
+                    "Provider-wide failure: stopping the eligibility sweep "
+                    "without evaluating further candidates."
+                )
+                break
             # Fail closed per candidate: a judgment that could not complete is
             # a rejection, recorded as its own disposition so it can never be
             # confused with a real ineligibility finding.
@@ -157,7 +174,8 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
 
     audit["selected_signal_id"] = selected
     failures = sum(
-        1 for item in audit["dispositions"] if item["disposition"] == "judgment_failed"
+        1 for item in audit["dispositions"]
+        if item["disposition"] in ("judgment_failed", "provider_unavailable")
     )
     evaluated = len(audit["dispositions"])
     audit["evaluated"] = evaluated
@@ -165,8 +183,11 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
     if selected is not None:
         audit["outcome"] = "selected"
     elif failures:
-        # One or more judgments never completed. "No eligible candidate" would
-        # be a claim the evidence does not support.
+        # One or more judgments never completed — a per-candidate failure, or
+        # a provider-wide stop that left candidates unevaluated. Either way,
+        # "no eligible candidate" would be a claim the evidence does not
+        # support, and this branch is checked before the truncation branch so
+        # a provider stop can never surface as search_truncated.
         audit["outcome"] = "eligibility_failure"
     elif audit["truncated"]:
         audit["outcome"] = "search_truncated"

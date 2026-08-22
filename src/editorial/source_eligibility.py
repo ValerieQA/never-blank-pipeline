@@ -69,7 +69,42 @@ Return ONLY one valid JSON object:
 
 
 class SourceEligibilityError(RuntimeError):
-    """The eligibility judgment could not produce a trustworthy verdict."""
+    """The eligibility judgment could not produce a trustworthy verdict.
+
+    ``scope`` says how far the failure reaches (#170):
+
+    - ``"candidate"`` — this one judgment failed (malformed output, contract
+      violation, missing identity). The next candidate is unaffected and a
+      caller walking a queue may continue.
+    - ``"provider"`` — the model provider refused or could not be reached
+      (rate limit, authentication, connection, provider outage). Every
+      subsequent call is expected to fail identically, and each attempt makes
+      a rate limit worse; a caller walking a queue must stop.
+
+    Either way the judgment failed closed: no scope ever yields a verdict.
+    """
+
+    def __init__(self, message: str, *, scope: str = "candidate") -> None:
+        super().__init__(message)
+        self.scope = scope
+
+
+#: Provider-wide SDK conditions. A failure of one of these types on one
+#: candidate predicts the same failure on every candidate after it.
+def _provider_scope(exc: BaseException) -> bool:
+    try:
+        import openai
+    except ImportError:  # pragma: no cover - openai is a hard dependency
+        return False
+    return isinstance(
+        exc,
+        (
+            openai.RateLimitError,
+            openai.AuthenticationError,
+            openai.APIConnectionError,  # includes APITimeoutError
+            openai.InternalServerError,
+        ),
+    )
 
 
 class SourceEligibilityTransport(Protocol):
@@ -136,7 +171,8 @@ def judge_source_eligibility(
         raw = transport.complete(instructions=_INSTRUCTIONS, request=request)
     except Exception as exc:  # noqa: BLE001 — boundary normalizes transport errors
         raise SourceEligibilityError(
-            f"eligibility transport failed ({type(exc).__name__})"
+            f"eligibility transport failed ({type(exc).__name__})",
+            scope="provider" if _provider_scope(exc) else "candidate",
         ) from exc
 
     try:
