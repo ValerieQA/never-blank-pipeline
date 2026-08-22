@@ -395,3 +395,74 @@ def test_no_production_client_bypasses_the_retry_contract():
     assert len(lines) == 3, lines
     for line in lines:
         assert "max_retries=" in line, line
+
+
+# ===========================================================================
+# Correction round (#171): --max-candidates is enforced, not defaulted
+# ===========================================================================
+
+
+def _selector_argv(tmp_path, extra):
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    active = tmp_path / "signals_active.jsonl"
+    active.write_text("\n".join(json.dumps(s) for s in CANDIDATES) + "\n")
+    published = tmp_path / "published_signal_ids.txt"
+    published.write_text("")
+    return [
+        "--editorial-role", MONDAY_ROLE,
+        "--active-path", str(active),
+        "--published-path", str(published),
+    ] + extra
+
+
+def test_the_default_and_the_ceiling_are_fifteen():
+    assert select_eligible_signal.DEFAULT_MAX_CANDIDATES == 15
+    assert select_eligible_signal.MAX_CANDIDATES_CEILING == 15
+
+
+def test_bounds_one_through_fifteen_are_accepted(tmp_path):
+    transport = ScriptedTransport({"sig-queue-1": (True, "Documented case.")})
+    for bound in (1, 15):
+        code = select_eligible_signal.main(
+            _selector_argv(tmp_path / str(bound), ["--max-candidates", str(bound)]),
+            transport=transport,
+        )
+        assert code == 0
+
+
+@pytest.mark.parametrize("bound", ["0", "-1", "16", "100", "999999"],
+                         ids=["zero", "negative", "sixteen", "hundred", "huge"])
+def test_out_of_bound_max_candidates_is_refused_before_any_model_call(
+    tmp_path, bound, capsys
+):
+    transport = ScriptedTransport({})  # any request would KeyError — none may occur
+
+    code = select_eligible_signal.main(
+        _selector_argv(tmp_path, ["--max-candidates", bound]),
+        transport=transport,
+    )
+
+    assert code == 1                      # configuration error, not 0/3/4/5
+    assert transport.requests == []       # refused before any transport
+    assert "--max-candidates" in capsys.readouterr().out
+
+
+def test_malformed_max_candidates_still_fails_normally(tmp_path):
+    with pytest.raises(SystemExit) as info:
+        select_eligible_signal.main(
+            _selector_argv(tmp_path, ["--max-candidates", "many"]),
+            transport=ScriptedTransport({}),
+        )
+    assert info.value.code == 2           # argparse's normal refusal
+
+
+def test_explicit_single_signal_dispatch_remains_valid(tmp_path):
+    transport = ScriptedTransport({"sig-queue-3": (True, "Documented case.")})
+
+    code = select_eligible_signal.main(
+        _selector_argv(tmp_path, ["--signal-id", "sig-queue-3"]),
+        transport=transport,
+    )
+
+    assert code == 0
+    assert transport.requests == ["sig-queue-3"]

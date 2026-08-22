@@ -62,6 +62,12 @@ SEARCH_TRUNCATED = 5
 #: a truncated search must never read as "nothing in the queue was eligible".
 DEFAULT_MAX_CANDIDATES = 15
 
+#: Hard Release 1 bound on one eligibility sweep (#171 correction): the
+#: selector is the largest pre-run call multiplier, and the per-run text
+#: budget does not cover this separate process — so the bound must be
+#: enforced here, not merely defaulted. Matches the scheduled default.
+MAX_CANDIDATES_CEILING = 15
+
 
 def _load_candidates(active_path: Path, published_path: Path) -> list[dict]:
     published = (
@@ -95,6 +101,15 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
     parser.add_argument("--active-path", default="data/research/signals_active.jsonl")
     parser.add_argument("--published-path", default="data/research/published_signal_ids.txt")
     args = parser.parse_args(argv)
+
+    # #171 correction: the bound is enforced, not merely defaulted. Refused
+    # before any queue is read and before any model call — never clamped.
+    if not 1 <= args.max_candidates <= MAX_CANDIDATES_CEILING:
+        print(
+            f"ERROR: --max-candidates must be between 1 and "
+            f"{MAX_CANDIDATES_CEILING} for Release 1; got {args.max_candidates}"
+        )
+        return 1
 
     try:
         configuration = load_business_strategy_configuration()

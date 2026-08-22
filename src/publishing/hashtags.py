@@ -7,6 +7,7 @@ no hashtag concept for any format).
 
 import json
 
+from src.run.call_budget import RunCallBudgetExceededError
 from src.utils.llm_client import chat, model_social
 from src.utils.logger import get_logger
 
@@ -82,6 +83,9 @@ Produce between {lo} and {hi} hashtags for this post."""
             if len(clean) >= hi:
                 break
         return clean
+    except RunCallBudgetExceededError:
+        # #171: budget exhaustion is a run stop, not a missing nice-to-have.
+        raise
     except Exception as exc:
         log.warning(
             "Hashtag generation failed for %s/%s: %s",
