@@ -348,7 +348,40 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
     if from_package:
         argv.extend(["--from-package", "--source-run-id", _valid_package()["run_id"]])
 
+    # #174: reuse binds the dispatched role to the source assignment.json —
+    # the immutable provenance anchor. The legacy synthetic packages never
+    # wrote one, so the harness supplies a valid roleless anchor matching
+    # the synthetic run identity. Role-binding behaviour itself is covered
+    # by tests/test_from_package_retry.py against REAL source runs.
+    _source_assignment_record = {
+        "schema_version": "1.2",
+        "run_id": _valid_package()["run_id"],
+        "execution_mode": "dry-run",
+        "configuration_identity": _test_configuration_identity(),
+        "assignment": {
+            "assignment_id": _SIGNAL_ID,
+            "origin": "jsonl",
+            "topic": "AI adoption accelerates in SMBs",
+            "submitted_at": "2026-08-01T00:00:00+00:00",
+            "strategy_ref": "2026-07-presence-debt-campaign-1",
+            "strategy_version": "1",
+        },
+        "editorial_role": None,
+    }
+
     kwargs = {
+        # echo the requested identity: the harness anchor binds to whatever
+        # (signal, run) the test addresses, exactly as a real anchor would
+        "load_assignment_json": mock.MagicMock(
+            side_effect=lambda packages_dir, signal_id, source_run_id: {
+                **_source_assignment_record,
+                "run_id": source_run_id,
+                "assignment": {
+                    **_source_assignment_record["assignment"],
+                    "assignment_id": signal_id,
+                },
+            }
+        ),
         # The stand-in research artifact carries the execution signal identity
         # the decision gate reads (research_artifact.signal_id).
         "execute_and_persist_research": mock.MagicMock(

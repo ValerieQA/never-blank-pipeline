@@ -349,11 +349,16 @@ def test_monday_runs_the_canonical_entrypoint_and_no_static_package_path():
 
     assert "scripts/generate_and_publish.py" in run
     assert f'--editorial-role "$MONDAY_ROLE"' in run
-    # the historical smoke-test defect: publishing a stored package instead of
-    # generating. Monday cannot ask for it.
-    assert "--from-package" not in run
+    # the historical smoke-test defect was publishing a stored package
+    # instead of generating. Since #174 the from-package path exists — but
+    # only behind the explicitly dispatched, operator-guarded source_run_id
+    # input; a scheduled run has empty inputs and can never reach it.
+    assert '--from-package --source-run-id $SOURCE_RUN_ID' in run
+    assert 'if [ -n "$SOURCE_RUN_ID" ]' in run
+    assert run.index('if [ -n "$SOURCE_RUN_ID" ]') < run.index("--from-package")
     assert "--legacy-package" not in run
-    assert "--source-run-id" not in run
+    # --source-run-id appears exactly once: inside the #174 guard
+    assert run.count("--source-run-id") == 1
     # the legacy static-path publisher, not the canonical entrypoint's name
     assert "scripts/publish.py" not in run
 

@@ -230,6 +230,7 @@ from src.artifacts import (
     load_business_strategy_snapshot,
     resolve_run_dir,
     load_linkedin_composition_json,
+    load_assignment_json,
     load_visual_assets_json,
     write_assignment_json,
     write_editorial_acceptance_json,
@@ -1273,25 +1274,135 @@ def _run(
                     run_started_at=source_envelope.request.freshness.retrieved_not_before,
                     now=datetime.now(timezone.utc),
                 )
-                # ── Decision Lens reuse gate (Issue #60) ──────────────────────
-                # Reuse loads the original generation run's immutable
-                # decision.json; the Decision Lens is never re-run and the
-                # artifact is never rewritten. Only an original validated
-                # PROCEED decision allows reuse to continue.
-                source_decision = load_decision_artifact(
-                    PACKAGES_DIR,
-                    signal_id,
-                    _source_run_id,
-                    research=research_artifact,
-                    audience=audience_selection,
-                    configuration_identity=strategy_execution.identity,
-                    lens_profile=RELEASE1_LENS_PROFILE,
+                # ── Decision reuse gate (Issue #60 / #174) ────────────────────
+                # Reuse honours the source run's persisted decision authority
+                # without ever re-running or rewriting it. The XOR contract
+                # (#152) holds here exactly as at generation time: a run has
+                # decision.json OR decision_policy.json — one authority,
+                # never both, never neither.
+                _source_run_dir = resolve_run_dir(
+                    PACKAGES_DIR, signal_id, _source_run_id
                 )
-                require_proceed(source_decision)
-                print(
-                    f"  ✓  decision: PROCEED (reused from source run "
-                    f"{_source_run_id}) [{source_decision.decision_lens_version}]"
+                # ── Source editorial-role binding (#174 correction) ───────
+                # assignment.json is the immutable provenance anchor and
+                # carries the role the content was actually produced under.
+                # Reuse binds it to the dispatched role — never inferred
+                # from weekday, package prose, decision artifact or
+                # workflow name, and never rewritten here.
+                try:
+                    _source_assignment = AssignmentRecord.model_validate(
+                        load_assignment_json(
+                            PACKAGES_DIR, signal_id, _source_run_id
+                        )
+                    )
+                except (FileNotFoundError, ValueError) as exc:
+                    raise DecisionGateError(str(exc)) from exc
+                except Exception as exc:
+                    raise DecisionGateError(
+                        f"source assignment.json is invalid: {exc}"
+                    ) from exc
+                if _source_assignment.run_id != _source_run_id:
+                    raise DecisionGateError(
+                        "source assignment identity mismatch: "
+                        f"assignment run_id={_source_assignment.run_id!r} "
+                        f"requested source_run_id={_source_run_id!r}"
+                    )
+                require_configuration_identity(
+                    strategy_execution.identity,
+                    _source_assignment.configuration_identity,
+                    "source-assignment",
                 )
+                _source_role = _source_assignment.editorial_role
+                if (_source_role is None) != (_editorial_role_identity is None):
+                    raise DecisionGateError(
+                        "editorial-role binding mismatch: source run was "
+                        f"produced under role "
+                        f"{None if _source_role is None else _source_role.role_id!r} "
+                        "but this dispatch declares role "
+                        f"{None if _editorial_role_identity is None else _editorial_role_identity.role_id!r} "
+                        "— a package may only be republished under the "
+                        "identity that produced it"
+                    )
+                if _source_role is not None and (
+                    _source_role.role_id != _editorial_role_identity.role_id
+                    or _source_role.configuration_version
+                    != _editorial_role_identity.configuration_version
+                ):
+                    raise DecisionGateError(
+                        "editorial-role binding mismatch: source role "
+                        f"{_source_role.role_id!r} "
+                        f"(configuration {_source_role.configuration_version!r}) "
+                        f"vs dispatched role {_editorial_role_identity.role_id!r} "
+                        f"(configuration "
+                        f"{_editorial_role_identity.configuration_version!r})"
+                    )
+                _policy_path = _source_run_dir / "decision_policy.json"
+                if (
+                    _editorial_role_identity is not None
+                    and _role.decision_policy == "role_bounded_r1"
+                ):
+                    if (_source_run_dir / "decision.json").exists():
+                        raise DecisionGateError(
+                            "source run carries both decision.json and "
+                            "decision_policy.json — corrupt decision "
+                            "authority; refusing reuse"
+                        )
+                    if not _policy_path.exists():
+                        raise DecisionGateError(
+                            f"No decision_policy.json at {_policy_path}. A "
+                            "role_bounded_r1 source run must carry its "
+                            "verified policy record."
+                        )
+                    try:
+                        _source_policy = DecisionPolicyRecord.model_validate_json(
+                            _policy_path.read_bytes()
+                        )
+                    except Exception as exc:
+                        raise DecisionGateError(
+                            f"source decision_policy.json is invalid: {exc}"
+                        ) from exc
+                    verify_decision_policy_record(
+                        _source_policy,
+                        run_id=_source_run_id,
+                        assignment_id=_source_assignment.assignment.assignment_id,
+                        signal_id=signal_id,
+                        role_id=_editorial_role_identity.role_id,
+                        configuration_version=(
+                            _editorial_role_identity.configuration_version
+                        ),
+                        configuration_identity=strategy_execution.identity,
+                        research_readiness=research_artifact.readiness.value,
+                    )
+                    print(
+                        "  ✓  decision policy: role_bounded_r1 (reused from "
+                        f"source run {_source_run_id}) — the Decision Lens "
+                        "was not consulted at generation and is not "
+                        "consulted for republication"
+                    )
+                else:
+                    if _policy_path.exists():
+                        raise DecisionGateError(
+                            "source run carries decision_policy.json but the "
+                            "dispatched role expects a Decision Lens "
+                            "decision — identity mismatch; refusing reuse"
+                        )
+                    source_decision = load_decision_artifact(
+                        PACKAGES_DIR,
+                        signal_id,
+                        _source_run_id,
+                        research=research_artifact,
+                        audience=audience_selection,
+                        configuration_identity=strategy_execution.identity,
+                        lens_profile=RELEASE1_LENS_PROFILE,
+                    )
+                    require_proceed(source_decision)
+                    print(
+                        f"  ✓  decision: PROCEED (reused from source run "
+                        f"{_source_run_id}) [{source_decision.decision_lens_version}]"
+                    )
+        except DecisionPolicyError as exc:
+            print(f"  ERROR: {exc}")
+            return 1
         except (FileNotFoundError, ValueError, ResearchGateError, DecisionGateError) as exc:
             print(f"  ERROR: {exc}")
             return 1

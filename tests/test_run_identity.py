@@ -185,6 +185,27 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         return _build_legacy_research_context(assignment, raw_signal, run_ctx)
 
     kwargs = {
+        # #174: reuse binds the dispatched role to the source assignment.json.
+        # The synthetic packages never wrote one; the harness supplies a valid
+        # roleless anchor echoing the requested identity. Real role-binding is
+        # covered by tests/test_from_package_retry.py.
+        "load_assignment_json": mock.MagicMock(
+            side_effect=lambda packages_dir, signal_id, source_run_id: {
+                "schema_version": "1.2",
+                "run_id": source_run_id,
+                "execution_mode": "dry-run",
+                "configuration_identity": _valid_package()["configuration_identity"],
+                "assignment": {
+                    "assignment_id": signal_id,
+                    "origin": "jsonl",
+                    "topic": "AI adoption accelerates in SMBs",
+                    "submitted_at": "2026-08-01T00:00:00+00:00",
+                    "strategy_ref": "2026-07-presence-debt-campaign-1",
+                    "strategy_version": "1",
+                },
+                "editorial_role": None,
+            }
+        ),
         "execute_and_persist_research": mock.MagicMock(
             return_value=mock.MagicMock(signal_id=_SIGNAL_ID)
         ),

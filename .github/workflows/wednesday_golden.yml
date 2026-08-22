@@ -14,6 +14,11 @@ on:
         required: false
         default: ""
         type: string
+      source_run_id:
+        description: "Republish an existing completed generation run via --from-package (requires signal_id; leave empty for a normal automatic run)"
+        required: false
+        default: ""
+        type: string
       dry_run:
         description: "Generate and validate without publishing"
         required: false
@@ -70,8 +75,28 @@ jobs:
           # #173: the eligibility judgment is enrichment-class work; the
           # stage model routes it without touching the global fallback.
           NB_ENRICH_MODEL: ${{ secrets.NB_ENRICH_MODEL }}
+          RETRY_RUN_ID: ${{ inputs.source_run_id }}
+          RETRY_SIGNAL_ID: ${{ inputs.signal_id }}
           WEDNESDAY_ROLE:       never-blank-wednesday-golden
         run: |
+          # #174: from-package retry short-circuit. Validated through quoted
+          # env vars with a strict charset guard — inputs can never inject
+          # shell or traverse paths. The signal was judged eligible in the
+          # source run; the selector is skipped, costing zero model calls.
+          if [ -n "$RETRY_RUN_ID" ]; then
+            case "$RETRY_RUN_ID" in (*[!A-Za-z0-9-]*) echo "ERROR: invalid source_run_id"; exit 1;; esac
+            if [ -z "$RETRY_SIGNAL_ID" ]; then
+              echo "ERROR: source_run_id requires signal_id"; exit 1
+            fi
+            case "$RETRY_SIGNAL_ID" in (*[!A-Za-z0-9_-]*) echo "ERROR: invalid signal_id"; exit 1;; esac
+            if grep -Fxq "$RETRY_SIGNAL_ID" data/research/published_signal_ids.txt 2>/dev/null; then
+              echo "ERROR: signal $RETRY_SIGNAL_ID is already published/consumed — a from-package retry may not publish it twice"
+              exit 1
+            fi
+            echo "signal_id=$RETRY_SIGNAL_ID" >> "$GITHUB_OUTPUT"
+            echo "From-package retry of run $RETRY_RUN_ID — eligibility selection skipped (already judged in the source run)."
+            exit 0
+          fi
           set +e
           python scripts/streams/select_eligible_signal.py \
             --editorial-role "$WEDNESDAY_ROLE" \
@@ -131,6 +156,7 @@ jobs:
         if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != ''
         env:
           WEDNESDAY_ROLE: never-blank-wednesday-golden
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
           NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
           NB_EXA_API_KEY: ${{ secrets.NB_EXA_API_KEY }}
           NB_OPENAI_CHAT_MODEL: ${{ secrets.NB_OPENAI_CHAT_MODEL }}
@@ -153,7 +179,11 @@ jobs:
           NB_FORCE_REGENERATE_RESEARCH_IMAGES: ${{ secrets.NB_FORCE_REGENERATE_RESEARCH_IMAGES }}
         run: |
           FLAGS=""
-          [ "${{ inputs.dry_run }}" = "true" ] && FLAGS="--dry-run"
+          if [ -n "$SOURCE_RUN_ID" ]; then
+            case "$SOURCE_RUN_ID" in (*[!A-Za-z0-9-]*) echo "ERROR: invalid source_run_id"; exit 1;; esac
+            FLAGS="$FLAGS --from-package --source-run-id $SOURCE_RUN_ID"
+          fi
+          [ "${{ inputs.dry_run }}" = "true" ] && FLAGS="$FLAGS --dry-run"
           python scripts/generate_and_publish.py \
             --signal-id "${{ steps.resolve.outputs.signal_id }}" \
             --editorial-role "$WEDNESDAY_ROLE" $FLAGS

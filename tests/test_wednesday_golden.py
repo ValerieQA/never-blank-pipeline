@@ -471,7 +471,10 @@ def test_wednesday_has_its_own_canonical_workflow_and_role():
     assert "scripts/generate_and_publish.py" in text
     assert '--editorial-role "$WEDNESDAY_ROLE"' in text
     assert "WEDNESDAY_ROLE: never-blank-wednesday-golden" in text
-    assert "--from-package" not in text
+    # #174: from-package is reachable only behind the dispatched
+    # source_run_id guard — never on the scheduled path
+    assert '--from-package --source-run-id $SOURCE_RUN_ID' in text
+    assert 'if [ -n "$SOURCE_RUN_ID" ]' in text
     assert "--legacy-package" not in text
     assert "scripts/publish.py" not in text
 

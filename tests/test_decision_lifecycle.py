@@ -455,6 +455,7 @@ def _reuse_patches(tmp_path, source_run_id):
     del patches["load_research_envelope"]
     del patches["validate_research_envelope"]
     del patches["load_decision_artifact"]
+    del patches["load_assignment_json"]   # real source runs carry real anchors
     return argv, patches
 
 
