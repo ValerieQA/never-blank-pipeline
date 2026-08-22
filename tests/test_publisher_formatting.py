@@ -16,7 +16,6 @@ Covers:
 """
 
 import json
-from unittest.mock import patch
 
 from src.publishing.formatting import (
     bold_unicode,
@@ -117,54 +116,49 @@ def test_append_hashtags_noop_on_empty():
     assert append_hashtags("Body.", []) == "Body."
 
 
-# --- generate_hashtags ---
+# --- generate_hashtags (deterministic since #176) ---
+
+_HASHTAG_SIGNAL = {
+    "SIGNAL_ID": "x",
+    "HEADLINE": "Neighborhood bakery doubled repeat orders with a posted schedule",
+    "INDUSTRY": "food service",
+    "SIGNAL_TYPE": "market_trend",
+    "REAL_COMPANY_EXAMPLE": "Corner Bakery",
+}
+
 
 def test_generate_hashtags_blog_and_telegram_take_none():
-    with patch("src.publishing.hashtags.chat") as mock_chat:
-        assert generate_hashtags({"SIGNAL_ID": "x"}, "blog") == []
-        assert generate_hashtags({"SIGNAL_ID": "x"}, "telegram") == []
-    mock_chat.assert_not_called()
+    assert generate_hashtags(_HASHTAG_SIGNAL, "blog") == []
+    assert generate_hashtags(_HASHTAG_SIGNAL, "telegram") == []
 
 
-def test_generate_hashtags_linkedin_respects_max_count():
-    data = {"hashtags": ["#Toyota", "#Automotive", "#EV", "#Hybrid", "#Manufacturing", "#Extra", "#TooMany"]}
-    with patch("src.publishing.hashtags.chat", return_value=_json_response(data)):
-        tags = generate_hashtags({"SIGNAL_ID": "x"}, "linkedin")
-    assert len(tags) <= 6
-    assert tags[:5] == ["#Toyota", "#Automotive", "#EV", "#Hybrid", "#Manufacturing"]
+def test_generate_hashtags_branded_trio_leads_and_count_is_bounded():
+    tags = generate_hashtags(_HASHTAG_SIGNAL, "linkedin")
+    assert tags[:3] == ["#NeverBlank", "#CompoundPresence", "#CustomerTrust"]
+    assert 3 <= len(tags) <= 6
 
 
 def test_generate_hashtags_threads_respects_max_of_two():
-    data = {"hashtags": ["#Toyota", "#Automotive", "#EV"]}
-    with patch("src.publishing.hashtags.chat", return_value=_json_response(data)):
-        tags = generate_hashtags({"SIGNAL_ID": "x"}, "threads")
+    tags = generate_hashtags(_HASHTAG_SIGNAL, "threads")
     assert len(tags) <= 2
 
 
-def test_generate_hashtags_dedupes_case_insensitively():
-    data = {"hashtags": ["#Toyota", "#toyota", "#EV"]}
-    with patch("src.publishing.hashtags.chat", return_value=_json_response(data)):
-        tags = generate_hashtags({"SIGNAL_ID": "x"}, "linkedin")
-    assert tags == ["#Toyota", "#EV"]
+def test_generate_hashtags_is_deterministic():
+    assert generate_hashtags(_HASHTAG_SIGNAL, "linkedin") == \
+        generate_hashtags(dict(_HASHTAG_SIGNAL), "linkedin")
 
 
-def test_generate_hashtags_drops_malformed_entries():
-    data = {"hashtags": ["#Good", "NoHash", "#has space", 42, "#"]}
-    with patch("src.publishing.hashtags.chat", return_value=_json_response(data)):
-        tags = generate_hashtags({"SIGNAL_ID": "x"}, "linkedin")
-    assert tags == ["#Good"]
+def test_generate_hashtags_never_emits_the_company_name():
+    tags = generate_hashtags(_HASHTAG_SIGNAL, "linkedin")
+    assert "#CornerBakery" not in tags
+    assert all("bakery" not in tag.casefold() for tag in tags)
 
 
-def test_generate_hashtags_returns_empty_on_invalid_json():
-    with patch("src.publishing.hashtags.chat", return_value="not json"):
-        tags = generate_hashtags({"SIGNAL_ID": "x"}, "linkedin")
-    assert tags == []
-
-
-def test_generate_hashtags_returns_empty_on_exception():
-    with patch("src.publishing.hashtags.chat", side_effect=RuntimeError("boom")):
-        tags = generate_hashtags({"SIGNAL_ID": "x"}, "instagram")
-    assert tags == []
+def test_generate_hashtags_survives_empty_and_malformed_fields():
+    tags = generate_hashtags({"SIGNAL_ID": "x", "HEADLINE": 42,
+                              "INDUSTRY": "", "SIGNAL_TYPE": None}, "linkedin")
+    # nothing topical survives; the branded contract still holds
+    assert tags == ["#NeverBlank", "#CompoundPresence", "#CustomerTrust"]
 
 
 # --- wix._md_to_rich_nodes bold handling ---
