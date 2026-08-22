@@ -71,6 +71,7 @@ def generate_article(
     audience_selection: AudienceSelection | None = None,
     research_artifact: NormalizedResearchArtifact | None = None,
     editorial_role_rules: "str | dict[str, str] | None" = None,
+    composer_formats: "tuple[str, ...] | None" = None,
 ) -> dict:
     """
     Run the full Editorial Engine V2 pipeline for one enriched signal.
@@ -162,6 +163,7 @@ def generate_article(
         wix_strategy=wix_strategy,
         linkedin_strategy=linkedin_strategy,
         editorial_role_rules=editorial_role_rules,
+        formats=composer_formats,
     )
 
     log.info("Editorial Engine: generation complete for signal %s", sig_id)
