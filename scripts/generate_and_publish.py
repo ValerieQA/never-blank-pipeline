@@ -1283,6 +1283,59 @@ def _run(
                 _source_run_dir = resolve_run_dir(
                     PACKAGES_DIR, signal_id, _source_run_id
                 )
+                # ── Source editorial-role binding (#174 correction) ───────
+                # assignment.json is the immutable provenance anchor and
+                # carries the role the content was actually produced under.
+                # Reuse binds it to the dispatched role — never inferred
+                # from weekday, package prose, decision artifact or
+                # workflow name, and never rewritten here.
+                try:
+                    _source_assignment = AssignmentRecord.model_validate(
+                        load_assignment_json(
+                            PACKAGES_DIR, signal_id, _source_run_id
+                        )
+                    )
+                except (FileNotFoundError, ValueError) as exc:
+                    raise DecisionGateError(str(exc)) from exc
+                except Exception as exc:
+                    raise DecisionGateError(
+                        f"source assignment.json is invalid: {exc}"
+                    ) from exc
+                if _source_assignment.run_id != _source_run_id:
+                    raise DecisionGateError(
+                        "source assignment identity mismatch: "
+                        f"assignment run_id={_source_assignment.run_id!r} "
+                        f"requested source_run_id={_source_run_id!r}"
+                    )
+                require_configuration_identity(
+                    strategy_execution.identity,
+                    _source_assignment.configuration_identity,
+                    "source-assignment",
+                )
+                _source_role = _source_assignment.editorial_role
+                if (_source_role is None) != (_editorial_role_identity is None):
+                    raise DecisionGateError(
+                        "editorial-role binding mismatch: source run was "
+                        f"produced under role "
+                        f"{None if _source_role is None else _source_role.role_id!r} "
+                        "but this dispatch declares role "
+                        f"{None if _editorial_role_identity is None else _editorial_role_identity.role_id!r} "
+                        "— a package may only be republished under the "
+                        "identity that produced it"
+                    )
+                if _source_role is not None and (
+                    _source_role.role_id != _editorial_role_identity.role_id
+                    or _source_role.configuration_version
+                    != _editorial_role_identity.configuration_version
+                ):
+                    raise DecisionGateError(
+                        "editorial-role binding mismatch: source role "
+                        f"{_source_role.role_id!r} "
+                        f"(configuration {_source_role.configuration_version!r}) "
+                        f"vs dispatched role {_editorial_role_identity.role_id!r} "
+                        f"(configuration "
+                        f"{_editorial_role_identity.configuration_version!r})"
+                    )
                 _policy_path = _source_run_dir / "decision_policy.json"
                 if (
                     _editorial_role_identity is not None
@@ -1308,11 +1361,6 @@ def _run(
                         raise DecisionGateError(
                             f"source decision_policy.json is invalid: {exc}"
                         ) from exc
-                    _source_assignment = AssignmentRecord.model_validate(
-                        load_assignment_json(
-                            PACKAGES_DIR, signal_id, _source_run_id
-                        )
-                    )
                     verify_decision_policy_record(
                         _source_policy,
                         run_id=_source_run_id,

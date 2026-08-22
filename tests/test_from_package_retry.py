@@ -294,3 +294,133 @@ def test_monday_and_wednesday_retry_semantics_are_identical():
         return re.sub(r"\s+", " ", block).replace("monday", "").replace("wednesday", "")
 
     assert normalized_retry("monday") == normalized_retry("wednesday")
+
+
+# ===========================================================================
+# Correction round: the source assignment's editorial role binds reuse
+# ===========================================================================
+
+WEDNESDAY_ROLE = "never-blank-wednesday-golden"
+
+
+def _build_wednesday_source_run(tmp_path) -> str:
+    code, _, _ = _run_with_role(tmp_path, WEDNESDAY_ROLE)
+    assert code == 0
+    decisions = list(tmp_path.glob("*/runs/*/decision.json"))
+    assert len(decisions) == 1          # Wednesday takes the Decision Lens
+    return decisions[0].parent.name
+
+
+def _source_assignment_path(tmp_path, source_run_id):
+    return next(tmp_path.glob(f"*/runs/{source_run_id}/assignment.json"))
+
+
+def test_a_wednesday_source_republishes_under_the_wednesday_role(
+    tmp_path, monkeypatch, capsys
+):
+    source_run_id = _build_wednesday_source_run(tmp_path)
+    capsys.readouterr()
+    monkeypatch.setattr(llm_client, "_client", ExplodingClient())
+    assignment_before = _source_assignment_path(tmp_path, source_run_id).read_bytes()
+
+    counting_evaluator, transport = _evaluator(_model_output())
+    code, patches = _reuse_main(
+        tmp_path, source_run_id,
+        argv_extra=["--editorial-role", WEDNESDAY_ROLE],
+        evaluator=counting_evaluator,
+    )
+
+    assert code == 0
+    assert transport.calls == []                       # lens never re-ran
+    assert patches["generate_article"].called is False
+    # the anchor was read, never rewritten
+    assert _source_assignment_path(
+        tmp_path, source_run_id).read_bytes() == assignment_before
+    assert "text-model call budget: 0 used" in capsys.readouterr().out
+    monkeypatch.setattr(llm_client, "_client", None)
+
+
+def test_a_roleless_source_cannot_be_republished_under_a_role(tmp_path):
+    # roleless Decision-Lens source + Wednesday dispatch → refused: the
+    # package was not produced under the identity now claiming it
+    source_run_id = _build_source_run(tmp_path)      # roleless source
+
+    code, patches = _reuse_main(
+        tmp_path, source_run_id,
+        argv_extra=["--editorial-role", WEDNESDAY_ROLE],
+    )
+
+    assert code == 1
+    assert patches["generate_article"].called is False
+    # the refusal happens at the reuse gate — long before any publisher
+
+
+def test_a_role_scoped_source_cannot_be_republished_rolelessly(tmp_path):
+    # Wednesday-role source + roleless dispatch → refused (previously this
+    # passed the lens branch unchecked — the exact blocking finding)
+    source_run_id = _build_wednesday_source_run(tmp_path)
+
+    code, patches = _reuse_main(tmp_path, source_run_id)
+
+    assert code == 1
+    assert patches["generate_article"].called is False
+
+
+def test_a_source_produced_under_another_role_is_refused(tmp_path):
+    # Wednesday-role source + Monday dispatch: same-signal, valid package,
+    # wrong identity. (Monday's dispatch takes the policy branch, which
+    # also lacks a policy record here — the binding refusal must come first
+    # and by role, not by artifact absence.)
+    source_run_id = _build_wednesday_source_run(tmp_path)
+
+    code, patches = _reuse_main(
+        tmp_path, source_run_id, argv_extra=["--editorial-role", MONDAY_ROLE],
+    )
+
+    assert code == 1
+    assert patches["generate_article"].called is False
+
+
+def test_a_tampered_source_role_id_fails_binding(tmp_path):
+    source_run_id = _build_wednesday_source_run(tmp_path)
+    path = _source_assignment_path(tmp_path, source_run_id)
+    record = json.loads(path.read_text())
+    record["editorial_role"]["role_id"] = "never-blank-monday-documented-case"
+    path.write_text(json.dumps(record))
+
+    code, patches = _reuse_main(
+        tmp_path, source_run_id,
+        argv_extra=["--editorial-role", WEDNESDAY_ROLE],
+    )
+
+    assert code == 1
+    assert patches["generate_article"].called is False
+
+
+def test_a_tampered_role_configuration_version_fails_binding(tmp_path):
+    source_run_id = _build_wednesday_source_run(tmp_path)
+    path = _source_assignment_path(tmp_path, source_run_id)
+    record = json.loads(path.read_text())
+    record["editorial_role"]["configuration_version"] = "999"
+    path.write_text(json.dumps(record))
+
+    code, patches = _reuse_main(
+        tmp_path, source_run_id,
+        argv_extra=["--editorial-role", WEDNESDAY_ROLE],
+    )
+
+    assert code == 1
+    assert patches["generate_article"].called is False
+
+
+def test_a_malformed_source_assignment_fails_binding(tmp_path):
+    source_run_id = _build_wednesday_source_run(tmp_path)
+    _source_assignment_path(tmp_path, source_run_id).write_text('{"broken":')
+
+    code, patches = _reuse_main(
+        tmp_path, source_run_id,
+        argv_extra=["--editorial-role", WEDNESDAY_ROLE],
+    )
+
+    assert code == 1
+    assert patches["generate_article"].called is False
