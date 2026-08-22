@@ -1861,7 +1861,14 @@ def _run(
         linkedin_text   = formatting.append_hashtags(
             formatting.bold_signature_prefix(linkedin_text, "unicode") +
             formatting.source_line(source_name, source_url, "bare_url"),
-            generate_hashtags(signal, "linkedin"),
+            # #176 correction: topical tags follow the published article —
+            # the supported mechanism and the composed title — never
+            # discovery metadata that may differ from what was written.
+            generate_hashtags(
+                signal, "linkedin",
+                mechanism=article.get("pattern", {}).get("mechanism", ""),
+                title=headline,
+            ),
         )
         facebook_text   = (
             formatting.bold_signature_prefix(facebook_text, "unicode") +
@@ -1870,7 +1877,11 @@ def _run(
         if instagram_text:
             instagram_text = formatting.append_hashtags(
                 formatting.bold_signature_prefix(instagram_text, "unicode"),
-                generate_hashtags(signal, "instagram"),
+                generate_hashtags(
+                    signal, "instagram",
+                    mechanism=article.get("pattern", {}).get("mechanism", ""),
+                    title=headline,
+                ),
             )
 
         # ── LinkedIn composition acceptance (Issue #93 / Story #14) ──────────

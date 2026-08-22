@@ -135,7 +135,7 @@ def _reduced_entry(tmp_path):
     with mock.patch.object(sys, "argv", argv), \
             mock.patch.multiple(gap, **patches), \
             mock.patch.object(gap, "generate_hashtags",
-                              side_effect=lambda signal, platform:
+                              side_effect=lambda signal, platform, **kwargs:
                               hashtag_calls.append(platform) or []):
         code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
     return code, captured, hashtag_calls, tmp_path

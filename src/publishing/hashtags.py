@@ -65,15 +65,15 @@ def _camel_tag(text: str) -> str:
     return f"#{joined}"
 
 
-def _headline_keyword(headline: str, company: str) -> str:
-    """The first substantial headline word that is not the company's name."""
-    if not isinstance(headline, str):
+def _title_keyword(title: str, company: str) -> str:
+    """The first substantial word of the published title, never the company."""
+    if not isinstance(title, str):
         return ""
     company_words = {
         w.casefold()
         for w in re.findall(r"[^\W_]+", unicodedata.normalize("NFKC", company or ""))
     }
-    for word in re.findall(r"[A-Za-z]{5,}", unicodedata.normalize("NFKC", headline)):
+    for word in re.findall(r"[A-Za-z]{5,}", unicodedata.normalize("NFKC", title)):
         lowered = word.casefold()
         if lowered in _STOPWORDS or lowered in company_words:
             continue
@@ -81,14 +81,37 @@ def _headline_keyword(headline: str, company: str) -> str:
     return ""
 
 
-def generate_hashtags(signal: dict, platform: str) -> list[str]:
-    """Deterministic hashtags for ``platform`` from the signal's own fields.
+def _mechanism_tag(mechanism: str) -> str:
+    """A tag for the run's supported mechanism (first three words at most)."""
+    if not isinstance(mechanism, str):
+        return ""
+    return _camel_tag(" ".join(mechanism.split()[:3]))
+
+
+def generate_hashtags(
+    signal: dict,
+    platform: str,
+    *,
+    mechanism: str = "",
+    title: str = "",
+) -> list[str]:
+    """Deterministic hashtags for ``platform`` from canonical article context.
 
     Returns [] for platforms that take no hashtags. The documented product
     rule is applied exactly: the branded trio first, then article-specific
-    tags (industry, signal type, one headline keyword), case-insensitively
-    deduplicated, prohibited tags and company names excluded, bounded by
-    the platform maximum. No model transport exists on this path.
+    tags, case-insensitively deduplicated, prohibited tags and company names
+    excluded, bounded by the platform maximum. No model transport exists on
+    this path.
+
+    The topical half comes from context the run has already paid for — the
+    signal's industry, the supported ``mechanism`` the editorial pipeline
+    produced, and the composed ``title`` actually being published. Discovery
+    metadata is never a substitute for what the article says: raw headlines
+    and classification fields can differ materially from the published
+    piece, so callers pass the canonical values in rather than this module
+    re-deriving editorial meaning from the raw signal. Callers without a
+    generation context (the legacy package publisher) simply omit them and
+    get the branded trio plus the industry tag.
     """
     lo, hi = _COUNT_RANGE.get(platform, (0, 0))
     if hi == 0:
@@ -99,8 +122,8 @@ def generate_hashtags(signal: dict, platform: str) -> list[str]:
 
     candidates = list(BRANDED_HASHTAGS) + [
         _camel_tag(signal.get("INDUSTRY", "")),
-        _camel_tag(signal.get("SIGNAL_TYPE", "")),
-        _headline_keyword(signal.get("HEADLINE", ""), company),
+        _mechanism_tag(mechanism),
+        _title_keyword(title, company),
     ]
 
     clean: list[str] = []
