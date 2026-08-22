@@ -331,3 +331,125 @@ def test_a_normal_run_reports_its_budget_usage(tmp_path, capsys):
     # used stays 0 — the accounting line itself is the contract here
     assert f"/ {DEFAULT_CEILING} limit /" in out
     assert "text-model call budget:" in out
+
+
+# ===========================================================================
+# Correction round: the temperature-fallback transport is charged too
+# ===========================================================================
+
+
+def _temperature_rejection() -> BaseException:
+    import openai
+
+    exc = openai.BadRequestError.__new__(openai.BadRequestError)
+    Exception.__init__(exc, "Unsupported value: 'temperature'")
+    exc.message = "Unsupported value: 'temperature'"
+    return exc
+
+
+class _FallbackClient:
+    """First create/parse rejects temperature; every later one succeeds."""
+
+    def __init__(self):
+        self.requests = 0
+        outer = self
+
+        class _Response:
+            class _Choice:
+                class _Msg:
+                    content = "{}"
+                    parsed = {"value": "x"}
+                message = _Msg()
+            choices = [_Choice()]
+
+        class _Completions:
+            def create(self, **kwargs):
+                outer.requests += 1
+                if outer.requests == 1:
+                    raise _temperature_rejection()
+                return _Response()
+
+            def parse(self, **kwargs):
+                return self.create(**kwargs)
+
+        chat_ns = type("Chat", (), {"completions": _Completions()})()
+        self.chat = chat_ns
+        self.beta = type("Beta", (), {"chat": chat_ns})()
+
+
+def _shape_model():
+    from pydantic import BaseModel
+
+    class _Shape(BaseModel):
+        value: str
+
+    return _Shape
+
+
+@pytest.mark.parametrize("fn_name", ["chat", "chat_qc", "chat_parsed"])
+def test_the_temperature_fallback_is_charged_as_a_second_call(monkeypatch, fn_name):
+    monkeypatch.setattr(llm_client, "_client", _FallbackClient())
+    budget = RunCallBudget(limit=2)
+
+    with activate_call_budget(budget):
+        if fn_name == "chat_parsed":
+            llm_client.chat_parsed("s", "u", response_model=_shape_model())
+        else:
+            getattr(llm_client, fn_name)("s", "u")
+
+    # one logical call, two application-level transports, two charges
+    assert llm_client._client.requests == 2
+    assert budget.used == 2
+    monkeypatch.setattr(llm_client, "_client", None)
+
+
+@pytest.mark.parametrize("fn_name", ["chat", "chat_qc", "chat_parsed"])
+def test_an_exhausted_budget_refuses_the_fallback_transport(monkeypatch, fn_name):
+    client = _FallbackClient()
+    monkeypatch.setattr(llm_client, "_client", client)
+    budget = RunCallBudget(limit=1)
+
+    with activate_call_budget(budget):
+        with pytest.raises(RunCallBudgetExceededError):
+            if fn_name == "chat_parsed":
+                llm_client.chat_parsed("s", "u", response_model=_shape_model())
+            else:
+                getattr(llm_client, fn_name)("s", "u")
+
+    # the first transport ran (and was charged); the fallback never executed
+    assert client.requests == 1
+    assert budget.used == 1
+    monkeypatch.setattr(llm_client, "_client", None)
+
+
+def test_non_temperature_bad_requests_still_raise_without_extra_charges(monkeypatch):
+    import openai
+
+    class _AlwaysBad:
+        def __init__(self):
+            self.requests = 0
+            outer = self
+
+            class _Completions:
+                def create(self, **kwargs):
+                    outer.requests += 1
+                    exc = openai.BadRequestError.__new__(openai.BadRequestError)
+                    Exception.__init__(exc, "Invalid request shape")
+                    exc.message = "Invalid request shape"
+                    raise exc
+
+            self.chat = type("Chat", (), {"completions": _Completions()})()
+
+    client = _AlwaysBad()
+    monkeypatch.setattr(llm_client, "_client", client)
+    budget = RunCallBudget(limit=5)
+
+    with activate_call_budget(budget):
+        with pytest.raises(openai.BadRequestError):
+            llm_client.chat("s", "u")
+
+    # #170 semantics preserved: no fallback for non-temperature errors,
+    # exactly one transport, exactly one charge
+    assert client.requests == 1
+    assert budget.used == 1
+    monkeypatch.setattr(llm_client, "_client", None)

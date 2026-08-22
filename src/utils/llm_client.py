@@ -133,6 +133,9 @@ def chat(system: str, user: str, json_mode: bool = False, model: str | None = No
         if "temperature" in str(exc):
             log.warning("Model %s rejected temperature — retrying without it", model)
             kwargs.pop("temperature", None)
+            # #171: the fallback is a second application-level transport —
+            # charged like any other, and refused when the budget is spent
+            charge_active_call_budget()
             response = client.chat.completions.create(**kwargs)
         else:
             raise
@@ -179,6 +182,9 @@ def chat_qc(system: str, user: str, json_mode: bool = False, model: str | None =
         if "temperature" in str(exc):
             log.warning("Model %s rejected temperature — retrying without it", model)
             kwargs.pop("temperature", None)
+            # #171: the fallback is a second application-level transport —
+            # charged like any other, and refused when the budget is spent
+            charge_active_call_budget()
             response = client.chat.completions.create(**kwargs)
         else:
             raise
@@ -234,6 +240,9 @@ def chat_parsed(
     except BadRequestError as exc:
         if "temperature" in str(exc):
             log.warning("Model %s rejected temperature — retrying without it", model)
+            # #171: the fallback is a second application-level transport —
+            # charged like any other, and refused when the budget is spent
+            charge_active_call_budget()
             response = client.beta.chat.completions.parse(
                 model=model,
                 messages=[
