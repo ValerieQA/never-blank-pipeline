@@ -70,11 +70,17 @@ def _model(stage_var: str | None = None) -> str:
     """
     Return the model for a given pipeline stage.
     Stage-specific var takes precedence; falls back to NB_OPENAI_CHAT_MODEL, then gpt-4o.
+
+    Empty and whitespace-only values are treated as absent (#173): GitHub
+    Actions renders an unset secret as an empty string in ``env:``, and an
+    empty string must mean "not configured" — never a literal model id sent
+    to the API.
     """
-    fallback = os.environ.get("NB_OPENAI_CHAT_MODEL", "gpt-4o")
     if stage_var:
-        return os.environ.get(stage_var, fallback)
-    return fallback
+        value = os.environ.get(stage_var, "").strip()
+        if value:
+            return value
+    return os.environ.get("NB_OPENAI_CHAT_MODEL", "").strip() or "gpt-4o"
 
 
 def model_discovery() -> str:

@@ -67,6 +67,9 @@ jobs:
         env:
           NB_OPENAI_API_KEY:    ${{ secrets.NB_OPENAI_API_KEY }}
           NB_OPENAI_CHAT_MODEL: ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          # #173: the eligibility judgment is enrichment-class work; the
+          # stage model routes it without touching the global fallback.
+          NB_ENRICH_MODEL: ${{ secrets.NB_ENRICH_MODEL }}
           WEDNESDAY_ROLE:       never-blank-wednesday-golden
         run: |
           set +e
@@ -131,6 +134,11 @@ jobs:
           NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
           NB_EXA_API_KEY: ${{ secrets.NB_EXA_API_KEY }}
           NB_OPENAI_CHAT_MODEL: ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          # #173: stage-specific model routing (Issue #159) — same shared
+          # infrastructure as Monday, never weekday branching.
+          NB_ENRICH_MODEL: ${{ secrets.NB_ENRICH_MODEL }}
+          NB_ARTICLE_MODEL: ${{ secrets.NB_ARTICLE_MODEL }}
+          NB_SOCIAL_MODEL: ${{ secrets.NB_SOCIAL_MODEL }}
           NB_WIX_API_KEY: ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID: ${{ secrets.NB_WIX_SITE_ID }}
           NB_WIX_POST_OWNER_ID: ${{ secrets.NB_WIX_POST_OWNER_ID }}
