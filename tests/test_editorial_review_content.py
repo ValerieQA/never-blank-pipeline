@@ -104,7 +104,10 @@ def test_a_blocked_run_preserves_the_article_linkedin_body_and_visuals(tmp_path)
     assert content["article_after_revision"] == REVISION_BODY
     assert content["article_as_generated"] != content["article_after_revision"]
     assert content["linkedin_body"]
-    assert record["visuals"]  # the images this run generated, by surface
+    # #177: image generation now happens AFTER acceptance, so a blocked run
+    # has honestly generated no visuals — that is the cost win, and the
+    # record says so instead of pretending assets existed
+    assert record["visuals"] == {}
     # the verdict that refused it, beside the content it refused
     assert record["editorial"]["final_disposition"] == "revise"
     assert record["editorial"]["failed_criterion_ids"] == ["unsupported-claims"]
