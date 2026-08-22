@@ -55,9 +55,20 @@ def test_inner_ordinary_test_cannot_see_the_key():
 @pytest.mark.skipif(os.environ.get(_INNER_GATE) != "1", reason="subprocess-only")
 @pytest.mark.live_api
 def test_inner_live_api_test_sees_the_key_it_was_authorized_for():
-    # the deliberate opt-in: the exported key is visible, untouched
+    # both authorizations present: the exported key is visible, untouched
     assert os.environ.get("NB_OPENAI_API_KEY") == _SENTINEL_KEY
     # no call is made — visibility is the entire assertion
+
+
+@pytest.mark.skipif(os.environ.get(_INNER_GATE) != "1", reason="subprocess-only")
+@pytest.mark.live_api
+def test_inner_marked_test_is_still_blocked():
+    # the marker alone is one authorization of two: the run-level
+    # authorization is absent or invalid, so the key must be stripped
+    assert os.environ.get("NB_OPENAI_API_KEY") is None
+    assert os.environ.get("OPENAI_API_KEY") is None
+    with pytest.raises(EnvironmentError, match="NB_OPENAI_API_KEY"):
+        llm_client._get_client()
 
 
 # ===========================================================================
@@ -129,17 +140,77 @@ def test_a_test_may_still_set_its_own_sentinel_key(monkeypatch):
 
 
 # ===========================================================================
-# 3. The live_api opt-in is deliberate and works
+# 3. The live opt-in needs BOTH the marker and the run-level authorization
 # ===========================================================================
 
+_AMBIENT = {"NB_OPENAI_API_KEY": _SENTINEL_KEY, "OPENAI_API_KEY": _SENTINEL_KEY}
 
-def test_the_live_api_marker_grants_key_visibility():
+
+def test_marker_plus_run_authorization_grants_key_visibility():
+    # 2×2 cell: marker YES + run authorization YES → visible
     result = _run_inner(
         "test_inner_live_api_test_sees_the_key_it_was_authorized_for",
-        {"NB_OPENAI_API_KEY": _SENTINEL_KEY},
+        {**_AMBIENT, "NB_ALLOW_LIVE_API_TESTS": "1"},
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "1 passed" in result.stdout
+
+
+def test_marker_without_run_authorization_is_blocked():
+    # 2×2 cell: marker YES + run authorization NO → blocked
+    result = _run_inner("test_inner_marked_test_is_still_blocked", _AMBIENT)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "1 passed" in result.stdout
+
+
+def test_run_authorization_without_marker_is_blocked():
+    # 2×2 cell: marker NO + run authorization YES → blocked
+    result = _run_inner(
+        "test_inner_ordinary_test_cannot_see_the_key",
+        {**_AMBIENT, "NB_ALLOW_LIVE_API_TESTS": "1"},
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "1 passed" in result.stdout
+
+
+def test_neither_marker_nor_run_authorization_is_blocked():
+    # 2×2 cell: marker NO + run authorization NO → blocked
+    result = _run_inner("test_inner_ordinary_test_cannot_see_the_key", _AMBIENT)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "1 passed" in result.stdout
+
+
+@pytest.mark.parametrize(
+    "value", ["true", "yes", "on", "1 ", " 1", "01", "11", "0", "TRUE", "enable"],
+    ids=["true", "yes", "on", "trailing-space", "leading-space", "zero-padded",
+         "eleven", "zero", "upper-true", "enable"],
+)
+def test_run_authorization_rejects_every_non_canonical_value(value):
+    # strict: only the exact string "1" authorizes — a marked test under any
+    # other value stays blocked, with real-looking credentials exported
+    result = _run_inner(
+        "test_inner_marked_test_is_still_blocked",
+        {**_AMBIENT, "NB_ALLOW_LIVE_API_TESTS": value},
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "1 passed" in result.stdout
+
+
+def test_the_run_authorization_check_is_strict_in_process():
+    from tests import conftest as guard
+
+    assert guard._LIVE_OPT_IN_VALUE == "1"
+    for value in ("true", "yes", "0", "11", " 1", ""):
+        os.environ["NB_ALLOW_LIVE_API_TESTS"] = value
+        try:
+            assert guard._run_authorizes_live_api() is False
+        finally:
+            del os.environ["NB_ALLOW_LIVE_API_TESTS"]
+    os.environ["NB_ALLOW_LIVE_API_TESTS"] = "1"
+    try:
+        assert guard._run_authorizes_live_api() is True
+    finally:
+        del os.environ["NB_ALLOW_LIVE_API_TESTS"]
 
 
 def test_the_marker_is_registered_not_ad_hoc():
