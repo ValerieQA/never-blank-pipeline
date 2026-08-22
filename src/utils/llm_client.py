@@ -3,6 +3,7 @@ import json
 from typing import Any, TypeVar
 from pydantic import BaseModel as PydanticBaseModel
 from openai import OpenAI, BadRequestError
+from src.run.call_budget import charge_active_call_budget
 from src.utils.logger import get_logger
 
 _T = TypeVar("_T", bound=PydanticBaseModel)
@@ -125,6 +126,7 @@ def chat(system: str, user: str, json_mode: bool = False, model: str | None = No
         kwargs["response_format"] = {"type": "json_object"}
 
     log.debug("chat() model=%s temp=%s json_mode=%s", model, _temperature(), json_mode)
+    charge_active_call_budget()  # #171: one logical call, refused before any paid transport
     try:
         response = client.chat.completions.create(**kwargs)
     except BadRequestError as exc:
@@ -170,6 +172,7 @@ def chat_qc(system: str, user: str, json_mode: bool = False, model: str | None =
         kwargs["response_format"] = {"type": "json_object"}
 
     log.debug("chat_qc() model=%s temp=%s", model, _qc_temperature())
+    charge_active_call_budget()  # #171: one logical call, refused before any paid transport
     try:
         response = client.chat.completions.create(**kwargs)
     except BadRequestError as exc:
@@ -217,6 +220,7 @@ def chat_parsed(
     client = _get_client()
     model = model or _model()
     log.debug("chat_parsed() model=%s response_model=%s", model, response_model.__name__)
+    charge_active_call_budget()  # #171: one logical call, refused before any paid transport
     try:
         response = client.beta.chat.completions.parse(
             model=model,

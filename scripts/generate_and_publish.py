@@ -123,6 +123,12 @@ from src.intake import (
 from src.intake.assignment_record import AssignmentRecord
 from src.intake.audience_routing import audience_request
 from src.run.code_identity import resolve_code_identity
+from src.run.call_budget import (
+    RunCallBudget,
+    RunCallBudgetExceededError,
+    activate_call_budget,
+    configured_run_call_ceiling,
+)
 from src.run.decision_policy import (
     DecisionPolicyError,
     DecisionPolicyRecord,
@@ -672,13 +678,30 @@ def main(
     """
 
     state = _TerminalState()
-    exit_code = _run(
-        state,
-        research_provider=research_provider,
-        evidence_judgment=evidence_judgment,
-        decision_evaluator=decision_evaluator,
-        editorial_reviewer=editorial_reviewer,
-        article_revisor=article_revisor,
+    # #171: one deterministic ceiling on paid text-model calls for the whole
+    # run. The budget is constructed per run (reset = construction), charged
+    # inside the shared client before each transport, and exhausted budgets
+    # fail the run closed here — after the last reached stage is recorded,
+    # before any further paid call, with the standard terminal accounting.
+    budget = RunCallBudget(limit=configured_run_call_ceiling())
+    try:
+        with activate_call_budget(budget):
+            exit_code = _run(
+                state,
+                research_provider=research_provider,
+                evidence_judgment=evidence_judgment,
+                decision_evaluator=decision_evaluator,
+                editorial_reviewer=editorial_reviewer,
+                article_revisor=article_revisor,
+            )
+    except RunCallBudgetExceededError as exc:
+        print(f"  ERROR: {exc}")
+        state.ended(state.stage, TerminalDisposition.STOPPED,
+                    f"call budget exhausted: {exc.used}/{exc.limit}")
+        exit_code = 1
+    print(
+        f"  ℹ  text-model call budget: {budget.used} used / "
+        f"{budget.limit} limit / {budget.remaining} remaining"
     )
     _emit_terminal_report(state, exit_code)
     return exit_code
@@ -1463,6 +1486,10 @@ def _run(
                     print(f"  ✓  Images generated: {blog_url[:60] if blog_url else '(none)'}")
                 else:
                     print(f"  ⚠  Image generation returned no packages — visual platforms will skip")
+            except RunCallBudgetExceededError:
+                # #171: an exhausted call budget is a run stop, never a
+                # silent fall-through to "publish without images".
+                raise
             except Exception as exc:
                 print(f"  ⚠  Image generation failed ({exc}) — visual platforms will skip")
 
