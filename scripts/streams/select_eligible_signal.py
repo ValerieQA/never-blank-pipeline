@@ -153,12 +153,30 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
                 # further attempt makes a rate limit worse. Stop the sweep on
                 # the first provider-scope failure; the honest evaluated/
                 # remaining counts below record how far the search got.
+                #
+                # #188: the sanitized normalized diagnostic is persisted so
+                # the evidence can distinguish throttling from exhausted
+                # quota from auth/connection/outage — run 32607277008 could
+                # only say "RateLimitError" while the true condition was
+                # 429 insufficient_quota / credit_balance_exhausted.
+                _diag = exc.diagnostic
                 audit["dispositions"].append(
                     {"signal_id": signal_id,
                      "disposition": "provider_unavailable",
-                     "detail": str(exc)[:300]}
+                     "detail": str(exc)[:300],
+                     "provider_failure": (
+                         _diag.as_audit_dict() if _diag is not None else None
+                     )}
                 )
                 print(f"  ✗  {signal_id}: provider unavailable — {exc}")
+                if _diag is not None:
+                    print(
+                        f"     provider failure: {_diag.normalized_reason}"
+                        + (f" (http {_diag.http_status}" if _diag.http_status else " (")
+                        + (f", type={_diag.provider_error_type}" if _diag.provider_error_type else "")
+                        + (f", code={_diag.provider_error_code}" if _diag.provider_error_code else "")
+                        + ")"
+                    )
                 print(
                     "Provider-wide failure: stopping the eligibility sweep "
                     "without evaluating further candidates."

@@ -23,6 +23,7 @@ case, and uncertainty is ineligibility.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -68,6 +69,137 @@ Return ONLY one valid JSON object:
 """
 
 
+@dataclass(frozen=True)
+class ProviderFailureDiagnostic:
+    """Sanitized, normalized account of one provider-scoped failure (#188).
+
+    Built by explicit field extraction only — never from ``str(exc)``, never
+    from response headers wholesale, never from request payloads, and never
+    from the provider's human-readable ``error.message``: provider prose is
+    arbitrary text that can echo secret-shaped material (authentication
+    errors quote API-key fragments), so it is not extracted at all. The
+    structured fields below are the complete set this record will ever
+    carry. Missing fields stay ``None``: absence is the honest answer, and
+    extraction must survive SDK-version differences in which attributes
+    exist.
+
+    Live run 32607277008 is why this exists: the audit said only
+    ``RateLimitError`` while the provider had actually answered
+    ``429 insufficient_quota / credit_balance_exhausted`` — exhausted
+    credits, not throttling. Two conditions with opposite operator
+    responses (wait vs. pay) were indistinguishable in the evidence.
+    """
+
+    provider: str
+    normalized_reason: str
+    http_status: int | None = None
+    provider_error_type: str | None = None
+    provider_error_code: str | None = None
+    request_id: str | None = None
+    #: Reserved for a future allowlist/redaction contract. Persisted as
+    #: ``None`` in Release 1: no such contract exists, raw provider prose is
+    #: not evidence, and the operational wording derives from
+    #: ``normalized_reason``. Kept as a typed field so the audit shape is
+    #: stable when a contract is ever defined.
+    sanitized_message: str | None = None
+
+    def as_audit_dict(self) -> dict:
+        """The exact shape persisted into the selection audit artifact."""
+        return {
+            "provider": self.provider,
+            "normalized_reason": self.normalized_reason,
+            "http_status": self.http_status,
+            "provider_error_type": self.provider_error_type,
+            "provider_error_code": self.provider_error_code,
+            "request_id": self.request_id,
+            "sanitized_message": self.sanitized_message,
+        }
+
+
+#: normalized_reason values. Fixed vocabulary: the audit is evidence, and
+#: evidence vocabularies do not drift silently.
+PROVIDER_FAILURE_REASONS = (
+    "rate_limit",
+    "insufficient_quota",
+    "authentication",
+    "connection",
+    "provider_internal",
+    "unknown_provider_failure",
+)
+
+#: Structured markers that a 429 is exhausted quota/billing, not throttling.
+#: Matched against the provider's structured ``error.type``/``error.code``
+#: fields only — never against the human-readable message.
+_QUOTA_MARKERS = frozenset({"insufficient_quota", "credit_balance_exhausted"})
+
+
+def _provider_error_fields(exc: BaseException) -> tuple[str | None, str | None]:
+    """(type, code) from the structured error body, defensively.
+
+    ``error.message`` is deliberately not read: provider prose is arbitrary
+    text and may quote secret-shaped material, so it never enters this
+    module's data flow at all.
+    """
+    body = getattr(exc, "body", None)
+    error = body.get("error") if isinstance(body, dict) else None
+    if not isinstance(error, dict):
+        return None, None
+
+    def _text(value: object) -> str | None:
+        return value if isinstance(value, str) and value else None
+
+    return _text(error.get("type")), _text(error.get("code"))
+
+
+def _provider_diagnostic(exc: BaseException) -> "ProviderFailureDiagnostic | None":
+    """Normalize a provider-scoped SDK exception; None for candidate scope.
+
+    Classification is isinstance-anchored on exactly the #170 provider set,
+    then refined by the provider's STRUCTURED type/code where one exists —
+    a RateLimitError whose body says ``insufficient_quota`` or
+    ``credit_balance_exhausted`` is exhausted quota, not throttling.
+    """
+    try:
+        import openai
+    except ImportError:  # pragma: no cover - openai is a hard dependency
+        return None
+
+    if not _provider_scope(exc):
+        return None
+
+    error_type, error_code = _provider_error_fields(exc)
+    if isinstance(exc, openai.RateLimitError):
+        if error_type in _QUOTA_MARKERS or error_code in _QUOTA_MARKERS:
+            reason = "insufficient_quota"
+        else:
+            reason = "rate_limit"
+    elif isinstance(exc, openai.AuthenticationError):
+        reason = "authentication"
+    elif isinstance(exc, openai.APIConnectionError):
+        reason = "connection"
+    elif isinstance(exc, openai.InternalServerError):
+        reason = "provider_internal"
+    else:  # pragma: no cover - _provider_scope admits only the four above
+        # "unknown_provider_failure" is RESERVED: with today's #170 provider
+        # set every provider-scoped class maps to a named reason, so this
+        # branch is unreachable. It exists so a future provider class added
+        # to _provider_scope degrades to a safe named value instead of an
+        # invented one. Do not widen the #170 scope to make it reachable.
+        reason = "unknown_provider_failure"
+
+    status = getattr(exc, "status_code", None)
+    request_id = getattr(exc, "request_id", None)
+    return ProviderFailureDiagnostic(
+        provider="openai",
+        normalized_reason=reason,
+        http_status=status if isinstance(status, int) else None,
+        provider_error_type=error_type,
+        provider_error_code=error_code,
+        request_id=request_id if isinstance(request_id, str) else None,
+        sanitized_message=None,  # R1: provider prose is never persisted
+    )
+
+
 class SourceEligibilityError(RuntimeError):
     """The eligibility judgment could not produce a trustworthy verdict.
 
@@ -81,12 +213,23 @@ class SourceEligibilityError(RuntimeError):
       subsequent call is expected to fail identically, and each attempt makes
       a rate limit worse; a caller walking a queue must stop.
 
+    ``diagnostic`` (#188) carries the sanitized normalized account of a
+    provider-scoped failure; ``None`` for candidate scope. Semantics live in
+    the typed fields, never encoded into the message string.
+
     Either way the judgment failed closed: no scope ever yields a verdict.
     """
 
-    def __init__(self, message: str, *, scope: str = "candidate") -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        scope: str = "candidate",
+        diagnostic: "ProviderFailureDiagnostic | None" = None,
+    ) -> None:
         super().__init__(message)
         self.scope = scope
+        self.diagnostic = diagnostic
 
 
 #: Provider-wide SDK conditions. A failure of one of these types on one
@@ -170,9 +313,13 @@ def judge_source_eligibility(
     try:
         raw = transport.complete(instructions=_INSTRUCTIONS, request=request)
     except Exception as exc:  # noqa: BLE001 — boundary normalizes transport errors
+        diagnostic = _provider_diagnostic(exc)
         raise SourceEligibilityError(
-            f"eligibility transport failed ({type(exc).__name__})",
-            scope="provider" if _provider_scope(exc) else "candidate",
+            f"eligibility transport failed ({type(exc).__name__}"
+            + (f": {diagnostic.normalized_reason}" if diagnostic else "")
+            + ")",
+            scope="provider" if diagnostic is not None else "candidate",
+            diagnostic=diagnostic,
         ) from exc
 
     try:
