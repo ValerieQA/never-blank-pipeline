@@ -232,6 +232,7 @@ from src.artifacts import (
     load_linkedin_composition_json,
     load_assignment_json,
     load_visual_assets_json,
+    append_rejected_composition,
     write_assignment_json,
     write_editorial_acceptance_json,
     write_decision_policy_json,
@@ -427,6 +428,27 @@ _NON_R1_PUBLISHERS = ("facebook", "instagram", "threads", "telegram")
 # composer/image architecture remain for future configuration.
 _R1_COMPOSER_FORMATS = ("long", "medium")
 _R1_IMAGE_PLATFORMS = ["blog", "linkedin"]
+
+
+def _persist_rejected_compositions(run_dir: Path, rejected: list) -> None:
+    """Write refused compositions as diagnostic evidence (Issue #191).
+
+    A deterministic contract failure must be diagnosable without paying for
+    another live run. Never a publication input: the record declares itself
+    unpublishable, is absent from the canonical artifact set, and no loader
+    reads it — ``--from-package`` reads ``generated.json`` and only that.
+    A failure to preserve evidence never rewrites the run's outcome.
+    """
+    if not rejected:
+        return
+    try:
+        for entry in rejected:
+            append_rejected_composition(run_dir, entry)
+        print(f"  ℹ  rejected compositions preserved: {len(rejected)} "
+              f"({run_dir / 'rejected_composition.json'})")
+    except (OSError, ValueError) as exc:
+        log.warning("rejected compositions could not be preserved (%s)",
+                    type(exc).__name__)
 
 
 def _stop_with_preflight(
@@ -812,6 +834,18 @@ def _run(
         return 1
 
     cta_mode            = get_cta_mode(active_strategy)
+    # #191: a role may declare its own CTA mode. Monday declares "none": its
+    # single branded editorial moment is the Never Blank Echo, and the Wix
+    # reader is already on the site. The shared channel rules already say
+    # "When CTA mode is none, do not add an invitation", so this switches the
+    # existing contract off without editing configuration other streams read.
+    if _role is not None and _role.cta_mode is not None:
+        if _role.cta_mode != cta_mode:
+            print(
+                f"  ✓  cta_mode:      {_role.cta_mode} "
+                f"(role {_role.role_id!r} overrides strategy {cta_mode!r})"
+            )
+        cta_mode = _role.cta_mode
     strategy_id         = active_strategy.strategy_id
     strategy_started_at = str(active_strategy.started_at) if active_strategy.started_at else ""
     strategy_version    = active_strategy.strategy_version
@@ -1604,6 +1638,9 @@ def _run(
         blog_image_url: Optional[str] = None
         platform_image_urls: dict = {}
 
+        # #191: diagnostic sink for compositions rejected by local validation.
+        _rejected_compositions: list = []
+
         # ── 3b. Generate content via LLM ─────────────────────────────────────
         print(f"\n[3/6] Generating content (LLM — Editorial Engine V2)…")
         print(f"  strategy context injected: strategy_id={strategy_id}")
@@ -1632,11 +1669,20 @@ def _run(
                 research_artifact=research_artifact,
                 editorial_role_rules=_editorial_role_rules,
                 composer_formats=_R1_COMPOSER_FORMATS,
+                # #191: how this role closes its long-form surface. Roles that
+                # declare nothing keep the existing contract.
+                closing_contract=(
+                    _role.closing_contract if _role is not None else None
+                ),
+                # #191: compositions our own validator refuses are preserved
+                # for diagnosis instead of dying with the runner.
+                rejected_sink=_rejected_compositions,
             )
             platforms  = article["platforms"]
             structured = article["structured_article"]
         except ArticleGenerationError as exc:
             print(f"  ERROR: Editorial Engine failed at stage {exc.stage!r}: {exc.original}")
+            _persist_rejected_compositions(run_dir, _rejected_compositions)
             return 1
 
         blog_body      = platforms["long"]["body"]

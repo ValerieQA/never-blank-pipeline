@@ -256,6 +256,56 @@ def write_editorial_review_content_json(run_dir: Path, data: dict) -> None:
     )
 
 
+REJECTED_COMPOSITION_KIND = "rejected_composition"
+REJECTED_COMPOSITION_NOTICE = (
+    "Composition rejected by local validation and preserved for diagnosis "
+    "only. NOT publishable and never a packaging or publication input: this "
+    "text failed the composer's own contract and no gate ever accepted it."
+)
+
+
+def append_rejected_composition(run_dir: Path, entry: dict) -> None:
+    """Preserve a composition our own validator refused (Issue #191).
+
+    A deterministic contract failure used to be undiagnosable: the composer
+    raised a message-only ``ValueError`` and both the rejected body and its
+    retry were garbage-collected, so the only way to learn what the model
+    actually wrote was to pay for another live run. Live run 32611137648 lost
+    two bodies exactly this way.
+
+    Every attempt is appended, so a stage that fails twice preserves both.
+    Unlike the create-once canonical artifacts this file legitimately grows
+    within one run — it is diagnostic evidence, not an authority, and it is
+    deliberately absent from ``CANONICAL_ARTIFACTS``.
+
+    Contains generated text and our own validation message only: no provider
+    transport data, no headers, no authorization material, no provider prose.
+    """
+
+    path = run_dir / "rejected_composition.json"
+    if path.exists():
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as exc:
+            raise ValueError(f"Could not read {path}: {exc}") from exc
+        attempts = record.get("attempts", [])
+    else:
+        record, attempts = {}, []
+    attempts.append(entry)
+    payload = {
+        "artifact_kind": REJECTED_COMPOSITION_KIND,
+        "publishable": False,
+        "notice": REJECTED_COMPOSITION_NOTICE,
+        **{k: v for k, v in record.items()
+           if k not in ("artifact_kind", "publishable", "notice", "attempts")},
+        "attempts": attempts,
+    }
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+                   encoding="utf-8")
+    tmp.replace(path)
+
+
 def write_assignment_json(run_dir: Path, data: dict) -> None:
     """Commit the run's canonical intake assignment record exactly once."""
     atomic_write_json(run_dir / "assignment.json", data)

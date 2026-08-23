@@ -130,6 +130,25 @@ class EditorialRole(_ContractModel):
     #: generic: product-specific criteria live in the referenced strict file.
     acceptance_rubric_path: NonBlankStr | None = None
     acceptance_rubric_identity: NonBlankStr | None = None
+    #: Optional role-scoped CTA override (Issue #191). ``None`` keeps today's
+    #: behaviour for every role: the active strategy's CTA mode governs. A
+    #: role may declare its own — a role whose single branded editorial
+    #: moment is its Echo, published on a surface the reader already reached,
+    #: declares "none". This is deliberately role-scoped: the shared
+    #: ``channels.*`` CTA rules already say "When CTA mode is none, do not
+    #: add an invitation", so the existing channel contract switches itself
+    #: off without editing configuration every other stream reads.
+    cta_mode: Literal["none", "reflection", "diagnostic",
+                      "example_request", "direct_conversation"] | None = None
+    #: How this role's long-form surface must close (Issue #191).
+    #: "invitation_last" is today's behaviour for every role: the verbatim
+    #: Echo is the literal end of the body. "branded_echo_then_sources" lets
+    #: a role declare instead that its Echo IS its publisher perspective,
+    #: rendered as an attributed block, with the required Sources section
+    #: following it. Role-scoped so no other role's contract moves.
+    closing_contract: Literal["invitation_last", "branded_echo_then_sources"] = (
+        "invitation_last"
+    )
 
     @model_validator(mode="after")
     def _complete_acceptance_reference(self) -> "EditorialRole":

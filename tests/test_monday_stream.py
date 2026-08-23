@@ -290,14 +290,28 @@ def test_the_anti_listicle_rules_are_present():
         assert forbidden in rules
 
 
-def test_the_never_blank_close_and_canonical_cta_are_required():
+def test_the_branded_echo_replaces_the_close_and_the_cta(monday_role=None):
+    """#191: one branded editorial moment, no invitation.
+
+    The Echo IS the Never Blank perspective; there is no separate perspective
+    paragraph and no website invitation on either surface.
+    """
     rules = _role_rules().lower()
 
-    assert "never blank close" in rules
-    assert "canonical configured destination" in rules
-    # and the destination itself is still configured on the channel rules
+    assert "never blank echo" in rules
+    assert "is the never blank perspective on this story" in rules
+    # the separate close and the invitation are gone from the role
+    assert "never blank close" not in rules
+    assert "website invitation" not in rules
+    assert "inneros.online" not in rules
+    # the role switches the CTA off through the existing channel contract,
+    # which is itself untouched and still owns the destination for other roles
+    role = _monday_role_object()
+    assert role.cta_mode == "none"
     channels = json.loads(CONFIG_PATH.read_text())["channels"]
     assert any("inneros.online" in rule for rule in channels["wix"]["cta_rules"])
+    assert any("when cta mode is none" in rule.lower()
+               for rule in channels["wix"]["cta_rules"])
 
 
 def test_headings_are_not_demanded_in_the_prose():
@@ -2238,12 +2252,13 @@ def test_forcing_the_lens_is_still_prohibited():
     assert "to satisfy a house style when the case does not support that mechanism" in rules
 
 
-def test_the_never_blank_close_is_an_editorial_signature_not_a_causal_claim():
+def test_the_never_blank_echo_is_an_editorial_signature_not_a_causal_claim():
     rules = _role_rules().lower()
 
-    assert "a short never blank perspective on this story" in rules
+    assert "never blank echo" in rules
     assert "never a claim that presence caused the outcome" in rules
     assert "never a generic brand manifesto" in rules
+    assert "never a sales line" in rules
 
 
 def test_the_closing_order_reaches_each_surface():
@@ -2255,8 +2270,11 @@ def test_the_closing_order_reaches_each_surface():
     assert "then hashtags last" in linkedin
     assert "hashtags last" not in wix
     assert "sources section last" not in linkedin
+    # #191: the branded Echo closes both surfaces, and neither carries an
+    # invitation any more
+    assert "never blank echo" in wix and "never blank echo" in linkedin
     for surface in (wix, linkedin):
-        assert "https://www.inneros.online" in surface
+        assert "inneros.online" not in surface
 
 
 def test_unsupported_facts_and_source_transparency_are_untouched():

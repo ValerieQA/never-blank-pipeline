@@ -28,7 +28,8 @@ from src.editorial.reader_context import build_reader_context
 from src.editorial.discovery_builder import build_discovery
 from src.editorial.story_assembly import assemble_story
 from src.editorial.never_blank_voice import finalize_article
-from src.editorial.platform_composer import compose_platforms
+from src.editorial.platform_composer import CompositionRejected, compose_platforms
+from src.editorial.sources_of_record import canonical_source_entries
 from src.strategy.execution_context import (
     AudienceSelection,
     DecisionLensEditorialStrategyView,
@@ -50,14 +51,33 @@ class ArticleGenerationError(Exception):
         super().__init__(f"stage {stage!r} failed after retry: {original}")
 
 
-def _run_stage(stage_name: str, fn: Callable, *args, **kwargs):
+def _record_rejection(sink, stage_name: str, attempt: int, exc: Exception) -> None:
+    """Capture a composition our own validator refused (#191).
+
+    Only rejections that carry their generated body are recorded; ordinary
+    stage failures have nothing to preserve. Never touches provider data.
+    """
+    if sink is None or not isinstance(exc, CompositionRejected):
+        return
+    sink.append({
+        "stage": stage_name,
+        "format": exc.format_key,
+        "attempt": attempt,
+        "validation_error": exc.validation_error,
+        "body": exc.body,
+    })
+
+
+def _run_stage(stage_name: str, fn: Callable, *args, rejected_sink=None, **kwargs):
     try:
         return fn(*args, **kwargs)
     except ValueError as exc:
+        _record_rejection(rejected_sink, stage_name, 1, exc)
         log.warning("Stage %r failed on first attempt (%s) — retrying once", stage_name, exc)
         try:
             return fn(*args, **kwargs)
         except ValueError as exc2:
+            _record_rejection(rejected_sink, stage_name, 2, exc2)
             raise ArticleGenerationError(stage_name, exc2) from exc2
 
 
@@ -72,6 +92,8 @@ def generate_article(
     research_artifact: NormalizedResearchArtifact | None = None,
     editorial_role_rules: "str | dict[str, str] | None" = None,
     composer_formats: "tuple[str, ...] | None" = None,
+    closing_contract: str | None = None,
+    rejected_sink: "list | None" = None,
 ) -> dict:
     """
     Run the full Editorial Engine V2 pipeline for one enriched signal.
@@ -155,6 +177,16 @@ def generate_article(
             "never_blank_voice", finalize_article, *voice_args,
             typed_strategy, audience_selection, selected_cta,
         )
+    # #191: the run's own canonical source entries. A Sources line must
+    # reproduce one of them whole — a bullet proves nothing, and containing a
+    # single field proves nothing either when a publisher is "AI". Derived
+    # from the same function that renders the prompt's SOURCES OF RECORD
+    # block, so the instruction and the validation cannot drift apart.
+    _identities: tuple[str, ...] = (
+        canonical_source_entries(research_artifact)
+        if research_artifact is not None else ()
+    )
+
     platforms = _run_stage(
         "platform_composer",
         compose_platforms,
@@ -164,6 +196,9 @@ def generate_article(
         linkedin_strategy=linkedin_strategy,
         editorial_role_rules=editorial_role_rules,
         formats=composer_formats,
+        rejected_sink=rejected_sink,
+        source_identities=_identities,
+        **({} if closing_contract is None else {"closing_contract": closing_contract}),
     )
 
     log.info("Editorial Engine: generation complete for signal %s", sig_id)
