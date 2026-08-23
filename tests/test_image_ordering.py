@@ -211,3 +211,100 @@ def test_cost_safety_contracts_survive_the_reorder():
     tags = generate_hashtags({"INDUSTRY": "retail"}, "linkedin",
                              mechanism="capacity", title="The Queue")
     assert tags[:3] == list(BRANDED_HASHTAGS)                  # #176
+
+
+# ===========================================================================
+# Option B (#177, authorized): the CONTENT_PACKAGE preview is deliberately
+# removed from canonical R1 — one stable editorial input, zero preview cost
+# ===========================================================================
+
+
+def _capture_editorial_context(tmp_path, cached_images):
+    """Run the real entrypoint; capture the package fed to rc.to_editorial.
+
+    ``pkg_raw`` is injected verbatim as CONTENT_PACKAGE into the editorial
+    signal (signal_lifecycle.to_legacy_dict), so the ``to_editorial``
+    boundary IS the canonical editorial-context input for the preview.
+    """
+
+    argv, patches = _entry_patches(tmp_path)
+    evaluator, _ = _evaluator(_model_output())
+    captured: dict = {}
+
+    def rc_factory(assignment, raw_signal, run_ctx):
+        rc = legacy._make_rc_mock(run_ctx.run_id)
+        real_to_editorial = rc.to_editorial
+
+        def record(pkg):
+            captured["CONTENT_PACKAGE"] = pkg
+            return real_to_editorial(pkg)
+
+        rc.to_editorial = record
+        return rc
+
+    patches["_build_legacy_research_context"] = mock.MagicMock(side_effect=rc_factory)
+    patches["_load_package_images"] = mock.MagicMock(return_value=cached_images)
+
+    def fake_images(signals, *args, **kwargs):
+        return [{"images": {"platform_images": {
+            "blog": {"url": "https://cdn.example/b.png"},
+            "linkedin": {"url": "https://cdn.example/l.png"},
+        }}}]
+
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches), \
+            mock.patch("scripts.research.prepare_content.prepare_content_packages",
+                       side_effect=fake_images), \
+            mock.patch("scripts.research.prepare_content._generate_content_package",
+                       side_effect=AssertionError("preview generation was reached")):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+    assert code == 0
+    assert "CONTENT_PACKAGE" in captured
+    return captured["CONTENT_PACKAGE"]
+
+
+def test_cache_hit_and_cache_miss_feed_identical_editorial_context(tmp_path):
+    from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
+
+    cache_hit = {
+        "blog": {"url": "https://cdn.example/cached.png"},
+        "linkedin": {"url": "https://cdn.example/cached-li.png"},
+        "_design_version": CURRENT_DESIGN_VERSION,
+    }
+    hit_ctx = _capture_editorial_context(tmp_path / "hit", cache_hit)
+    miss_ctx = _capture_editorial_context(tmp_path / "miss", {})
+
+    # one canonical shape, regardless of image-cache state — and it is the
+    # empty non-authoritative preview, by product decision
+    assert hit_ctx == miss_ctx == {"images": {"platform_images": {}}}
+
+
+def test_the_preview_call_is_never_invoked_on_the_canonical_path(tmp_path):
+    # _generate_content_package is patched to explode in the capture helper;
+    # both cache states completed with code 0 above. Here: the real
+    # prepare_content_packages honours content_package=False without ever
+    # touching the preview generator.
+    from scripts.research import prepare_content
+
+    with mock.patch.object(prepare_content, "_generate_content_package",
+                           side_effect=AssertionError("preview reached")), \
+            mock.patch.object(prepare_content, "_build_image_plan",
+                              return_value=({"platform_images": {}}, None)), \
+            mock.patch.object(prepare_content, "_load_image_library",
+                              return_value={}), \
+            mock.patch.object(prepare_content, "_save_image_library"), \
+            mock.patch.object(prepare_content, "_save_package"
+                              if hasattr(prepare_content, "_save_package")
+                              else "_load_image_library"):
+        pkgs = prepare_content.prepare_content_packages(
+            [{"SIGNAL_ID": "sig-x", "HEADLINE": "h"}],
+            platforms=["blog", "linkedin"], content_package=False,
+        )
+    assert pkgs and pkgs[0].get("content") == {}
+
+
+def test_legacy_daily_research_keeps_its_preview_by_default():
+    import inspect
+    from scripts.research.prepare_content import prepare_content_packages
+
+    assert inspect.signature(prepare_content_packages).parameters[
+        "content_package"].default is True

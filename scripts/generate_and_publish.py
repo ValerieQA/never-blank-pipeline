@@ -1588,6 +1588,17 @@ def _run(
         # refuse must not already have paid for assets it cannot publish.
         # Until then the run carries no visuals — which is also what a
         # blocked run honestly preserves.
+        #
+        # PRODUCT DECISION (#177, authorized): the CONTENT_PACKAGE preview is
+        # deliberately removed from the canonical R1 editorial input. It cost
+        # one model call, was labelled non-authoritative ("never a source of
+        # new facts"), sat outside the evidence chain, was invisible to
+        # acceptance and source transparency — and appeared only when the
+        # image cache happened to miss, so the steady state never had it.
+        # Every fresh run now feeds generation this same canonical empty
+        # shape regardless of image-cache state. R2 must not "restore" the
+        # old cache-dependent preview as a bug fix; reintroducing it is a
+        # product decision with a per-run cost.
         pimgs: dict = {}
         editorial_package: dict = {"images": {"platform_images": {}}}
         blog_image_url: Optional[str] = None
@@ -1907,6 +1918,8 @@ def _run(
                 pkgs = prepare_content_packages(
                     [signal], strategy_execution.research, research_audience,
                     platforms=_R1_IMAGE_PLATFORMS,
+                    # #177 product decision: no preview generation here either
+                    content_package=False,
                 )
                 if pkgs:
                     pimgs = pkgs[0].get("images", {}).get("platform_images", {})
