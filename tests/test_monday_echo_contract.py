@@ -55,21 +55,58 @@ def _article(echo: str = ECHO) -> dict:
             "narrative_spine": "s", "cta_line": None}
 
 
+def _research_with_one_source():
+    from tests.test_decision_lens_evaluator import _research
+    return _research()
+
+
+def _identities() -> tuple:
+    """The run's own citable identities, exactly as the pipeline derives them."""
+    from src.editorial.sources_of_record import source_records
+
+    return tuple(
+        value
+        for record in source_records(_research_with_one_source())
+        for key in ("url", "publisher", "title")
+        for value in (record.get(key),)
+        if value
+    )
+
+
+#: One real rendered Sources entry, taken from the canonical renderer rather
+#: than hand-invented, so the test validates what the run actually shows.
+def _real_source_entry() -> str:
+    from src.editorial.sources_of_record import render_sources_of_record
+
+    rendered = render_sources_of_record(_research_with_one_source(), surface="wix")
+    return next(l for l in rendered.splitlines() if l.startswith("- "))
+
+
 def _compose(body: str, *, contract=CLOSING_BRANDED_ECHO_THEN_SOURCES,
-             fmt="long", echo: str = ECHO):
+             fmt="long", echo: str = ECHO, identities=None):
     """Drive the real validator against a body we control."""
     payload = json.dumps({"body": body, "echo_included": True, "title": "T"})
     with mock.patch.object(platform_composer, "chat", return_value=payload):
-        return _compose_one(_article(echo), fmt, closing_contract=contract)
+        return _compose_one(
+            _article(echo), fmt, closing_contract=contract,
+            source_identities=_identities() if identities is None else identities,
+        )
 
 
-_GOOD_WIX = (
-    "Opening paragraph that carries the tension.\n\n"
-    + " ".join(f"word{i}" for i in range(430))
-    + "\n\nWhat this means for another owner.\n\n"
-    f"**Never Blank:** {ECHO}\n\n"
-    "## Sources\n- Verified report — https://source.example/story"
-)
+def _body(*, echo_block: str = None, sources: str = None) -> str:
+    """A full-length article with a controllable ending."""
+    echo_block = echo_block if echo_block is not None else f"**Never Blank:** {ECHO}"
+    tail = f"\n\n{sources}" if sources else ""
+    return (
+        "Opening paragraph that carries the tension.\n\n"
+        + " ".join(f"word{i}" for i in range(430))
+        + "\n\nWhat this means for another owner.\n\n"
+        + echo_block + tail
+    )
+
+
+_REAL_SOURCES = "## Sources\n" + _real_source_entry()
+_GOOD_WIX = _body(sources=_REAL_SOURCES)
 
 
 # ===========================================================================
@@ -359,72 +396,70 @@ def test_cost_and_containment_contracts_are_unaffected():
 def test_a_cta_appended_below_the_source_list_is_rejected():
     """The exact shape the previous validator could not see.
 
-    Its first trailing line was a Sources heading, so a call to action
-    underneath the source entries passed unchallenged.
+    Its first trailing line was a Sources heading and its second carried a
+    list marker, so a call to action underneath a genuine citation passed
+    both earlier rules.
     """
-    body = (
-        "Body paragraph.\n\n" + " ".join(f"w{i}" for i in range(430))
-        + f"\n\n**Never Blank:** {ECHO}\n\n"
-        "## Sources\n- source A\n- source B\n\n"
-        "Visit Never Blank today!"
-    )
-    with pytest.raises(CompositionRejected, match="only source entries may appear"):
+    body = _body(sources=(
+        "## Sources\n"
+        "- SBA Office of Advocacy — https://advocacy.sba.gov/report\n"
+        "- Visit Never Blank today!"
+    ))
+    with pytest.raises(CompositionRejected, match="must name one of this run's sources"):
         _compose(body)
 
 
 def test_a_second_perspective_appended_below_the_source_list_is_rejected():
-    body = (
-        "Body paragraph.\n\n" + " ".join(f"w{i}" for i in range(430))
-        + f"\n\n**Never Blank:** {ECHO}\n\n"
-        "## Sources\n- source A\n\n"
-        "Never Blank believes businesses should keep publishing through the "
-        "quiet weeks."
-    )
-    with pytest.raises(CompositionRejected, match="only source entries may appear"):
+    body = _body(sources=(
+        "## Sources\n"
+        "- SBA Office of Advocacy — https://advocacy.sba.gov/report\n"
+        "- Never Blank believes every founder should publish consistently."
+    ))
+    with pytest.raises(CompositionRejected, match="must name one of this run's sources"):
+        _compose(body)
+
+
+def test_numbered_prose_disguised_as_a_source_is_rejected():
+    body = _body(sources=(
+        "## Sources\n"
+        "1. https://advocacy.sba.gov/report\n"
+        "2. Sign up for Never Blank today."
+    ))
+    with pytest.raises(CompositionRejected, match="must name one of this run's sources"):
         _compose(body)
 
 
 def test_the_intended_shape_still_passes():
-    body = (
-        "Body paragraph.\n\n" + " ".join(f"w{i}" for i in range(430))
-        + f"\n\n**Never Blank:** {ECHO}\n\n"
-        "## Sources\n- source A\n- source B"
-    )
-    result = _compose(body)
-    assert result["body"].rstrip().endswith("- source B")
+    result = _compose(_body(sources=_REAL_SOURCES))
+    assert result["body"].rstrip().endswith(_real_source_entry())
 
 
 @pytest.mark.parametrize(
     "entry",
-    ["- Verified report — https://source.example/story",
-     "* Verified report", "1. Verified report", "2) Verified report",
-     "https://source.example/story"],
-    ids=["dash", "asterisk", "numbered-dot", "numbered-paren", "bare-url"],
+    ["- SBA Office of Advocacy — https://advocacy.sba.gov/report",
+     "* Small-business operating constraints",
+     "1. https://advocacy.sba.gov/report",
+     "2) SBA Office of Advocacy",
+     "https://advocacy.sba.gov/report"],
+    ids=["dash-url", "asterisk-title", "numbered-url", "numbered-publisher",
+         "bare-url"],
 )
-def test_real_source_entry_shapes_are_accepted(entry):
-    body = (
-        "Body paragraph.\n\n" + " ".join(f"w{i}" for i in range(430))
-        + f"\n\n**Never Blank:** {ECHO}\n\n## Sources\n{entry}"
-    )
-    _compose(body)          # must not raise
+def test_legitimate_source_formats_are_accepted(entry):
+    """Any layout is fine — what matters is that it names a real source.
+
+    Includes a title-only and a publisher-only entry, because
+    ``source_records`` treats a source as citable when it has a URL OR a
+    publisher OR a title: a URL-only rule would reject legitimate sources.
+    """
+    _compose(_body(sources=f"## Sources\n{entry}"))
 
 
-def test_the_rendered_sources_block_shape_is_the_one_we_accept():
-    """The shape the run actually shows the model must validate."""
-    from src.editorial.sources_of_record import render_sources_of_record
+def test_the_real_rendered_sources_block_passes():
+    """The canonical renderer's own output, not a hand-invented lookalike."""
+    result = _compose(_body(sources=_REAL_SOURCES))
 
-    rendered = render_sources_of_record(_research_with_one_source(), surface="wix")
-    entry = next(l for l in rendered.splitlines() if l.startswith("- "))
-    body = (
-        "Body paragraph.\n\n" + " ".join(f"w{i}" for i in range(430))
-        + f"\n\n**Never Blank:** {ECHO}\n\n## Sources\n{entry}"
-    )
-    _compose(body)          # must not raise
-
-
-def _research_with_one_source():
-    from tests.test_decision_lens_evaluator import _research
-    return _research()
+    assert _real_source_entry() in result["body"]
+    assert "publisher: SBA Office of Advocacy" in result["body"]
 
 
 # ---------------------------------------------------------------------------

@@ -29,6 +29,7 @@ from src.editorial.discovery_builder import build_discovery
 from src.editorial.story_assembly import assemble_story
 from src.editorial.never_blank_voice import finalize_article
 from src.editorial.platform_composer import CompositionRejected, compose_platforms
+from src.editorial.sources_of_record import source_records
 from src.strategy.execution_context import (
     AudienceSelection,
     DecisionLensEditorialStrategyView,
@@ -176,6 +177,19 @@ def generate_article(
             "never_blank_voice", finalize_article, *voice_args,
             typed_strategy, audience_selection, selected_cta,
         )
+    # #191: the run's own citable identities. A Sources entry must name one
+    # of them — a bullet alone proves nothing. Derived from the same records
+    # the prompt shows the model, so the validator and the instruction agree.
+    _identities: tuple[str, ...] = ()
+    if research_artifact is not None:
+        _identities = tuple(
+            value
+            for record in source_records(research_artifact)
+            for key in ("url", "publisher", "title")
+            for value in (record.get(key),)
+            if value
+        )
+
     platforms = _run_stage(
         "platform_composer",
         compose_platforms,
@@ -186,6 +200,7 @@ def generate_article(
         editorial_role_rules=editorial_role_rules,
         formats=composer_formats,
         rejected_sink=rejected_sink,
+        source_identities=_identities,
         **({} if closing_contract is None else {"closing_contract": closing_contract}),
     )
 

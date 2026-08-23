@@ -171,12 +171,20 @@ BRAND_ATTRIBUTION = "Never Blank"
 _SOURCES_HEADING = re.compile(r"^\s{0,3}(#{1,6}\s*)?sources\b\s*:?\s*$",
                               re.IGNORECASE)
 
-#: What may appear INSIDE that Sources section: a list entry, or a line
-#: carrying a link. Deterministic shape only — never a judgment about what
-#: arbitrary prose means. This is what stops a call to action or a second
-#: perspective from being appended below the source list.
-_SOURCE_ENTRY = re.compile(r"^\s{0,3}(?:[-*\u2022]|\d+[.)])\s+\S|^\s{0,3}https?://",
-                           re.IGNORECASE)
+def _cites_a_known_source(line: str, identities: "tuple[str, ...]") -> bool:
+    """Does this line actually name one of the run's own sources?
+
+    Identity match, not grammar: a bullet proves nothing, because
+    "- Visit us today!" is as well-formed a list item as a citation. The run
+    already knows its citable identities — each source's URL, publisher and
+    title — and the prompt instructs the model to quote them exactly, so a
+    real Sources entry contains one and a call to action contains none.
+
+    Deterministic and case-insensitive. No judgment about what prose means,
+    and no model call.
+    """
+    haystack = line.casefold()
+    return any(identity.casefold() in haystack for identity in identities if identity)
 
 
 def _attributed_echo_line(body: str, echo: str) -> "int | None":
@@ -197,7 +205,10 @@ def _attributed_echo_line(body: str, echo: str) -> "int | None":
     return None
 
 
-def _validate_branded_echo_then_sources(body: str, echo: str, format_key: str) -> None:
+def _validate_branded_echo_then_sources(
+    body: str, echo: str, format_key: str,
+    source_identities: "tuple[str, ...]" = (),
+) -> None:
     """Prove the branded-echo closing shape deterministically (#191).
 
     Four obligations, each a separate failure so the evidence names the
@@ -243,11 +254,11 @@ def _validate_branded_echo_then_sources(body: str, echo: str, format_key: str) -
             format_key=format_key, body=body,
         )
     for entry in trailing[1:]:
-        if not _SOURCE_ENTRY.match(entry):
+        if not _cites_a_known_source(entry, source_identities):
             raise CompositionRejected(
-                f"Platform Composer ({format_key}): only source entries may "
-                "appear after the Sources heading — the Never Blank Echo is "
-                "the article's last editorial word",
+                f"Platform Composer ({format_key}): every line after the "
+                "Sources heading must name one of this run's sources — the "
+                "Never Blank Echo is the article's last editorial word",
                 format_key=format_key, body=body,
             )
 
@@ -335,6 +346,7 @@ def _compose_one(
     strategy_rules: tuple[str, ...] = (),
     editorial_role_rules: str | None = None,
     closing_contract: str = CLOSING_INVITATION_LAST,
+    source_identities: "tuple[str, ...]" = (),
 ) -> dict:
     model = model_article() if format_key in ("long", "reading") else model_social()
     raw = chat(
@@ -366,7 +378,9 @@ def _compose_one(
             # and the required Sources section follows it. Proven structurally
             # rather than by "the echo is the last characters of the body",
             # which cannot coexist with a mandatory Sources section.
-            _validate_branded_echo_then_sources(body, echo, format_key)
+            _validate_branded_echo_then_sources(
+                body, echo, format_key, source_identities
+            )
         elif body.count(echo) != 1 or not body.endswith(echo):
             raise CompositionRejected(
                 f"Platform Composer ({format_key}): verbatim Echo must appear exactly once at end",
@@ -425,6 +439,7 @@ def compose_platforms(
     editorial_role_rules: "str | dict[str, str] | None" = None,
     formats: "tuple[str, ...] | None" = None,
     closing_contract: str = CLOSING_INVITATION_LAST,
+    source_identities: "tuple[str, ...]" = (),
 ) -> dict:
     """Compose one native body per requested format.
 
@@ -464,6 +479,7 @@ def compose_platforms(
                 )
             ),
             closing_contract=closing_contract,
+            source_identities=source_identities,
         )
         log.info("Platform Composer: %s -> %d words", format_key, result[format_key]["word_count"])
     return result
