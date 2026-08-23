@@ -349,3 +349,111 @@ def test_cost_and_containment_contracts_are_unaffected():
     # #191's rejection type stays a ValueError so the single-retry seam and
     # the budget accounting behave exactly as before
     assert issubclass(CompositionRejected, ValueError)
+
+
+# ===========================================================================
+# Review round 2: the WHOLE post-Echo tail is proven, not just its first line
+# ===========================================================================
+
+
+def test_a_cta_appended_below_the_source_list_is_rejected():
+    """The exact shape the previous validator could not see.
+
+    Its first trailing line was a Sources heading, so a call to action
+    underneath the source entries passed unchallenged.
+    """
+    body = (
+        "Body paragraph.\n\n" + " ".join(f"w{i}" for i in range(430))
+        + f"\n\n**Never Blank:** {ECHO}\n\n"
+        "## Sources\n- source A\n- source B\n\n"
+        "Visit Never Blank today!"
+    )
+    with pytest.raises(CompositionRejected, match="only source entries may appear"):
+        _compose(body)
+
+
+def test_a_second_perspective_appended_below_the_source_list_is_rejected():
+    body = (
+        "Body paragraph.\n\n" + " ".join(f"w{i}" for i in range(430))
+        + f"\n\n**Never Blank:** {ECHO}\n\n"
+        "## Sources\n- source A\n\n"
+        "Never Blank believes businesses should keep publishing through the "
+        "quiet weeks."
+    )
+    with pytest.raises(CompositionRejected, match="only source entries may appear"):
+        _compose(body)
+
+
+def test_the_intended_shape_still_passes():
+    body = (
+        "Body paragraph.\n\n" + " ".join(f"w{i}" for i in range(430))
+        + f"\n\n**Never Blank:** {ECHO}\n\n"
+        "## Sources\n- source A\n- source B"
+    )
+    result = _compose(body)
+    assert result["body"].rstrip().endswith("- source B")
+
+
+@pytest.mark.parametrize(
+    "entry",
+    ["- Verified report — https://source.example/story",
+     "* Verified report", "1. Verified report", "2) Verified report",
+     "https://source.example/story"],
+    ids=["dash", "asterisk", "numbered-dot", "numbered-paren", "bare-url"],
+)
+def test_real_source_entry_shapes_are_accepted(entry):
+    body = (
+        "Body paragraph.\n\n" + " ".join(f"w{i}" for i in range(430))
+        + f"\n\n**Never Blank:** {ECHO}\n\n## Sources\n{entry}"
+    )
+    _compose(body)          # must not raise
+
+
+def test_the_rendered_sources_block_shape_is_the_one_we_accept():
+    """The shape the run actually shows the model must validate."""
+    from src.editorial.sources_of_record import render_sources_of_record
+
+    rendered = render_sources_of_record(_research_with_one_source(), surface="wix")
+    entry = next(l for l in rendered.splitlines() if l.startswith("- "))
+    body = (
+        "Body paragraph.\n\n" + " ".join(f"w{i}" for i in range(430))
+        + f"\n\n**Never Blank:** {ECHO}\n\n## Sources\n{entry}"
+    )
+    _compose(body)          # must not raise
+
+
+def _research_with_one_source():
+    from tests.test_decision_lens_evaluator import _research
+    return _research()
+
+
+# ---------------------------------------------------------------------------
+# The empty-tail case: structurally valid here, authoritatively judged there
+# ---------------------------------------------------------------------------
+
+
+def test_an_echo_with_nothing_after_it_is_structurally_valid():
+    body = ("Body paragraph.\n\n" + " ".join(f"w{i}" for i in range(430))
+            + f"\n\n**Never Blank:** {ECHO}")
+    _compose(body)          # the composer does not own attribution
+
+
+def test_missing_attribution_is_rejected_by_the_authoritative_gate():
+    """Where a body with no Sources is actually stopped (#142/#155).
+
+    The role permits "a visible Sources section and/or appropriate inline
+    source links", so the composer must not demand a heading. The run-level
+    gate sees the real sources and fails closed before any publisher.
+    """
+    from src.editorial.source_transparency import (
+        SourceTransparencyError, validate_source_transparency,
+    )
+
+    with pytest.raises(SourceTransparencyError):
+        validate_source_transparency(
+            article_body=f"An article that cites nothing.\n\n**Never Blank:** {ECHO}",
+            linkedin_body="Nor does this.",
+            research=_research_with_one_source(),
+        )
+    # and the role that publishes this contract demands that gate
+    assert _role(MONDAY).require_source_transparency is True

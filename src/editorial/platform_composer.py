@@ -171,6 +171,13 @@ BRAND_ATTRIBUTION = "Never Blank"
 _SOURCES_HEADING = re.compile(r"^\s{0,3}(#{1,6}\s*)?sources\b\s*:?\s*$",
                               re.IGNORECASE)
 
+#: What may appear INSIDE that Sources section: a list entry, or a line
+#: carrying a link. Deterministic shape only — never a judgment about what
+#: arbitrary prose means. This is what stops a call to action or a second
+#: perspective from being appended below the source list.
+_SOURCE_ENTRY = re.compile(r"^\s{0,3}(?:[-*\u2022]|\d+[.)])\s+\S|^\s{0,3}https?://",
+                           re.IGNORECASE)
+
 
 def _attributed_echo_line(body: str, echo: str) -> "int | None":
     """Index of the line carrying '[**]Never Blank[**]: <echo>', or None.
@@ -222,12 +229,27 @@ def _validate_branded_echo_then_sources(body: str, echo: str, format_key: str) -
                 format_key=format_key, body=body,
             )
     trailing = [ln.strip() for ln in lines[index + 1:] if ln.strip()]
-    if trailing and not _SOURCES_HEADING.match(trailing[0]):
+    if not trailing:
+        # Nothing after the Echo is a structurally valid ending. Whether the
+        # article carries the attribution its role requires is not this
+        # validator's question: validate_source_transparency owns it, sees
+        # the run's real sources, and fails the run closed before any
+        # publisher. Duplicating it here would be a second, weaker authority.
+        return
+    if not _SOURCES_HEADING.match(trailing[0]):
         raise CompositionRejected(
             f"Platform Composer ({format_key}): only a Sources section may "
             "follow the Never Blank Echo",
             format_key=format_key, body=body,
         )
+    for entry in trailing[1:]:
+        if not _SOURCE_ENTRY.match(entry):
+            raise CompositionRejected(
+                f"Platform Composer ({format_key}): only source entries may "
+                "appear after the Sources heading — the Never Blank Echo is "
+                "the article's last editorial word",
+                format_key=format_key, body=body,
+            )
 
 
 def _block_content(structured_article: dict, block: str):
