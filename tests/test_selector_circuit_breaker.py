@@ -527,10 +527,8 @@ def test_the_observed_incident_normalizes_to_insufficient_quota():
         provider_error_type="insufficient_quota",
         provider_error_code="credit_balance_exhausted",
         request_id="req_diag_0123456789",
-        sanitized_message=diag.sanitized_message,
+        sanitized_message=None,
     )
-    assert "no credits remaining" in diag.sanitized_message
-    assert len(diag.sanitized_message) <= 200
 
 
 def test_the_observed_incident_survives_into_the_written_audit_json(tmp_path):
@@ -604,7 +602,7 @@ def test_a_bodyless_provider_exception_degrades_safely(tmp_path):
     assert failure["provider_error_type"] is None
     assert failure["provider_error_code"] is None
     assert failure["request_id"] is None
-    assert failure["sanitized_message"] is None
+    assert failure["sanitized_message"] is None      # always None in R1
 
 
 def test_no_raw_response_header_or_payload_leaks_into_the_audit(tmp_path):
@@ -623,6 +621,46 @@ def test_no_raw_response_header_or_payload_leaks_into_the_audit(tmp_path):
         "provider_error_type", "provider_error_code", "request_id",
         "sanitized_message",
     }
+
+
+def test_a_secret_inside_the_provider_message_never_reaches_the_audit(tmp_path):
+    # review-round blocker: the persisted field itself, attacked directly.
+    # Authentication errors quote API-key fragments in body.error.message —
+    # the one field the previous head truncated instead of sanitizing.
+    exc = _sdk_error_with_body(
+        openai.AuthenticationError, "Invalid API key", status=401,
+        body={"error": {
+            "message": "Incorrect API key provided: sk-secret-key-material",
+            "type": "invalid_request_error",
+            "code": "invalid_api_key",
+        }},
+        request_id="req_auth_0000000001",
+    )
+    transport = ScriptedTransport({"sig-queue-1": exc})
+
+    code, audit, _ = _select(tmp_path, MONDAY_ROLE, transport)
+
+    assert code == select_eligible_signal.ELIGIBILITY_FAILURE
+    # the WRITTEN audit artifact — not the in-memory object — is the proof
+    flat = json.dumps(audit)
+    assert "sk-secret-key-material" not in flat
+    assert "Incorrect API key" not in flat          # no provider prose at all
+    failure = audit["dispositions"][0]["provider_failure"]
+    assert failure["normalized_reason"] == "authentication"
+    assert failure["provider_error_code"] == "invalid_api_key"
+    assert failure["sanitized_message"] is None      # R1: prose never persisted
+
+
+def test_provider_prose_is_never_persisted_for_any_condition(tmp_path):
+    # the same guarantee across the whole matrix, including the observed
+    # incident whose message was benign: benign or not, prose is not evidence
+    transport = ScriptedTransport({"sig-queue-1": _observed_incident_error()})
+
+    _, audit, _ = _select(tmp_path, MONDAY_ROLE, transport)
+
+    failure = audit["dispositions"][0]["provider_failure"]
+    assert failure["sanitized_message"] is None
+    assert "no credits remaining" not in json.dumps(audit)
 
 
 def test_candidate_scope_still_continues_and_carries_no_diagnostic(tmp_path):

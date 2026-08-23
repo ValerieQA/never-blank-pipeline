@@ -74,11 +74,14 @@ class ProviderFailureDiagnostic:
     """Sanitized, normalized account of one provider-scoped failure (#188).
 
     Built by explicit field extraction only — never from ``str(exc)``, never
-    from response headers wholesale, never from request payloads. The five
-    provider fields below are the complete set this record will ever carry,
-    so nothing secret can leak into the audit by construction. Missing
-    fields stay ``None``: absence is the honest answer, and extraction must
-    survive SDK-version differences in which attributes exist.
+    from response headers wholesale, never from request payloads, and never
+    from the provider's human-readable ``error.message``: provider prose is
+    arbitrary text that can echo secret-shaped material (authentication
+    errors quote API-key fragments), so it is not extracted at all. The
+    structured fields below are the complete set this record will ever
+    carry. Missing fields stay ``None``: absence is the honest answer, and
+    extraction must survive SDK-version differences in which attributes
+    exist.
 
     Live run 32607277008 is why this exists: the audit said only
     ``RateLimitError`` while the provider had actually answered
@@ -93,6 +96,11 @@ class ProviderFailureDiagnostic:
     provider_error_type: str | None = None
     provider_error_code: str | None = None
     request_id: str | None = None
+    #: Reserved for a future allowlist/redaction contract. Persisted as
+    #: ``None`` in Release 1: no such contract exists, raw provider prose is
+    #: not evidence, and the operational wording derives from
+    #: ``normalized_reason``. Kept as a typed field so the audit shape is
+    #: stable when a contract is ever defined.
     sanitized_message: str | None = None
 
     def as_audit_dict(self) -> dict:
@@ -124,20 +132,23 @@ PROVIDER_FAILURE_REASONS = (
 #: fields only — never against the human-readable message.
 _QUOTA_MARKERS = frozenset({"insufficient_quota", "credit_balance_exhausted"})
 
-_SANITIZED_MESSAGE_LIMIT = 200
 
+def _provider_error_fields(exc: BaseException) -> tuple[str | None, str | None]:
+    """(type, code) from the structured error body, defensively.
 
-def _provider_error_fields(exc: BaseException) -> tuple[str | None, str | None, str | None]:
-    """(type, code, message) from the structured error body, defensively."""
+    ``error.message`` is deliberately not read: provider prose is arbitrary
+    text and may quote secret-shaped material, so it never enters this
+    module's data flow at all.
+    """
     body = getattr(exc, "body", None)
     error = body.get("error") if isinstance(body, dict) else None
     if not isinstance(error, dict):
-        return None, None, None
+        return None, None
 
     def _text(value: object) -> str | None:
         return value if isinstance(value, str) and value else None
 
-    return _text(error.get("type")), _text(error.get("code")), _text(error.get("message"))
+    return _text(error.get("type")), _text(error.get("code"))
 
 
 def _provider_diagnostic(exc: BaseException) -> "ProviderFailureDiagnostic | None":
@@ -156,7 +167,7 @@ def _provider_diagnostic(exc: BaseException) -> "ProviderFailureDiagnostic | Non
     if not _provider_scope(exc):
         return None
 
-    error_type, error_code, error_message = _provider_error_fields(exc)
+    error_type, error_code = _provider_error_fields(exc)
     if isinstance(exc, openai.RateLimitError):
         if error_type in _QUOTA_MARKERS or error_code in _QUOTA_MARKERS:
             reason = "insufficient_quota"
@@ -169,6 +180,11 @@ def _provider_diagnostic(exc: BaseException) -> "ProviderFailureDiagnostic | Non
     elif isinstance(exc, openai.InternalServerError):
         reason = "provider_internal"
     else:  # pragma: no cover - _provider_scope admits only the four above
+        # "unknown_provider_failure" is RESERVED: with today's #170 provider
+        # set every provider-scoped class maps to a named reason, so this
+        # branch is unreachable. It exists so a future provider class added
+        # to _provider_scope degrades to a safe named value instead of an
+        # invented one. Do not widen the #170 scope to make it reachable.
         reason = "unknown_provider_failure"
 
     status = getattr(exc, "status_code", None)
@@ -180,9 +196,7 @@ def _provider_diagnostic(exc: BaseException) -> "ProviderFailureDiagnostic | Non
         provider_error_type=error_type,
         provider_error_code=error_code,
         request_id=request_id if isinstance(request_id, str) else None,
-        sanitized_message=(
-            error_message[:_SANITIZED_MESSAGE_LIMIT] if error_message else None
-        ),
+        sanitized_message=None,  # R1: provider prose is never persisted
     )
 
 
