@@ -466,3 +466,198 @@ def test_explicit_single_signal_dispatch_remains_valid(tmp_path):
 
     assert code == 0
     assert transport.requests == ["sig-queue-3"]
+
+
+# ===========================================================================
+# #188: provider failure diagnostics survive, sanitized, into the audit
+# ===========================================================================
+
+from src.editorial.source_eligibility import (
+    PROVIDER_FAILURE_REASONS,
+    ProviderFailureDiagnostic,
+    _provider_diagnostic,
+)
+
+
+_LEAK_SENTINELS = ("sk-secret-key-material", "Bearer sk-", "Authorization",
+                   "x-secret-header-value", "raw-request-payload")
+
+
+def _sdk_error_with_body(cls: type, message: str, *, status=None, body=None,
+                         request_id=None) -> BaseException:
+    exc = _sdk_error(cls, message)
+    if status is not None:
+        exc.status_code = status
+    if body is not None:
+        exc.body = body
+    if request_id is not None:
+        exc.request_id = request_id
+    # adversarial: secret-shaped attributes that must never reach the audit
+    exc.response = type("R", (), {
+        "headers": {"Authorization": "Bearer sk-secret-key-material",
+                    "x-secret": "x-secret-header-value"},
+    })()
+    return exc
+
+
+def _observed_incident_error() -> BaseException:
+    # byte-for-byte the provider body from daily-research run 32562615847
+    return _sdk_error_with_body(
+        openai.RateLimitError, "Rate limit reached",
+        status=429,
+        body={"error": {
+            "message": "You have no credits remaining. Add credits to "
+                       "continue using the API at https://platform.openai.com"
+                       "/settings/organization/billing/.",
+            "type": "insufficient_quota",
+            "param": None,
+            "code": "credit_balance_exhausted",
+        }},
+        request_id="req_diag_0123456789",
+    )
+
+
+def test_the_observed_incident_normalizes_to_insufficient_quota():
+    diag = _provider_diagnostic(_observed_incident_error())
+
+    assert diag == ProviderFailureDiagnostic(
+        provider="openai",
+        normalized_reason="insufficient_quota",
+        http_status=429,
+        provider_error_type="insufficient_quota",
+        provider_error_code="credit_balance_exhausted",
+        request_id="req_diag_0123456789",
+        sanitized_message=diag.sanitized_message,
+    )
+    assert "no credits remaining" in diag.sanitized_message
+    assert len(diag.sanitized_message) <= 200
+
+
+def test_the_observed_incident_survives_into_the_written_audit_json(tmp_path):
+    transport = ScriptedTransport({"sig-queue-1": _observed_incident_error()})
+
+    code, audit, published = _select(tmp_path, MONDAY_ROLE, transport)
+
+    # containment semantics byte-identical to #170
+    assert code == select_eligible_signal.ELIGIBILITY_FAILURE
+    assert transport.requests == ["sig-queue-1"]      # stopped after first
+    assert audit["outcome"] == "eligibility_failure"
+    assert audit["remaining"] == 7
+    assert published.read_text() == ""                # nothing consumed
+    # and the evidence now names the true condition, not just the class
+    entry = audit["dispositions"][0]
+    assert entry["disposition"] == "provider_unavailable"
+    assert "RateLimitError" in entry["detail"]        # class name preserved
+    failure = entry["provider_failure"]
+    assert failure["http_status"] == 429
+    assert failure["normalized_reason"] == "insufficient_quota"
+    assert failure["provider_error_type"] == "insufficient_quota"
+    assert failure["provider_error_code"] == "credit_balance_exhausted"
+    assert failure["request_id"] == "req_diag_0123456789"
+
+
+@pytest.mark.parametrize(
+    "factory,reason",
+    [
+        (lambda: _sdk_error_with_body(
+            openai.RateLimitError, "Rate limit reached", status=429,
+            body={"error": {"message": "Rate limit reached for requests",
+                            "type": "requests", "code": "rate_limit_exceeded"}},
+        ), "rate_limit"),
+        (lambda: _sdk_error_with_body(
+            openai.AuthenticationError, "Invalid API key", status=401,
+            body={"error": {"message": "Incorrect API key provided",
+                            "type": "invalid_request_error",
+                            "code": "invalid_api_key"}},
+        ), "authentication"),
+        (lambda: _sdk_error(openai.APIConnectionError, "Connection error"),
+         "connection"),
+        (lambda: _sdk_error_with_body(
+            openai.InternalServerError, "Server error", status=500,
+            body={"error": {"message": "The server had an error",
+                            "type": "server_error", "code": None}},
+        ), "provider_internal"),
+    ],
+    ids=["true-rate-limit", "authentication", "connection", "provider-internal"],
+)
+def test_each_provider_condition_gets_its_normalized_reason(factory, reason):
+    diag = _provider_diagnostic(factory())
+    assert diag is not None
+    assert diag.normalized_reason == reason
+    assert diag.normalized_reason in PROVIDER_FAILURE_REASONS
+
+
+def test_a_bodyless_provider_exception_degrades_safely(tmp_path):
+    # provider-scoped, but nothing structured to extract: every optional
+    # field is honestly None, the reason falls back per class, and the sweep
+    # still stops
+    transport = ScriptedTransport({"sig-queue-1": _rate_limit_error()})
+
+    code, audit, _ = _select(tmp_path, MONDAY_ROLE, transport)
+
+    assert code == select_eligible_signal.ELIGIBILITY_FAILURE
+    failure = audit["dispositions"][0]["provider_failure"]
+    assert failure["normalized_reason"] == "rate_limit"   # class fallback
+    # the SDK class itself may know its HTTP status (a class attribute on
+    # some SDK versions) — honest data either way, never invented
+    assert failure["http_status"] in (None, 429)
+    assert failure["provider_error_type"] is None
+    assert failure["provider_error_code"] is None
+    assert failure["request_id"] is None
+    assert failure["sanitized_message"] is None
+
+
+def test_no_raw_response_header_or_payload_leaks_into_the_audit(tmp_path):
+    # the exception carries secret-shaped headers; the persisted artifact
+    # must contain none of them
+    transport = ScriptedTransport({"sig-queue-1": _observed_incident_error()})
+
+    _, audit, _ = _select(tmp_path, MONDAY_ROLE, transport)
+
+    flat = json.dumps(audit)
+    for sentinel in _LEAK_SENTINELS:
+        assert sentinel not in flat, sentinel
+    # the audit's provider_failure carries exactly the sanctioned fields
+    assert set(audit["dispositions"][0]["provider_failure"]) == {
+        "provider", "normalized_reason", "http_status",
+        "provider_error_type", "provider_error_code", "request_id",
+        "sanitized_message",
+    }
+
+
+def test_candidate_scope_still_continues_and_carries_no_diagnostic(tmp_path):
+    transport = ScriptedTransport({
+        "sig-queue-1": RuntimeError("judgment transport failed"),
+        "sig-queue-2": (True, "Documented owner-led case."),
+    })
+
+    code, audit, _ = _select(tmp_path, MONDAY_ROLE, transport)
+
+    assert code == 0                                   # next candidate won
+    assert audit["selected_signal_id"] == "sig-queue-2"
+    failed = audit["dispositions"][0]
+    assert failed["disposition"] == "judgment_failed"
+    assert "provider_failure" not in failed            # candidate scope: none
+
+
+def test_candidate_scope_errors_expose_no_diagnostic_on_the_exception():
+    with pytest.raises(SourceEligibilityError) as info:
+        judge_source_eligibility(
+            CANDIDATES[0], _role_with_criteria(),
+            RaisingTransport(RuntimeError("judgment transport failed")),
+        )
+    assert info.value.scope == "candidate"
+    assert info.value.diagnostic is None
+
+
+def test_provider_scope_errors_carry_the_typed_diagnostic():
+    with pytest.raises(SourceEligibilityError) as info:
+        judge_source_eligibility(
+            CANDIDATES[0], _role_with_criteria(),
+            RaisingTransport(_observed_incident_error()),
+        )
+    assert info.value.scope == "provider"
+    assert info.value.diagnostic.normalized_reason == "insufficient_quota"
+    # semantics in typed fields; the message stays human-oriented but names
+    # both the class and the normalized reason
+    assert "RateLimitError: insufficient_quota" in str(info.value)
