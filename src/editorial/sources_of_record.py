@@ -42,6 +42,36 @@ def source_records(research: NormalizedResearchArtifact) -> tuple[dict, ...]:
     return tuple(records)
 
 
+def canonical_source_entries(
+    research: NormalizedResearchArtifact,
+) -> tuple[str, ...]:
+    """The exact citation text for each citable source, one string each.
+
+    This is the single definition of what a Sources entry *is*: the prompt
+    renders these (prefixed with "- ") and instructs the model to quote them
+    exactly, and the composer validates the article's Sources section against
+    the same strings. Deriving both from one function is what keeps the
+    instruction and the check from drifting apart — the #191 defect was two
+    rules that could not both be satisfied.
+
+    Each component is conditional, because ``source_records`` treats a source
+    as citable when it carries a URL OR a publisher OR a title.
+    """
+
+    entries = []
+    for item in source_records(research):
+        parts = []
+        if item.get("publisher"):
+            parts.append(f"publisher: {item['publisher']}")
+        if item.get("title"):
+            parts.append(f"title: {item['title']}")
+        if item.get("url"):
+            parts.append(f"url: {item['url']}")
+        if parts:
+            entries.append(" · ".join(parts))
+    return tuple(entries)
+
+
 def render_sources_of_record(
     research: NormalizedResearchArtifact, *, surface: str
 ) -> str:
@@ -66,15 +96,8 @@ def render_sources_of_record(
         "title or URL that does not appear here.",
         "",
     ]
-    for item in citable:
-        parts = []
-        if item.get("publisher"):
-            parts.append(f"publisher: {item['publisher']}")
-        if item.get("title"):
-            parts.append(f"title: {item['title']}")
-        if item.get("url"):
-            parts.append(f"url: {item['url']}")
-        lines.append("- " + " · ".join(parts))
+    for entry in canonical_source_entries(research):
+        lines.append("- " + entry)
     lines.append("")
     if surface == "wix":
         lines.append(

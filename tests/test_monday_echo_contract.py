@@ -60,17 +60,31 @@ def _research_with_one_source():
     return _research()
 
 
-def _identities() -> tuple:
-    """The run's own citable identities, exactly as the pipeline derives them."""
-    from src.editorial.sources_of_record import source_records
+def _research_with(**source_overrides):
+    """A research artifact whose single source we control.
 
-    return tuple(
-        value
-        for record in source_records(_research_with_one_source())
-        for key in ("url", "publisher", "title")
-        for value in (record.get(key),)
-        if value
-    )
+    Built from the canonical payload so the record shape is the real one;
+    ``None`` removes a field, which is how title-only / publisher-only /
+    url-only sources are produced.
+    """
+    from src.research.evidence import NormalizedResearchArtifact
+    from tests.test_decision_lens_evaluator import _research_payload
+
+    payload = _research_payload()
+    source = payload["sources"][0]
+    for key, value in source_overrides.items():
+        if value is None:
+            source.pop(key, None)
+        else:
+            source[key] = value
+    return NormalizedResearchArtifact.model_validate(payload)
+
+
+def _identities(research=None) -> tuple:
+    """The run's canonical source entries, exactly as the pipeline derives them."""
+    from src.editorial.sources_of_record import canonical_source_entries
+
+    return canonical_source_entries(research or _research_with_one_source())
 
 
 #: One real rendered Sources entry, taken from the canonical renderer rather
@@ -83,13 +97,15 @@ def _real_source_entry() -> str:
 
 
 def _compose(body: str, *, contract=CLOSING_BRANDED_ECHO_THEN_SOURCES,
-             fmt="long", echo: str = ECHO, identities=None):
+             fmt="long", echo: str = ECHO, identities=None, research=None):
     """Drive the real validator against a body we control."""
     payload = json.dumps({"body": body, "echo_included": True, "title": "T"})
     with mock.patch.object(platform_composer, "chat", return_value=payload):
         return _compose_one(
             _article(echo), fmt, closing_contract=contract,
-            source_identities=_identities() if identities is None else identities,
+            source_identities=(
+                _identities(research) if identities is None else identities
+            ),
         )
 
 
@@ -401,31 +417,28 @@ def test_a_cta_appended_below_the_source_list_is_rejected():
     both earlier rules.
     """
     body = _body(sources=(
-        "## Sources\n"
-        "- SBA Office of Advocacy — https://advocacy.sba.gov/report\n"
+        f"## Sources\n{_real_source_entry()}\n"
         "- Visit Never Blank today!"
     ))
-    with pytest.raises(CompositionRejected, match="must name one of this run's sources"):
+    with pytest.raises(CompositionRejected, match="quoted exactly"):
         _compose(body)
 
 
 def test_a_second_perspective_appended_below_the_source_list_is_rejected():
     body = _body(sources=(
-        "## Sources\n"
-        "- SBA Office of Advocacy — https://advocacy.sba.gov/report\n"
+        f"## Sources\n{_real_source_entry()}\n"
         "- Never Blank believes every founder should publish consistently."
     ))
-    with pytest.raises(CompositionRejected, match="must name one of this run's sources"):
+    with pytest.raises(CompositionRejected, match="quoted exactly"):
         _compose(body)
 
 
 def test_numbered_prose_disguised_as_a_source_is_rejected():
     body = _body(sources=(
-        "## Sources\n"
-        "1. https://advocacy.sba.gov/report\n"
+        f"## Sources\n1. {_identities()[0]}\n"
         "2. Sign up for Never Blank today."
     ))
-    with pytest.raises(CompositionRejected, match="must name one of this run's sources"):
+    with pytest.raises(CompositionRejected, match="quoted exactly"):
         _compose(body)
 
 
@@ -434,24 +447,51 @@ def test_the_intended_shape_still_passes():
     assert result["body"].rstrip().endswith(_real_source_entry())
 
 
-@pytest.mark.parametrize(
-    "entry",
-    ["- SBA Office of Advocacy — https://advocacy.sba.gov/report",
-     "* Small-business operating constraints",
-     "1. https://advocacy.sba.gov/report",
-     "2) SBA Office of Advocacy",
-     "https://advocacy.sba.gov/report"],
-    ids=["dash-url", "asterisk-title", "numbered-url", "numbered-publisher",
-         "bare-url"],
-)
-def test_legitimate_source_formats_are_accepted(entry):
-    """Any layout is fine — what matters is that it names a real source.
+_IDENTIFIER_LOCATOR = {"kind": "identifier", "value": "isbn:978-0-000000-0"}
 
-    Includes a title-only and a publisher-only entry, because
-    ``source_records`` treats a source as citable when it has a URL OR a
-    publisher OR a title: a URL-only rule would reject legitimate sources.
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {},                                              # publisher+title+url
+        {"publisher": None},                             # title+url
+        {"locator": _IDENTIFIER_LOCATOR},                # publisher+title
+        {"publisher": None, "locator": _IDENTIFIER_LOCATOR},   # title only
+    ],
+    ids=["publisher+title+url", "title+url", "publisher+title", "title-only"],
+)
+def test_canonical_legitimate_variants_are_accepted(overrides):
+    """Every citable record shape that the contract can actually produce.
+
+    ``source_records`` renders each component conditionally, so a URL-only
+    rule would reject the last two. Note what the source contract itself
+    permits: ``title`` is mandatory (min 1 character) and ``url`` appears
+    only for an ``http`` locator, so a publisher-only or url-only record
+    cannot exist — the real variant space is driven by publisher presence
+    and locator kind. The fixtures are the renderer's own output, never a
+    hand-invented lookalike.
     """
-    _compose(_body(sources=f"## Sources\n{entry}"))
+    from src.editorial.sources_of_record import (
+        canonical_source_entries, render_sources_of_record,
+    )
+
+    research = _research_with(**overrides)
+    entries = canonical_source_entries(research)
+    assert entries, "fixture must still be citable"
+    rendered = [l for l in render_sources_of_record(research, surface="wix").splitlines()
+                if l.startswith("- ")]
+
+    for line in rendered:
+        _compose(_body(sources=f"## Sources\n{line}"), research=research)
+
+
+@pytest.mark.parametrize("marker", ["- ", "* ", "1. ", "2) ", ""],
+                         ids=["dash", "asterisk", "numbered-dot",
+                              "numbered-paren", "no-marker"])
+def test_list_markers_and_spacing_are_forgiven_but_the_entry_is_not(marker):
+    """Layout may vary; the citation text itself may not."""
+    entry = _identities()[0]
+    _compose(_body(sources=f"## Sources\n{marker}{entry}"))
 
 
 def test_the_real_rendered_sources_block_passes():
@@ -460,6 +500,36 @@ def test_the_real_rendered_sources_block_passes():
 
     assert _real_source_entry() in result["body"]
     assert "publisher: SBA Office of Advocacy" in result["body"]
+
+
+# ---------------------------------------------------------------------------
+# Fourth pass: a coincidental word from a source is not a citation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "overrides,line",
+    [
+        ({"publisher": "AI", "title": "AI", "locator": _IDENTIFIER_LOCATOR},
+         "- Never Blank uses AI to keep your business visible."),
+        ({"publisher": None, "title": "Growth", "locator": _IDENTIFIER_LOCATOR},
+         "- Growth starts when you show up consistently."),
+        ({"publisher": "Acme", "title": "Acme Growth Report",
+          "locator": _IDENTIFIER_LOCATOR},
+         "- Acme recommends visiting Never Blank today."),
+    ],
+    ids=["short-publisher-collision", "short-title-collision",
+         "partial-identity-plus-cta"],
+)
+def test_prose_that_merely_contains_a_source_word_is_rejected(overrides, line):
+    """The false-positive class substring matching could not see.
+
+    Each line contains a real identity — "AI", "Growth", "Acme" — but none
+    reproduces the run's citation, so none is a source.
+    """
+    research = _research_with(**overrides)
+    with pytest.raises(CompositionRejected, match="quoted exactly"):
+        _compose(_body(sources=f"## Sources\n{line}"), research=research)
 
 
 # ---------------------------------------------------------------------------

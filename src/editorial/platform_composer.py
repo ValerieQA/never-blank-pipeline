@@ -171,20 +171,29 @@ BRAND_ATTRIBUTION = "Never Blank"
 _SOURCES_HEADING = re.compile(r"^\s{0,3}(#{1,6}\s*)?sources\b\s*:?\s*$",
                               re.IGNORECASE)
 
-def _cites_a_known_source(line: str, identities: "tuple[str, ...]") -> bool:
-    """Does this line actually name one of the run's own sources?
+#: List markers a Sources entry may legitimately carry.
+_LIST_MARKER = re.compile(r"^\s{0,3}(?:[-*\u2022]|\d+[.)])\s*")
 
-    Identity match, not grammar: a bullet proves nothing, because
-    "- Visit us today!" is as well-formed a list item as a citation. The run
-    already knows its citable identities — each source's URL, publisher and
-    title — and the prompt instructs the model to quote them exactly, so a
-    real Sources entry contains one and a call to action contains none.
 
-    Deterministic and case-insensitive. No judgment about what prose means,
-    and no model call.
+def _normalize_entry(line: str) -> str:
+    """One comparable form for a citation line: no marker, tidy spacing."""
+    return " ".join(_LIST_MARKER.sub("", line).split()).casefold()
+
+
+def _is_canonical_source_entry(line: str, entries: "tuple[str, ...]") -> bool:
+    """Is this line one of the run's own citation lines, whole?
+
+    Whole-entry match, not substring: a source's publisher may be "AI" and
+    its title "Growth", so "contains a known identity" would bless ordinary
+    prose. The run renders each citable source as one deterministic string
+    and the prompt instructs the model to quote it exactly, so a real Sources
+    entry reproduces that string and a call to action reproduces none.
+
+    Only the list marker and whitespace are forgiven. Deterministic,
+    case-insensitive, no judgment about what prose means, no model call.
     """
-    haystack = line.casefold()
-    return any(identity.casefold() in haystack for identity in identities if identity)
+    candidate = _normalize_entry(line)
+    return any(candidate == _normalize_entry(entry) for entry in entries if entry)
 
 
 def _attributed_echo_line(body: str, echo: str) -> "int | None":
@@ -254,11 +263,12 @@ def _validate_branded_echo_then_sources(
             format_key=format_key, body=body,
         )
     for entry in trailing[1:]:
-        if not _cites_a_known_source(entry, source_identities):
+        if not _is_canonical_source_entry(entry, source_identities):
             raise CompositionRejected(
                 f"Platform Composer ({format_key}): every line after the "
-                "Sources heading must name one of this run's sources — the "
-                "Never Blank Echo is the article's last editorial word",
+                "Sources heading must be one of this run's source entries, "
+                "quoted exactly — the Never Blank Echo is the article's last "
+                "editorial word",
                 format_key=format_key, body=body,
             )
 
@@ -322,7 +332,9 @@ def _build_user_prompt(
                 f"supplied echo exactly once, on its own line, as "
                 f"'**{BRAND_ATTRIBUTION}:** <echo>'. It is the last editorial "
                 "word: no commentary, no invitation and no call to action after "
-                "it. Only the required Sources section may follow."
+                "it. Only the required Sources section may follow, and every "
+                "line in it must be one of the supplied sources quoted exactly "
+                "as given — nothing else may appear below the heading."
             )
         elif echo_mode == "full":
             lines.append("ECHO MODE: verbatim; include the supplied echo exactly once at the end.")
