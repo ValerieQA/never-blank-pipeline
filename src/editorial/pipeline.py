@@ -29,7 +29,7 @@ from src.editorial.discovery_builder import build_discovery
 from src.editorial.story_assembly import assemble_story
 from src.editorial.never_blank_voice import finalize_article
 from src.editorial.platform_composer import CompositionRejected, compose_platforms
-from src.editorial.sources_of_record import canonical_source_entries
+from src.editorial.sources_of_record import source_citation_values
 from src.strategy.execution_context import (
     AudienceSelection,
     DecisionLensEditorialStrategyView,
@@ -177,13 +177,13 @@ def generate_article(
             "never_blank_voice", finalize_article, *voice_args,
             typed_strategy, audience_selection, selected_cta,
         )
-    # #191: the run's own canonical source entries. A Sources line must
-    # reproduce one of them whole — a bullet proves nothing, and containing a
-    # single field proves nothing either when a publisher is "AI". Derived
-    # from the same function that renders the prompt's SOURCES OF RECORD
-    # block, so the instruction and the validation cannot drift apart.
-    _identities: tuple[str, ...] = (
-        canonical_source_entries(research_artifact)
+    # #191/#193: the citable values of each source, grouped per record. A
+    # Sources line must render one whole record — every value it has and
+    # nothing else of substance. Grouped so a line mixing two sources
+    # satisfies neither, and value-based so a citation written naturally
+    # passes while the prompt's field labels stay optional.
+    _identities: tuple[tuple[str, ...], ...] = (
+        source_citation_values(research_artifact)
         if research_artifact is not None else ()
     )
 

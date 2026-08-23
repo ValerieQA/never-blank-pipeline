@@ -175,25 +175,52 @@ _SOURCES_HEADING = re.compile(r"^\s{0,3}(#{1,6}\s*)?sources\b\s*:?\s*$",
 _LIST_MARKER = re.compile(r"^\s{0,3}(?:[-*\u2022]|\d+[.)])\s*")
 
 
-def _normalize_entry(line: str) -> str:
-    """One comparable form for a citation line: no marker, tidy spacing."""
-    return " ".join(_LIST_MARKER.sub("", line).split()).casefold()
+#: Prompt vocabulary, not published contract: a citation may carry these
+#: labels or omit them. Live run 32656064741 wrote the values without them.
+_FIELD_LABELS = ("publisher:", "title:", "url:")
+
+#: Anything that still reads as a word after a record's values are removed.
+_WORD = re.compile(r"[^\W_]", re.UNICODE)
 
 
-def _is_canonical_source_entry(line: str, entries: "tuple[str, ...]") -> bool:
-    """Is this line one of the run's own citation lines, whole?
+def _cites_one_source_record(line: str, record: "tuple[str, ...]") -> bool:
+    """Does this line render exactly this one source record, and nothing more?
 
-    Whole-entry match, not substring: a source's publisher may be "AI" and
-    its title "Growth", so "contains a known identity" would bless ordinary
-    prose. The run renders each citable source as one deterministic string
-    and the prompt instructs the model to quote it exactly, so a real Sources
-    entry reproduces that string and a call to action reproduces none.
+    Two halves, both required:
 
-    Only the list marker and whitespace are forgiven. Deterministic,
-    case-insensitive, no judgment about what prose means, no model call.
+    - **presence** — every citable value of THIS record appears in the line;
+    - **residue** — with those values (and the optional field labels) removed,
+      nothing but separators and punctuation is left.
+
+    Presence alone would bless "Never Blank uses AI to drive Growth." for a
+    record whose publisher is "AI"; residue alone would bless a bare
+    separator. Together they establish that the line *is* this citation
+    rather than prose that mentions part of it — and because the values are
+    grouped per record, a line mixing two sources satisfies neither.
+
+    Rendering is free: "Publisher · Title · URL", "Publisher — Title (URL)"
+    and the labelled prompt form all pass. Deterministic, case-insensitive,
+    no judgment about meaning, no model call.
     """
-    candidate = _normalize_entry(line)
-    return any(candidate == _normalize_entry(entry) for entry in entries if entry)
+    if not record:
+        return False
+    text = _LIST_MARKER.sub("", line)
+    lowered = text.casefold()
+    if not all(value.casefold() in lowered for value in record):
+        return False
+    # longest first, so a title containing the publisher cannot strand it
+    for value in sorted(record, key=len, reverse=True):
+        lowered = lowered.replace(value.casefold(), " ")
+    for label in _FIELD_LABELS:
+        lowered = lowered.replace(label, " ")
+    return _WORD.search(lowered) is None
+
+
+def _is_canonical_source_entry(
+    line: str, records: "tuple[tuple[str, ...], ...]"
+) -> bool:
+    """Is this line a citation of one of the run's own sources?"""
+    return any(_cites_one_source_record(line, record) for record in records)
 
 
 def _attributed_echo_line(body: str, echo: str) -> "int | None":
@@ -216,7 +243,7 @@ def _attributed_echo_line(body: str, echo: str) -> "int | None":
 
 def _validate_branded_echo_then_sources(
     body: str, echo: str, format_key: str,
-    source_identities: "tuple[str, ...]" = (),
+    source_identities: "tuple[tuple[str, ...], ...]" = (),
 ) -> None:
     """Prove the branded-echo closing shape deterministically (#191).
 
@@ -266,9 +293,10 @@ def _validate_branded_echo_then_sources(
         if not _is_canonical_source_entry(entry, source_identities):
             raise CompositionRejected(
                 f"Platform Composer ({format_key}): every line after the "
-                "Sources heading must be one of this run's source entries, "
-                "quoted exactly — the Never Blank Echo is the article's last "
-                "editorial word",
+                "Sources heading must cite one of this run's sources — all "
+                "of that source's publisher, title and URL, and nothing "
+                "else. The Never Blank Echo is the article's last editorial "
+                "word",
                 format_key=format_key, body=body,
             )
 
@@ -333,8 +361,11 @@ def _build_user_prompt(
                 f"'**{BRAND_ATTRIBUTION}:** <echo>'. It is the last editorial "
                 "word: no commentary, no invitation and no call to action after "
                 "it. Only the required Sources section may follow, and every "
-                "line in it must be one of the supplied sources quoted exactly "
-                "as given — nothing else may appear below the heading."
+                "line in it must cite one of the supplied sources — carrying "
+                "that source's publisher, title and URL exactly as given, and "
+                "nothing else. Write it naturally; the 'publisher:'/'title:'/"
+                "'url:' labels above are only there to tell you which value "
+                "is which."
             )
         elif echo_mode == "full":
             lines.append("ECHO MODE: verbatim; include the supplied echo exactly once at the end.")
@@ -358,7 +389,7 @@ def _compose_one(
     strategy_rules: tuple[str, ...] = (),
     editorial_role_rules: str | None = None,
     closing_contract: str = CLOSING_INVITATION_LAST,
-    source_identities: "tuple[str, ...]" = (),
+    source_identities: "tuple[tuple[str, ...], ...]" = (),
 ) -> dict:
     model = model_article() if format_key in ("long", "reading") else model_social()
     raw = chat(
@@ -451,7 +482,7 @@ def compose_platforms(
     editorial_role_rules: "str | dict[str, str] | None" = None,
     formats: "tuple[str, ...] | None" = None,
     closing_contract: str = CLOSING_INVITATION_LAST,
-    source_identities: "tuple[str, ...]" = (),
+    source_identities: "tuple[tuple[str, ...], ...]" = (),
 ) -> dict:
     """Compose one native body per requested format.
 
