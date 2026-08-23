@@ -352,8 +352,7 @@
         "The Never Blank reading, only where the material earns it: if the case genuinely supports a presence, visibility, recognition or memory mechanism, say so as an interpretation of this case and never as a proven law. If the strongest supported mechanism is something else — pricing, capacity, supply, regulation, distribution, operations, customer behaviour, a founder decision — write about that mechanism instead. Never Blank is the publisher, not the predetermined conclusion.",
         "One practical question or consequence an owner-led reader can examine. One, not several.",
         "Keep three things distinguishable throughout: documented facts, the observable mechanism, and the bounded Never Blank reflection. The reflection may say what is worth examining; it may never present this company's outcome as evidence of the reader's likely result.",
-        "Never Blank close: a short Never Blank perspective on THIS story — one or two fresh sentences, written for this case. It is an editorial signature, never a claim that presence caused the outcome, and never a generic brand manifesto.",
-        "Website invitation: close with a natural invitation to continue at https://www.inneros.online — the canonical configured destination, and no other URL.",
+        "Never Blank Echo: one concise, memorable thought that IS the Never Blank perspective on this story — not a separate commentary paragraph about it. It is rendered as an attributed block, 'Never Blank: <the thought>', and it is the article's last editorial word. Never a claim that presence caused the outcome, never a generic brand manifesto, never a sales line.",
         "Source attribution: name the published sources the facts came from.",
         "Section headings are not required in the prose; the movement through the structure is what matters."
       ],
@@ -382,14 +381,16 @@
       "wix_rules": [
         "Materially verifiable external claims keep publishable provenance: the article carries a visible Sources section and/or appropriate inline source links naming where the facts came from.",
         "Attribution never substitutes for verification, and no source or URL is ever invented.",
-        "End in this order: the Never Blank perspective on this story, then the invitation to https://www.inneros.online, then the Sources section last."
+        "End in this order: the reader-relevance close, then the Never Blank Echo as an attributed block on its own line ('**Never Blank:** <echo>'), then the Sources section last. No call to action, no website invitation, and no link on the Never Blank name — the reader is already on the site."
       ],
       "linkedin_rules": [
         "Carry compact source attribution sufficient to identify the source case — one clear reference, not citation-heavy prose.",
-        "End in this order: the Never Blank perspective on this story, then the invitation to https://www.inneros.online, then hashtags last — nothing after the hashtags."
+        "End in this order: the Never Blank Echo as an attributed block on its own line ('Never Blank: <echo>'), then the compact source reference, then hashtags last — nothing after the hashtags. No website invitation: the platform suppresses posts carrying external links."
       ],
       "require_source_transparency": true,
-      "decision_policy": "role_bounded_r1"
+      "decision_policy": "role_bounded_r1",
+      "cta_mode": "none",
+      "closing_contract": "branded_echo_then_sources"
     },
     {
       "role_id": "never-blank-wednesday-golden",

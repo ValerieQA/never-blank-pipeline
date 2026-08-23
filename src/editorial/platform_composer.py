@@ -6,6 +6,7 @@ an original Echo behind an adapted one.
 """
 
 import json
+import re
 from typing import TYPE_CHECKING
 
 from src.content.output_guard import validate_platform_output
@@ -134,6 +135,101 @@ Return ONLY valid JSON:
 """
 
 
+#: Every format the composer knows how to write. Future channels re-enable
+#: by passing their formats to compose_platforms — the tables stay complete.
+ALL_FORMATS = ("long", "reading", "medium", "instagram", "short")
+
+#: How a role's long-form surface closes (#191). "invitation_last" is every
+#: role's existing contract: the verbatim Echo ends the body. A role may
+#: instead declare "branded_echo_then_sources": the Echo IS the publisher's
+#: perspective, rendered as an attributed block, with the required Sources
+#: section after it. Role-scoped, so no other role's validated shape moves.
+class CompositionRejected(ValueError):
+    """A composition our own validator refused, carrying what was written.
+
+    A ValueError so the existing single-retry seam still treats it as a
+    retryable stage failure (#170/#171 semantics unchanged); the attached
+    body exists so the rejection can be diagnosed without paying for another
+    run (#191). Contains generated text only — never provider transport data.
+    """
+
+    def __init__(self, message: str, *, format_key: str, body: str) -> None:
+        super().__init__(message)
+        self.format_key = format_key
+        self.body = body
+        self.validation_error = message
+
+
+CLOSING_INVITATION_LAST = "invitation_last"
+CLOSING_BRANDED_ECHO_THEN_SOURCES = "branded_echo_then_sources"
+
+#: The visible brand attribution. Matches formatting._SIGNATURE_PREFIX so the
+#: publisher-layer bolding finds the same line on every surface.
+BRAND_ATTRIBUTION = "Never Blank"
+
+#: A Sources section is the only thing permitted after the branded Echo.
+_SOURCES_HEADING = re.compile(r"^\s{0,3}(#{1,6}\s*)?sources\b\s*:?\s*$",
+                              re.IGNORECASE)
+
+
+def _attributed_echo_line(body: str, echo: str) -> "int | None":
+    """Index of the line carrying '[**]Never Blank[**]: <echo>', or None.
+
+    Bold markers are optional so the same contract holds for the markdown
+    (Wix) and plain-text (social) renderings.
+    """
+    target = echo.strip()
+    for index, line in enumerate(body.splitlines()):
+        stripped = line.strip()
+        if not stripped.endswith(target):
+            continue
+        prefix = stripped[: len(stripped) - len(target)]
+        normalized = prefix.replace("*", "").strip()
+        if normalized.rstrip(":").strip().casefold() == BRAND_ATTRIBUTION.casefold():
+            return index
+    return None
+
+
+def _validate_branded_echo_then_sources(body: str, echo: str, format_key: str) -> None:
+    """Prove the branded-echo closing shape deterministically (#191).
+
+    Four obligations, each a separate failure so the evidence names the
+    cause: the Echo appears exactly once; it sits inside the publisher's
+    attribution block; any Sources section comes after it, never before;
+    and only a Sources section may follow it — which is
+    also what proves no second perspective, invitation or call to action was
+    appended after the branded moment. The engine stays generic: it never
+    names a destination, only the shape.
+    """
+    if body.count(echo) != 1:
+        raise CompositionRejected(
+            f"Platform Composer ({format_key}): Echo must appear exactly once",
+            format_key=format_key, body=body,
+        )
+    index = _attributed_echo_line(body, echo)
+    if index is None:
+        raise CompositionRejected(
+            f"Platform Composer ({format_key}): Echo must be the Never Blank "
+            f"attribution block — a line reading '{BRAND_ATTRIBUTION}: <echo>'",
+            format_key=format_key, body=body,
+        )
+    lines = body.splitlines()
+    for earlier in lines[:index]:
+        if _SOURCES_HEADING.match(earlier.strip()):
+            raise CompositionRejected(
+                f"Platform Composer ({format_key}): the Sources section must "
+                "follow the Echo, not precede it",
+                format_key=format_key, body=body,
+            )
+    trailing = [ln.strip() for ln in lines[index + 1:] if ln.strip()]
+    if trailing and not _SOURCES_HEADING.match(trailing[0]):
+        raise CompositionRejected(
+            f"Platform Composer ({format_key}): only a Sources section may "
+            "follow the Never Blank Echo",
+            format_key=format_key, body=body,
+        )
+
+
 def _block_content(structured_article: dict, block: str):
     discovery = structured_article.get("discovery", {})
     evidence = [discovery.get("puzzle", "")] + list(discovery.get("investigation_sequence", []) or [])
@@ -159,6 +255,7 @@ def _build_user_prompt(
     cta_mode: str,
     strategy_rules: tuple[str, ...] = (),
     editorial_role_rules: str | None = None,
+    closing_contract: str = CLOSING_INVITATION_LAST,
 ) -> str:
     lo, hi = _WORD_RANGE[format_key]
     lines = [
@@ -186,7 +283,15 @@ def _build_user_prompt(
 
     echo_mode = _BLOCK_TABLE[format_key].get("echo")
     if _block_content(structured_article, "echo"):
-        if echo_mode == "full":
+        if echo_mode == "full" and closing_contract == CLOSING_BRANDED_ECHO_THEN_SOURCES:
+            lines.append(
+                "ECHO MODE: verbatim, as the Never Blank perspective. Put the "
+                f"supplied echo exactly once, on its own line, as "
+                f"'**{BRAND_ATTRIBUTION}:** <echo>'. It is the last editorial "
+                "word: no commentary, no invitation and no call to action after "
+                "it. Only the required Sources section may follow."
+            )
+        elif echo_mode == "full":
             lines.append("ECHO MODE: verbatim; include the supplied echo exactly once at the end.")
         elif echo_mode == "adapt":
             lines.append("ECHO MODE: adapt semantically; include one adapted closing line only.")
@@ -207,6 +312,7 @@ def _compose_one(
     cta_mode: str = "none",
     strategy_rules: tuple[str, ...] = (),
     editorial_role_rules: str | None = None,
+    closing_contract: str = CLOSING_INVITATION_LAST,
 ) -> dict:
     model = model_article() if format_key in ("long", "reading") else model_social()
     raw = chat(
@@ -214,6 +320,7 @@ def _compose_one(
         user=_build_user_prompt(
             structured_article, format_key, cta_mode, strategy_rules,
             editorial_role_rules=editorial_role_rules,
+            closing_contract=closing_contract,
         ),
         json_mode=True,
         model=model,
@@ -232,8 +339,17 @@ def _compose_one(
     echo_mode = _BLOCK_TABLE[format_key].get("echo")
     echo_included = bool(data.get("echo_included"))
     if echo and echo_mode == "full":
-        if body.count(echo) != 1 or not body.endswith(echo):
-            raise ValueError(f"Platform Composer ({format_key}): verbatim Echo must appear exactly once at end")
+        if closing_contract == CLOSING_BRANDED_ECHO_THEN_SOURCES:
+            # #191: for this contract the Echo is the publisher's perspective
+            # and the required Sources section follows it. Proven structurally
+            # rather than by "the echo is the last characters of the body",
+            # which cannot coexist with a mandatory Sources section.
+            _validate_branded_echo_then_sources(body, echo, format_key)
+        elif body.count(echo) != 1 or not body.endswith(echo):
+            raise CompositionRejected(
+                f"Platform Composer ({format_key}): verbatim Echo must appear exactly once at end",
+                format_key=format_key, body=body,
+            )
     elif echo and echo_mode == "adapt" and not echo_included:
         raise ValueError(f"Platform Composer ({format_key}): adapted Echo missing")
 
@@ -278,11 +394,6 @@ def _linkedin_rules(view: "LinkedInStrategyView | None") -> tuple[str, ...]:
     )
 
 
-#: Every format the composer knows how to write. Future channels re-enable
-#: by passing their formats to compose_platforms — the tables stay complete.
-ALL_FORMATS = ("long", "reading", "medium", "instagram", "short")
-
-
 def compose_platforms(
     structured_article: dict,
     cta_mode: str = "none",
@@ -291,6 +402,7 @@ def compose_platforms(
     linkedin_strategy: "LinkedInStrategyView | None" = None,
     editorial_role_rules: "str | dict[str, str] | None" = None,
     formats: "tuple[str, ...] | None" = None,
+    closing_contract: str = CLOSING_INVITATION_LAST,
 ) -> dict:
     """Compose one native body per requested format.
 
@@ -329,6 +441,7 @@ def compose_platforms(
                     editorial_role_rules if format_key in ("long", "medium") else None
                 )
             ),
+            closing_contract=closing_contract,
         )
         log.info("Platform Composer: %s -> %d words", format_key, result[format_key]["word_count"])
     return result
