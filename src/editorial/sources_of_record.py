@@ -42,6 +42,30 @@ def source_records(research: NormalizedResearchArtifact) -> tuple[dict, ...]:
     return tuple(records)
 
 
+def source_citation_values(
+    research: NormalizedResearchArtifact,
+) -> tuple[tuple[str, ...], ...]:
+    """The citable values of each source, one tuple per record (#193).
+
+    This is what a published citation must carry: the record's publisher,
+    title and URL as they exist. The *labels* around them are prompt
+    vocabulary, not part of the published contract — live run 32656064741
+    proved that requiring them rejects a correct citation.
+
+    Grouped per record so a line combining values from two different sources
+    satisfies neither.
+    """
+
+    groups = []
+    for item in source_records(research):
+        values = tuple(
+            item[key] for key in ("publisher", "title", "url") if item.get(key)
+        )
+        if values:
+            groups.append(values)
+    return tuple(groups)
+
+
 def canonical_source_entries(
     research: NormalizedResearchArtifact,
 ) -> tuple[str, ...]:
@@ -91,9 +115,12 @@ def render_sources_of_record(
 
     lines = [
         "",
-        "SOURCES OF RECORD — the only sources this run may cite. Quote these "
-        "exactly; never invent, guess, complete, or substitute a publisher, "
-        "title or URL that does not appear here.",
+        "SOURCES OF RECORD — the only sources this run may cite. Every "
+        "publisher, title and URL below must survive into your citation "
+        "exactly as written; never invent, guess, complete, or substitute "
+        "one. The 'publisher:', 'title:' and 'url:' labels are only here to "
+        "tell you which value is which — write the citation naturally, for "
+        "example 'Publisher · Title · URL'.",
         "",
     ]
     for entry in canonical_source_entries(research):

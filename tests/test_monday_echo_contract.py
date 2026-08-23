@@ -81,10 +81,10 @@ def _research_with(**source_overrides):
 
 
 def _identities(research=None) -> tuple:
-    """The run's canonical source entries, exactly as the pipeline derives them."""
-    from src.editorial.sources_of_record import canonical_source_entries
+    """The run's citable values per record, exactly as the pipeline derives them."""
+    from src.editorial.sources_of_record import source_citation_values
 
-    return canonical_source_entries(research or _research_with_one_source())
+    return source_citation_values(research or _research_with_one_source())
 
 
 #: One real rendered Sources entry, taken from the canonical renderer rather
@@ -420,7 +420,7 @@ def test_a_cta_appended_below_the_source_list_is_rejected():
         f"## Sources\n{_real_source_entry()}\n"
         "- Visit Never Blank today!"
     ))
-    with pytest.raises(CompositionRejected, match="quoted exactly"):
+    with pytest.raises(CompositionRejected, match="must cite one of this run's sources"):
         _compose(body)
 
 
@@ -429,7 +429,7 @@ def test_a_second_perspective_appended_below_the_source_list_is_rejected():
         f"## Sources\n{_real_source_entry()}\n"
         "- Never Blank believes every founder should publish consistently."
     ))
-    with pytest.raises(CompositionRejected, match="quoted exactly"):
+    with pytest.raises(CompositionRejected, match="must cite one of this run's sources"):
         _compose(body)
 
 
@@ -438,7 +438,7 @@ def test_numbered_prose_disguised_as_a_source_is_rejected():
         f"## Sources\n1. {_identities()[0]}\n"
         "2. Sign up for Never Blank today."
     ))
-    with pytest.raises(CompositionRejected, match="quoted exactly"):
+    with pytest.raises(CompositionRejected, match="must cite one of this run's sources"):
         _compose(body)
 
 
@@ -528,7 +528,7 @@ def test_prose_that_merely_contains_a_source_word_is_rejected(overrides, line):
     reproduces the run's citation, so none is a source.
     """
     research = _research_with(**overrides)
-    with pytest.raises(CompositionRejected, match="quoted exactly"):
+    with pytest.raises(CompositionRejected, match="must cite one of this run's sources"):
         _compose(_body(sources=f"## Sources\n{line}"), research=research)
 
 
@@ -562,3 +562,112 @@ def test_missing_attribution_is_rejected_by_the_authoritative_gate():
         )
     # and the role that publishes this contract demands that gate
     assert _role(MONDAY).require_source_transparency is True
+
+
+# ===========================================================================
+# #193: the published citation contract, proven against live evidence
+# ===========================================================================
+
+#: The exact values the model wrote in live run 32656064741, from the
+#: preserved rejected_composition.json — not a reconstruction.
+LIVE_PUBLISHER = "Shawn P. Walchef"
+LIVE_TITLE = "He Taught Himself a Recipe and Sold $85,000 From His Kitchen"
+LIVE_URL = (
+    "https://www.entrepreneur.com/building-a-business/this-dad-lost-his-job-"
+    "and-started-making-a-breakfast-staple-at-home-it-was-so-good-he-sold-"
+    "85000-worth-from-his-kitchen"
+)
+LIVE_RESEARCH_OVERRIDES = {
+    "publisher": LIVE_PUBLISHER,
+    "title": LIVE_TITLE,
+    "locator": {"kind": "url", "value": LIVE_URL},
+}
+
+
+def _live_research():
+    return _research_with(**LIVE_RESEARCH_OVERRIDES)
+
+
+def test_the_exact_live_rejected_citation_now_passes():
+    """The regression that matters: run 32656064741's own output.
+
+    The model wrote the right publisher, title and URL in the record's order
+    with the record's separator, omitting only the prompt's field labels.
+    That is a correct citation and must be accepted.
+    """
+    line = f"{LIVE_PUBLISHER} · {LIVE_TITLE} · {LIVE_URL}"
+    _compose(_body(sources=f"Sources\n{line}"), research=_live_research())
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "{p} · {t} · {u}",                       # the live shape
+        "- {p} · {t} · {u}",                     # with a list marker
+        "publisher: {p} · title: {t} · url: {u}",  # the prompt's own labels
+        "- {p} — {t} ({u})",                     # dash + parentheses
+        "1. {p}, {t}, {u}",                      # numbered, commas
+    ],
+    ids=["live-shape", "with-marker", "labelled-form", "dash-parens",
+         "numbered-commas"],
+)
+def test_a_citation_may_render_naturally(line):
+    """Layout is free; the record's values are not.
+
+    The labelled form still passes: those labels are our own vocabulary, not
+    arbitrary prose, and rejecting a citation whose content is correct is the
+    defect #193 exists to fix.
+    """
+    rendered = line.format(p=LIVE_PUBLISHER, t=LIVE_TITLE, u=LIVE_URL)
+    _compose(_body(sources=f"Sources\n{rendered}"), research=_live_research())
+
+
+def test_a_citation_missing_one_of_the_records_values_is_rejected():
+    """Correspondence means the WHOLE record, not a convenient part of it."""
+    line = f"- {LIVE_PUBLISHER} · {LIVE_TITLE}"        # URL dropped
+    with pytest.raises(CompositionRejected, match="must cite one of this run's sources"):
+        _compose(_body(sources=f"Sources\n{line}"), research=_live_research())
+
+
+def test_a_citation_carrying_extra_prose_is_rejected():
+    """Every value present, but the line is a sentence, not a citation."""
+    line = f"- {LIVE_PUBLISHER} · {LIVE_TITLE} · {LIVE_URL} — and you should visit us too"
+    with pytest.raises(CompositionRejected, match="must cite one of this run's sources"):
+        _compose(_body(sources=f"Sources\n{line}"), research=_live_research())
+
+
+def test_values_mixed_from_two_different_records_are_rejected():
+    """A line must correspond to ONE record, not borrow across them."""
+    from src.research.evidence import NormalizedResearchArtifact
+    from tests.test_decision_lens_evaluator import _research_payload
+
+    payload = _research_payload()
+    first = payload["sources"][0]
+    first.update({"publisher": "Publisher A", "title": "Title A",
+                  "locator": _IDENTIFIER_LOCATOR})
+    second = dict(first)
+    second.update({"source_id": "source-b", "publisher": "Publisher B",
+                   "title": "Title B"})
+    payload["sources"] = [first, second]
+    payload["evidence"][0]["source_ids"] = ["source-sba"]
+    research = NormalizedResearchArtifact.model_validate(payload)
+
+    # each real record passes on its own …
+    for publisher, title in (("Publisher A", "Title A"), ("Publisher B", "Title B")):
+        _compose(_body(sources=f"Sources\n- {publisher} · {title}"), research=research)
+
+    # … and the chimera satisfies neither
+    with pytest.raises(CompositionRejected, match="must cite one of this run's sources"):
+        _compose(_body(sources="Sources\n- Publisher A · Title B"), research=research)
+
+
+def test_the_prompt_asks_for_values_not_labels():
+    """Prompt and validator now describe the same public contract."""
+    from src.editorial.sources_of_record import render_sources_of_record
+
+    rendered = render_sources_of_record(_live_research(), surface="wix")
+
+    assert "must survive into your citation" in rendered
+    assert "only here to tell you which value is which" in rendered
+    # the labelled listing itself stays: it tells the model which is which
+    assert "publisher: " in rendered and "title: " in rendered
