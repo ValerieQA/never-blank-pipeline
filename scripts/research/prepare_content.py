@@ -345,6 +345,7 @@ def prepare_content_packages(
     strategy_view: ResearchStrategyView | None = None,
     audience: AudienceSelection | None = None,
     platforms: list[str] | None = None,
+    content_package: bool = True,
 ) -> list[dict]:
     """
     Main entry point. For each signal: generate content + image (one per signal).
@@ -354,6 +355,13 @@ def prepare_content_packages(
     historical set; the canonical R1 entrypoint passes only its active
     surfaces (#175). The single billed base-image generation is unchanged —
     only per-platform composites and uploads are scoped.
+
+    content_package: when False, the paid _generate_content_package model
+    call is skipped and the package carries an empty content preview. The
+    canonical R1 path passes False (#177 product decision: the preview is
+    deliberately removed from R1 — non-authoritative, absent from the
+    evidence chain, and previously produced only on image-cache misses).
+    The default True keeps legacy daily-research behaviour unchanged.
     """
     if not signals:
         return []
@@ -367,7 +375,10 @@ def prepare_content_packages(
         headline = signal.get("HEADLINE", "")
         log.info("Preparing content package: %s", headline[:60])
 
-        content    = _generate_content_package(signal, strategy_view, audience)
+        content    = (
+            _generate_content_package(signal, strategy_view, audience)
+            if content_package else {}
+        )
         image_plan, library_entry = _build_image_plan(signal, library, platforms=platforms)
 
         if library_entry:

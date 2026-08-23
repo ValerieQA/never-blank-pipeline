@@ -1581,45 +1581,28 @@ def _run(
             _vis_req.run_id, _vis_req.blocked, _vis_req.blocked_reason,
         )
 
-        # ── Image preparation (fresh-gen path) ───────────────────────────────
-        pimgs = _load_package_images(signal_id)
-        editorial_package: dict = {"images": {"platform_images": pimgs}}
-        pkg_design_version = pimgs.get("_design_version") if pimgs else None
-        needs_regen = (
-            not pimgs.get("blog", {}).get("url")
-            or pkg_design_version != CURRENT_DESIGN_VERSION
-        )
-        if needs_regen:
-            reason = "no pre-generated image" if not pimgs else f"stale design v{pkg_design_version} (current: v{CURRENT_DESIGN_VERSION})"
-            print(f"  — {reason} — generating images for all platforms…")
-            try:
-                from scripts.research.prepare_content import prepare_content_packages
-                pkgs = prepare_content_packages(
-                    [signal], strategy_execution.research, research_audience,
-                    platforms=_R1_IMAGE_PLATFORMS,
-                )
-                if pkgs:
-                    editorial_package = pkgs[0]
-                    pimgs = pkgs[0].get("images", {}).get("platform_images", {})
-                    blog_url = pimgs.get("blog", {}).get("url") or ""
-                    print(f"  ✓  Images generated: {blog_url[:60] if blog_url else '(none)'}")
-                else:
-                    print(f"  ⚠  Image generation returned no packages — visual platforms will skip")
-            except RunCallBudgetExceededError:
-                # #171: an exhausted call budget is a run stop, never a
-                # silent fall-through to "publish without images".
-                raise
-            except Exception as exc:
-                print(f"  ⚠  Image generation failed ({exc}) — visual platforms will skip")
-
-        blog_image_url: Optional[str] = pimgs.get("blog", {}).get("url") or None
-        platform_image_urls = {
-            p: (pimgs.get(p, {}).get("url") or None)
-            for p in ("blog", "linkedin", "facebook", "instagram", "threads", "stories")
-            if pimgs.get(p, {}).get("url")
-        }
-        print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
-        print(f"  ✓  Platform images: {list(platform_image_urls.keys())}")
+        # ── Image preparation deferred (#177) ────────────────────────────────
+        # Paid image generation moves behind every text gate that can still
+        # block publication: a run that editorial acceptance, source
+        # transparency, validation or LinkedIn composition is going to
+        # refuse must not already have paid for assets it cannot publish.
+        # Until then the run carries no visuals — which is also what a
+        # blocked run honestly preserves.
+        #
+        # PRODUCT DECISION (#177, authorized): the CONTENT_PACKAGE preview is
+        # deliberately removed from the canonical R1 editorial input. It cost
+        # one model call, was labelled non-authoritative ("never a source of
+        # new facts"), sat outside the evidence chain, was invisible to
+        # acceptance and source transparency — and appeared only when the
+        # image cache happened to miss, so the steady state never had it.
+        # Every fresh run now feeds generation this same canonical empty
+        # shape regardless of image-cache state. R2 must not "restore" the
+        # old cache-dependent preview as a bug fix; reintroducing it is a
+        # product decision with a per-run cost.
+        pimgs: dict = {}
+        editorial_package: dict = {"images": {"platform_images": {}}}
+        blog_image_url: Optional[str] = None
+        platform_image_urls: dict = {}
 
         # ── 3b. Generate content via LLM ─────────────────────────────────────
         print(f"\n[3/6] Generating content (LLM — Editorial Engine V2)…")
@@ -1919,6 +1902,46 @@ def _run(
             f"[{_li_record.composition_rules_version}] "
             f"({run_dir / 'linkedin_composition.json'})"
         )
+
+        # ── Image preparation (fresh-gen path, after all text gates — #177) ──
+        pimgs = _load_package_images(signal_id)
+        pkg_design_version = pimgs.get("_design_version") if pimgs else None
+        needs_regen = (
+            not pimgs.get("blog", {}).get("url")
+            or pkg_design_version != CURRENT_DESIGN_VERSION
+        )
+        if needs_regen:
+            reason = "no pre-generated image" if not pimgs else f"stale design v{pkg_design_version} (current: v{CURRENT_DESIGN_VERSION})"
+            print(f"  — {reason} — generating images for the active platforms…")
+            try:
+                from scripts.research.prepare_content import prepare_content_packages
+                pkgs = prepare_content_packages(
+                    [signal], strategy_execution.research, research_audience,
+                    platforms=_R1_IMAGE_PLATFORMS,
+                    # #177 product decision: no preview generation here either
+                    content_package=False,
+                )
+                if pkgs:
+                    pimgs = pkgs[0].get("images", {}).get("platform_images", {})
+                    blog_url = pimgs.get("blog", {}).get("url") or ""
+                    print(f"  ✓  Images generated: {blog_url[:60] if blog_url else '(none)'}")
+                else:
+                    print(f"  ⚠  Image generation returned no packages — visual platforms will skip")
+            except RunCallBudgetExceededError:
+                # #171: an exhausted call budget is a run stop, never a
+                # silent fall-through to "publish without images".
+                raise
+            except Exception as exc:
+                print(f"  ⚠  Image generation failed ({exc}) — visual platforms will skip")
+
+        blog_image_url = pimgs.get("blog", {}).get("url") or None
+        platform_image_urls = {
+            p: (pimgs.get(p, {}).get("url") or None)
+            for p in ("blog", "linkedin", "facebook", "instagram", "threads", "stories")
+            if pimgs.get(p, {}).get("url")
+        }
+        print(f"  ✓  Blog image: {blog_image_url[:60] if blog_image_url else '— (none)'}")
+        print(f"  ✓  Platform images: {list(platform_image_urls.keys())}")
 
         # ── Visual contract gate (Issue #96 / Story #15) ─────────────────────
         # Release 1 rule: the Wix visual is required (no valid Wix visual → no
