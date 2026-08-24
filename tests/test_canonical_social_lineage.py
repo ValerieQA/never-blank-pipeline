@@ -294,7 +294,7 @@ def test_wix_failure_means_linkedin_is_not_attempted(tmp_path):  # item 3
     results = _publication_results(tmp_path)
     assert results["results"]["wix"]["status"] == "FAILED"
     assert results["results"]["linkedin"]["status"] == "BLOCKED"
-    assert "no canonical article URL" in (
+    assert "no verified canonical article URL" in (
         results["results"]["linkedin"]["error_message"]
     )
     assert results["wix_url"] == ""
@@ -360,6 +360,14 @@ def test_a_reused_wix_publication_still_feeds_linkedin_its_url(tmp_path):  # 18
     wix = mock.MagicMock()   # must never be asked to publish again
     li = mock.MagicMock()
     li.publish.return_value = _make_ok_publish_result("linkedin")
+    # #200: the reuse path re-asks the provider for the known post rather
+    # than trusting the recorded URL
+    from src.publishing.wix import ProviderUrlLookup
+
+    wix.lookup_canonical_url.side_effect = lambda post_id, *, site_id: (
+        ProviderUrlLookup(post_id, post_id, CANONICAL_URL,
+                          UrlProvenance.PROVIDER_LOOKUP, 200)
+    )
     patches["WixPublisher"] = mock.MagicMock(return_value=wix)
     patches["LinkedInPublisher"] = mock.MagicMock(return_value=li)
     patches["find_prior_wix_publication"] = mock.MagicMock(

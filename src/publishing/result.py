@@ -27,14 +27,32 @@ class UrlProvenance(str, Enum):
     confirmed by the provider.
     """
 
-    #: the provider itself returned the public URL
+    #: the publish response itself carried the public URL
     PROVIDER_CONFIRMED = "provider_confirmed"
-    #: the provider confirmed the post and returned a slug, but no URL, so
-    #: ``NB_WIX_SITE_BASE_URL + /blog/{slug}`` was constructed locally
+    #: retrieved from the provider afterwards, by post ID, through the
+    #: provider's own URL field (Issue #200)
+    PROVIDER_LOOKUP = "provider_lookup"
+    #: the provider confirmed the post and returned a slug, but no URL, so a
+    #: route was constructed locally. Issue #200 proved such a URL can be
+    #: wrong and unreachable while looking entirely plausible: it is kept as
+    #: recorded evidence and can NEVER be canonical for distribution.
     LOCALLY_DERIVED = "locally_derived"
     #: no provenance-confirmed URL exists (none returned, or its origin
     #: cannot be established — e.g. reused evidence recorded before #105)
     UNAVAILABLE = "unavailable"
+
+    def is_provider_sourced(self) -> bool:
+        """Did the provider itself produce this URL? (Issue #200)
+
+        Only a provider-sourced URL may become the canonical article URL —
+        and only after verification. A locally constructed route is a
+        guess about site configuration, and live run 32740322282 published
+        a social post pointing at a guess that returned 404.
+        """
+        return self in (
+            UrlProvenance.PROVIDER_CONFIRMED,
+            UrlProvenance.PROVIDER_LOOKUP,
+        )
 
 
 @dataclass
@@ -53,6 +71,10 @@ class PublishResult:
     # duplicate. Defaults keep every existing caller unchanged.
     url_provenance:     UrlProvenance = UrlProvenance.UNAVAILABLE
     reused_from_run_id: Optional[str] = None
+    #: Issue #200: what the provider said when asked for this exact post by
+    #: ID — the record that establishes which post the URL belongs to.
+    #: Typed loosely to keep this module free of provider imports.
+    provider_lookup:    Optional[object] = None
 
     def ok(self) -> bool:
         return self.status in (PublishStatus.PUBLISHED, PublishStatus.DRAFT_CREATED)

@@ -368,8 +368,13 @@ class TestWixPublisherDraftVerification:
                     "media": {"wixMedia": {"image": {"id": file_id}}}
                 }}, ""
             if method == "POST" and "publish" in url:
-                return 200, {"post": {"id": "post-001", "url": "https://neverblank.co/post/x"}}, ""
-            return 200, {}, ""
+                return 200, {"post": {"id": "post-001"}}, ""
+            # #200: the canonical URL comes from retrieving the published
+            # post itself, so the happy path answers that lookup too
+            return 200, {"post": {
+                "id": "post-001", "slug": "x",
+                "url": {"base": "https://neverblank.co", "path": "/post/x"},
+            }}, ""
         return fake_fetch
 
     def test_draft_media_missing_blocks_publish(self, monkeypatch):
@@ -463,8 +468,11 @@ class TestWixPublisherDraftVerification:
 
 
 class TestWixPublisherUrlResolution:
-    def test_url_from_publish_response_used_directly(self, monkeypatch):
+    def test_the_url_always_comes_from_the_post_object_lookup(self, monkeypatch):
+        """#200: a URL is canonical only once the provider returns it for
+        THIS post ID — the publish response alone is not that proof."""
         _wix_env(monkeypatch)
+        lookups = []
 
         def fake_fetch(url, *, method="GET", headers=None, body=None, timeout=20):
             if method == "POST" and "draft-posts" in url and "publish" not in url:
@@ -472,8 +480,17 @@ class TestWixPublisherUrlResolution:
             if method == "GET" and "draft-posts" in url:
                 return 200, {"draftPost": {"media": {"wixMedia": {"image": {"id": "wix-file-1"}}}}}, ""
             if method == "POST" and "publish" in url:
-                return 200, {"post": {"id": "post-001", "url": "https://neverblank.co/post/the-slug"}}, ""
-            return 200, {}, ""
+                # even a publish response that carries a URL …
+                return 200, {"post": {
+                    "id": "post-001",
+                    "url": {"base": "https://neverblank.co", "path": "/post/from-publish"},
+                }}, ""
+            lookups.append(url)
+            # … is superseded by what the provider says about the post itself
+            return 200, {"post": {
+                "id": "post-001", "slug": "the-slug",
+                "url": {"base": "https://neverblank.co", "path": "/post/the-slug"},
+            }}, ""
 
         with patch("src.publishing.wix.import_image",
                    return_value=WixMediaAsset(file_id="wix-file-1")), \
@@ -481,6 +498,8 @@ class TestWixPublisherUrlResolution:
             result = WixPublisher().publish(_draft_package(), "live")
 
         assert result.url == "https://neverblank.co/post/the-slug"
+        assert any("fieldsets=URL" in u for u in lookups)
+        assert result.provider_lookup.identity_ok() is True
 
     def test_missing_url_resolved_via_get_posts(self, monkeypatch):
         """When publish response has no URL, GET /blog/v3/posts/{id} is called."""
@@ -496,7 +515,10 @@ class TestWixPublisherUrlResolution:
                 return 200, {"post": {"id": "post-001"}}, ""   # no URL
             if method == "GET" and "/posts/" in url:
                 resolve_calls.append(url)
-                return 200, {"post": {"id": "post-001", "url": "https://neverblank.co/post/resolved"}}, ""
+                return 200, {"post": {
+                    "id": "post-001",
+                    "url": {"base": "https://neverblank.co", "path": "/post/resolved"},
+                }}, ""
             return 200, {}, ""
 
         with patch("src.publishing.wix.import_image",
