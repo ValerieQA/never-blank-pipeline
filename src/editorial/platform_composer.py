@@ -301,6 +301,59 @@ def _validate_branded_echo_then_sources(
             )
 
 
+def _effective_echo_mode(format_key: str, closing_contract: str) -> "str | None":
+    """The echo mode this composition actually runs under (#196).
+
+    The ``_BLOCK_TABLE`` value is the format's default. A role that declares
+    the branded-echo closing contract has declared that its Echo IS the
+    publisher's perspective — one canonical Echo that travels verbatim into
+    every derivative it composes. Under that contract a format whose default
+    is ``adapt`` is upgraded to ``verbatim_final``: the exact Echo, as the
+    attributed block, as the literal end of the composed body.
+
+    Deliberately contract-scoped, not table-scoped: roles that declare
+    nothing keep every format's default, so no other stream moves.
+    """
+    mode = _BLOCK_TABLE[format_key].get("echo")
+    if mode == "adapt" and closing_contract == CLOSING_BRANDED_ECHO_THEN_SOURCES:
+        return "verbatim_final"
+    return mode
+
+
+def _validate_branded_echo_final(body: str, echo: str, format_key: str) -> None:
+    """Prove a social derivative ends at the exact canonical Echo (#196).
+
+    Three obligations: the Echo appears verbatim exactly once; it is rendered
+    as the publisher's attribution block; and it is the literal last line of
+    the composed body. Everything that follows it on the published surface —
+    the canonical article link, hashtags — is appended deterministically by
+    the system, never composed, which is what keeps the Echo the last
+    *editorial* word while the assembled post still carries its link.
+    """
+    if body.count(echo) != 1:
+        raise CompositionRejected(
+            f"Platform Composer ({format_key}): the canonical Echo must "
+            "appear verbatim exactly once",
+            format_key=format_key, body=body,
+        )
+    index = _attributed_echo_line(body, echo)
+    if index is None:
+        raise CompositionRejected(
+            f"Platform Composer ({format_key}): the Echo must be the Never "
+            f"Blank attribution block — a line reading "
+            f"'{BRAND_ATTRIBUTION}: <echo>'",
+            format_key=format_key, body=body,
+        )
+    trailing = [ln for ln in body.splitlines()[index + 1:] if ln.strip()]
+    if trailing:
+        raise CompositionRejected(
+            f"Platform Composer ({format_key}): nothing may follow the Never "
+            "Blank Echo in the composed body — the link and hashtags are "
+            "appended by the system, never composed",
+            format_key=format_key, body=body,
+        )
+
+
 def _block_content(structured_article: dict, block: str):
     discovery = structured_article.get("discovery", {})
     evidence = [discovery.get("puzzle", "")] + list(discovery.get("investigation_sequence", []) or [])
@@ -350,9 +403,13 @@ def _build_user_prompt(
             continue
         if block == "cta" and (not cta_mode or cta_mode == "none"):
             continue
+        if block == "echo":
+            # the ECHO MODE instruction below is authoritative; the label
+            # here must not contradict it (#196)
+            mode = _effective_echo_mode(format_key, closing_contract)
         lines.append(f"- {block} [{mode}]: {content}")
 
-    echo_mode = _BLOCK_TABLE[format_key].get("echo")
+    echo_mode = _effective_echo_mode(format_key, closing_contract)
     if _block_content(structured_article, "echo"):
         if echo_mode == "full" and closing_contract == CLOSING_BRANDED_ECHO_THEN_SOURCES:
             lines.append(
@@ -366,6 +423,19 @@ def _build_user_prompt(
                 "nothing else. Write it naturally; the 'publisher:'/'title:'/"
                 "'url:' labels above are only there to tell you which value "
                 "is which."
+            )
+        elif echo_mode == "verbatim_final":
+            # #196: a social derivative of the branded contract carries the
+            # exact same Echo as the canonical article — the one canonical
+            # Echo travels; the lens never rewrites it.
+            lines.append(
+                "ECHO MODE: verbatim, as the Never Blank perspective — the "
+                "EXACT supplied echo, word for word, never adapted or "
+                "rephrased. Put it exactly once, as the final line, rendered "
+                f"'{BRAND_ATTRIBUTION}: <echo>'. It is the post's last word: "
+                "write nothing after it — no sources section, no link, no "
+                "invitation, no hashtags (the system appends what follows). "
+                "Do not write any URL anywhere in the post."
             )
         elif echo_mode == "full":
             lines.append("ECHO MODE: verbatim; include the supplied echo exactly once at the end.")
@@ -413,7 +483,7 @@ def _compose_one(
     body = body.strip()
 
     echo = _block_content(structured_article, "echo")
-    echo_mode = _BLOCK_TABLE[format_key].get("echo")
+    echo_mode = _effective_echo_mode(format_key, closing_contract)
     echo_included = bool(data.get("echo_included"))
     if echo and echo_mode == "full":
         if closing_contract == CLOSING_BRANDED_ECHO_THEN_SOURCES:
@@ -429,6 +499,10 @@ def _compose_one(
                 f"Platform Composer ({format_key}): verbatim Echo must appear exactly once at end",
                 format_key=format_key, body=body,
             )
+    elif echo and echo_mode == "verbatim_final":
+        # #196: the social derivative carries the article's exact Echo and
+        # ends at it — proven structurally, never trusted to the prompt.
+        _validate_branded_echo_final(body, echo, format_key)
     elif echo and echo_mode == "adapt" and not echo_included:
         raise ValueError(f"Platform Composer ({format_key}): adapted Echo missing")
 

@@ -179,7 +179,7 @@ def test_the_monday_role_states_the_new_order_on_both_surfaces():
     linkedin = render_editorial_role_rules(role, surface="linkedin").lower()
 
     assert "never blank echo" in wix and "then the sources section last" in wix
-    assert "never blank echo" in linkedin and "then hashtags last" in linkedin
+    assert "never blank echo" in linkedin and "hashtags last" in linkedin
     for surface in (wix, linkedin):
         assert "inneros.online" not in surface
 
@@ -287,7 +287,7 @@ def test_linkedin_attribution_is_plain_with_no_url_workaround():
     assert "'Never Blank: <echo>'" in linkedin
     # and no raw URL is introduced merely to create a link
     assert "inneros.online" not in linkedin
-    assert "http" not in linkedin.split("End in this order")[1]
+    assert "http" not in linkedin.lower()
 
 
 def test_the_publisher_bolding_helper_still_finds_the_attribution_line():
@@ -557,7 +557,6 @@ def test_missing_attribution_is_rejected_by_the_authoritative_gate():
     with pytest.raises(SourceTransparencyError):
         validate_source_transparency(
             article_body=f"An article that cites nothing.\n\n**Never Blank:** {ECHO}",
-            linkedin_body="Nor does this.",
             research=_research_with_one_source(),
         )
     # and the role that publishes this contract demands that gate

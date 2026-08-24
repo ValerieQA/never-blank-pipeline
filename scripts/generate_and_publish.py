@@ -157,7 +157,9 @@ from src.editorial.editorial_role import (
 )
 from src.editorial.sources_of_record import render_sources_of_record
 from src.editorial.source_transparency import (
+    SocialLineageError,
     SourceTransparencyError,
+    validate_social_lineage,
     validate_source_transparency,
 )
 from src.editorial.pipeline import ArticleGenerationError, generate_article
@@ -216,6 +218,7 @@ from src.publishing.package import (
     PackageFailureCategory,
     PublicationPackageError,
     WixPublicationTarget,
+    bind_canonical_article_url,
     build_linkedin_publication_package,
     build_wix_publication_package,
     canonical_slug,
@@ -233,6 +236,7 @@ from src.artifacts import (
     load_assignment_json,
     load_visual_assets_json,
     append_rejected_composition,
+    write_accepted_composition_json,
     write_assignment_json,
     write_editorial_acceptance_json,
     write_decision_policy_json,
@@ -1829,18 +1833,60 @@ def _run(
             f"[{_acceptance_rubric.identity}]"
         )
 
+        # Issue #196: preserve the accepted compositions NOW, before the
+        # remaining gates. A run blocked downstream (transparency, images,
+        # visuals, preflight) used to lose its accepted article with the
+        # runner — live run 32666861632 cost a full regeneration to learn
+        # what it had written. Diagnostic evidence only: publishable=false,
+        # not canonical, and nothing (including --from-package) loads it, so
+        # preservation can never become a route past a gate.
+        try:
+            write_accepted_composition_json(
+                run_dir,
+                {
+                    "run_id": run_ctx.run_id,
+                    "signal_id": signal_id,
+                    "assignment_id": assignment.assignment_id,
+                    "editorial": {
+                        "rubric": _acceptance_rubric.identity,
+                        "revised": _acceptance.revised,
+                    },
+                    "content": {
+                        "title": headline,
+                        "echo": echo_line,
+                        "article_body": blog_body,
+                        "linkedin_body": linkedin_text,
+                    },
+                },
+            )
+            print(
+                "  ✓  accepted compositions preserved: "
+                f"{run_dir / 'accepted_composition.json'} (not publishable)"
+            )
+        except (ArtifactCollisionError, OSError) as exc:
+            # Losing the diagnostic copy never changes the run's verdict —
+            # but the run says so honestly instead of silently.
+            print(f"  ⚠  accepted compositions could not be preserved: {exc}")
+
         # Issue #142 review round 2: a role may require source transparency
         # as a fail-closed publication condition. The prompt asked for
-        # attribution; here the accepted article and the LinkedIn body are
-        # verified against the run's ACTUAL sources — a model that ignored the
-        # instruction, or invented a link, stops the run before any publisher
-        # is called. Roles without the requirement (every other stream, and
-        # every run with no role) are never checked.
+        # attribution; here the accepted CANONICAL ARTICLE is verified against
+        # the run's ACTUAL sources — a model that ignored the instruction, or
+        # invented a link, stops the run before any publisher is called.
+        # Roles without the requirement (every other stream, and every run
+        # with no role) are never checked.
+        #
+        # #196 split: this gate owns the canonical article ↔ original sources
+        # half of the provenance chain, undiminished. The social half —
+        # LinkedIn ↔ the published canonical article URL — cannot be judged
+        # here because that URL does not exist until Wix publishes; it is
+        # validated by validate_social_lineage in the publication loop. (The
+        # old combined check also judged the LinkedIn body 49 lines before
+        # its attribution line was appended — the run 32666861632 defect.)
         if _editorial_role_identity is not None and _role.require_source_transparency:
             try:
                 validate_source_transparency(
                     article_body=blog_body,
-                    linkedin_body=linkedin_text,
                     research=research_artifact,
                     allowed_destinations=tuple(
                         destination for destination in (
@@ -1887,9 +1933,13 @@ def _run(
         source_name = signal.get("SOURCE_NAME", "")
         source_url  = signal.get("SOURCE_URL", "")
         blog_body      += formatting.source_line(source_name, source_url, "blog_markdown")
+        # #196: the LinkedIn post no longer carries the original source's URL
+        # — the canonical Never Blank article owns the external-source links,
+        # and the post's destination is the published article itself. That
+        # link cannot be appended here because it does not exist yet; it is
+        # bound deterministically after Wix publication succeeds.
         linkedin_text   = formatting.append_hashtags(
-            formatting.bold_signature_prefix(linkedin_text, "unicode") +
-            formatting.source_line(source_name, source_url, "bare_url"),
+            formatting.bold_signature_prefix(linkedin_text, "unicode"),
             # #176 correction: topical tags follow the published article —
             # the supported mechanism and the composed title — never
             # discovery metadata that may differ from what was written.
@@ -2275,6 +2325,28 @@ def _run(
                 "external_id": None, "url": None, "run_id": run_ctx.run_id,
             }
             continue
+        # ── Wix gates social publication (Issue #196) ────────────────────
+        # The LinkedIn post distributes the published canonical article; its
+        # destination is that article's real URL. No canonical URL — Wix
+        # blocked, failed, or published without returning one — means there
+        # is nothing to distribute, so LinkedIn is NOT attempted. The
+        # channels are no longer independent publication siblings.
+        if name == "linkedin" and not wix_url:
+            _wix_status = results.get("wix", {}).get("status", "not attempted")
+            print(
+                f"  ✗  {name:<12} NOT ATTEMPTED — no canonical article URL "
+                f"(wix: {_wix_status}); social distributes the published "
+                "article, so there is nothing to publish behind"
+            )
+            results[name] = {
+                "platform": name, "status": "BLOCKED",
+                "error_message": (
+                    "no canonical article URL — Wix publication did not "
+                    f"succeed (wix status: {_wix_status})"
+                ),
+                "external_id": None, "url": None, "run_id": run_ctx.run_id,
+            }
+            continue
         try:
             channel_view = (
                 strategy_execution.wix
@@ -2292,6 +2364,28 @@ def _run(
             if _package.package_digest() != _verdict.package_digest:
                 raise ValueError(
                     f"{name} package digest does not match the preflight verdict"
+                )
+
+            # ── Canonical article link enrichment + lineage gate (#196) ──────
+            # Runs AFTER the digest check, so what is proven against the
+            # preflight verdict is exactly the authorized package. The
+            # enrichment derives a new frozen package whose only difference is
+            # the deterministic link block (zero model calls — the URL comes
+            # from the Wix publisher's result and nowhere else), and the
+            # lineage gate then proves the assembled body points at exactly
+            # that URL and at nothing else. Placed BEFORE the idempotency scan
+            # so duplicate identity is computed over the body actually
+            # published — a recovery run assembles the same body and is
+            # recognised.
+            if name == "linkedin":
+                _package = bind_canonical_article_url(_package, wix_url)
+                validate_social_lineage(
+                    social_body=_package.linkedin_body,
+                    canonical_url=wix_url,
+                )
+                print(
+                    f"  ✓  linkedin lineage: post → canonical article "
+                    f"({wix_url[:60]})"
                 )
 
             # ── Wix retry idempotency (Issue #105 / Story #18) ───────────────

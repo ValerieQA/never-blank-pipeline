@@ -230,7 +230,21 @@ class LinkedInPublicationPackage(_PackageModel):
     source_article_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     linkedin_body: str = Field(min_length=1)
     linkedin_image_url: Optional[str] = Field(default=None, max_length=2000)
+    #: The published canonical Never Blank article this post distributes
+    #: (#196). ``None`` until the article is actually live: the URL does not
+    #: exist before Wix publishes, and nothing is permitted to invent one.
+    #: Bound by ``bind_canonical_article_url`` after publication returns it.
+    canonical_article_url: Optional[str] = Field(default=None, max_length=2000)
     target: LinkedInPublicationTarget
+
+    @field_validator("canonical_article_url")
+    @classmethod
+    def _remote_canonical(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and not _REMOTE_URL.match(value):
+            raise ValueError(
+                "the canonical article URL must be a real published https URL"
+            )
+        return value
 
     @field_validator("schema_version")
     @classmethod
@@ -424,6 +438,56 @@ def build_wix_publication_package(
     except Exception as exc:  # noqa: BLE001 — strict model rejection fails closed
         raise PublicationPackageError(
             f"Wix publication package is invalid: {exc}"
+        ) from exc
+
+
+def bind_canonical_article_url(
+    package: LinkedInPublicationPackage,
+    canonical_url: str,
+) -> LinkedInPublicationPackage:
+    """Bind the published canonical article URL into a LinkedIn package (#196).
+
+    Called only after the Wix publisher has returned the real URL — before
+    that moment the URL does not exist, which is why it can never be part of
+    the composed/accepted body. The enrichment is pure string assembly
+    (``formatting.append_canonical_article_link``): zero model calls, so the
+    destination can never be invented, and the same inputs always assemble
+    the same body.
+
+    Deliberately returns a **new frozen package** rather than mutating the
+    authorized one: the caller proves the authorized package against its
+    preflight digest FIRST, then derives this enriched package from it. The
+    accepted composition, the generated artifact, and every gate that judged
+    them remain exactly what they were; the only difference between the two
+    packages is the deterministic link block and the recorded URL.
+    """
+
+    from src.publishing import formatting
+
+    url = (canonical_url or "").strip()
+    if not url:
+        raise PublicationPackageError(
+            "no canonical article URL to bind — Wix publication did not "
+            "return one, so the social derivative has no destination",
+            category=PackageFailureCategory.CHANNEL_PACKAGE,
+        )
+    try:
+        return LinkedInPublicationPackage(
+            run_id=package.run_id,
+            signal_id=package.signal_id,
+            configuration_identity=package.configuration_identity,
+            source_article_digest=package.source_article_digest,
+            linkedin_body=formatting.append_canonical_article_link(
+                package.linkedin_body, url
+            ),
+            linkedin_image_url=package.linkedin_image_url,
+            canonical_article_url=url,
+            target=package.target,
+        )
+    except Exception as exc:  # noqa: BLE001 — strict model rejection fails closed
+        raise PublicationPackageError(
+            f"canonical article URL could not be bound: {exc}",
+            category=PackageFailureCategory.CHANNEL_PACKAGE,
         ) from exc
 
 

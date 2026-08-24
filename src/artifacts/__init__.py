@@ -256,6 +256,42 @@ def write_editorial_review_content_json(run_dir: Path, data: dict) -> None:
     )
 
 
+ACCEPTED_COMPOSITION_KIND = "accepted_composition"
+ACCEPTED_COMPOSITION_NOTICE = (
+    "Editorially accepted compositions preserved at the moment of acceptance, "
+    "for diagnosis and product review only. NOT publishable and never a "
+    "packaging or publication input: acceptance is one gate, not the last — "
+    "transparency, image, visual, preflight and publication gates may still "
+    "block this run, and this record says nothing about whether they did."
+)
+
+
+def write_accepted_composition_json(run_dir: Path, data: dict) -> None:
+    """Preserve accepted compositions before the remaining gates (Issue #196).
+
+    Editorial acceptance used to be the last moment the accepted article and
+    LinkedIn body were guaranteed to exist: a run blocked by any LATER gate
+    (source transparency, images, visuals, preflight) wrote no
+    ``generated.json`` and its accepted content died with the runner. Live
+    run 32666861632 accepted an article and lost it exactly this way — the
+    only route to reading it again was paying for a full regeneration.
+
+    This record is written immediately after acceptance returns ACCEPT, so
+    accepted content survives whatever happens next. It is deliberately
+    **not** ``generated.json`` and must never move earlier in its place: that
+    name means "accepted AND ready to package", and nothing loads this file —
+    ``--from-package`` reads ``generated.json`` and only ``generated.json`` —
+    so preservation cannot become a route past any gate. Deliberately absent
+    from ``CANONICAL_ARTIFACTS``: it is evidence, not authority.
+    """
+
+    atomic_write_json(
+        run_dir / "accepted_composition.json",
+        {"artifact_kind": ACCEPTED_COMPOSITION_KIND, "publishable": False,
+         "notice": ACCEPTED_COMPOSITION_NOTICE, **data},
+    )
+
+
 REJECTED_COMPOSITION_KIND = "rejected_composition"
 REJECTED_COMPOSITION_NOTICE = (
     "Composition rejected by local validation and preserved for diagnosis "

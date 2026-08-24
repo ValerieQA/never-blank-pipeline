@@ -313,7 +313,6 @@ def test_safety_and_wednesday_golden_boundaries_remain_intact():
     with pytest.raises(SourceTransparencyError):
         validate_source_transparency(
             article_body="An article that cites nothing.",
-            linkedin_body="Nor does this.",
             research=evaluator_fixtures._research(),  # noqa: SLF001
         )
     with pytest.raises(ValueError):

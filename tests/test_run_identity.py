@@ -233,6 +233,13 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "write_preflight_result_json": mock.MagicMock(),
         "build_wix_publication_package": mock.MagicMock(side_effect=legacy._fake_wix_package),
         "build_linkedin_publication_package": mock.MagicMock(side_effect=legacy._fake_linkedin_package),
+        # #196 stand-ins (see tests/test_canonical_social_lineage.py for the
+        # real enrichment + gate): the synthetic packages here would be
+        # refused by the real binder
+        "bind_canonical_article_url": mock.MagicMock(
+            side_effect=lambda package, url: package
+        ),
+        "validate_social_lineage": mock.MagicMock(return_value=None),
         "WixPublicationTarget": mock.MagicMock(return_value=mock.sentinel.wix_target),
         "LinkedInPublicationTarget": mock.MagicMock(return_value=mock.sentinel.linkedin_target),
         "load_linkedin_composition_json": mock.MagicMock(return_value={"stand-in": True}),
@@ -688,7 +695,8 @@ class TestDraftPackageRunId:
         argv, patches = _base_patches(dry_run=False)
         patches["PACKAGES_DIR"] = tmp_path
 
-        wix_r = PublishResult(platform="wix", status=PublishStatus.PUBLISHED)
+        wix_r = PublishResult(platform="wix", status=PublishStatus.PUBLISHED,
+                              url="https://example.com/wix")
         li_r  = PublishResult(platform="linkedin", status=PublishStatus.PUBLISHED)
         wix_m = mock.MagicMock()
         li_m  = mock.MagicMock()
@@ -736,7 +744,8 @@ class TestPublishResultRunId:
         argv, patches = _base_patches(dry_run=False)
         patches["PACKAGES_DIR"] = tmp_path
 
-        wix_r = PublishResult(platform="wix", status=PublishStatus.PUBLISHED)
+        wix_r = PublishResult(platform="wix", status=PublishStatus.PUBLISHED,
+                              url="https://example.com/wix")
         li_r  = PublishResult(platform="linkedin", status=PublishStatus.PUBLISHED)
         wix_m = mock.MagicMock()
         li_m  = mock.MagicMock()
@@ -847,7 +856,8 @@ class TestFromPackageRunIdentity:
         argv, patches = _base_patches(dry_run=False, from_package=True)
         patches["PACKAGES_DIR"] = tmp_path
 
-        wix_r = PublishResult(platform="wix", status=PublishStatus.PUBLISHED)
+        wix_r = PublishResult(platform="wix", status=PublishStatus.PUBLISHED,
+                              url="https://example.com/wix")
         li_r  = PublishResult(platform="linkedin", status=PublishStatus.PUBLISHED)
         wix_m = mock.MagicMock(); wix_m.publish.return_value = wix_r
         li_m  = mock.MagicMock(); li_m.publish.return_value  = li_r
@@ -880,7 +890,8 @@ class TestFromPackageRunIdentity:
         argv, patches = _base_patches(dry_run=False, from_package=True)
         patches["PACKAGES_DIR"] = tmp_path
 
-        wix_r = PublishResult(platform="wix", status=PublishStatus.PUBLISHED)
+        wix_r = PublishResult(platform="wix", status=PublishStatus.PUBLISHED,
+                              url="https://example.com/wix")
         li_r  = PublishResult(platform="linkedin", status=PublishStatus.PUBLISHED)
         wix_m = mock.MagicMock(); wix_m.publish.return_value = wix_r
         li_m  = mock.MagicMock(); li_m.publish.return_value  = li_r
