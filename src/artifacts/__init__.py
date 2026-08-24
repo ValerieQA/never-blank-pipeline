@@ -495,6 +495,20 @@ def load_run_report_json(
     return data
 
 
+def write_linkedin_final_preflight_json(run_dir: Path, data: dict) -> None:
+    """Persist the final exact-package LinkedIn authorization (Issue #196).
+
+    The trust contract is: exact frozen package → exact-package ALLOW →
+    external side effect. The canonical-URL enrichment derives a NEW frozen
+    package after the run's preflight verdict was issued, so that package
+    must receive — and this artifact preserves — its own ALLOW, bound to its
+    own digest, before the LinkedIn publisher is called. Written exactly
+    once; a collision fails closed like every other run artifact.
+    """
+
+    atomic_write_json(run_dir / "linkedin_final_preflight.json", data)
+
+
 def write_publication_results_json(run_dir: Path, data: dict) -> None:
     """
     Write publication_results.json under run_dir exactly once.

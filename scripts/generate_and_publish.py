@@ -243,6 +243,7 @@ from src.artifacts import (
     write_editorial_review_content_json,
     write_generated_json,
     write_linkedin_composition_json,
+    write_linkedin_final_preflight_json,
     write_visual_assets_json,
     write_business_strategy_snapshot,
     write_preflight_result_json,
@@ -2301,6 +2302,9 @@ def _run(
     results: dict = {}
     wix_post_id: Optional[str] = None
     wix_url = ""
+    # #196: lineage evidence for the LinkedIn attempt — set only once the
+    # enriched package exists and holds a persisted final ALLOW.
+    _li_evidence: Optional[dict] = None
     # Issue #105: typed, sanitized note when prior publication evidence could
     # not be interpreted — it never suppresses publication, but the run says so.
     _unusable_prior_evidence: Optional[dict] = None
@@ -2368,7 +2372,7 @@ def _run(
 
             # ── Canonical article link enrichment + lineage gate (#196) ──────
             # Runs AFTER the digest check, so what is proven against the
-            # preflight verdict is exactly the authorized package. The
+            # run preflight verdict is exactly the authorized package. The
             # enrichment derives a new frozen package whose only difference is
             # the deterministic link block (zero model calls — the URL comes
             # from the Wix publisher's result and nowhere else), and the
@@ -2378,6 +2382,7 @@ def _run(
             # published — a recovery run assembles the same body and is
             # recognised.
             if name == "linkedin":
+                _derived_from_digest = _package.package_digest()
                 _package = bind_canonical_article_url(_package, wix_url)
                 validate_social_lineage(
                     social_body=_package.linkedin_body,
@@ -2387,6 +2392,76 @@ def _run(
                     f"  ✓  linkedin lineage: post → canonical article "
                     f"({wix_url[:60]})"
                 )
+
+                # ── Final exact-package authorization (#196 review) ──────────
+                # The trust contract is: exact frozen package → exact-package
+                # ALLOW → external side effect. The enriched package is a
+                # DIFFERENT frozen package from the one the run preflight
+                # authorized, so it receives its own verdict from the same
+                # preflight machinery — evaluated against its own digest and
+                # persisted BEFORE the publisher can be called. Deterministic
+                # evidence and rules only; zero model calls.
+                _final_preflight = evaluate_publication_preflight(
+                    packages_dir=PACKAGES_DIR,
+                    run_id=run_ctx.run_id,
+                    signal_id=signal_id,
+                    configuration_identity=strategy_execution.identity,
+                    channel_outcomes=[
+                        ChannelPackageOutcome.valid("linkedin", _package)
+                    ],
+                    override_attempted=_override_attempted,
+                    readiness=_readiness,
+                    freshness=_freshness,
+                )
+                write_linkedin_final_preflight_json(
+                    run_dir, json.loads(_final_preflight.model_dump_json())
+                )
+                _final_verdict = _final_preflight.verdict_for("linkedin")
+                if (
+                    _final_preflight.run_disposition is PreflightDisposition.BLOCK
+                    or _final_verdict is None
+                    or _final_verdict.disposition is PreflightDisposition.BLOCK
+                ):
+                    _final_reasons = ", ".join(
+                        reason.value
+                        for reason in (
+                            *_final_preflight.run_blocking_reasons,
+                            *(
+                                _final_verdict.blocking_reasons
+                                if _final_verdict is not None else ()
+                            ),
+                        )
+                    ) or "no final preflight verdict"
+                    print(
+                        f"  ✗  {name:<12} BLOCKED by final exact-package "
+                        f"preflight ({_final_reasons}) — not published"
+                    )
+                    results[name] = {
+                        "platform": name, "status": "BLOCKED",
+                        "error_message": (
+                            f"final exact-package preflight: {_final_reasons}"
+                        ),
+                        "external_id": None, "url": None,
+                        "run_id": run_ctx.run_id,
+                    }
+                    continue
+                # The critical invariant: the digest of the package handed to
+                # the publisher IS the digest the persisted final ALLOW names.
+                if _package.package_digest() != _final_verdict.package_digest:
+                    raise ValueError(
+                        "linkedin enriched package digest does not match the "
+                        "persisted final preflight verdict"
+                    )
+                print(
+                    f"  ✓  linkedin final ALLOW bound to "
+                    f"{_final_verdict.package_digest[:16]}… "
+                    f"({run_dir / 'linkedin_final_preflight.json'})"
+                )
+                _li_evidence = {
+                    "published_package_digest": _package.package_digest(),
+                    "derived_from_digest": _derived_from_digest,
+                    "canonical_article_url": wix_url,
+                }
 
             # ── Wix retry idempotency (Issue #105 / Story #18) ───────────────
             # Runs only after this channel received preflight ALLOW and only on
@@ -2453,6 +2528,13 @@ def _run(
                 "error_message": str(exc), "external_id": None, "url": None,
                 "run_id": run_ctx.run_id,
             }
+
+    # #196: the lineage/audit fields ride on the LinkedIn result they
+    # describe — published, reused, or a failed attempt of the authorized
+    # enriched package. A LinkedIn entry blocked before enrichment carries
+    # none, honestly.
+    if _li_evidence is not None and "linkedin" in results:
+        results["linkedin"].update(_li_evidence)
 
     print()
     for platform, res in results.items():

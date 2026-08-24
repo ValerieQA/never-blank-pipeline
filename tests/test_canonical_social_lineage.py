@@ -477,3 +477,189 @@ def test_a_fully_successful_run_also_preserves_its_acceptance(tmp_path):
     code, patches, _ = _run_with_role(tmp_path, MONDAY_ROLE)
     assert code == 0
     assert len(list(tmp_path.glob("*/runs/*/accepted_composition.json"))) == 1
+
+
+# ===========================================================================
+# Final exact-package authorization (#196 review correction)
+#
+# The trust contract: exact frozen package → exact-package ALLOW → external
+# side effect. The enriched package B is a different frozen package from the
+# preflight-authorized A, so B receives its own persisted ALLOW — from the
+# same preflight machinery — before the LinkedIn publisher is called, and
+# the digest handed to the publisher must equal the digest that ALLOW names.
+# ===========================================================================
+
+
+def test_the_enriched_package_is_a_different_frozen_package():
+    package = _linkedin_package()
+    enriched = bind_canonical_article_url(package, CANONICAL_URL)
+    assert enriched.package_digest() != package.package_digest()
+
+
+def test_the_enriched_package_receives_its_own_preflight_verdict(tmp_path):
+    wix = mock.MagicMock()
+    wix.publish.return_value = _make_ok_publish_result("wix")
+    li = mock.MagicMock()
+    li.publish.return_value = _make_ok_publish_result("linkedin")
+    code, patches = _live_run(tmp_path, wix_publisher=wix, linkedin_publisher=li)
+
+    assert code == 0
+    preflight_calls = patches["evaluate_publication_preflight"].call_args_list
+    # once for the run's channel packages, once for the enriched package
+    assert len(preflight_calls) == 2
+    final_outcomes = preflight_calls[1].kwargs["channel_outcomes"]
+    assert len(final_outcomes) == 1
+    assert final_outcomes[0].channel == "linkedin"
+    # the package judged by the final verdict IS the one the binder returned
+    # and IS the one the publisher was handed
+    assert final_outcomes[0].package is li.publish.call_args.args[0]
+    # and the persisted ALLOW exists as its own run artifact
+    assert len(list(tmp_path.glob("*/runs/*/linkedin_final_preflight.json"))) == 1
+
+
+def test_the_final_allow_is_persisted_before_the_publisher_is_called(tmp_path):
+    # a publisher that fails AFTER the final ALLOW leaves the verdict behind:
+    # persistence cannot depend on the side effect it authorizes
+    wix = mock.MagicMock()
+    wix.publish.return_value = _make_ok_publish_result("wix")
+    li = mock.MagicMock()
+    li.publish.side_effect = RuntimeError("zernio 500")
+    code, _ = _live_run(tmp_path, wix_publisher=wix, linkedin_publisher=li)
+
+    assert code == 1
+    assert len(list(tmp_path.glob("*/runs/*/linkedin_final_preflight.json"))) == 1
+    results = _publication_results(tmp_path)
+    assert results["results"]["linkedin"]["status"] == "FAILED"
+
+
+def test_a_final_preflight_block_stops_the_publisher(tmp_path):
+    from types import SimpleNamespace
+
+    from src.publishing.preflight import PreflightDisposition
+
+    from tests.test_generate_and_publish import _fake_preflight
+
+    calls = []
+
+    def blocking_second_pass(**kwargs):
+        calls.append(kwargs)
+        if len(calls) == 1:
+            return _fake_preflight(**kwargs)
+        verdict = SimpleNamespace(
+            channel="linkedin",
+            disposition=PreflightDisposition.BLOCK,
+            blocking_reasons=(),
+            package_digest=None,
+        )
+        return SimpleNamespace(
+            run_disposition=PreflightDisposition.ALLOW,
+            run_blocking_reasons=(),
+            channels=(verdict,),
+            verdict_for={"linkedin": verdict}.get,
+            model_dump_json=lambda **_: "{}",
+        )
+
+    argv, patches = _entry_patches(tmp_path, dry_run=False)
+    wix = mock.MagicMock()
+    wix.publish.return_value = _make_ok_publish_result("wix")
+    li = mock.MagicMock()
+    patches["WixPublisher"] = mock.MagicMock(return_value=wix)
+    patches["LinkedInPublisher"] = mock.MagicMock(return_value=li)
+    patches["evaluate_publication_preflight"] = mock.MagicMock(
+        side_effect=blocking_second_pass
+    )
+    evaluator, _ = _evaluator(_model_output())
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+
+    assert not li.publish.called
+    results = _publication_results(tmp_path)
+    assert results["results"]["linkedin"]["status"] == "BLOCKED"
+    assert "final exact-package preflight" in (
+        results["results"]["linkedin"]["error_message"]
+    )
+    assert code == 1
+
+
+def test_a_digest_mismatch_with_the_final_verdict_fails_closed(tmp_path):
+    from types import SimpleNamespace
+
+    from src.publishing.preflight import PreflightDisposition
+
+    from tests.test_generate_and_publish import _fake_preflight
+
+    calls = []
+
+    def wrong_digest_second_pass(**kwargs):
+        calls.append(kwargs)
+        if len(calls) == 1:
+            return _fake_preflight(**kwargs)
+        verdict = SimpleNamespace(
+            channel="linkedin",
+            disposition=PreflightDisposition.ALLOW,
+            blocking_reasons=(),
+            package_digest="sha256:" + "f" * 64,   # names a different package
+        )
+        return SimpleNamespace(
+            run_disposition=PreflightDisposition.ALLOW,
+            run_blocking_reasons=(),
+            channels=(verdict,),
+            verdict_for={"linkedin": verdict}.get,
+            model_dump_json=lambda **_: "{}",
+        )
+
+    argv, patches = _entry_patches(tmp_path, dry_run=False)
+    wix = mock.MagicMock()
+    wix.publish.return_value = _make_ok_publish_result("wix")
+    li = mock.MagicMock()
+    patches["WixPublisher"] = mock.MagicMock(return_value=wix)
+    patches["LinkedInPublisher"] = mock.MagicMock(return_value=li)
+    patches["evaluate_publication_preflight"] = mock.MagicMock(
+        side_effect=wrong_digest_second_pass
+    )
+    evaluator, _ = _evaluator(_model_output())
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+
+    assert not li.publish.called
+    results = _publication_results(tmp_path)
+    assert results["results"]["linkedin"]["status"] == "FAILED"
+    assert "does not match" in results["results"]["linkedin"]["error_message"]
+    assert code == 1
+
+
+def test_the_real_machinery_binds_the_allow_to_the_enriched_digest():
+    # the invariant with the REAL preflight verdict model: the ALLOW names
+    # exactly the enriched package's digest
+    from src.publishing.preflight import ChannelPackageOutcome
+
+    enriched = bind_canonical_article_url(_linkedin_package(), CANONICAL_URL)
+    outcome = ChannelPackageOutcome.valid("linkedin", enriched)
+    assert outcome.package.package_digest() == enriched.package_digest()
+
+
+def test_publication_results_carry_the_lineage_evidence(tmp_path):
+    wix = mock.MagicMock()
+    wix.publish.return_value = _make_ok_publish_result("wix")
+    li = mock.MagicMock()
+    li.publish.return_value = _make_ok_publish_result("linkedin")
+    _, patches = _live_run(tmp_path, wix_publisher=wix, linkedin_publisher=li)
+
+    entry = _publication_results(tmp_path)["results"]["linkedin"]
+    published_package = li.publish.call_args.args[0]
+    assert entry["published_package_digest"] == published_package.package_digest()
+    assert entry["derived_from_digest"]      # the run-preflight-authorized A
+    assert entry["canonical_article_url"] == "https://example.com/wix"
+
+
+def test_a_linkedin_entry_blocked_before_enrichment_carries_no_evidence(tmp_path):
+    wix = mock.MagicMock()
+    wix.publish.side_effect = RuntimeError("wix is down")
+    li = mock.MagicMock()
+    _, _ = _live_run(tmp_path, wix_publisher=wix, linkedin_publisher=li)
+
+    entry = _publication_results(tmp_path)["results"]["linkedin"]
+    assert "published_package_digest" not in entry
+    assert "canonical_article_url" not in entry
+    # and no final verdict was fabricated for a package that never existed
+    assert not list(tmp_path.glob("*/runs/*/linkedin_final_preflight.json"))
