@@ -236,6 +236,12 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         # #196 stand-ins (see tests/test_canonical_social_lineage.py for the
         # real enrichment + gate): the synthetic packages here would be
         # refused by the real binder
+        # #200 stand-in: this harness has no network and its publish stubs
+        # carry synthetic URLs. The real contract is covered by
+        # tests/test_canonical_url.py.
+        "verify_canonical_url": mock.MagicMock(
+            side_effect=legacy._fake_canonical_verdict
+        ),
         "bind_canonical_article_url": mock.MagicMock(
             side_effect=lambda package, url: package
         ),

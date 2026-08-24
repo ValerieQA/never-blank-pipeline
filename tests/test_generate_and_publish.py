@@ -328,6 +328,20 @@ def _make_ok_publish_result(platform: str):
     return r
 
 
+def _fake_canonical_verdict(**kwargs):
+    """VERIFIED-shaped stand-in for the Issue #200 canonical URL gate."""
+    from src.publishing.canonical_url import CanonicalUrlVerdict
+    from src.publishing.result import UrlProvenance
+
+    return CanonicalUrlVerdict(
+        url=kwargs.get("url") or "",
+        provenance=UrlProvenance.PROVIDER_LOOKUP,
+        verified=bool(kwargs.get("url")),
+        http_status=200,
+        attempts=1,
+    )
+
+
 def _make_formatting_mock():
     m = mock.MagicMock()
     m.source_line.return_value = ""
@@ -430,6 +444,13 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         # identity-shaped stand-ins — the legacy packages are SimpleNamespace
         # stand-ins the real binder would refuse. The real enrichment and
         # gate are covered by tests/test_canonical_social_lineage.py.
+        # Canonical URL verification (Issue #200): verified-shaped stand-in —
+        # the harness has no network and its publish stubs carry synthetic
+        # URLs. The real resolution/verification contract is covered by
+        # tests/test_canonical_url.py.
+        "verify_canonical_url": mock.MagicMock(
+            side_effect=lambda **kw: _fake_canonical_verdict(**kw)
+        ),
         "bind_canonical_article_url": mock.MagicMock(
             side_effect=lambda package, url: package
         ),

@@ -501,11 +501,15 @@ def test_recomposition_sits_between_acceptance_and_every_later_gate():
 def test_196_sequencing_is_untouched():
     source = Path("scripts/generate_and_publish.py").read_text()
     # Wix gates LinkedIn; deterministic enrichment; final exact-package ALLOW
-    assert 'if name == "linkedin" and not wix_url:' in source     # item 19
-    assert "bind_canonical_article_url(_package, wix_url)" in source  # item 20
+    # #200 strengthened this gate from "a URL exists" to "a VERIFIED
+    # provider-sourced canonical URL exists"; the sequencing it enforces is
+    # unchanged
+    assert 'if name == "linkedin" and not _canonical_verdict_ok(' in source  # item 19
+    # #200: the bound URL is now the VERIFIED canonical one
+    assert "bind_canonical_article_url(_package, _canonical_url)" in source  # item 20
     assert "write_linkedin_final_preflight_json(" in source       # item 21
-    gate = source.index('if name == "linkedin" and not wix_url:')
-    bind = source.index("bind_canonical_article_url(_package, wix_url)")
+    gate = source.index('if name == "linkedin" and not _canonical_verdict_ok(')
+    bind = source.index("bind_canonical_article_url(_package, _canonical_url)")
     allow = source.index("write_linkedin_final_preflight_json(")
     publish = source.index("_r1_cls[name]().publish(")
     assert gate < bind < allow < publish

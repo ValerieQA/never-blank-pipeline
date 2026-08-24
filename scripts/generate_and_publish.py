@@ -227,6 +227,10 @@ from src.publishing.package import (
     build_wix_publication_package,
     canonical_slug,
 )
+from src.publishing.canonical_url import (
+    CanonicalUrlVerdict,
+    verify_canonical_url,
+)
 from src.publishing.result import PublishResult, PublishStatus
 from src.publishing.telegram import TelegramPublisher
 from src.publishing.threads import ThreadsPublisher
@@ -2402,6 +2406,36 @@ def _run(
     results: dict = {}
     wix_post_id: Optional[str] = None
     wix_url = ""
+    # #200: the canonical URL is what social will point readers at, so it is
+    # only usable once the PROVIDER produced it and it actually resolves to
+    # this post. The verdict is evidence either way.
+    _canonical_verdict = None
+
+    def _verify_canonical(result) -> "CanonicalUrlVerdict":
+        verdict = verify_canonical_url(
+            url=result.url or "",
+            provenance=result.url_provenance,
+            expected_host=os.environ.get("NB_WIX_SITE_BASE_URL", ""),
+            # the PROVIDER's slug, never one derived locally (#200)
+            slug=getattr(result, "provider_slug", None) or "",
+        )
+        if verdict.verified:
+            print(
+                f"  ✓  canonical article URL verified "
+                f"[{verdict.provenance.value}, HTTP {verdict.http_status}]: "
+                f"{verdict.url[:70]}"
+            )
+        else:
+            print(
+                f"  ✗  canonical article URL NOT verified "
+                f"({verdict.failure_reason}) — social publication will not "
+                "be attempted; the Wix article stays published"
+            )
+        return verdict
+
+    def _canonical_verdict_ok(verdict) -> bool:
+        return verdict is not None and verdict.verified
+
     # #196: lineage evidence for the LinkedIn attempt — set only once the
     # enriched package exists and holds a persisted final ALLOW.
     _li_evidence: Optional[dict] = None
@@ -2435,18 +2469,28 @@ def _run(
         # blocked, failed, or published without returning one — means there
         # is nothing to distribute, so LinkedIn is NOT attempted. The
         # channels are no longer independent publication siblings.
-        if name == "linkedin" and not wix_url:
+        # #200: and it must be a URL the PROVIDER produced and that actually
+        # resolves. A locally constructed route is a guess about site
+        # configuration: run 32740322282 published a social post pointing at
+        # exactly such a guess, and it returned 404. No verified canonical
+        # URL — no social publication.
+        if name == "linkedin" and not _canonical_verdict_ok(_canonical_verdict):
             _wix_status = results.get("wix", {}).get("status", "not attempted")
+            _why = (
+                _canonical_verdict.failure_reason
+                if _canonical_verdict is not None else "wix_not_published"
+            )
             print(
-                f"  ✗  {name:<12} NOT ATTEMPTED — no canonical article URL "
-                f"(wix: {_wix_status}); social distributes the published "
-                "article, so there is nothing to publish behind"
+                f"  ✗  {name:<12} NOT ATTEMPTED — no verified canonical "
+                f"article URL ({_why}; wix: {_wix_status}); social "
+                "distributes the published article, so there is nothing to "
+                "publish behind"
             )
             results[name] = {
                 "platform": name, "status": "BLOCKED",
                 "error_message": (
-                    "no canonical article URL — Wix publication did not "
-                    f"succeed (wix status: {_wix_status})"
+                    f"no verified canonical article URL ({_why}) — "
+                    f"wix status: {_wix_status}"
                 ),
                 "external_id": None, "url": None, "run_id": run_ctx.run_id,
             }
@@ -2483,14 +2527,17 @@ def _run(
             # recognised.
             if name == "linkedin":
                 _derived_from_digest = _package.package_digest()
-                _package = bind_canonical_article_url(_package, wix_url)
+                # #200: bind the VERIFIED canonical URL — the same string the
+                # verdict above proved reachable and post-identifying.
+                _canonical_url = _canonical_verdict.url
+                _package = bind_canonical_article_url(_package, _canonical_url)
                 validate_social_lineage(
                     social_body=_package.linkedin_body,
-                    canonical_url=wix_url,
+                    canonical_url=_canonical_url,
                 )
                 print(
                     f"  ✓  linkedin lineage: post → canonical article "
-                    f"({wix_url[:60]})"
+                    f"({_canonical_url[:60]})"
                 )
 
                 # ── Final exact-package authorization (#196 review) ──────────
@@ -2560,7 +2607,7 @@ def _run(
                 _li_evidence = {
                     "published_package_digest": _package.package_digest(),
                     "derived_from_digest": _derived_from_digest,
-                    "canonical_article_url": wix_url,
+                    "canonical_article_url": _canonical_url,
                 }
 
             # ── Wix retry idempotency (Issue #105 / Story #18) ───────────────
@@ -2611,6 +2658,7 @@ def _run(
                     if name == "wix":
                         wix_post_id = result.external_id
                         wix_url = result.url or ""
+                        _canonical_verdict = _verify_canonical(result)
                     continue
 
             result = _r1_cls[name]().publish(
@@ -2621,6 +2669,7 @@ def _run(
             if name == "wix" and result.ok():
                 wix_post_id = result.external_id
                 wix_url     = result.url or ""
+                _canonical_verdict = _verify_canonical(result)
         except Exception as exc:
             log.error("%s publish error: %s", name, exc)
             results[name] = {
@@ -2675,6 +2724,14 @@ def _run(
             results.get("wix", {}).get("reused_from_run_id")
         ),
         "unusable_prior_publication_evidence": _unusable_prior_evidence,
+        # #200: how the canonical article URL was established, and why it
+        # was refused when it was. A refused candidate is preserved here
+        # with its provenance so the failure is diagnosable without
+        # republishing anything.
+        "canonical_url_verification": (
+            _canonical_verdict.as_audit_dict()
+            if _canonical_verdict is not None else None
+        ),
     }
     try:
         write_publication_results_json(run_dir, _pub_results_data)

@@ -275,7 +275,8 @@ class WixPublisher(BasePublisher):
 
             post     = resp2.get("post", {})
             post_id  = post.get("id", "") or resp2.get("postId", "")
-            post_url = post.get("url", "")
+            # #200: the provider types this as a PageUrl object, not a string
+            post_url = page_url_to_str(post.get("url"))
             url_provenance = (
                 UrlProvenance.PROVIDER_CONFIRMED if post_url
                 else UrlProvenance.UNAVAILABLE
@@ -288,11 +289,16 @@ class WixPublisher(BasePublisher):
                 )
 
             # ── Step 6: Resolve URL if not in publish response ────────────────
+            provider_slug = post.get("slug", "") or ""
             if not post_url:
-                post_url, url_provenance = _resolve_post_url(post_id, headers)
+                post_url, url_provenance, provider_slug = _resolve_post_url(
+                    post_id, headers
+                )
 
             result = self._published(external_id=post_id, url=post_url)
             result.url_provenance = url_provenance
+            # #200: the provider's own slug, for post-identity verification
+            result.provider_slug = provider_slug or None
             return result
 
         except WixPublisherError as exc:
@@ -351,26 +357,62 @@ def _verify_draft(
         )
 
 
-def _resolve_post_url(post_id: str, headers: dict) -> tuple[str, UrlProvenance]:
-    """
-    GET /blog/v3/posts/{post_id} to find the actual published URL.
-    Returns the URL together with its truthful origin (Issue #105): a URL
-    Never Blank constructed locally is never reported as provider-confirmed.
-    An absent URL is non-critical — the post is published either way.
+#: The provider's URL field is an opt-in fieldset. Without it the response
+#: carries only base fields and ``url`` is simply absent — which is why live
+#: run 32740322282 logged ``post.url=—`` and fell through to a locally
+#: constructed route that returned 404 (Issue #200). The documented values
+#: are URL, CONTENT_TEXT, METRICS, SEO, CONTACT_ID, RICH_CONTENT.
+_URL_FIELDSET = "URL"
 
-    Fallback: if Wix confirms the post exists (HTTP 200) but post.url is absent,
-    and both slug and NB_WIX_SITE_BASE_URL are available, constructs the canonical
-    URL locally. This is Never Blank-specific (assumes /blog/{slug} path format).
-    Logs the URL source so future readers can tell whether the URL came from the
-    Wix API or was constructed locally.
+
+def page_url_to_str(value: object) -> str:
+    """Render the provider's ``PageUrl`` object as an absolute URL (#200).
+
+    The provider types this field as an object — ``{"base": …, "path": …}``,
+    where ``base`` is the site domain and ``path`` the site-relative page
+    path. Reading it as a string silently yields a stringified dict, so the
+    "provider-confirmed" branch never actually worked. A plain string is
+    still accepted defensively: if the provider ever returns one, it is
+    already the answer.
+    """
+    if isinstance(value, str):
+        return value.strip()
+    if not isinstance(value, dict):
+        return ""
+    base = str(value.get("base") or "").strip().rstrip("/")
+    path = str(value.get("path") or "").strip()
+    if not base or not path:
+        return ""
+    if not path.startswith("/"):
+        path = "/" + path
+    return f"{base}{path}"
+
+
+def _resolve_post_url(
+    post_id: str, headers: dict
+) -> tuple[str, UrlProvenance, str]:
+    """Ask the provider for this post's real public URL (Issue #200).
+
+    ``GET /blog/v3/posts/{post_id}?fieldsets=URL`` is the provider's own
+    retrieve-by-ID path, and the ``URL`` fieldset is what makes it return
+    the ``PageUrl``. The returned ``base``/``path`` describe the route the
+    site actually serves, so no assumption about the public path shape is
+    made here at all.
+
+    A locally constructed route is still recorded when the provider gives
+    us nothing but a slug — as ``LOCALLY_DERIVED`` evidence for diagnosis.
+    It is deliberately NOT canonical: run 32740322282 published a social
+    post pointing at exactly such a construction and it returned 404. The
+    caller decides what may be canonical; provenance is how it knows.
     """
     code, resp, _ = _fetch(
-        f"https://www.wixapis.com/blog/v3/posts/{post_id}",
+        f"https://www.wixapis.com/blog/v3/posts/{post_id}"
+        f"?fieldsets={_URL_FIELDSET}",
         method="GET", headers=headers,
     )
     post_obj = resp.get("post", {})
     slug     = post_obj.get("slug", "")
-    api_url  = post_obj.get("url", "")
+    api_url  = page_url_to_str(post_obj.get("url"))
 
     _log.info(
         "wix step6 resolve-url: HTTP %s | post.slug=%s | post.url=%s",
@@ -378,28 +420,27 @@ def _resolve_post_url(post_id: str, headers: dict) -> tuple[str, UrlProvenance]:
     )
 
     if code not in (200, 201):
-        return "", UrlProvenance.UNAVAILABLE
+        return "", UrlProvenance.UNAVAILABLE, ""
 
-    # URL came directly from Wix API — preferred path
     if api_url:
-        _log.info("wix URL source: api | url=%s", api_url)
-        return api_url, UrlProvenance.PROVIDER_CONFIRMED
+        _log.info("wix URL source: provider_lookup | url=%s", api_url)
+        return api_url, UrlProvenance.PROVIDER_LOOKUP, slug
 
-    # Fallback: Wix confirmed the post exists (HTTP 200) but returned no url.
-    # Construct from base + slug only when all conditions are met:
-    #   1. slug is confirmed from the GET /posts/{id} response (not constructed locally)
-    #   2. NB_WIX_SITE_BASE_URL is configured
-    # This is NB-specific: assumes public blog path is {base}/blog/{slug}.
+    # The provider confirmed the post but produced no URL. A route built
+    # from base + slug is a guess about site configuration — recorded, never
+    # canonical (#200).
     if slug:
         base = os.getenv("NB_WIX_SITE_BASE_URL", "").rstrip("/")
         if base:
-            url = f"{base}/blog/{slug}"
-            _log.info("wix URL source: fallback_base_plus_slug | base=%s | url=%s", base, url)
-            return url, UrlProvenance.LOCALLY_DERIVED
-        else:
+            url = f"{base}/{slug}"
             _log.warning(
-                "wix URL source: fallback skipped — slug=%s but NB_WIX_SITE_BASE_URL is empty",
-                slug,
+                "wix URL source: locally_derived (NOT canonical) | base=%s | url=%s",
+                base, url,
             )
+            return url, UrlProvenance.LOCALLY_DERIVED, slug
+        _log.warning(
+            "wix URL source: no route candidate — slug=%s but NB_WIX_SITE_BASE_URL is empty",
+            slug,
+        )
 
-    return "", UrlProvenance.UNAVAILABLE
+    return "", UrlProvenance.UNAVAILABLE, slug

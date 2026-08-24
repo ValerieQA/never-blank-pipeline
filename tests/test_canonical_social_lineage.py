@@ -294,7 +294,7 @@ def test_wix_failure_means_linkedin_is_not_attempted(tmp_path):  # item 3
     results = _publication_results(tmp_path)
     assert results["results"]["wix"]["status"] == "FAILED"
     assert results["results"]["linkedin"]["status"] == "BLOCKED"
-    assert "no canonical article URL" in (
+    assert "no verified canonical article URL" in (
         results["results"]["linkedin"]["error_message"]
     )
     assert results["wix_url"] == ""

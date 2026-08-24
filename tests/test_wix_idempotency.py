@@ -483,23 +483,39 @@ def test_prior_record_without_provenance_is_not_promoted(tmp_path, monkeypatch):
 # ── URL provenance at the adapter boundary ───────────────────────────────────
 
 
-def test_provider_returned_url_is_provider_confirmed():
-    with mock.patch("src.publishing.wix._fetch", return_value=(
-        200, {"post": {"slug": "the-slug", "url": PROVIDER_URL}}, ""
-    )):
-        url, provenance = _resolve_post_url("post-1", {})
-    assert url == PROVIDER_URL
-    assert provenance is UrlProvenance.PROVIDER_CONFIRMED
+def test_provider_returned_url_is_a_provider_lookup(monkeypatch):
+    # #200: the provider types this field as PageUrl{base, path}; reading it
+    # as a string is what made the "provider-confirmed" branch unreachable
+    captured = {}
+
+    def fake_fetch(url, *, method="GET", headers=None, body=None, timeout=20):
+        captured["url"] = url
+        return 200, {"post": {
+            "slug": "the-slug",
+            "url": {"base": "https://neverblank.co", "path": "/post/the-slug"},
+        }}, ""
+
+    with mock.patch("src.publishing.wix._fetch", side_effect=fake_fetch):
+        url, provenance, slug = _resolve_post_url("post-1", {})
+    assert url == "https://neverblank.co/post/the-slug"
+    assert provenance is UrlProvenance.PROVIDER_LOOKUP
+    assert slug == "the-slug"
+    # the URL field is opt-in — it must actually be requested
+    assert "fieldsets=URL" in captured["url"]
 
 
-def test_local_fallback_is_locally_derived(monkeypatch):
+def test_a_route_built_locally_is_recorded_but_never_canonical(monkeypatch):
+    # #200: when the provider gives only a slug, a constructed route is
+    # diagnostic evidence — its provenance disqualifies it from becoming the
+    # canonical article URL, whatever path shape it happens to have
     monkeypatch.setenv("NB_WIX_SITE_BASE_URL", "https://neverblank.co/")
     with mock.patch("src.publishing.wix._fetch", return_value=(
         200, {"post": {"slug": "the-slug"}}, ""
     )):
-        url, provenance = _resolve_post_url("post-1", {})
-    assert url == "https://neverblank.co/blog/the-slug"
+        url, provenance, slug = _resolve_post_url("post-1", {})
     assert provenance is UrlProvenance.LOCALLY_DERIVED
+    assert provenance.is_provider_sourced() is False
+    assert slug == "the-slug"
 
 
 def test_no_usable_url_is_unavailable(monkeypatch):
@@ -507,12 +523,12 @@ def test_no_usable_url_is_unavailable(monkeypatch):
     with mock.patch("src.publishing.wix._fetch", return_value=(
         200, {"post": {"slug": "the-slug"}}, ""
     )):
-        url, provenance = _resolve_post_url("post-1", {})
+        url, provenance, _slug = _resolve_post_url("post-1", {})
     assert url == ""
     assert provenance is UrlProvenance.UNAVAILABLE
 
     with mock.patch("src.publishing.wix._fetch", return_value=(404, {}, "")):
-        url, provenance = _resolve_post_url("post-1", {})
+        url, provenance, _slug = _resolve_post_url("post-1", {})
     assert (url, provenance) == ("", UrlProvenance.UNAVAILABLE)
 
 

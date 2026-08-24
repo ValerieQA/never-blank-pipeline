@@ -546,7 +546,7 @@ def test_missing_wix_credential_blocks_wix_and_therefore_linkedin(tmp_path, monk
     )
     assert published["results"]["wix"]["status"] == "BLOCKED"
     assert published["results"]["linkedin"]["status"] == "BLOCKED"
-    assert "no canonical article URL" in published["results"]["linkedin"]["error_message"]
+    assert "no verified canonical article URL" in published["results"]["linkedin"]["error_message"]
     assert published["completed"] is False
 
 
