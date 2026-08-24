@@ -285,14 +285,14 @@
         "Preserve the approved Echo verbatim when the article has one."
       ],
       "link_rules": [
-        "Use the verified Wix article URL when the composition calls for a link.",
+        "Never write a link into the post. The system appends the verified canonical URL of this run's published Never Blank article after publication, and that is the post's only destination.",
         "Place source or article links according to the approved composition without placeholder URLs.",
         "Do not report a generic LinkedIn feed URL as the created publication URL."
       ],
       "cta_rules": [
         "Follow the configured CTA mode exactly.",
         "When present, use a paragraph-length invitation tied to the post and place it before the Echo.",
-        "Close with a contextual Never Blank perspective grounded in this post's evidence-supported mechanism, then invite the reader to continue at https://www.inneros.online.",
+        "Close with a contextual Never Blank perspective grounded in this post's evidence-supported mechanism, then invite the reader onward in prose. Never name, write or choose a destination URL here: the link to this run's published Never Blank article is appended by the system after publication. If the supplied CTA line names a URL, keep its invitation prose and leave the URL out.",
         "When CTA mode is none, do not add an invitation.",
         "The invitation makes no claim about what Never Blank can do or achieve for the reader."
       ],
@@ -436,7 +436,7 @@
       "linkedin_rules": [
         "Compose a native compressed LinkedIn version of the same central Golden discovery; do not truncate the Wix article or introduce a second argument.",
         "Preserve X, Y, the primary mechanism, the evidence boundary, the bounded question, and the contextual Never Blank close.",
-        "Use the configured reflection CTA and canonical website destination https://www.inneros.online."
+        "Use the configured reflection CTA as invitation prose only. Do not name a destination URL; the system supplies this article's canonical link after publication."
       ],
       "require_source_transparency": true,
       "acceptance_rubric_path": "config/prompts/editorial_acceptance/never_blank_golden_wednesday.yaml",

@@ -390,9 +390,12 @@ def test_golden_rules_reach_the_existing_wix_and_linkedin_prompt_constructor(pro
         assert "exactly one primary mechanism" in prompt
         assert "5 lessons from X" in prompt
         assert "3 takeaways" in prompt
-        assert SITE in prompt
     assert "evidence-grounded title tension" in wix_prompt
     assert "native compressed LinkedIn" in linkedin_prompt
+    # #203: the destination is surface-scoped — the article names it, the
+    # social derivative never does (the system appends the canonical link)
+    assert SITE in wix_prompt
+    assert SITE not in linkedin_prompt
 
 
 class _AcceptingReviewer:
@@ -700,3 +703,120 @@ def test_wednesday_workflow_does_not_import_monday_product_policy():
     assert "monday_publish" not in text
     assert "small-business evidence" not in text
     assert Path(".github/workflows/monday_publish.yml").exists()
+
+
+# ===========================================================================
+# Issue #203: the social CTA invites in prose; the system owns the destination
+#
+# The Wednesday audit found the LinkedIn prompt carrying two instructions no
+# output could satisfy at once — "invite the reader to continue at
+# <landing page>" against #196's "never write any URL in the post". Following
+# the first put a competing URL in the body, which the social-lineage gate
+# then refused *after* Wix had already published. Wednesday keeps its CTA;
+# only the destination moved to the system.
+# ===========================================================================
+
+
+def _wednesday_linkedin_prompt():
+    """The prompt the entrypoint actually composes for the social surface."""
+    from src.editorial.sources_of_record import render_sources_of_record
+    from src.strategy.execution_context import StrategyExecutionContext
+    from tests.test_monday_stream import _research_artifact
+
+    configuration = load_business_strategy_configuration(BUSINESS_CONFIG)
+    _, role = resolve_editorial_role(configuration, ROLE_ID)
+    execution = StrategyExecutionContext.from_configuration(configuration)
+    rules = (
+        render_editorial_role_rules(role, surface="linkedin")
+        + render_sources_of_record(_research_artifact(), surface="linkedin")
+    )
+    return _build_user_prompt(
+        {"hook": "h", "discovery": {}, "echo_line": "E.", "cta_line": "Continue."},
+        "medium", role.cta_mode or "reflection",
+        _linkedin_rules(execution.linkedin), editorial_role_rules=rules,
+        closing_contract=role.closing_contract,
+    )
+
+
+def test_the_social_prompt_names_no_destination_url():
+    import re
+
+    prompt = _wednesday_linkedin_prompt()
+    offending = [
+        line.strip() for line in prompt.splitlines()
+        if re.search(r"https?://", line)
+    ]
+    assert offending == [], offending
+
+
+def test_the_social_prompt_still_asks_for_invitation_prose():
+    # the CTA behaviour is kept — only the URL moved to the system
+    prompt = _wednesday_linkedin_prompt().lower()
+    assert "invite the reader onward in prose" in prompt
+    assert "appended by the system after publication" in prompt
+    # and a supplied CTA line carrying a URL has an unambiguous instruction
+    assert "keep its invitation prose and leave the url out" in prompt
+
+
+def test_wednesday_keeps_its_cta_mode():
+    configuration = load_business_strategy_configuration(BUSINESS_CONFIG)
+    _, role = resolve_editorial_role(configuration, ROLE_ID)
+    # deliberately NOT switched to "none" — Wednesday still invites
+    assert role.cta_mode is None          # inherits the strategy default
+    assert role.closing_contract == "invitation_last"
+
+
+def test_the_article_surface_still_owns_its_destination():
+    # the correction is social-scoped: the Wix invitation is untouched
+    channels = json.loads(BUSINESS_CONFIG.read_text())["channels"]
+    assert any("inneros.online" in rule for rule in channels["wix"]["cta_rules"])
+    assert not any("http" in rule for rule in channels["linkedin"]["cta_rules"])
+    assert not any("http" in rule for rule in channels["linkedin"]["link_rules"])
+
+
+def test_the_landing_page_url_would_still_fail_the_lineage_gate():
+    # the #196 gate is untouched — this is why the contradiction mattered
+    from src.editorial.source_transparency import (
+        SocialLineageError,
+        validate_social_lineage,
+    )
+    from src.publishing.formatting import append_canonical_article_link
+
+    canonical = f"{SITE}/post/a-wednesday-article"
+    body = append_canonical_article_link(
+        "Post prose.\n\nContinue at https://www.inneros.online.\n\n"
+        "Never Blank: an adapted close.",
+        canonical,
+    )
+    with pytest.raises(SocialLineageError):
+        validate_social_lineage(social_body=body, canonical_url=canonical)
+    # while the corrected shape — prose CTA, one system-supplied link — passes
+    clean = append_canonical_article_link(
+        "Post prose.\n\nIf that pattern is familiar, it is worth a look.\n\n"
+        "Never Blank: an adapted close.",
+        canonical,
+    )
+    validate_social_lineage(social_body=clean, canonical_url=canonical)
+
+
+def test_monday_social_prompt_is_unaffected():
+    from src.editorial.sources_of_record import render_sources_of_record
+    from src.strategy.execution_context import StrategyExecutionContext
+    from tests.test_monday_stream import MONDAY_ROLE, _research_artifact
+
+    configuration = load_business_strategy_configuration(BUSINESS_CONFIG)
+    _, role = resolve_editorial_role(configuration, MONDAY_ROLE)
+    execution = StrategyExecutionContext.from_configuration(configuration)
+    assert role.cta_mode == "none"          # Monday's own contract untouched
+    rules = (
+        render_editorial_role_rules(role, surface="linkedin")
+        + render_sources_of_record(_research_artifact(), surface="linkedin")
+    )
+    prompt = _build_user_prompt(
+        {"hook": "h", "discovery": {}, "echo_line": "E."},
+        "medium", role.cta_mode, _linkedin_rules(execution.linkedin),
+        editorial_role_rules=rules, closing_contract=role.closing_contract,
+    )
+    import re
+
+    assert not re.search(r"https?://", prompt)
