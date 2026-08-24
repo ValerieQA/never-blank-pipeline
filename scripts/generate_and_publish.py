@@ -162,7 +162,11 @@ from src.editorial.source_transparency import (
     validate_social_lineage,
     validate_source_transparency,
 )
-from src.editorial.pipeline import ArticleGenerationError, generate_article
+from src.editorial.pipeline import (
+    ArticleGenerationError,
+    generate_article,
+    recompose_platform,
+)
 from src.editorial.decision_lens_evaluator import (
     DecisionLensEvaluator,
     production_evaluator,
@@ -1834,24 +1838,115 @@ def _run(
             f"[{_acceptance_rubric.identity}]"
         )
 
+        # #196/#197: one record of the accepted compositions and how the
+        # social derivative relates to the revision, filled in below.
+        _accepted_record = {
+            "run_id": run_ctx.run_id,
+            "signal_id": signal_id,
+            "assignment_id": assignment.assignment_id,
+            "editorial": {
+                "rubric": _acceptance_rubric.identity,
+                "revised": _acceptance.revised,
+            },
+        }
+        _social_recomposed = False
+
+        # ── Social re-composition after revision (Issue #197) ────────────────
+        # The canonical content model: final canonical article → channel lens
+        # → social derivative. When acceptance revised the article, the
+        # social body composed alongside the ORIGINAL article no longer
+        # derives from the content that survived review — live run
+        # 32725156081 proved the Story #13 guard then (correctly) kills the
+        # whole run. The missing operation is re-composition: one composition
+        # stage, same channel lens and validators, with the FINAL accepted
+        # article as the authoritative source. Nothing else is regenerated —
+        # not research, not the article, not the title, not the Echo (it
+        # still arrives verbatim from the structured article) — and the
+        # stale body is preserved as evidence, never published, never a
+        # fallback.
+        if _acceptance.revised:
+            _stale_social_body = linkedin_text
+            _accepted_record["social_recomposition"] = {
+                "performed": False,
+                "reason": (
+                    "editorial acceptance revised the article after the "
+                    "social composition was produced; the pre-revision "
+                    "composition is stale and was discarded"
+                ),
+                "stale_composition_discarded": _stale_social_body,
+            }
+            try:
+                _recomposed = recompose_platform(
+                    structured,
+                    "medium",
+                    canonical_body=blog_body,
+                    cta_mode=cta_mode,
+                    linkedin_strategy=strategy_execution.linkedin,
+                    editorial_role_rules=_editorial_role_rules,
+                    closing_contract=(
+                        _role.closing_contract if _role is not None else None
+                    ),
+                    research_artifact=research_artifact,
+                    rejected_sink=_rejected_compositions,
+                )
+                linkedin_text = _recomposed["body"]
+                _social_recomposed = True
+                _accepted_record["social_recomposition"]["performed"] = True
+                print(
+                    f"  ✓  social derivative re-composed from the final "
+                    f"accepted article ({_recomposed['word_count']} words)"
+                )
+            except ArticleGenerationError as exc:
+                # Fail closed before any later gate or side effect: the run
+                # has a final accepted article and no valid social
+                # derivative. Preserve both facts honestly — Article B with
+                # NO social body (the stale one is evidence, not content) —
+                # and every rejected attempt for diagnosis.
+                print(
+                    "  ERROR: social re-composition failed after revision: "
+                    f"{exc.original} — the stale pre-revision composition is "
+                    "never a fallback; the run stops"
+                )
+                _persist_rejected_compositions(run_dir, _rejected_compositions)
+                _accepted_record["social_recomposition"]["error"] = (
+                    f"{type(exc.original).__name__}: {exc.original}"
+                )
+                _accepted_record["content"] = {
+                    "title": headline,
+                    "echo": echo_line,
+                    "article_body": blog_body,
+                    "linkedin_body": None,
+                }
+                try:
+                    write_accepted_composition_json(run_dir, _accepted_record)
+                    print(
+                        "  ✓  accepted article preserved without a social "
+                        f"derivative: {run_dir / 'accepted_composition.json'}"
+                    )
+                except (ArtifactCollisionError, OSError) as exc2:
+                    print(f"  ⚠  accepted article could not be preserved: {exc2}")
+                state.ended(
+                    TerminalStage.LINKEDIN_COMPOSITION,
+                    TerminalDisposition.BLOCKED,
+                    f"social recomposition: {type(exc.original).__name__}",
+                )
+                return 1
+
         # Issue #196: preserve the accepted compositions NOW, before the
         # remaining gates. A run blocked downstream (transparency, images,
         # visuals, preflight) used to lose its accepted article with the
         # runner — live run 32666861632 cost a full regeneration to learn
         # what it had written. Diagnostic evidence only: publishable=false,
         # not canonical, and nothing (including --from-package) loads it, so
-        # preservation can never become a route past a gate.
+        # preservation can never become a route past a gate. #197: written
+        # after re-composition, so the record holds the final internally
+        # consistent pair — never the revised article beside a stale social
+        # body presented as accepted.
         try:
             write_accepted_composition_json(
                 run_dir,
                 {
-                    "run_id": run_ctx.run_id,
-                    "signal_id": signal_id,
-                    "assignment_id": assignment.assignment_id,
-                    "editorial": {
-                        "rubric": _acceptance_rubric.identity,
-                        "revised": _acceptance.revised,
-                    },
+                    **_accepted_record,
                     "content": {
                         "title": headline,
                         "echo": echo_line,
@@ -1976,7 +2071,12 @@ def _run(
                 article_body=blog_body,
                 # Truthful Story #13 seam: a revised article invalidates the
                 # pre-revision LinkedIn composition (fail closed, new run).
-                article_revised=_acceptance.revised,
+                # #197: staleness means "the article was revised AFTER this
+                # body was composed". A re-composed body derives from the
+                # final accepted article, so it is not stale; the guard
+                # itself is untouched and still kills any path that would
+                # hand it a pre-revision body.
+                article_revised=_acceptance.revised and not _social_recomposed,
                 run_id=run_ctx.run_id,
                 signal_id=signal_id,
                 configuration_identity=strategy_execution.identity,

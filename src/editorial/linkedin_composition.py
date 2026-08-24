@@ -126,8 +126,10 @@ def accept_linkedin_composition(
     revision may survive in it. Release 1 fails closed: a stale
     pre-revision LinkedIn body can never become ``ACCEPTED`` or publishable,
     and no record is written whose digest would claim a composition
-    relationship that did not exist. The remedy follows existing new-run
-    semantics (a fresh run composes all bodies from one content state).
+    relationship that did not exist. The remedy is re-composition from the
+    final accepted article (#197, ``recompose_platform``); the caller passes
+    ``article_revised=False`` for a body composed AFTER the revision, and
+    this guard still kills any path that hands it a pre-revision body.
     """
 
     if article_revised:

@@ -403,8 +403,12 @@ def test_revision_regenerates_no_other_channels(tmp_path):
     assert patches["generate_article"].call_count == 1
     generated = _generated(tmp_path)
     assert "Channel-discipline revised body." in generated["blog_article"]
-    # other channels keep their originally generated bodies
-    assert generated["linkedin_post"].startswith("LinkedIn post text.")
+    # #197: the published social derivative follows the final accepted
+    # article — LinkedIn is re-composed (never regenerated wholesale, never
+    # kept stale); the non-R1 channels keep their originally generated
+    # bodies because nothing publishes them
+    assert patches["recompose_platform"].call_count == 1
+    assert generated["linkedin_post"].startswith("Re-composed social body")
     assert generated["facebook_post"].startswith("Facebook post text.")
     assert generated["instagram_caption"].startswith("Instagram caption text.")
     # the revision request contained only the one article

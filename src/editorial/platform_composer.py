@@ -380,6 +380,7 @@ def _build_user_prompt(
     strategy_rules: tuple[str, ...] = (),
     editorial_role_rules: str | None = None,
     closing_contract: str = CLOSING_INVITATION_LAST,
+    canonical_body: str | None = None,
 ) -> str:
     lo, hi = _WORD_RANGE[format_key]
     lines = [
@@ -391,6 +392,30 @@ def _build_user_prompt(
         "",
         "STRUCTURED FIELDS:",
     ]
+    if canonical_body:
+        # #197: this composition is a DERIVATIVE of already-accepted
+        # long-form content (an editorial revision changed it after the
+        # structured outline was produced). The final content is the
+        # authority; the outline remains context.
+        lines[:0] = [
+            "FINAL CANONICAL CONTENT — the accepted long-form this "
+            "composition must derive from. Its facts, framing and single "
+            "mechanism are authoritative: never introduce a claim that is "
+            "not supported by it, and where the structured fields below "
+            "differ from it, the final content wins. Write this format's "
+            "prose as your own derivative of that content rather than "
+            "copying its paragraphs or sentences wholesale — reused "
+            "long-form prose is rejected as non-channel-native. This rule "
+            "governs ORDINARY PROSE ONLY: any element an instruction below "
+            "requires to appear verbatim (the ECHO MODE line, for example) "
+            "must still be reproduced exactly as supplied, even when the "
+            "same wording also appears in the content above. Those "
+            "requirements are exceptions to this one, never conflicts with "
+            "it.",
+            "",
+            canonical_body,
+            "",
+        ]
     if strategy_rules:
         lines.extend(
             ["", "CONFIGURED CHANNEL RULES:"]
@@ -460,6 +485,7 @@ def _compose_one(
     editorial_role_rules: str | None = None,
     closing_contract: str = CLOSING_INVITATION_LAST,
     source_identities: "tuple[tuple[str, ...], ...]" = (),
+    canonical_body: "str | None" = None,
 ) -> dict:
     model = model_article() if format_key in ("long", "reading") else model_social()
     raw = chat(
@@ -468,6 +494,7 @@ def _compose_one(
             structured_article, format_key, cta_mode, strategy_rules,
             editorial_role_rules=editorial_role_rules,
             closing_contract=closing_contract,
+            canonical_body=canonical_body,
         ),
         json_mode=True,
         model=model,
@@ -557,6 +584,7 @@ def compose_platforms(
     formats: "tuple[str, ...] | None" = None,
     closing_contract: str = CLOSING_INVITATION_LAST,
     source_identities: "tuple[tuple[str, ...], ...]" = (),
+    canonical_body: "str | None" = None,
 ) -> dict:
     """Compose one native body per requested format.
 
@@ -597,6 +625,10 @@ def compose_platforms(
             ),
             closing_contract=closing_contract,
             source_identities=source_identities,
+            # #197: when set, this composition derives from already-accepted
+            # final long-form content (post-revision re-composition) rather
+            # than from the structured outline alone.
+            canonical_body=canonical_body,
         )
         log.info("Platform Composer: %s -> %d words", format_key, result[format_key]["word_count"])
     return result

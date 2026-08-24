@@ -434,6 +434,14 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
             side_effect=lambda package, url: package
         ),
         "validate_social_lineage": mock.MagicMock(return_value=None),
+        # Social re-composition after revision (Issue #197): fresh-body
+        # stand-in — the real seam is covered by
+        # tests/test_social_recomposition.py. Harness acceptance never
+        # revises, so this is inert unless a test drives a revision.
+        "recompose_platform": mock.MagicMock(return_value={
+            "body": "Re-composed social body derived from the final accepted article.",
+            "word_count": 150, "echo_included": True, "title": None,
+        }),
         "WixPublicationTarget": mock.MagicMock(return_value=mock.sentinel.wix_target),
         "LinkedInPublicationTarget": mock.MagicMock(return_value=mock.sentinel.linkedin_target),
         "load_linkedin_composition_json": mock.MagicMock(return_value={"stand-in": True}),

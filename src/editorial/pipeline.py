@@ -28,6 +28,7 @@ from src.editorial.reader_context import build_reader_context
 from src.editorial.discovery_builder import build_discovery
 from src.editorial.story_assembly import assemble_story
 from src.editorial.never_blank_voice import finalize_article
+from src.run.call_budget import RunCallBudgetExceededError
 from src.editorial.platform_composer import CompositionRejected, compose_platforms
 from src.editorial.sources_of_record import source_citation_values
 from src.strategy.execution_context import (
@@ -209,3 +210,76 @@ def generate_article(
         "structured_article": structured_article,
         "platforms": platforms,
     }
+
+
+def recompose_platform(
+    structured_article: dict,
+    format_key: str,
+    *,
+    canonical_body: str,
+    cta_mode: str = "none",
+    wix_strategy=None,
+    linkedin_strategy=None,
+    editorial_role_rules: "str | dict[str, str] | None" = None,
+    closing_contract: "str | None" = None,
+    research_artifact=None,
+    rejected_sink: "list | None" = None,
+) -> dict:
+    """Re-compose ONE platform derivative from final accepted content (#197).
+
+    The missing lifecycle operation behind the Story #13 stale-composition
+    guard: when editorial review revises the long-form after the platform
+    bodies were composed, the affected derivative must be produced again —
+    this time FROM the content that actually survived review, carried in
+    ``canonical_body`` as the authoritative source. Exactly one composition
+    stage runs (one logical model call through the same budget-charged
+    client); nothing else is regenerated — no research, no long-form, no
+    title (the requested format's own contract still governs whether it may
+    return one), and the Echo still arrives verbatim from
+    ``structured_article`` under the same closing contract.
+
+    Same machinery as first composition: the same channel lens, role rules,
+    local validators and ``_run_stage`` retry-once semantics, so a
+    re-composed body meets exactly the bar the original did. Failures
+    surface as ``ArticleGenerationError`` (rejections preserved in
+    ``rejected_sink``); the caller fails closed — never falling back to the
+    stale body.
+    """
+
+    if not isinstance(canonical_body, str) or not canonical_body.strip():
+        raise ArticleGenerationError(
+            "platform_recomposer",
+            ValueError("re-composition requires the final accepted content"),
+        )
+    _identities: tuple[tuple[str, ...], ...] = (
+        source_citation_values(research_artifact)
+        if research_artifact is not None else ()
+    )
+    try:
+        platforms = _run_stage(
+            "platform_recomposer",
+            compose_platforms,
+            structured_article,
+            cta_mode=cta_mode,
+            wix_strategy=wix_strategy,
+            linkedin_strategy=linkedin_strategy,
+            editorial_role_rules=editorial_role_rules,
+            formats=(format_key,),
+            rejected_sink=rejected_sink,
+            source_identities=_identities,
+            canonical_body=canonical_body,
+            **({} if closing_contract is None else {"closing_contract": closing_contract}),
+        )
+    except ArticleGenerationError:
+        raise
+    except RunCallBudgetExceededError:
+        # #171: an exhausted call budget is a run stop, never a stage error.
+        raise
+    except Exception as exc:  # noqa: BLE001 — provider/transport failures
+        # ``_run_stage`` retries only ValueError-class rejections; a provider
+        # failure surfaces here on the FIRST attempt (no retry, no second
+        # charge). Wrapped so the caller has one typed fail-closed boundary.
+        raise ArticleGenerationError("platform_recomposer", exc) from exc
+    log.info("Editorial Engine: %s re-composed from final accepted content", format_key)
+    return platforms[format_key]
+
