@@ -234,7 +234,7 @@ from src.publishing.canonical_url import (
 from src.publishing.result import PublishResult, PublishStatus
 from src.publishing.telegram import TelegramPublisher
 from src.publishing.threads import ThreadsPublisher
-from src.publishing.wix import WixPublisher
+from src.publishing.wix import ProviderUrlLookup, WixPublisher
 from src.artifacts import (
     ArtifactCollisionError,
     load_run_generated,
@@ -2410,20 +2410,35 @@ def _run(
     # only usable once the PROVIDER produced it and it actually resolves to
     # this post. The verdict is evidence either way.
     _canonical_verdict = None
+    # #200: the provider-object identity chain, recorded so a human can read
+    # "we published post X, we asked for post X, the provider returned this
+    # PageUrl for post X" directly out of the run's evidence.
+    _provider_lookup_audit = None
 
     def _verify_canonical(result) -> "CanonicalUrlVerdict":
+        """Reachability of the URL the provider attached to this post (#200).
+
+        Identity is already settled by the time we get here: the publisher
+        established the URL from the published object itself (retrieve that
+        exact post ID, use the PageUrl the provider returns for it) and
+        leaves ``url`` empty when it could not. So an empty or
+        non-provider-sourced URL means the identity chain did not complete,
+        and this refuses it without asking the network anything.
+        """
         verdict = verify_canonical_url(
             url=result.url or "",
             provenance=result.url_provenance,
             expected_host=os.environ.get("NB_WIX_SITE_BASE_URL", ""),
-            # the PROVIDER's slug, never one derived locally (#200)
-            slug=getattr(result, "provider_slug", None) or "",
         )
         if verdict.verified:
+            _moved = (
+                f" → {verdict.final_resolved_url[:50]}"
+                if verdict.final_resolved_url else ""
+            )
             print(
                 f"  ✓  canonical article URL verified "
                 f"[{verdict.provenance.value}, HTTP {verdict.http_status}]: "
-                f"{verdict.url[:70]}"
+                f"{verdict.url[:70]}{_moved}"
             )
         else:
             print(
@@ -2657,8 +2672,19 @@ def _run(
                     results[name] = result.to_dict()
                     if name == "wix":
                         wix_post_id = result.external_id
-                        wix_url = result.url or ""
-                        _canonical_verdict = _verify_canonical(result)
+                        # #200: do NOT reuse the URL the earlier run
+                        # recorded — evidence written before this fix can
+                        # carry a locally constructed route. Re-establish
+                        # the identity chain by asking the provider for
+                        # this post again (one HTTP call, no publication).
+                        _reuse_lookup = WixPublisher().lookup_canonical_url(
+                            wix_post_id or "", site_id=_package.target.site_id
+                        )
+                        _canonical_verdict = _verify_canonical(
+                            _reuse_lookup.as_result_view()
+                        )
+                        wix_url = _canonical_verdict.url
+                        _provider_lookup_audit = _reuse_lookup.as_audit_dict()
                     continue
 
             result = _r1_cls[name]().publish(
@@ -2670,6 +2696,9 @@ def _run(
                 wix_post_id = result.external_id
                 wix_url     = result.url or ""
                 _canonical_verdict = _verify_canonical(result)
+                _lookup = getattr(result, "provider_lookup", None)
+                if isinstance(_lookup, ProviderUrlLookup):
+                    _provider_lookup_audit = _lookup.as_audit_dict()
         except Exception as exc:
             log.error("%s publish error: %s", name, exc)
             results[name] = {
@@ -2732,6 +2761,7 @@ def _run(
             _canonical_verdict.as_audit_dict()
             if _canonical_verdict is not None else None
         ),
+        "canonical_url_provider_lookup": _provider_lookup_audit,
     }
     try:
         write_publication_results_json(run_dir, _pub_results_data)

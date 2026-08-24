@@ -491,15 +491,15 @@ def test_provider_returned_url_is_a_provider_lookup(monkeypatch):
     def fake_fetch(url, *, method="GET", headers=None, body=None, timeout=20):
         captured["url"] = url
         return 200, {"post": {
-            "slug": "the-slug",
+            "id": "post-1", "slug": "the-slug",
             "url": {"base": "https://neverblank.co", "path": "/post/the-slug"},
         }}, ""
 
     with mock.patch("src.publishing.wix._fetch", side_effect=fake_fetch):
-        url, provenance, slug = _resolve_post_url("post-1", {})
-    assert url == "https://neverblank.co/post/the-slug"
-    assert provenance is UrlProvenance.PROVIDER_LOOKUP
-    assert slug == "the-slug"
+        lookup = _resolve_post_url("post-1", {})
+    assert lookup.url == "https://neverblank.co/post/the-slug"
+    assert lookup.provenance is UrlProvenance.PROVIDER_LOOKUP
+    assert lookup.identity_ok() is True
     # the URL field is opt-in — it must actually be requested
     assert "fieldsets=URL" in captured["url"]
 
@@ -510,32 +510,35 @@ def test_a_route_built_locally_is_recorded_but_never_canonical(monkeypatch):
     # canonical article URL, whatever path shape it happens to have
     monkeypatch.setenv("NB_WIX_SITE_BASE_URL", "https://neverblank.co/")
     with mock.patch("src.publishing.wix._fetch", return_value=(
-        200, {"post": {"slug": "the-slug"}}, ""
+        200, {"post": {"id": "post-1", "slug": "the-slug"}}, ""
     )):
-        url, provenance, slug = _resolve_post_url("post-1", {})
-    assert provenance is UrlProvenance.LOCALLY_DERIVED
-    assert provenance.is_provider_sourced() is False
-    assert slug == "the-slug"
+        lookup = _resolve_post_url("post-1", {})
+    # the post is identified, but the provider attached no URL to it, so
+    # nothing canonical exists — the local route is evidence only
+    assert lookup.identity_ok() is True
+    assert lookup.url == ""
+    assert lookup.provenance is UrlProvenance.UNAVAILABLE
+    assert lookup.local_candidate == "https://neverblank.co/the-slug"
+    assert lookup.as_result_view().url == ""
 
 
 def test_no_usable_url_is_unavailable(monkeypatch):
     monkeypatch.delenv("NB_WIX_SITE_BASE_URL", raising=False)
     with mock.patch("src.publishing.wix._fetch", return_value=(
-        200, {"post": {"slug": "the-slug"}}, ""
+        200, {"post": {"id": "post-1", "slug": "the-slug"}}, ""
     )):
-        url, provenance, _slug = _resolve_post_url("post-1", {})
-    assert url == ""
-    assert provenance is UrlProvenance.UNAVAILABLE
+        lookup = _resolve_post_url("post-1", {})
+    assert lookup.url == ""
+    assert lookup.provenance is UrlProvenance.UNAVAILABLE
 
     with mock.patch("src.publishing.wix._fetch", return_value=(404, {}, "")):
-        url, provenance, _slug = _resolve_post_url("post-1", {})
-    assert (url, provenance) == ("", UrlProvenance.UNAVAILABLE)
+        lookup = _resolve_post_url("post-1", {})
+    assert (lookup.url, lookup.provenance) == ("", UrlProvenance.UNAVAILABLE)
+    assert lookup.identity_ok() is False
 
 
-def test_publish_carries_url_provenance(tmp_path, monkeypatch):
-    """A live publish records where its URL came from."""
-    monkeypatch.setenv("NB_WIX_API_KEY", "secret")
-    package = _build_wix(tmp_path, target=_target())
+def _publishing_fetch(lookup_response):
+    """Drive a full publish, with the post-ID lookup answering as given."""
 
     def fake_fetch(url, *, method="GET", headers=None, body=None, timeout=20):
         if method == "POST" and "draft-posts" in url and "publish" not in url:
@@ -545,18 +548,51 @@ def test_publish_carries_url_provenance(tmp_path, monkeypatch):
                 "media": {"wixMedia": {"image": {"id": "file-1"}}}
             }}, ""
         if "publish" in url:
-            return 200, {"post": {"id": POST_ID, "url": PROVIDER_URL}}, ""
-        return 200, {}, ""
+            return 200, {"post": {"id": POST_ID}}, ""
+        return lookup_response
 
+    return fake_fetch
+
+
+def _publish_with(tmp_path, lookup_response):
+    package = _build_wix(tmp_path, target=_target())
     with mock.patch("src.publishing.wix.import_image",
                     return_value=WixMediaAsset(file_id="file-1")):
-        with mock.patch("src.publishing.wix._fetch", side_effect=fake_fetch):
-            result = WixPublisher().publish(package, "live")
+        with mock.patch("src.publishing.wix._fetch",
+                        side_effect=_publishing_fetch(lookup_response)):
+            return WixPublisher().publish(package, "live")
+
+
+def test_publish_takes_its_url_from_the_post_object_lookup(tmp_path, monkeypatch):
+    """#200: the canonical URL comes from retrieving the published post."""
+    monkeypatch.setenv("NB_WIX_API_KEY", "secret")
+    result = _publish_with(tmp_path, (200, {"post": {
+        "id": POST_ID, "slug": "the-slug",
+        "url": {"base": "https://neverblank.co", "path": "/post/the-slug"},
+    }}, ""))
 
     assert result.status is PublishStatus.PUBLISHED
     assert result.external_id == POST_ID
-    assert result.url_provenance is UrlProvenance.PROVIDER_CONFIRMED
-    assert result.to_dict()["url_provenance"] == "provider_confirmed"
+    assert result.url == "https://neverblank.co/post/the-slug"
+    assert result.url_provenance is UrlProvenance.PROVIDER_LOOKUP
+    assert result.to_dict()["url_provenance"] == "provider_lookup"
+    assert result.provider_lookup.identity_ok() is True
+
+
+def test_publish_yields_no_url_when_the_lookup_is_about_another_post(
+    tmp_path, monkeypatch
+):
+    """A URL is only canonical if the provider returned it FOR THIS post."""
+    monkeypatch.setenv("NB_WIX_API_KEY", "secret")
+    result = _publish_with(tmp_path, (200, {"post": {
+        "id": "a-completely-different-post",
+        "url": {"base": "https://neverblank.co", "path": "/post/other"},
+    }}, ""))
+
+    assert result.status is PublishStatus.PUBLISHED   # the article IS live
+    assert result.url == ""                           # but its address is not proven
+    assert result.url_provenance is UrlProvenance.UNAVAILABLE
+    assert result.provider_lookup.identity_ok() is False
 
 
 # ── End-to-end through the canonical entrypoint ──────────────────────────────
@@ -586,6 +622,10 @@ def _prior_for_live_run(tmp_path, monkeypatch, *, status=None, malformed_results
     return run_dir
 
 
+def _prior_post_id(prior_run) -> str:
+    return _published_entry(prior_run)["external_id"]
+
+
 def _real_scan_run(tmp_path, **overrides):
     """`_live_run` with the real idempotency scan wired back in."""
 
@@ -603,30 +643,42 @@ def _current_publication(tmp_path):
     return json.loads(newest.read_text())
 
 
-def test_sequential_retry_reuses_and_calls_no_wix_endpoint(tmp_path, monkeypatch):
+def test_sequential_retry_reuses_and_creates_no_wix_post(tmp_path, monkeypatch):
     prior_run = _prior_for_live_run(tmp_path, monkeypatch)
+    # #200: the reuse path re-establishes the canonical URL by asking the
+    # provider for the known post — a read-only lookup. It must still create
+    # nothing: no media import, no draft, no publish.
     with mock.patch("src.publishing.wix.import_image") as media, \
-         mock.patch("src.publishing.wix._fetch") as fetch:
+         mock.patch("src.publishing.wix._fetch") as fetch, \
+         mock.patch("src.publishing.canonical_url._fetch_final",
+                    side_effect=lambda u: (u, 200)):
         code, wix_mock, li_mock, verdicts = _real_scan_run(tmp_path)
 
     # the publisher class was never asked to publish…
     wix_mock.publish.assert_not_called()
-    # …and no Wix network work happened at all
+    # …no media was imported and no Wix write endpoint was touched
     media.assert_not_called()
     fetch.assert_not_called()
+    # …and the canonical URL was re-derived by asking about the known post
+    wix_mock.lookup_canonical_url.assert_called_once()
+    assert wix_mock.lookup_canonical_url.call_args.args[0] == (
+        _prior_post_id(prior_run)
+    )
     assert li_mock.publish.called          # the other channel is unaffected
 
     published = _current_publication(tmp_path)
     prior = _published_entry(prior_run)
     wix = published["results"]["wix"]
     assert wix["status"] == "REUSED"
-    # the prior publication's evidence is preserved exactly, not re-derived
+    # the prior publication's identity is preserved exactly…
     assert wix["external_id"] == prior["external_id"]
-    assert wix["url"] == prior["url"]
-    assert wix["url_provenance"] == prior["url_provenance"]
     assert wix["reused_from_run_id"] == prior_run.name
     assert published["wix_reused_from_run_id"] == prior_run.name
     assert wix["run_id"] and wix["run_id"] != prior_run.name  # current identity apart
+    # …while the canonical URL comes from the provider, not from a record
+    # that may predate this contract (#200)
+    assert published["canonical_url_provider_lookup"]["identity_ok"] is True
+    assert published["canonical_url_verification"]["verified"] is True
     assert published["completed"] is True                  # a reuse is not a failure
     assert code == 0
 

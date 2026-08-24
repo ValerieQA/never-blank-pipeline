@@ -1,4 +1,4 @@
-"""Is this URL really the published article we are about to point readers at?
+"""Can a reader actually open the URL the provider gave us for this post?
 
 Issue #200. Live run 32740322282 published a social post whose canonical
 link returned 404: the provider had returned no URL, a route was constructed
@@ -6,31 +6,29 @@ locally from a hardcoded path shape, and every stage downstream treated that
 guess as canonical because nothing ever asked where it came from or whether
 it resolved.
 
-Two independent obligations, both deterministic and both required before a
-URL may be called canonical:
+This module answers exactly one of the two questions that failure raised —
+**reachability**. The other one, *identity*, is deliberately not answered
+here, and never by inspecting URL text: which post a URL belongs to is
+established upstream by the provider object contract (publish, retrieve that
+exact post ID, use the ``PageUrl`` the provider attaches to the object it
+returns). A URL arriving here has already been proven to belong to the
+published post; what remains is whether the public web agrees it exists.
 
-1. **Origin** — the provider itself must have produced the URL. A route this
-   codebase assembled is a hypothesis about site configuration; it may be
-   recorded as evidence but can never be the destination of a published post.
-2. **Resolution** — the URL must actually answer, on the expected host, at a
-   path that carries this post's own slug. That last part is what separates
-   "the site is up" from "this article is there": a generic 200 from the site
-   root proves nothing about the post.
+So: a bounded HTTP request with redirects followed normally, a final
+response that succeeds, and a final destination still on the expected host.
+No path conventions, no slug matching, no page-content heuristics, no model.
+Anything unproven fails closed — an unverifiable URL is not a weaker yes.
 
-No model is involved at any point. Publication propagation can lag by a few
-seconds, so resolution is retried a bounded number of times with a fixed
-short backoff — never open-ended polling.
-
-Generic by construction: it knows a URL, an expected host, a slug and a
-transport. It knows nothing about which channel will use the URL, which
-business publishes it, or what day it is.
+Generic by construction: it knows a URL, an expected host and a transport.
+It knows nothing about which channel will use the URL, which business
+publishes it, or what day it is.
 """
 
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple
 from urllib.parse import urlsplit
 
 from src.publishing.result import UrlProvenance
@@ -46,10 +44,15 @@ MAX_ATTEMPTS = 3
 RETRY_DELAY_SECONDS = 2.0
 #: Hard per-request timeout.
 REQUEST_TIMEOUT_SECONDS = 10.0
+#: Redirect hops the HTTP client may follow before the chain is refused.
+MAX_REDIRECTS = 5
 
-#: Statuses that prove the page answers. Anything else — 404 (the live
-#: defect), 403, 5xx, a transport error — leaves the URL unverified.
-_OK_STATUSES = frozenset({200, 203, 204, 206, 301, 302, 303, 307, 308})
+#: The final destination must actually answer.
+_SUCCESS_STATUSES = frozenset({200, 203, 204, 206})
+
+#: ``(final_url, status)`` after redirects, or ``None`` when the transport
+#: failed outright.
+FetchResult = Optional[Tuple[str, int]]
 
 
 class CanonicalUrlError(RuntimeError):
@@ -58,14 +61,17 @@ class CanonicalUrlError(RuntimeError):
 
 @dataclass(frozen=True)
 class CanonicalUrlVerdict:
-    """Why a candidate URL is, or is not, usable as the canonical article."""
+    """Whether a provider-attached URL is publicly usable, and why not."""
 
+    #: The provider's URL for the post — what gets published on success.
     url: str
     provenance: UrlProvenance
     verified: bool
-    #: Machine-readable reason a candidate was refused; ``None`` when verified.
+    #: Where the request actually landed, recorded only when a redirect moved
+    #: it. The provider's URL stays canonical; this records the movement
+    #: truthfully instead of silently substituting a different address.
+    final_resolved_url: str = ""
     failure_reason: Optional[str] = None
-    #: HTTP status the resolution attempt saw, when there was one.
     http_status: Optional[int] = None
     attempts: int = 0
 
@@ -75,32 +81,42 @@ class CanonicalUrlVerdict:
             "url": self.url,
             "provenance": self.provenance.value,
             "verified": self.verified,
+            "final_resolved_url": self.final_resolved_url or None,
             "failure_reason": self.failure_reason,
-            "http_status": self.http_status,
+            "reachability_status": self.http_status,
             "attempts": self.attempts,
         }
 
 
-def _http_status(url: str) -> Optional[int]:
-    """One bounded request. ``None`` when the transport itself failed.
+def _fetch_final(url: str) -> FetchResult:
+    """One bounded request, redirects followed; ``(final_url, status)``.
 
     ``HEAD`` first because the body is irrelevant; some hosts answer HEAD
-    with 405, so a single ``GET`` follows in that case. Redirects are not
-    followed — a redirect status is itself proof the page exists.
+    with 405/501, so a single ``GET`` follows in that case. Redirect
+    following is the HTTP client's own job — there is no custom 3xx logic
+    here, only a hop ceiling and the destination it lands on.
     """
     import requests
 
-    for method in ("head", "get"):
+    for method in ("HEAD", "GET"):
         try:
-            response = getattr(requests, method)(
-                url, timeout=REQUEST_TIMEOUT_SECONDS, allow_redirects=False
+            session = requests.Session()
+            session.max_redirects = MAX_REDIRECTS
+            response = session.request(
+                method, url,
+                timeout=REQUEST_TIMEOUT_SECONDS, allow_redirects=True,
             )
         except Exception as exc:  # noqa: BLE001 — any transport failure is "unverified"
-            log.warning("canonical url: %s %s failed (%s)", method.upper(), url, exc)
+            log.warning("canonical url: %s %s failed (%s)", method, url, exc)
             return None
         if response.status_code not in (405, 501):
-            return response.status_code
+            return str(response.url), response.status_code
     return None
+
+
+def _host_of(value: str) -> str:
+    parsed = urlsplit(value if "//" in value else f"//{value}")
+    return (parsed.hostname or "").lower()
 
 
 def verify_canonical_url(
@@ -108,75 +124,82 @@ def verify_canonical_url(
     url: str,
     provenance: UrlProvenance,
     expected_host: str,
-    slug: str = "",
-    status_probe: Callable[[str], Optional[int]] | None = None,
+    fetch: Callable[[str], FetchResult] | None = None,
     sleep: Callable[[float], None] | None = None,
 ) -> CanonicalUrlVerdict:
-    """Decide whether ``url`` may be the canonical article URL.
+    """Decide whether the provider's URL for this post may be published.
 
-    Returns a verdict rather than raising: a refused URL is evidence the run
-    must record, not an exception to swallow. The caller fails closed on
-    ``verified is False``.
+    The URL must already be provider-attached (``provenance``); this adds
+    that it is structurally a page on the expected host and that the public
+    web serves it. Returns a verdict rather than raising — a refused URL is
+    evidence the run must record, not an exception to swallow.
 
-    ``status_probe`` and ``sleep`` are injectable so the decision can be
-    exercised without a network.
+    ``fetch`` and ``sleep`` are injectable so the decision can be exercised
+    without a network.
     """
 
-    probe = status_probe or _http_status
+    request = fetch or _fetch_final
     pause = sleep if sleep is not None else __import__("time").sleep
+    candidate = (url or "").strip()
 
-    def refuse(reason: str, status: Optional[int] = None, attempts: int = 0):
-        log.warning("canonical url refused (%s): %s", reason, url or "—")
+    def refuse(reason, *, final="", status=None, attempts=0):
+        log.warning("canonical url refused (%s): %s", reason, candidate or "—")
         return CanonicalUrlVerdict(
-            url=url, provenance=provenance, verified=False,
-            failure_reason=reason, http_status=status, attempts=attempts,
+            url=candidate, provenance=provenance, verified=False,
+            final_resolved_url=final, failure_reason=reason,
+            http_status=status, attempts=attempts,
         )
 
-    if not url:
+    if not candidate:
         return refuse("no_candidate_url")
 
-    # 1. Origin: only the provider may author a canonical destination.
+    # Origin: only a URL the provider attached to the post may be published.
     if not provenance.is_provider_sourced():
         return refuse(f"not_provider_sourced:{provenance.value}")
 
-    # 2. Structure: https, on the site we publish to, with a real page path.
-    parts = urlsplit(url.strip())
-    if parts.scheme.lower() != "https":
-        return refuse("not_https")
-    host = (parts.hostname or "").lower()
-    if not host:
-        return refuse("no_host")
-    expected = (urlsplit(expected_host).hostname or expected_host or "").lower()
+    expected = _host_of(expected_host).lstrip(".")
     if not expected:
         return refuse("no_expected_host_configured")
-    if host != expected.lstrip("."):
-        return refuse(f"unexpected_host:{host}")
-    path = parts.path or ""
-    if path.strip("/") == "":
-        return refuse("no_page_path")
 
-    # 3. Identity: the provider's own slug must be in the provider's own
-    #    path. This is what a generic site 200 cannot satisfy.
-    if slug and slug.strip().lower() not in path.lower():
-        return refuse("path_does_not_carry_post_slug")
+    parts = urlsplit(candidate)
+    if parts.scheme.lower() != "https":
+        return refuse("not_https")
+    if not parts.hostname:
+        return refuse("no_host")
+    if parts.hostname.lower() != expected:
+        return refuse(f"unexpected_host:{parts.hostname.lower()}")
 
-    # 4. Resolution: bounded attempts, fixed backoff, no polling.
+    # Reachability: bounded attempts, fixed backoff, no polling.
     status = None
+    final = ""
     for attempt in range(1, MAX_ATTEMPTS + 1):
-        status = probe(url)
-        if status is not None and status in _OK_STATUSES:
-            log.info(
-                "canonical url verified: %s (HTTP %s, attempt %s)",
-                url, status, attempt,
-            )
-            return CanonicalUrlVerdict(
-                url=url, provenance=provenance, verified=True,
-                http_status=status, attempts=attempt,
-            )
+        result = request(candidate)
+        if result is not None:
+            final, status = result
+            if status in _SUCCESS_STATUSES:
+                # Where the reader lands must still be this site. A redirect
+                # off the expected host is not our article, whatever it says.
+                landed = _host_of(final)
+                if landed and landed != expected:
+                    return refuse(
+                        f"redirect_left_expected_host:{landed}",
+                        final=final, status=status, attempts=attempt,
+                    )
+                moved = final if final and final != candidate else ""
+                log.info(
+                    "canonical url reachable: %s (HTTP %s%s, attempt %s)",
+                    candidate, status,
+                    f", resolved to {final}" if moved else "", attempt,
+                )
+                return CanonicalUrlVerdict(
+                    url=candidate, provenance=provenance, verified=True,
+                    final_resolved_url=moved, http_status=status,
+                    attempts=attempt,
+                )
         if attempt < MAX_ATTEMPTS:
             pause(RETRY_DELAY_SECONDS)
 
     return refuse(
         "unreachable" if status is None else f"http_{status}",
-        status, MAX_ATTEMPTS,
+        final=final, status=status, attempts=MAX_ATTEMPTS,
     )

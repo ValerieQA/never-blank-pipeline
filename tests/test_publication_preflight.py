@@ -471,6 +471,15 @@ def _live_run(tmp_path, **overrides):
     patches["generate_article"] = mock.MagicMock(return_value=article)
     wix_mock, li_mock = mock.MagicMock(), mock.MagicMock()
     wix_mock.publish.return_value = _publish_result("wix", "w-1", "https://nb.co/p")
+    # #200: the reuse path re-asks the provider for the known post. A real
+    # lookup record keeps that seam honest in this harness.
+    from src.publishing.result import UrlProvenance
+    from src.publishing.wix import ProviderUrlLookup
+
+    wix_mock.lookup_canonical_url.side_effect = lambda post_id, *, site_id: (
+        ProviderUrlLookup(post_id, post_id, "https://nb.co/p",
+                          UrlProvenance.PROVIDER_LOOKUP, 200)
+    )
     li_mock.publish.return_value = _publish_result("linkedin", "l-1", "https://li.co/p")
     patches["WixPublisher"] = mock.MagicMock(return_value=wix_mock)
     patches["LinkedInPublisher"] = mock.MagicMock(return_value=li_mock)

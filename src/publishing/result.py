@@ -71,11 +71,10 @@ class PublishResult:
     # duplicate. Defaults keep every existing caller unchanged.
     url_provenance:     UrlProvenance = UrlProvenance.UNAVAILABLE
     reused_from_run_id: Optional[str] = None
-    #: Issue #200: the slug the PROVIDER reports for this post. Used to prove
-    #: a candidate URL points at THIS post rather than at some other page
-    #: that merely answers. Never derived locally from the title — deriving
-    #: it here would re-introduce the assumption #200 exists to remove.
-    provider_slug:      Optional[str] = None
+    #: Issue #200: what the provider said when asked for this exact post by
+    #: ID — the record that establishes which post the URL belongs to.
+    #: Typed loosely to keep this module free of provider imports.
+    provider_lookup:    Optional[object] = None
 
     def ok(self) -> bool:
         return self.status in (PublishStatus.PUBLISHED, PublishStatus.DRAFT_CREATED)

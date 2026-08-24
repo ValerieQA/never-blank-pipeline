@@ -40,6 +40,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from dataclasses import dataclass
 from typing import Optional, TYPE_CHECKING
 
 from src.publishing.base import BasePublisher, DraftPackage, _fetch
@@ -129,6 +130,29 @@ def _md_to_rich_nodes(markdown: str) -> list[dict]:
 
 class WixPublisher(BasePublisher):
     name = "wix"
+
+    def lookup_canonical_url(
+        self, post_id: str, *, site_id: str
+    ) -> "ProviderUrlLookup":
+        """Ask the provider for an already-published post's URL (#200).
+
+        The recovery seam: a run that finds its article already published
+        must not reuse the URL recorded by the earlier run — that record may
+        predate this fix and carry a locally constructed route (the live
+        32740322282 evidence does). Re-asking the provider for the post by
+        ID re-establishes the identity chain from scratch, and costs one
+        HTTP call, no model and no publication.
+        """
+        api_key = os.getenv("NB_WIX_API_KEY", "")
+        if not api_key or not site_id or not post_id:
+            return ProviderUrlLookup(
+                post_id or "", "", "", UrlProvenance.UNAVAILABLE, 0
+            )
+        return _resolve_post_url(post_id, {
+            "Authorization": api_key,
+            "wix-site-id":   site_id,
+            "Content-Type":  "application/json",
+        })
 
     def publish(
         self,
@@ -288,17 +312,22 @@ class WixPublisher(BasePublisher):
                     "cannot record a valid platform_content_id"
                 )
 
-            # ── Step 6: Resolve URL if not in publish response ────────────────
-            provider_slug = post.get("slug", "") or ""
-            if not post_url:
-                post_url, url_provenance, provider_slug = _resolve_post_url(
-                    post_id, headers
-                )
+            # ── Step 6: establish the canonical URL from the published
+            # object itself (#200). Even when the publish response carried a
+            # PageUrl, the round-trip by post ID is what proves the URL
+            # belongs to the post we just published — so it always runs.
+            lookup = _resolve_post_url(post_id, headers)
+            if lookup.identity_ok() and lookup.url:
+                post_url, url_provenance = lookup.url, lookup.provenance
+            else:
+                # Either the provider answered about a different post, or it
+                # attached no URL to this one. Nothing here identifies our
+                # article, so nothing here may be published as its address.
+                post_url, url_provenance = "", UrlProvenance.UNAVAILABLE
 
             result = self._published(external_id=post_id, url=post_url)
             result.url_provenance = url_provenance
-            # #200: the provider's own slug, for post-identity verification
-            result.provider_slug = provider_slug or None
+            result.provider_lookup = lookup
             return result
 
         except WixPublisherError as exc:
@@ -388,59 +417,109 @@ def page_url_to_str(value: object) -> str:
     return f"{base}{path}"
 
 
-def _resolve_post_url(
-    post_id: str, headers: dict
-) -> tuple[str, UrlProvenance, str]:
-    """Ask the provider for this post's real public URL (Issue #200).
+@dataclass(frozen=True)
+class ProviderUrlLookup:
+    """What the provider said when asked for one specific published post.
+
+    Issue #200. The canonical URL is established from the published object
+    itself, never reconstructed from text: we publish, we get a post ID, we
+    ask the provider for *that* ID, and we use the ``PageUrl`` the provider
+    attaches to the object it returns. ``identity_ok`` is the whole identity
+    question — did the provider hand back the post we asked about?
+    """
+
+    requested_post_id: str
+    returned_post_id: str
+    url: str
+    provenance: UrlProvenance
+    http_status: int
+    #: A route this codebase assembled when the provider produced no URL.
+    #: Diagnostic evidence only — never canonical.
+    local_candidate: str = ""
+
+    def identity_ok(self) -> bool:
+        return bool(self.returned_post_id) and (
+            self.returned_post_id == self.requested_post_id
+        )
+
+    def as_result_view(self):
+        """A minimal object the reachability check can read (#200).
+
+        Only a canonical URL that passed the identity check is offered; a
+        mismatched or URL-less lookup yields nothing to verify, so the
+        reachability step refuses it without asking the network.
+        """
+        from types import SimpleNamespace
+
+        usable = self.identity_ok() and bool(self.url)
+        return SimpleNamespace(
+            url=self.url if usable else "",
+            url_provenance=(
+                self.provenance if usable else UrlProvenance.UNAVAILABLE
+            ),
+        )
+
+    def as_audit_dict(self) -> dict:
+        return {
+            "requested_post_id": self.requested_post_id,
+            "returned_post_id": self.returned_post_id,
+            "provider_page_url": self.url,
+            "provider_url_provenance": self.provenance.value,
+            "http_status": self.http_status,
+            "identity_ok": self.identity_ok(),
+            "local_candidate": self.local_candidate or None,
+        }
+
+
+def _resolve_post_url(post_id: str, headers: dict) -> ProviderUrlLookup:
+    """Ask the provider for this exact post's own public URL (Issue #200).
 
     ``GET /blog/v3/posts/{post_id}?fieldsets=URL`` is the provider's own
-    retrieve-by-ID path, and the ``URL`` fieldset is what makes it return
-    the ``PageUrl``. The returned ``base``/``path`` describe the route the
-    site actually serves, so no assumption about the public path shape is
-    made here at all.
+    retrieve-by-ID path, and the ``URL`` fieldset is what makes it return the
+    ``PageUrl``. The returned ``base``/``path`` describe the route the site
+    actually serves, so no assumption about the public path shape is made
+    here at all — which is the point: live run 32740322282 published a social
+    link built from a hardcoded path convention, and it 404'd.
 
-    A locally constructed route is still recorded when the provider gives
-    us nothing but a slug — as ``LOCALLY_DERIVED`` evidence for diagnosis.
-    It is deliberately NOT canonical: run 32740322282 published a social
-    post pointing at exactly such a construction and it returned 404. The
-    caller decides what may be canonical; provenance is how it knows.
+    The response's own post ID is carried back so the caller can confirm the
+    provider answered about the post we published. A locally constructed
+    route is recorded as ``local_candidate`` for diagnosis and is never
+    offered as the canonical URL.
     """
     code, resp, _ = _fetch(
         f"https://www.wixapis.com/blog/v3/posts/{post_id}"
         f"?fieldsets={_URL_FIELDSET}",
         method="GET", headers=headers,
     )
-    post_obj = resp.get("post", {})
-    slug     = post_obj.get("slug", "")
-    api_url  = page_url_to_str(post_obj.get("url"))
+    post_obj = resp.get("post", {}) if isinstance(resp, dict) else {}
+    returned_id = str(post_obj.get("id", "") or "")
+    slug        = post_obj.get("slug", "")
+    api_url     = page_url_to_str(post_obj.get("url"))
 
     _log.info(
-        "wix step6 resolve-url: HTTP %s | post.slug=%s | post.url=%s",
-        code, slug or "—", api_url or "—",
+        "wix resolve-url: HTTP %s | requested=%s | returned=%s | PageUrl=%s",
+        code, post_id, returned_id or "—", api_url or "—",
     )
 
     if code not in (200, 201):
-        return "", UrlProvenance.UNAVAILABLE, ""
-
+        return ProviderUrlLookup(post_id, returned_id, "",
+                                 UrlProvenance.UNAVAILABLE, code)
     if api_url:
-        _log.info("wix URL source: provider_lookup | url=%s", api_url)
-        return api_url, UrlProvenance.PROVIDER_LOOKUP, slug
+        return ProviderUrlLookup(post_id, returned_id, api_url,
+                                 UrlProvenance.PROVIDER_LOOKUP, code)
 
-    # The provider confirmed the post but produced no URL. A route built
-    # from base + slug is a guess about site configuration — recorded, never
+    # The provider confirmed the post but produced no URL. A route built from
+    # base + slug is a guess about site configuration: recorded, never
     # canonical (#200).
+    local = ""
     if slug:
         base = os.getenv("NB_WIX_SITE_BASE_URL", "").rstrip("/")
         if base:
-            url = f"{base}/{slug}"
+            local = f"{base}/{slug}"
             _log.warning(
-                "wix URL source: locally_derived (NOT canonical) | base=%s | url=%s",
-                base, url,
+                "wix resolve-url: no provider PageUrl; local candidate "
+                "recorded but NOT canonical | %s", local,
             )
-            return url, UrlProvenance.LOCALLY_DERIVED, slug
-        _log.warning(
-            "wix URL source: no route candidate — slug=%s but NB_WIX_SITE_BASE_URL is empty",
-            slug,
-        )
-
-    return "", UrlProvenance.UNAVAILABLE, slug
+    return ProviderUrlLookup(post_id, returned_id, "",
+                             UrlProvenance.UNAVAILABLE, code,
+                             local_candidate=local)
