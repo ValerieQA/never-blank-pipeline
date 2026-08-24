@@ -157,7 +157,9 @@ from src.editorial.editorial_role import (
 )
 from src.editorial.sources_of_record import render_sources_of_record
 from src.editorial.source_transparency import (
+    SocialLineageError,
     SourceTransparencyError,
+    validate_social_lineage,
     validate_source_transparency,
 )
 from src.editorial.pipeline import ArticleGenerationError, generate_article
@@ -216,6 +218,7 @@ from src.publishing.package import (
     PackageFailureCategory,
     PublicationPackageError,
     WixPublicationTarget,
+    bind_canonical_article_url,
     build_linkedin_publication_package,
     build_wix_publication_package,
     canonical_slug,
@@ -233,12 +236,14 @@ from src.artifacts import (
     load_assignment_json,
     load_visual_assets_json,
     append_rejected_composition,
+    write_accepted_composition_json,
     write_assignment_json,
     write_editorial_acceptance_json,
     write_decision_policy_json,
     write_editorial_review_content_json,
     write_generated_json,
     write_linkedin_composition_json,
+    write_linkedin_final_preflight_json,
     write_visual_assets_json,
     write_business_strategy_snapshot,
     write_preflight_result_json,
@@ -1829,18 +1834,60 @@ def _run(
             f"[{_acceptance_rubric.identity}]"
         )
 
+        # Issue #196: preserve the accepted compositions NOW, before the
+        # remaining gates. A run blocked downstream (transparency, images,
+        # visuals, preflight) used to lose its accepted article with the
+        # runner — live run 32666861632 cost a full regeneration to learn
+        # what it had written. Diagnostic evidence only: publishable=false,
+        # not canonical, and nothing (including --from-package) loads it, so
+        # preservation can never become a route past a gate.
+        try:
+            write_accepted_composition_json(
+                run_dir,
+                {
+                    "run_id": run_ctx.run_id,
+                    "signal_id": signal_id,
+                    "assignment_id": assignment.assignment_id,
+                    "editorial": {
+                        "rubric": _acceptance_rubric.identity,
+                        "revised": _acceptance.revised,
+                    },
+                    "content": {
+                        "title": headline,
+                        "echo": echo_line,
+                        "article_body": blog_body,
+                        "linkedin_body": linkedin_text,
+                    },
+                },
+            )
+            print(
+                "  ✓  accepted compositions preserved: "
+                f"{run_dir / 'accepted_composition.json'} (not publishable)"
+            )
+        except (ArtifactCollisionError, OSError) as exc:
+            # Losing the diagnostic copy never changes the run's verdict —
+            # but the run says so honestly instead of silently.
+            print(f"  ⚠  accepted compositions could not be preserved: {exc}")
+
         # Issue #142 review round 2: a role may require source transparency
         # as a fail-closed publication condition. The prompt asked for
-        # attribution; here the accepted article and the LinkedIn body are
-        # verified against the run's ACTUAL sources — a model that ignored the
-        # instruction, or invented a link, stops the run before any publisher
-        # is called. Roles without the requirement (every other stream, and
-        # every run with no role) are never checked.
+        # attribution; here the accepted CANONICAL ARTICLE is verified against
+        # the run's ACTUAL sources — a model that ignored the instruction, or
+        # invented a link, stops the run before any publisher is called.
+        # Roles without the requirement (every other stream, and every run
+        # with no role) are never checked.
+        #
+        # #196 split: this gate owns the canonical article ↔ original sources
+        # half of the provenance chain, undiminished. The social half —
+        # LinkedIn ↔ the published canonical article URL — cannot be judged
+        # here because that URL does not exist until Wix publishes; it is
+        # validated by validate_social_lineage in the publication loop. (The
+        # old combined check also judged the LinkedIn body 49 lines before
+        # its attribution line was appended — the run 32666861632 defect.)
         if _editorial_role_identity is not None and _role.require_source_transparency:
             try:
                 validate_source_transparency(
                     article_body=blog_body,
-                    linkedin_body=linkedin_text,
                     research=research_artifact,
                     allowed_destinations=tuple(
                         destination for destination in (
@@ -1887,9 +1934,13 @@ def _run(
         source_name = signal.get("SOURCE_NAME", "")
         source_url  = signal.get("SOURCE_URL", "")
         blog_body      += formatting.source_line(source_name, source_url, "blog_markdown")
+        # #196: the LinkedIn post no longer carries the original source's URL
+        # — the canonical Never Blank article owns the external-source links,
+        # and the post's destination is the published article itself. That
+        # link cannot be appended here because it does not exist yet; it is
+        # bound deterministically after Wix publication succeeds.
         linkedin_text   = formatting.append_hashtags(
-            formatting.bold_signature_prefix(linkedin_text, "unicode") +
-            formatting.source_line(source_name, source_url, "bare_url"),
+            formatting.bold_signature_prefix(linkedin_text, "unicode"),
             # #176 correction: topical tags follow the published article —
             # the supported mechanism and the composed title — never
             # discovery metadata that may differ from what was written.
@@ -2251,6 +2302,9 @@ def _run(
     results: dict = {}
     wix_post_id: Optional[str] = None
     wix_url = ""
+    # #196: lineage evidence for the LinkedIn attempt — set only once the
+    # enriched package exists and holds a persisted final ALLOW.
+    _li_evidence: Optional[dict] = None
     # Issue #105: typed, sanitized note when prior publication evidence could
     # not be interpreted — it never suppresses publication, but the run says so.
     _unusable_prior_evidence: Optional[dict] = None
@@ -2275,6 +2329,28 @@ def _run(
                 "external_id": None, "url": None, "run_id": run_ctx.run_id,
             }
             continue
+        # ── Wix gates social publication (Issue #196) ────────────────────
+        # The LinkedIn post distributes the published canonical article; its
+        # destination is that article's real URL. No canonical URL — Wix
+        # blocked, failed, or published without returning one — means there
+        # is nothing to distribute, so LinkedIn is NOT attempted. The
+        # channels are no longer independent publication siblings.
+        if name == "linkedin" and not wix_url:
+            _wix_status = results.get("wix", {}).get("status", "not attempted")
+            print(
+                f"  ✗  {name:<12} NOT ATTEMPTED — no canonical article URL "
+                f"(wix: {_wix_status}); social distributes the published "
+                "article, so there is nothing to publish behind"
+            )
+            results[name] = {
+                "platform": name, "status": "BLOCKED",
+                "error_message": (
+                    "no canonical article URL — Wix publication did not "
+                    f"succeed (wix status: {_wix_status})"
+                ),
+                "external_id": None, "url": None, "run_id": run_ctx.run_id,
+            }
+            continue
         try:
             channel_view = (
                 strategy_execution.wix
@@ -2293,6 +2369,99 @@ def _run(
                 raise ValueError(
                     f"{name} package digest does not match the preflight verdict"
                 )
+
+            # ── Canonical article link enrichment + lineage gate (#196) ──────
+            # Runs AFTER the digest check, so what is proven against the
+            # run preflight verdict is exactly the authorized package. The
+            # enrichment derives a new frozen package whose only difference is
+            # the deterministic link block (zero model calls — the URL comes
+            # from the Wix publisher's result and nowhere else), and the
+            # lineage gate then proves the assembled body points at exactly
+            # that URL and at nothing else. Placed BEFORE the idempotency scan
+            # so duplicate identity is computed over the body actually
+            # published — a recovery run assembles the same body and is
+            # recognised.
+            if name == "linkedin":
+                _derived_from_digest = _package.package_digest()
+                _package = bind_canonical_article_url(_package, wix_url)
+                validate_social_lineage(
+                    social_body=_package.linkedin_body,
+                    canonical_url=wix_url,
+                )
+                print(
+                    f"  ✓  linkedin lineage: post → canonical article "
+                    f"({wix_url[:60]})"
+                )
+
+                # ── Final exact-package authorization (#196 review) ──────────
+                # The trust contract is: exact frozen package → exact-package
+                # ALLOW → external side effect. The enriched package is a
+                # DIFFERENT frozen package from the one the run preflight
+                # authorized, so it receives its own verdict from the same
+                # preflight machinery — evaluated against its own digest and
+                # persisted BEFORE the publisher can be called. Deterministic
+                # evidence and rules only; zero model calls.
+                _final_preflight = evaluate_publication_preflight(
+                    packages_dir=PACKAGES_DIR,
+                    run_id=run_ctx.run_id,
+                    signal_id=signal_id,
+                    configuration_identity=strategy_execution.identity,
+                    channel_outcomes=[
+                        ChannelPackageOutcome.valid("linkedin", _package)
+                    ],
+                    override_attempted=_override_attempted,
+                    readiness=_readiness,
+                    freshness=_freshness,
+                )
+                write_linkedin_final_preflight_json(
+                    run_dir, json.loads(_final_preflight.model_dump_json())
+                )
+                _final_verdict = _final_preflight.verdict_for("linkedin")
+                if (
+                    _final_preflight.run_disposition is PreflightDisposition.BLOCK
+                    or _final_verdict is None
+                    or _final_verdict.disposition is PreflightDisposition.BLOCK
+                ):
+                    _final_reasons = ", ".join(
+                        reason.value
+                        for reason in (
+                            *_final_preflight.run_blocking_reasons,
+                            *(
+                                _final_verdict.blocking_reasons
+                                if _final_verdict is not None else ()
+                            ),
+                        )
+                    ) or "no final preflight verdict"
+                    print(
+                        f"  ✗  {name:<12} BLOCKED by final exact-package "
+                        f"preflight ({_final_reasons}) — not published"
+                    )
+                    results[name] = {
+                        "platform": name, "status": "BLOCKED",
+                        "error_message": (
+                            f"final exact-package preflight: {_final_reasons}"
+                        ),
+                        "external_id": None, "url": None,
+                        "run_id": run_ctx.run_id,
+                    }
+                    continue
+                # The critical invariant: the digest of the package handed to
+                # the publisher IS the digest the persisted final ALLOW names.
+                if _package.package_digest() != _final_verdict.package_digest:
+                    raise ValueError(
+                        "linkedin enriched package digest does not match the "
+                        "persisted final preflight verdict"
+                    )
+                print(
+                    f"  ✓  linkedin final ALLOW bound to "
+                    f"{_final_verdict.package_digest[:16]}… "
+                    f"({run_dir / 'linkedin_final_preflight.json'})"
+                )
+                _li_evidence = {
+                    "published_package_digest": _package.package_digest(),
+                    "derived_from_digest": _derived_from_digest,
+                    "canonical_article_url": wix_url,
+                }
 
             # ── Wix retry idempotency (Issue #105 / Story #18) ───────────────
             # Runs only after this channel received preflight ALLOW and only on
@@ -2359,6 +2528,13 @@ def _run(
                 "error_message": str(exc), "external_id": None, "url": None,
                 "run_id": run_ctx.run_id,
             }
+
+    # #196: the lineage/audit fields ride on the LinkedIn result they
+    # describe — published, reused, or a failed attempt of the authorized
+    # enriched package. A LinkedIn entry blocked before enrichment carries
+    # none, honestly.
+    if _li_evidence is not None and "linkedin" in results:
+        results["linkedin"].update(_li_evidence)
 
     print()
     for platform, res in results.items():

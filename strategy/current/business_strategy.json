@@ -384,8 +384,10 @@
         "End in this order: the reader-relevance close, then the Never Blank Echo as an attributed block on its own line ('**Never Blank:** <echo>'), then the Sources section last. No call to action, no website invitation, and no link on the Never Blank name — the reader is already on the site."
       ],
       "linkedin_rules": [
-        "Carry compact source attribution sufficient to identify the source case — one clear reference, not citation-heavy prose.",
-        "End in this order: the Never Blank Echo as an attributed block on its own line ('Never Blank: <echo>'), then the compact source reference, then hashtags last — nothing after the hashtags. No website invitation: the platform suppresses posts carrying external links."
+        "The post distributes the published Never Blank article: write it from the article's material through a channel-native lens. Framing, length, rhythm and emphasis may change; the facts and the Echo may not.",
+        "You may name the original publisher or source naturally in the body when it helps the reader (for example, 'Entrepreneur profiled a founder who…'). Naming it is editorial judgment, never an obligation.",
+        "Never write any URL in the post — not the original source's, not the site's. The link to the published Never Blank article is appended by the system after publication; a hand-written link would be an invented destination.",
+        "End with the Never Blank Echo as an attributed block on its own line ('Never Blank: <echo>') — the exact same Echo as the article, word for word, never adapted. It is the composed post's last line; the continue-reading link and hashtags are appended by the system afterwards, with hashtags last."
       ],
       "require_source_transparency": true,
       "decision_policy": "role_bounded_r1",

@@ -8,7 +8,7 @@ to **this run's** sources rather than merely looking like a citation.
 
 Two checks, both against the run's own research artifact:
 
-1. **Attribution** — each required surface must attribute at least one real
+1. **Attribution** — the canonical article must attribute at least one real
    run source through an explicit, deterministic form: the exact source URL,
    or the source's publisher/title inside a recognizable attribution
    construction ("Source: X", "According to X", "X reported…", "documented by
@@ -23,6 +23,12 @@ Two checks, both against the run's own research artifact:
    and path boundary. String prefixes are not used, so
    ``https://site.example.evil.test/…``, userinfo tricks, foreign ports and
    lookalike hosts all fail.
+
+A third check, ``validate_social_lineage`` (#196), governs the other half of
+the chain: a social derivative must point at the run's own published
+canonical article and at nothing else. Together the two functions preserve
+the whole provenance path — ``social → canonical article → original
+sources`` — without asking a social post to duplicate the article's citations.
 
 Generic by construction: which roles require this is configuration; this
 module knows only bodies, a research artifact, and allowed destinations — no
@@ -225,18 +231,22 @@ def _check_surface(
 def validate_source_transparency(
     *,
     article_body: str,
-    linkedin_body: str,
     research: NormalizedResearchArtifact,
     allowed_destinations: tuple[str, ...] = (),
 ) -> None:
-    """Verify both Release 1 surfaces against the run's actual sources.
+    """Verify the canonical article against the run's actual sources.
 
     ``allowed_destinations`` are full origins (optionally with a base path),
     e.g. the configured site URL; candidate links are compared to them
     structurally, never by string prefix. Raises ``SourceTransparencyError``
-    on the first surface that fails; the caller stops before any publisher is
-    invoked, consumes nothing, and the run's evidence records the honest
-    reason.
+    when the article fails; the caller stops before any publisher is invoked,
+    consumes nothing, and the run's evidence records the honest reason.
+
+    Scope note (#196): this is the **canonical article's** provenance
+    obligation and it is deliberately undiminished — the published article is
+    what proves the run's connection to its external evidence. Social
+    derivatives are governed by ``validate_social_lineage`` instead: they
+    point at the canonical article, which owns the external-source links.
     """
 
     source_urls, source_names = _source_identities(research)
@@ -249,4 +259,54 @@ def validate_source_transparency(
         _parse(destination) for destination in allowed_destinations if destination
     )
     _check_surface("article", article_body, source_urls, source_names, allowed)
-    _check_surface("linkedin", linkedin_body, source_urls, source_names, allowed)
+
+
+class SocialLineageError(RuntimeError):
+    """A social derivative does not point at this run's canonical article."""
+
+
+def validate_social_lineage(*, social_body: str, canonical_url: str) -> None:
+    """Prove a social body points at exactly this canonical article (#196).
+
+    Three obligations, all deterministic and all structural — no model call,
+    no judgment, and no tolerance for a model-authored destination:
+
+    1. the canonical URL must be real and parseable (a missing or malformed
+       publication URL is not a link, so there is nothing to publish behind);
+    2. the assembled body must actually carry it;
+    3. it must be the body's **only** external link — a competing
+       original-source URL would split the reader away from the article that
+       owns the provenance.
+
+    Comparison is the same canonical form the article check uses, so an
+    equivalent rendering of the same URL is recognised while a different
+    destination — lookalike host, foreign port, userinfo trick — is not.
+    """
+
+    canonical = _canonical(canonical_url)
+    if canonical is None:
+        raise SocialLineageError(
+            f"the canonical article URL {canonical_url!r} is missing or "
+            "unusable — a social derivative has nothing to point at"
+        )
+    raw_links = _URL_PATTERN.findall(social_body)
+    for raw in raw_links:
+        if _canonical(raw) is None:
+            raise SocialLineageError(
+                f"the social body contains an unparseable or "
+                f"userinfo-bearing link {raw!r}"
+            )
+    body_urls = {_canonical(url) for url in raw_links}
+    if canonical not in body_urls:
+        raise SocialLineageError(
+            "the social body does not link this run's canonical Never Blank "
+            f"article ({canonical_url!r}) — social distribution must point at "
+            "the published article"
+        )
+    competing = sorted(url for url in body_urls if url != canonical)
+    if competing:
+        raise SocialLineageError(
+            f"the social body links {competing!r} alongside the canonical "
+            "article — the canonical article owns the external-source links, "
+            "and a social derivative carries no competing destination"
+        )

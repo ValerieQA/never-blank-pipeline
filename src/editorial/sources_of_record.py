@@ -113,30 +113,58 @@ def render_sources_of_record(
     if not citable:
         return ""
 
-    lines = [
-        "",
-        "SOURCES OF RECORD — the only sources this run may cite. Every "
-        "publisher, title and URL below must survive into your citation "
-        "exactly as written; never invent, guess, complete, or substitute "
-        "one. The 'publisher:', 'title:' and 'url:' labels are only here to "
-        "tell you which value is which — write the citation naturally, for "
-        "example 'Publisher · Title · URL'.",
-        "",
-    ]
-    for entry in canonical_source_entries(research):
-        lines.append("- " + entry)
-    lines.append("")
     if surface == "wix":
-        lines.append(
+        lines = [
+            "",
+            "SOURCES OF RECORD — the only sources this run may cite. Every "
+            "publisher, title and URL below must survive into your citation "
+            "exactly as written; never invent, guess, complete, or substitute "
+            "one. The 'publisher:', 'title:' and 'url:' labels are only here to "
+            "tell you which value is which — write the citation naturally, for "
+            "example 'Publisher · Title · URL'.",
+            "",
+        ]
+        for entry in canonical_source_entries(research):
+            lines.append("- " + entry)
+        lines += [
+            "",
             "Required: attribute the facts you take from these sources in the "
             "body, and close the article with a short Sources section listing "
-            "them. The article is not publishable without it."
-        )
-    else:
-        lines.append(
-            "Required: name the source case compactly — one clear reference to "
-            "the publisher or title above — without turning the post into "
-            "citation-heavy prose."
-        )
-    lines.append("")
+            "them. The article is not publishable without it.",
+            "",
+        ]
+        return "\n".join(lines)
+
+    # Social surface (#196): the post distributes the published Never Blank
+    # article, and the article owns the external-source links. The post may
+    # name the source naturally, but never carries a URL — the canonical
+    # article link is appended by the system after publication, and any URL
+    # the model wrote would fail the social-lineage gate as a competing
+    # destination. Records with no nameable identity (URL only) are omitted:
+    # there is nothing they could contribute except the forbidden link.
+    nameable = []
+    for item in citable:
+        parts = [item[key] for key in ("publisher", "title") if item.get(key)]
+        if parts:
+            nameable.append(" · ".join(parts))
+    if not nameable:
+        return ""
+    lines = [
+        "",
+        "SOURCES BEHIND THE ARTICLE — the documented sources this story comes "
+        "from. You may name the publisher or title naturally in the body when "
+        "it helps the reader (for example, 'Entrepreneur profiled a founder "
+        "who…'); never invent or substitute one, and never cite anything "
+        "else.",
+        "",
+    ]
+    for entry in nameable:
+        lines.append("- " + entry)
+    lines += [
+        "",
+        "Never write any URL in the post — not the source's, not the site's. "
+        "The link to the published Never Blank article is appended by the "
+        "system after publication.",
+        "",
+    ]
     return "\n".join(lines)

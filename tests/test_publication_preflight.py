@@ -528,11 +528,16 @@ def test_recorded_digest_equals_the_package_handed_to_the_publisher(tmp_path, mo
         assert package.package_digest() == result.verdict_for(channel).package_digest
 
 
-def test_missing_wix_credential_blocks_wix_only_end_to_end(tmp_path, monkeypatch):
+def test_missing_wix_credential_blocks_wix_and_therefore_linkedin(tmp_path, monkeypatch):
+    # #196: the channels are no longer independent siblings — LinkedIn
+    # distributes the published canonical article, so a Wix block leaves it
+    # nothing to publish behind. Preflight still ALLOWs the LinkedIn channel
+    # (its own package is fine); the publication loop is what refuses to run
+    # it without a canonical URL.
     _target_env(monkeypatch, wix_key=False)
     code, wix_mock, li_mock, verdicts = _live_run(tmp_path)
     wix_mock.publish.assert_not_called()
-    assert li_mock.publish.called
+    li_mock.publish.assert_not_called()
     result = PreflightResult.model_validate_json(verdicts[0].read_bytes())
     assert result.allowed_channels() == ("linkedin",)
     assert code == 1          # the run is not complete while a channel is blocked
@@ -540,6 +545,8 @@ def test_missing_wix_credential_blocks_wix_only_end_to_end(tmp_path, monkeypatch
         next(tmp_path.glob(f"{legacy._SIGNAL_ID}/runs/*/publication_results.json")).read_text()
     )
     assert published["results"]["wix"]["status"] == "BLOCKED"
+    assert published["results"]["linkedin"]["status"] == "BLOCKED"
+    assert "no canonical article URL" in published["results"]["linkedin"]["error_message"]
     assert published["completed"] is False
 
 
@@ -660,7 +667,7 @@ def test_linkedin_target_failure_blocks_only_linkedin_end_to_end(tmp_path, monke
     assert code == 1                                 # run incomplete, not silent
 
 
-def test_wix_target_failure_blocks_only_wix_end_to_end(tmp_path, monkeypatch):
+def test_wix_target_failure_blocks_wix_and_therefore_linkedin(tmp_path, monkeypatch):
     _target_env(monkeypatch)
     monkeypatch.delenv("NB_WIX_POST_OWNER_ID", raising=False)
 
@@ -673,7 +680,8 @@ def test_wix_target_failure_blocks_only_wix_end_to_end(tmp_path, monkeypatch):
     assert BlockingReason.TARGET_MISSING in wix.blocking_reasons
     assert wix.package_digest is None
     wix_mock.publish.assert_not_called()
-    assert li_mock.publish.called
+    # #196: no published canonical article -> LinkedIn is not attempted either
+    li_mock.publish.assert_not_called()
 
 
 def test_channel_local_failure_leaves_the_other_channel_published(tmp_path, monkeypatch):

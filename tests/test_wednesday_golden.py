@@ -302,11 +302,15 @@ def test_canonical_entrypoint_records_role_and_routes_real_rules(tmp_path):
     assert "evidence-grounded title tension" in role_rules["long"]
     assert "native compressed LinkedIn" in role_rules["medium"]
     assert "SOURCES OF RECORD" in role_rules["long"]
-    assert "SOURCES OF RECORD" in role_rules["medium"]
+    # #196: the social surface receives the URL-free naming block instead
+    assert "SOURCES BEHIND THE ARTICLE" in role_rules["medium"]
     assert "Verified report" in role_rules["long"]
-    assert "https://source.example/report" in role_rules["medium"]
+    # #196: the social surface names sources, never links them — the URL
+    # stays on the canonical article surface only
+    assert "Verified report" in role_rules["medium"]
+    assert "https://source.example/report" not in role_rules["medium"]
+    assert "Never write any URL in the post" in role_rules["medium"]
     assert "Sources section" in role_rules["long"]
-    assert "compactly" in role_rules["medium"]
     assert "close the article with a short Sources section" not in role_rules["medium"]
 
     rubric = patches["run_editorial_acceptance"].call_args.kwargs["rubric"]

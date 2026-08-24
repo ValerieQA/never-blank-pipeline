@@ -207,7 +207,7 @@ def test_the_role_rules_are_handed_to_generation(tmp_path):
         assert MONDAY_ROLE in rendering
         assert "exactly one mechanism actually visible" in rendering.lower()
     assert "sources section" in rules["long"].lower()
-    assert "compact source attribution" in rules["medium"].lower()
+    assert "never write any url in the post" in rules["medium"].lower()
 
 
 # ===========================================================================
@@ -237,9 +237,9 @@ def test_surface_rules_reach_their_surface_and_only_their_surface():
     linkedin_rendering = render_editorial_role_rules(role, surface="linkedin")
 
     assert "Sources section" in wix_rendering
-    assert "compact source attribution" in linkedin_rendering
+    assert "Never write any URL in the post" in linkedin_rendering
     # no cross-surface leak in either direction
-    assert "compact source attribution" not in wix_rendering
+    assert "Never write any URL in the post" not in wix_rendering
     assert "Sources section" not in linkedin_rendering
 
 
@@ -959,8 +959,9 @@ def test_linkedin_source_attribution_reaches_the_monday_prompt():
         ),
     ).lower()
 
-    assert "compact source attribution" in prompt
-    assert "not citation-heavy prose" in prompt
+    assert "name the original publisher" in prompt
+    assert "never write any url in the post" in prompt
+    assert "appended by the system after publication" in prompt
 
 
 def test_monday_source_rules_do_not_leak_into_shared_channel_composition():
@@ -981,13 +982,13 @@ def test_monday_source_rules_do_not_leak_into_shared_channel_composition():
 
     for prompt in (wix_prompt, linkedin_prompt):
         assert "visible sources section" not in prompt
-        assert "compact source attribution" not in prompt
+        assert "never write any url in the post" not in prompt
         assert "editorial role" not in prompt
     # the shared channel configuration itself stayed as it was
     channels = json.loads(CONFIG_PATH.read_text())["channels"]
     shared = json.dumps(channels).lower()
     assert "sources section" not in shared
-    assert "compact source attribution" not in shared
+    assert "never write any url in the post" not in shared
 
 
 # ===========================================================================
@@ -1247,29 +1248,23 @@ FABRICATED_BODY = (
 )
 
 
-def test_valid_attribution_on_both_surfaces_passes():
+def test_valid_attribution_on_the_article_passes():
     validate_source_transparency(
         article_body=ATTRIBUTED_BODY,
-        linkedin_body="Case documented by the SBA Office of Advocacy.",
         research=_research_artifact(),
     )
 
 
-@pytest.mark.parametrize(
-    "article, linkedin, failing_surface",
-    [
-        (UNATTRIBUTED_BODY, "Case documented by the SBA Office of Advocacy.", "article"),
-        (ATTRIBUTED_BODY, UNATTRIBUTED_BODY, "linkedin"),
-    ],
-)
-def test_a_surface_without_attribution_blocks(article, linkedin, failing_surface):
+def test_an_article_without_attribution_blocks():
+    # #196: the gate owns the canonical article surface only — the LinkedIn
+    # derivative is governed by validate_social_lineage after Wix publishes.
     with pytest.raises(SourceTransparencyError) as exc:
         validate_source_transparency(
-            article_body=article, linkedin_body=linkedin,
+            article_body=UNATTRIBUTED_BODY,
             research=_research_artifact(),
         )
 
-    assert failing_surface in str(exc.value)
+    assert "article" in str(exc.value)
 
 
 def test_a_fabricated_source_does_not_satisfy_the_rule():
@@ -1278,7 +1273,6 @@ def test_a_fabricated_source_does_not_satisfy_the_rule():
     with pytest.raises(SourceTransparencyError):
         validate_source_transparency(
             article_body=FABRICATED_BODY,
-            linkedin_body="Case documented by the SBA Office of Advocacy.",
             research=_research_artifact(),
         )
 
@@ -1288,8 +1282,7 @@ def test_an_invented_link_beside_real_attribution_still_blocks():
 
     with pytest.raises(SourceTransparencyError) as exc:
         validate_source_transparency(
-            article_body=body, linkedin_body="Per the SBA Office of Advocacy.",
-            research=_research_artifact(),
+            article_body=body, research=_research_artifact(),
         )
 
     assert "invented" in str(exc.value) or "not one of this run's sources" in str(exc.value)
@@ -1299,8 +1292,7 @@ def test_the_configured_site_destination_is_not_treated_as_invented():
     body = ATTRIBUTED_BODY + " Continue at https://www.inneros.online/about."
 
     validate_source_transparency(
-        article_body=body, linkedin_body="Per the SBA Office of Advocacy.",
-        research=_research_artifact(),
+        article_body=body, research=_research_artifact(),
         allowed_destinations=("https://www.inneros.online",),
     )
 
@@ -1375,8 +1367,7 @@ def test_sibling_and_lookalike_hosts_are_refused_structurally():
 
     with pytest.raises(SourceTransparencyError):
         validate_source_transparency(
-            article_body=body, linkedin_body="Per the SBA Office of Advocacy.",
-            research=_research_artifact(),
+            article_body=body, research=_research_artifact(),
             allowed_destinations=("https://www.inneros.online",),
         )
 
@@ -1395,8 +1386,7 @@ def test_url_confusion_attacks_fail(attack):
 
     with pytest.raises(SourceTransparencyError):
         validate_source_transparency(
-            article_body=body, linkedin_body="Per the SBA Office of Advocacy.",
-            research=_research_artifact(),
+            article_body=body, research=_research_artifact(),
             allowed_destinations=("https://www.inneros.online",),
         )
 
@@ -1410,8 +1400,7 @@ def test_the_exact_configured_origin_and_subpaths_pass(legitimate):
     body = ATTRIBUTED_BODY + f" Continue at {legitimate} today."
 
     validate_source_transparency(
-        article_body=body, linkedin_body="Per the SBA Office of Advocacy.",
-        research=_research_artifact(),
+        article_body=body, research=_research_artifact(),
         allowed_destinations=("https://www.inneros.online",),
     )
 
@@ -1424,7 +1413,6 @@ def test_a_generic_publisher_is_never_satisfied_by_ordinary_prose():
     with pytest.raises(SourceTransparencyError):
         validate_source_transparency(
             article_body="Our research shows steady gains for small firms.",
-            linkedin_body="Our research shows the same.",
             research=research,
         )
 
@@ -1435,7 +1423,6 @@ def test_a_generic_publisher_is_refused_even_inside_an_attribution_construction(
     with pytest.raises(SourceTransparencyError):
         validate_source_transparency(
             article_body="According to Research, firms grow.",
-            linkedin_body="Per Research.",
             research=research,
         )
 
@@ -1445,7 +1432,6 @@ def test_a_generic_publisher_can_still_be_attested_by_its_exact_url():
 
     validate_source_transparency(
         article_body="The case is documented at https://advocacy.sba.gov/report.",
-        linkedin_body="Details: https://advocacy.sba.gov/report",
         research=research,
     )
 
@@ -1456,7 +1442,6 @@ def test_an_unambiguous_publisher_needs_an_explicit_construction():
     with pytest.raises(SourceTransparencyError):
         validate_source_transparency(
             article_body="We visited the SBA Office of Advocacy building last week.",
-            linkedin_body="A nice building.",
             research=_research_artifact(),
         )
 
@@ -1470,7 +1455,6 @@ def test_a_real_source_identity_cannot_prefix_a_fabricated_identity(body):
     with pytest.raises(SourceTransparencyError):
         validate_source_transparency(
             article_body=body,
-            linkedin_body="Per the SBA Office of Advocacy.",
             research=_research_artifact(),
         )
 
@@ -1488,7 +1472,6 @@ def test_a_real_source_identity_cannot_prefix_a_fabricated_identity(body):
 def test_declared_exact_attribution_constructions_remain_valid(body):
     validate_source_transparency(
         article_body=body,
-        linkedin_body="Per the SBA Office of Advocacy.",
         research=_research_artifact(),
     )
 
@@ -2060,14 +2043,16 @@ def test_monday_wix_receives_the_runs_actual_source_identity(tmp_path):
     assert "Sources section" in wix
 
 
-def test_monday_linkedin_receives_compact_attribution_instructions(tmp_path):
+def test_monday_linkedin_receives_url_free_source_naming_instructions(tmp_path):
+    # #196: the social surface may NAME the source, never link it — the
+    # canonical article owns the external-source links, and any URL the model
+    # wrote would fail the social-lineage gate as a competing destination
     _, rules = _captured_role_rules(tmp_path)
 
     medium = rules["medium"]
     assert "Verified report" in medium
-    assert "https://source.example/report" in medium
-    assert "compactly" in medium
-    assert "citation-heavy prose" in medium
+    assert "https://source.example/report" not in medium
+    assert "Never write any URL in the post" in medium
     # the article-only Sources-section requirement does not leak to LinkedIn
     assert "close the article with a short Sources section" not in medium
 
@@ -2267,7 +2252,7 @@ def test_the_closing_order_reaches_each_surface():
     linkedin = render_editorial_role_rules(role, surface="linkedin").lower()
 
     assert "then the sources section last" in wix
-    assert "then hashtags last" in linkedin
+    assert "hashtags last" in linkedin
     assert "hashtags last" not in wix
     assert "sources section last" not in linkedin
     # #191: the branded Echo closes both surfaces, and neither carries an

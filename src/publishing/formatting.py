@@ -5,6 +5,8 @@ Editorial Engine already produced for a specific platform; it never decides what
 the piece says. See docs/EDITORIAL_ENGINE_V2.md for where that line is drawn.
 """
 
+import re
+
 # Unicode Mathematical Sans-Serif Bold block. Contiguous ranges, verified via
 # unicodedata.name() against "𝗡𝗲𝘃𝗲𝗿 𝗕𝗹𝗮𝗻𝗸". Used on platforms whose post-text
 # APIs have no real bold markup (LinkedIn, Facebook, Instagram, Threads).
@@ -88,6 +90,43 @@ def source_line(source_name: str, source_url: str, style: str) -> str:
     if style == "bare_url":
         return f"\n\nSource: {source_url}"
     return ""
+
+
+#: The invitation that carries a reader from a social derivative to the
+#: canonical Never Blank article. Deliberately plain: the destination is the
+#: point, and LinkedIn's post-text API has no anchor text to dress it with.
+CANONICAL_LINK_INVITATION = "Want to read more?"
+
+#: A line made only of hashtags. Hashtags conventionally close a social post,
+#: so the canonical link is inserted *before* such a line rather than after it.
+_HASHTAG_LINE = re.compile(r"^#[^\s#]+(?:\s+#[^\s#]+)*$")
+
+
+def append_canonical_article_link(text: str, canonical_url: str) -> str:
+    """Add the canonical Never Blank article link to a social body (#196).
+
+    Deterministic by construction — string assembly over a URL the publisher
+    actually returned. No model is involved, so the destination can never be
+    invented, and re-running the same inputs produces the same body (which is
+    what lets duplicate detection recognise a recovery attempt).
+
+    The link block goes last, except that a trailing hashtag line keeps its
+    place at the very end.
+    """
+
+    url = (canonical_url or "").strip()
+    if not url:
+        raise ValueError(
+            "a canonical article link requires a real published URL — there "
+            "is no placeholder and no generic fallback destination"
+        )
+    block = f"{CANONICAL_LINK_INVITATION}\n{url}"
+    lines = text.rstrip().split("\n")
+    last = lines[-1].strip()
+    if len(lines) > 1 and _HASHTAG_LINE.match(last):
+        head = "\n".join(lines[:-1]).rstrip()
+        return f"{head}\n\n{block}\n\n{last}"
+    return f"{text.rstrip()}\n\n{block}"
 
 
 def append_hashtags(text: str, hashtags: list[str]) -> str:
