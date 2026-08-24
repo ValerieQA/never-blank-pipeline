@@ -145,10 +145,17 @@ def test_both_surfaces_require_a_contextual_never_blank_close(wix_text, linkedin
     assert "standard house thesis" in wix_text
 
 
-def test_both_surfaces_name_the_canonical_destination_and_no_other(wix_text, linkedin_text):
+def test_the_article_names_the_canonical_destination_and_the_social_post_does_not(
+    wix_text, linkedin_text
+):
+    # #203: the destination is surface-scoped. The article names it; the
+    # social derivative never does, because the system appends this run's
+    # canonical article link after publication (#196/#200) and a
+    # model-authored URL would be a competing destination.
     assert SITE.lower() in wix_text
-    assert SITE.lower() in linkedin_text
+    assert SITE.lower() not in linkedin_text
     assert "no other url" in wix_text
+    assert "appended by the system after publication" in linkedin_text
 
     # and the CTA the voice stage receives names it too
     reflection = next(
@@ -209,10 +216,12 @@ def test_the_configured_rules_reach_the_composer_prompt_for_both_surfaces():
     assert "TARGET LENGTH: 400-600 words" in blog_prompt
     for prompt in (blog_prompt, li_prompt):
         assert "CONFIGURED CHANNEL RULES:" in prompt
-        assert SITE in prompt
         assert "Never Blank" in prompt
         assert "perspective" in prompt
         assert "evidence-supported mechanism" in prompt
+    # #203: only the article surface carries the destination
+    assert SITE in blog_prompt
+    assert SITE not in li_prompt
     assert "one central idea" in blog_prompt.lower()
     assert "same single idea" in li_prompt.lower()
 
@@ -281,9 +290,10 @@ def test_the_invitation_claims_no_capability(wix_text, linkedin_text):
 
 
 def test_the_canonical_destination_survives_the_framing_rules(wix_text, linkedin_text):
-    # the CTA rules were rewritten; the destination must not have been lost
+    # the CTA rules were rewritten; the article's destination must not have
+    # been lost — and the social surface must not have gained one (#203)
     assert SITE.lower() in wix_text
-    assert SITE.lower() in linkedin_text
+    assert SITE.lower() not in linkedin_text
     assert wix_text.count(SITE.lower()) == 1  # one destination, named once
 
 
