@@ -250,6 +250,102 @@ def _seam_chat_capture(body_lines: str):
     return calls, fake_chat
 
 
+# ===========================================================================
+# Prompt contract: the copying rule and the verbatim-Echo rule must be
+# simultaneously obeyable (PR #198 review round 1)
+#
+# #191 and #193 were both live failures of the same class: two individually
+# reasonable instructions that no output could satisfy at once. Here the
+# canonical-content block says "do not reuse the article's sentences" while
+# the ECHO MODE line says "reproduce the supplied Echo exactly" — and under
+# this contract the article itself ends with that Echo. The prohibition must
+# therefore carry its own exception, in the same breath, or the two rules
+# cannot both be followed.
+# ===========================================================================
+
+
+def _canonical_prompt() -> str:
+    """A prompt with BOTH conditions live: canonical body + verbatim Echo."""
+    from src.editorial.platform_composer import _effective_echo_mode
+
+    assert _effective_echo_mode("medium", CLOSING_BRANDED_ECHO_THEN_SOURCES) == (
+        "verbatim_final"
+    )
+    return _build_user_prompt(
+        _structured(), "medium", "none",
+        closing_contract=CLOSING_BRANDED_ECHO_THEN_SOURCES,
+        canonical_body=f"Long-form prose about the case.\n\nNever Blank: {_ECHO}",
+    )
+
+
+def test_the_copying_rule_is_scoped_to_ordinary_prose():
+    prompt = _canonical_prompt()
+
+    # the derive-don't-copy principle is stated …
+    assert "rather than copying its paragraphs or sentences wholesale" in prompt
+    # … and it is explicitly limited to ordinary prose, not stated absolutely
+    assert "This rule governs ORDINARY PROSE ONLY" in prompt
+    # the unqualified form that could not coexist with a verbatim Echo is gone
+    assert "Derive, never copy" not in prompt
+    assert "reusing its sentences verbatim is rejected" not in prompt
+
+
+def test_contract_required_verbatim_content_is_explicitly_exempt():
+    prompt = _canonical_prompt()
+
+    # the exemption names the mechanism (an instruction below requiring
+    # verbatim reproduction), gives the concrete instance, and rules out
+    # reading it as a conflict
+    assert (
+        "any element an instruction below requires to appear verbatim "
+        "(the ECHO MODE line, for example) must still be reproduced exactly "
+        "as supplied, even when the same wording also appears in the content "
+        "above"
+    ) in prompt
+    assert "exceptions to this one, never conflicts with it" in prompt
+
+
+def test_the_exception_travels_with_the_prohibition():
+    # a model reading the prohibition must meet its exception in the same
+    # block — an exemption stranded elsewhere in the prompt would not
+    # resolve the contradiction at the point of reading
+    prompt = _canonical_prompt()
+    block = prompt.split("FINAL CANONICAL CONTENT")[1].split(_ECHO)[0]
+
+    prohibition = block.index("rather than copying its paragraphs")
+    exemption = block.index("This rule governs ORDINARY PROSE ONLY")
+    assert prohibition < exemption
+
+
+def test_both_rules_are_present_and_jointly_satisfiable():
+    prompt = _canonical_prompt()
+
+    # the ECHO MODE instruction still demands the exact supplied Echo …
+    assert "word for word" in prompt
+    assert "never adapted" in prompt
+    # … the Echo is supplied …
+    assert _ECHO in prompt
+    # … and a body that copies ONLY the Echo satisfies both rules: the
+    # validator accepts it, which is the behaviour the prompt now asks for
+    from src.editorial.platform_composer import _validate_branded_echo_final
+
+    _validate_branded_echo_final(
+        f"A wholly different channel-native opening.\n\nNever Blank: {_ECHO}",
+        _ECHO, "medium",
+    )
+
+
+def test_the_prompt_contract_holds_without_a_canonical_body_too():
+    # the ordinary composition path never had the copying rule at all; the
+    # exemption must not leak into it
+    prompt = _build_user_prompt(
+        _structured(), "medium", "none",
+        closing_contract=CLOSING_BRANDED_ECHO_THEN_SOURCES,
+    )
+    assert "ORDINARY PROSE ONLY" not in prompt
+    assert "word for word" in prompt          # the Echo rule is unchanged
+
+
 def test_the_seam_makes_exactly_one_model_call_with_the_final_content():
     body = f"A channel-native derivative.\n\nNever Blank: {_ECHO}"
     calls, fake_chat = _seam_chat_capture(body)

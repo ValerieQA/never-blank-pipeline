@@ -402,9 +402,16 @@ def _build_user_prompt(
             "composition must derive from. Its facts, framing and single "
             "mechanism are authoritative: never introduce a claim that is "
             "not supported by it, and where the structured fields below "
-            "differ from it, the final content wins. Derive, never copy — "
-            "reusing its sentences verbatim is rejected as "
-            "non-channel-native.",
+            "differ from it, the final content wins. Write this format's "
+            "prose as your own derivative of that content rather than "
+            "copying its paragraphs or sentences wholesale — reused "
+            "long-form prose is rejected as non-channel-native. This rule "
+            "governs ORDINARY PROSE ONLY: any element an instruction below "
+            "requires to appear verbatim (the ECHO MODE line, for example) "
+            "must still be reproduced exactly as supplied, even when the "
+            "same wording also appears in the content above. Those "
+            "requirements are exceptions to this one, never conflicts with "
+            "it.",
             "",
             canonical_body,
             "",
