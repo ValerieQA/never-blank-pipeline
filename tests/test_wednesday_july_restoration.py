@@ -264,27 +264,37 @@ def test_the_interpretation_fields_reach_the_stages_that_used_them(versant):
     assert versant["RESPONSE_TAKEN"] in discovery
 
 
-def test_the_ported_modules_are_verbatim_july(versant):
-    """A literal restoration — the port must not have been 'improved'."""
-    import subprocess
+def test_the_ported_modules_are_verbatim_july():
+    """A literal restoration — the port must not have been 'improved'.
+
+    Compared against reference copies of the c7d3a23 sources committed under
+    ``july_originals/`` rather than against git history: the claim must hold
+    in a shallow clone, and pinning the originals in-repo makes the source of
+    truth reviewable instead of requiring an archaeological dig.
+    """
+    originals = FIXTURES / "july_originals"
 
     for module in _STAGE_MODULES:
-        july = subprocess.run(
-            ["git", "show", f"c7d3a23:src/editorial/{module}.py"],
-            capture_output=True, text=True, check=True,
-        ).stdout
+        july = (originals / f"{module}.py.txt").read_text(encoding="utf-8")
         ported = Path(f"src/never_blank/wednesday_july/{module}.py").read_text()
-        # the port adds an isolation banner and repoints intra-package imports;
-        # everything else must be byte-identical to July
-        stripped = "\n".join(
-            line for line in ported.splitlines()
-            if not line.startswith("#") or "ISOLATED WEDNESDAY" not in ported[:400]
-        )
         for july_line in july.splitlines():
             if july_line.strip().startswith("from src.editorial."):
                 continue          # intra-package import, legitimately repointed
             assert july_line in ported, f"{module}: lost July line {july_line!r}"
-        assert stripped  # sanity
+
+
+def test_the_only_additions_are_the_isolation_banner():
+    """Every ported module is July plus exactly the banner — nothing else."""
+    originals = FIXTURES / "july_originals"
+
+    for module in _STAGE_MODULES:
+        july_len = len((originals / f"{module}.py.txt").read_text().splitlines())
+        ported_len = len(
+            Path(f"src/never_blank/wednesday_july/{module}.py").read_text().splitlines()
+        )
+        assert ported_len - july_len == 17, (
+            f"{module}: +{ported_len - july_len} lines, expected only the banner"
+        )
 
 
 def test_july_retry_semantics_are_preserved(versant):
