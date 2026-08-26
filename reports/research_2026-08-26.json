@@ -1,0 +1,107 @@
+{
+  "date": "2026-08-26",
+  "candidates_found": 1,
+  "duplicates_skipped": 0,
+  "new_signals_added": 1,
+  "selected_for_content": 1,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Your Promo Code Field May Be Sending Revenue To Affiliates via @sejournal, @lore"
+  ],
+  "publish_reports": [],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 1,
+  "images_new": 1,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "ff539d8bbe68ce48",
+      "HEADLINE": "Your Promo Code Field May Be Sending Revenue To Affiliates via @sejournal, @lorenbaker",
+      "prepared_at": "2026-08-26 08:50 UTC",
+      "content": {
+        "blog": {
+          "headline": "How Your Promo Code Field Is Quietly Bleeding Revenue to Affiliates",
+          "angle": "Ecommerce sites want every sale but handing off promo code searches to affiliates creates tension between capturing revenue and paying unnecessary commissions; the fix is owning the promo code experience to stop revenue leakage."
+        },
+        "linkedin": {
+          "headline": "Every time a shopper leaves your checkout to find a promo code, you\u2019re paying a commission for a sale you already had.",
+          "angle": "Promo code fields that drive customers to affiliate sites create hidden revenue loss, forcing founders to rethink their checkout UX to protect margins."
+        },
+        "facebook": {
+          "headline": "Is your promo code field sending money straight to affiliates?",
+          "angle": "Ecommerce businesses risk losing revenue when customers use promo code fields to hunt discounts and end up on affiliate sites\u2014how much are you paying out for sales you already had?"
+        },
+        "instagram": {
+          "headline": "Stop Losing Revenue to Promo Code Affiliates",
+          "angle": "When your promo code field sends shoppers to affiliates, you\u2019re outsourcing part of your customer experience and paying unnecessary commissions."
+        },
+        "threads": {
+          "thread_hook": "Your promo code field might be the biggest revenue leak you don\u2019t see.",
+          "angle": "This thread breaks down how promo code searches funnel customers to affiliates, why that costs you money, and what founders can do to reclaim lost revenue."
+        },
+        "stories": {
+          "story_question": "Are your promo code fields costing you sales you already had?",
+          "angle": "Exploring how handing off promo code searches to affiliates creates a hidden revenue drain for ecommerce founders."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787734229/never-blank/posts/research/ff539d8bbe68ce48/blog/1787734228.png",
+            "path": "reports/content_packages/images/ff539d8bbe68ce48_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787734232/never-blank/posts/research/ff539d8bbe68ce48/linkedin/1787734232.png",
+            "path": "reports/content_packages/images/ff539d8bbe68ce48_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787734235/never-blank/posts/research/ff539d8bbe68ce48/facebook/1787734235.png",
+            "path": "reports/content_packages/images/ff539d8bbe68ce48_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787734242/never-blank/posts/research/ff539d8bbe68ce48/instagram/1787734241.png",
+            "path": "reports/content_packages/images/ff539d8bbe68ce48_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787734246/never-blank/posts/research/ff539d8bbe68ce48/threads/1787734246.png",
+            "path": "reports/content_packages/images/ff539d8bbe68ce48_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787734255/never-blank/posts/research/ff539d8bbe68ce48/stories/1787734255.png",
+            "path": "reports/content_packages/images/ff539d8bbe68ce48_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "light_paths",
+        "hook_text": "Avoid losing revenue to affiliate coupon sites."
+      }
+    }
+  ],
+  "_publish_reports": []
+}
