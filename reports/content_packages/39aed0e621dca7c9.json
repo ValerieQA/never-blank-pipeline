@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "39aed0e621dca7c9",
+  "HEADLINE": "Wendy’s New CEO Has a Five-Point Plan to Get Back in the Burger Chain Fight — Here’s What’s in It",
+  "prepared_at": "2026-08-27 18:59 UTC",
+  "content": {
+    "blog": {
+      "headline": "Wendy’s Five-Point Plan: Why Cost-Cutting Alone Bleeds Brands Dry",
+      "angle": "Wendy’s CEO faces the fallout from past cost cuts that sacrificed quality → The tension between saving money and maintaining brand standards → A strategic pivot to reinvest in product and experience → Lesson: Cost-cutting isn’t strategy; sustained brand health demands focused investment."
+    },
+    "linkedin": {
+      "headline": "Wendy’s lost ground by treating cost cuts as a strategy, not a tool.",
+      "angle": "When brands prioritize short-term savings over product quality, market share slips and recovery demands more than just bigger budgets."
+    },
+    "facebook": {
+      "headline": "Wendy’s tried saving money by cutting corners — and paid for it in lost customers.",
+      "angle": "Wendy’s cost-cutting led to a dip in quality and market share. Can their new CEO’s five-point plan reverse the damage before it’s too late?"
+    },
+    "instagram": {
+      "headline": "Cost Cuts Don’t Heal Brands",
+      "angle": "Wendy’s new CEO knows that slashing expenses at the expense of quality only deepens brand wounds."
+    },
+    "threads": {
+      "thread_hook": "Wendy’s learned the hard way: cost-cutting isn’t a strategy, it’s a risk.",
+      "angle": "This thread breaks down how Wendy’s past cost cuts eroded their brand, why the new CEO’s plan focuses on quality and experience, and what founders should take from this balancing act."
+    },
+    "stories": {
+      "story_question": "Can cutting costs kill your brand’s edge?",
+      "angle": "Exploring the tension between saving money and investing in what keeps customers coming back."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857141/never-blank/posts/research/39aed0e621dca7c9/blog/1787857140.png",
+        "path": "reports/content_packages/images/39aed0e621dca7c9_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857141/never-blank/posts/research/39aed0e621dca7c9/linkedin/1787857141.png",
+        "path": "reports/content_packages/images/39aed0e621dca7c9_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857142/never-blank/posts/research/39aed0e621dca7c9/facebook/1787857142.png",
+        "path": "reports/content_packages/images/39aed0e621dca7c9_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857142/never-blank/posts/research/39aed0e621dca7c9/instagram/1787857142.png",
+        "path": "reports/content_packages/images/39aed0e621dca7c9_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857143/never-blank/posts/research/39aed0e621dca7c9/threads/1787857143.png",
+        "path": "reports/content_packages/images/39aed0e621dca7c9_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857144/never-blank/posts/research/39aed0e621dca7c9/stories/1787857144.png",
+        "path": "reports/content_packages/images/39aed0e621dca7c9_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "light_message_card",
+    "hook_text": "Wendy’s tried saving money by cutting corners — and paid for it in lost customers."
+  }
+}

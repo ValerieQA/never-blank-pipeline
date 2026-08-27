@@ -693,5 +693,25 @@
     "visual_family": "light_paths",
     "design_version": "3",
     "hook_text": "Avoid losing revenue to affiliate coupon sites."
+  },
+  "39aed0e621dca7c9": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857141/never-blank/posts/research/39aed0e621dca7c9/blog/1787857140.png",
+    "signal_type": "owner bottleneck",
+    "headline": "Wendy’s New CEO Has a Five-Point Plan to Get Back in the Burger Chain Fight — Here’s What’s in It",
+    "created_at": "2026-08-27",
+    "method": "quote_card",
+    "visual_family": "light_message_card",
+    "design_version": "3",
+    "hook_text": "Wendy’s tried saving money by cutting corners — and paid for it in lost customers."
+  },
+  "151ecdbaffab27e3": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857193/never-blank/posts/research/151ecdbaffab27e3/blog/1787857193.png",
+    "signal_type": "trust accumulation pattern",
+    "headline": "How To Become A Strategic Partner & Keep Clients Years Longer",
+    "created_at": "2026-08-27",
+    "method": "gpt-image-1",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Agencies that evolve can extend client relationships to seven years."
   }
 }

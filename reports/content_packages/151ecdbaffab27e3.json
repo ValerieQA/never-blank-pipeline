@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "151ecdbaffab27e3",
+  "HEADLINE": "How To Become A Strategic Partner & Keep Clients Years Longer",
+  "prepared_at": "2026-08-27 19:00 UTC",
+  "content": {
+    "blog": {
+      "headline": "From Vendor to Boardroom: How Agencies Secure Clients for Seven Years",
+      "angle": "Agencies stuck as replaceable vendors face churn → the tension of being sidelined after delivery → agencies that invest in strategic alignment become trusted partners → resulting in longer client retention and higher lifetime value."
+    },
+    "linkedin": {
+      "headline": "Most agencies are fired before their work is even finished. Why?",
+      "angle": "Agencies that remain task-focused risk being replaceable, but those who embed themselves strategically secure client trust and extend relationships."
+    },
+    "facebook": {
+      "headline": "Are you just a vendor or a strategic partner? Most agencies get cut loose early.",
+      "angle": "Agencies that shift from task execution to strategic partnership can keep clients for seven years on average. What’s your agency’s role in the client’s business?"
+    },
+    "instagram": {
+      "headline": "From Invoice Pile to Boardroom Seat",
+      "angle": "Agencies that invest in strategic alignment move beyond deliverables to become indispensable partners, locking in longer client relationships."
+    },
+    "threads": {
+      "thread_hook": "Most agencies get fired before their work is even finished. Here’s why.",
+      "angle": "This thread breaks down how agencies trapped in vendor roles lose clients quickly, and how shifting to strategic partnership extends client lifecycles dramatically."
+    },
+    "stories": {
+      "story_question": "Are you a replaceable vendor or a strategic partner?",
+      "angle": "Exploring the tension agencies face between being easily replaced and becoming trusted, long-term partners."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857193/never-blank/posts/research/151ecdbaffab27e3/blog/1787857193.png",
+        "path": "reports/content_packages/images/151ecdbaffab27e3_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857196/never-blank/posts/research/151ecdbaffab27e3/linkedin/1787857196.png",
+        "path": "reports/content_packages/images/151ecdbaffab27e3_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857199/never-blank/posts/research/151ecdbaffab27e3/facebook/1787857199.png",
+        "path": "reports/content_packages/images/151ecdbaffab27e3_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857204/never-blank/posts/research/151ecdbaffab27e3/instagram/1787857203.png",
+        "path": "reports/content_packages/images/151ecdbaffab27e3_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857208/never-blank/posts/research/151ecdbaffab27e3/threads/1787857208.png",
+        "path": "reports/content_packages/images/151ecdbaffab27e3_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857214/never-blank/posts/research/151ecdbaffab27e3/stories/1787857214.png",
+        "path": "reports/content_packages/images/151ecdbaffab27e3_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Agencies that evolve can extend client relationships to seven years."
+  }
+}

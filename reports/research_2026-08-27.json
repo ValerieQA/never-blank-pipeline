@@ -1,0 +1,237 @@
+{
+  "date": "2026-08-27",
+  "candidates_found": 5,
+  "duplicates_skipped": 0,
+  "new_signals_added": 5,
+  "selected_for_content": 2,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Wendy\u2019s New CEO Has a Five-Point Plan to Get Back in the Burger Chain Fight \u2014 He",
+    "How To Become A Strategic Partner & Keep Clients Years Longer"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "39aed0e621dca7c9",
+      "headline": "Wendy\u2019s New CEO Has a Five-Point Plan to Get Back in the Burger Chain Fight \u2014 Here\u2019s What\u2019s in It",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'a quiet shift in quality can trigger a wave of silent exits long before the numbers catch up.'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 2,
+  "images_new": 2,
+  "images_reused": 0,
+  "publish_failures": [
+    "editorial_gate: Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'a quiet shift in quality can trigger a wave of silent exits long before the numbers catch up.'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "39aed0e621dca7c9",
+      "HEADLINE": "Wendy\u2019s New CEO Has a Five-Point Plan to Get Back in the Burger Chain Fight \u2014 Here\u2019s What\u2019s in It",
+      "prepared_at": "2026-08-27 18:59 UTC",
+      "content": {
+        "blog": {
+          "headline": "Wendy\u2019s Five-Point Plan: Why Cost-Cutting Alone Bleeds Brands Dry",
+          "angle": "Wendy\u2019s CEO faces the fallout from past cost cuts that sacrificed quality \u2192 The tension between saving money and maintaining brand standards \u2192 A strategic pivot to reinvest in product and experience \u2192 Lesson: Cost-cutting isn\u2019t strategy; sustained brand health demands focused investment."
+        },
+        "linkedin": {
+          "headline": "Wendy\u2019s lost ground by treating cost cuts as a strategy, not a tool.",
+          "angle": "When brands prioritize short-term savings over product quality, market share slips and recovery demands more than just bigger budgets."
+        },
+        "facebook": {
+          "headline": "Wendy\u2019s tried saving money by cutting corners \u2014 and paid for it in lost customers.",
+          "angle": "Wendy\u2019s cost-cutting led to a dip in quality and market share. Can their new CEO\u2019s five-point plan reverse the damage before it\u2019s too late?"
+        },
+        "instagram": {
+          "headline": "Cost Cuts Don\u2019t Heal Brands",
+          "angle": "Wendy\u2019s new CEO knows that slashing expenses at the expense of quality only deepens brand wounds."
+        },
+        "threads": {
+          "thread_hook": "Wendy\u2019s learned the hard way: cost-cutting isn\u2019t a strategy, it\u2019s a risk.",
+          "angle": "This thread breaks down how Wendy\u2019s past cost cuts eroded their brand, why the new CEO\u2019s plan focuses on quality and experience, and what founders should take from this balancing act."
+        },
+        "stories": {
+          "story_question": "Can cutting costs kill your brand\u2019s edge?",
+          "angle": "Exploring the tension between saving money and investing in what keeps customers coming back."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857141/never-blank/posts/research/39aed0e621dca7c9/blog/1787857140.png",
+            "path": "reports/content_packages/images/39aed0e621dca7c9_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857141/never-blank/posts/research/39aed0e621dca7c9/linkedin/1787857141.png",
+            "path": "reports/content_packages/images/39aed0e621dca7c9_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857142/never-blank/posts/research/39aed0e621dca7c9/facebook/1787857142.png",
+            "path": "reports/content_packages/images/39aed0e621dca7c9_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857142/never-blank/posts/research/39aed0e621dca7c9/instagram/1787857142.png",
+            "path": "reports/content_packages/images/39aed0e621dca7c9_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857143/never-blank/posts/research/39aed0e621dca7c9/threads/1787857143.png",
+            "path": "reports/content_packages/images/39aed0e621dca7c9_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857144/never-blank/posts/research/39aed0e621dca7c9/stories/1787857144.png",
+            "path": "reports/content_packages/images/39aed0e621dca7c9_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "light_message_card",
+        "hook_text": "Wendy\u2019s tried saving money by cutting corners \u2014 and paid for it in lost customers."
+      }
+    },
+    {
+      "SIGNAL_ID": "151ecdbaffab27e3",
+      "HEADLINE": "How To Become A Strategic Partner & Keep Clients Years Longer",
+      "prepared_at": "2026-08-27 19:00 UTC",
+      "content": {
+        "blog": {
+          "headline": "From Vendor to Boardroom: How Agencies Secure Clients for Seven Years",
+          "angle": "Agencies stuck as replaceable vendors face churn \u2192 the tension of being sidelined after delivery \u2192 agencies that invest in strategic alignment become trusted partners \u2192 resulting in longer client retention and higher lifetime value."
+        },
+        "linkedin": {
+          "headline": "Most agencies are fired before their work is even finished. Why?",
+          "angle": "Agencies that remain task-focused risk being replaceable, but those who embed themselves strategically secure client trust and extend relationships."
+        },
+        "facebook": {
+          "headline": "Are you just a vendor or a strategic partner? Most agencies get cut loose early.",
+          "angle": "Agencies that shift from task execution to strategic partnership can keep clients for seven years on average. What\u2019s your agency\u2019s role in the client\u2019s business?"
+        },
+        "instagram": {
+          "headline": "From Invoice Pile to Boardroom Seat",
+          "angle": "Agencies that invest in strategic alignment move beyond deliverables to become indispensable partners, locking in longer client relationships."
+        },
+        "threads": {
+          "thread_hook": "Most agencies get fired before their work is even finished. Here\u2019s why.",
+          "angle": "This thread breaks down how agencies trapped in vendor roles lose clients quickly, and how shifting to strategic partnership extends client lifecycles dramatically."
+        },
+        "stories": {
+          "story_question": "Are you a replaceable vendor or a strategic partner?",
+          "angle": "Exploring the tension agencies face between being easily replaced and becoming trusted, long-term partners."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857193/never-blank/posts/research/151ecdbaffab27e3/blog/1787857193.png",
+            "path": "reports/content_packages/images/151ecdbaffab27e3_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857196/never-blank/posts/research/151ecdbaffab27e3/linkedin/1787857196.png",
+            "path": "reports/content_packages/images/151ecdbaffab27e3_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857199/never-blank/posts/research/151ecdbaffab27e3/facebook/1787857199.png",
+            "path": "reports/content_packages/images/151ecdbaffab27e3_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857204/never-blank/posts/research/151ecdbaffab27e3/instagram/1787857203.png",
+            "path": "reports/content_packages/images/151ecdbaffab27e3_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857208/never-blank/posts/research/151ecdbaffab27e3/threads/1787857208.png",
+            "path": "reports/content_packages/images/151ecdbaffab27e3_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787857214/never-blank/posts/research/151ecdbaffab27e3/stories/1787857214.png",
+            "path": "reports/content_packages/images/151ecdbaffab27e3_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Agencies that evolve can extend client relationships to seven years."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "39aed0e621dca7c9",
+      "headline": "Wendy\u2019s New CEO Has a Five-Point Plan to Get Back in the Burger Chain Fight \u2014 Here\u2019s What\u2019s in It",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'a quiet shift in quality can trigger a wave of silent exits long before the numbers catch up.'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ]
+}
