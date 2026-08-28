@@ -1,0 +1,324 @@
+{
+  "date": "2026-08-28",
+  "candidates_found": 6,
+  "duplicates_skipped": 0,
+  "new_signals_added": 6,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Google Updates Site Reputation Abuse (Parasite SEO) Policy via @sejournal, @mart",
+    "Your Next Customer Will Ask AI About Your Business. Here\u2019s How to Shape What It ",
+    "AEO mentions vs. citations: Key differences explained"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "9cfe836ba02723cb",
+      "headline": "Google Updates Site Reputation Abuse (Parasite SEO) Policy via @sejournal, @martinibuster",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'risk now travels along the lines you draw between your own pages.'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "publish_failures": [
+    "editorial_gate: Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'risk now travels along the lines you draw between your own pages.'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "9cfe836ba02723cb",
+      "HEADLINE": "Google Updates Site Reputation Abuse (Parasite SEO) Policy via @sejournal, @martinibuster",
+      "prepared_at": "2026-08-28 20:07 UTC",
+      "content": {
+        "blog": {
+          "headline": "Google\u2019s New Parasite SEO Policy: Why Your Site\u2019s Sections Are Now Separate Battlegrounds",
+          "angle": "Google\u2019s shift from manual, site-wide penalties to section-level ranking adjustments creates tension between fair enforcement and business risk, forcing companies to rethink digital structure as a strategic asset."
+        },
+        "linkedin": {
+          "headline": "When Google changes the rules, your site map becomes a liability.",
+          "angle": "Google\u2019s updated Parasite SEO policy means businesses must now manage risk at the site-section level, impacting visibility and revenue in ways founders can\u2019t ignore."
+        },
+        "facebook": {
+          "headline": "Google no longer penalizes entire sites for reputation abuse\u2014now it targets specific sections. What does this mean for your business?",
+          "angle": "Google\u2019s new section-based ranking penalties shift enforcement dynamics; how will your digital structure hold up under this microscope?"
+        },
+        "instagram": {
+          "headline": "Site Structure Is Your New Strategy",
+          "angle": "Google\u2019s policy update means every part of your website is a standalone risk\u2014and a potential opportunity."
+        },
+        "threads": {
+          "thread_hook": "Google just rewrote the rules on site reputation abuse. Your entire site isn\u2019t guilty anymore\u2014just the problematic parts.",
+          "angle": "This thread breaks down how Google\u2019s move to section-based penalties forces businesses to rethink digital risk management and operational strategy."
+        },
+        "stories": {
+          "story_question": "Is your website\u2019s weakest section putting your whole business at risk?",
+          "angle": "Exploring how Google\u2019s updated policy forces founders to treat every site section as a separate risk factor for visibility and revenue."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947605/never-blank/posts/research/9cfe836ba02723cb/blog/1787947605.png",
+            "path": "reports/content_packages/images/9cfe836ba02723cb_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947609/never-blank/posts/research/9cfe836ba02723cb/linkedin/1787947609.png",
+            "path": "reports/content_packages/images/9cfe836ba02723cb_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947613/never-blank/posts/research/9cfe836ba02723cb/facebook/1787947612.png",
+            "path": "reports/content_packages/images/9cfe836ba02723cb_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947619/never-blank/posts/research/9cfe836ba02723cb/instagram/1787947618.png",
+            "path": "reports/content_packages/images/9cfe836ba02723cb_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947624/never-blank/posts/research/9cfe836ba02723cb/threads/1787947624.png",
+            "path": "reports/content_packages/images/9cfe836ba02723cb_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947632/never-blank/posts/research/9cfe836ba02723cb/stories/1787947632.png",
+            "path": "reports/content_packages/images/9cfe836ba02723cb_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "mountains_depth_layers",
+        "hook_text": "New policy shifts the SEO landscape in the EEA."
+      }
+    },
+    {
+      "SIGNAL_ID": "aa564245f2f53245",
+      "HEADLINE": "Your Next Customer Will Ask AI About Your Business. Here\u2019s How to Shape What It Says",
+      "prepared_at": "2026-08-28 20:08 UTC",
+      "content": {
+        "blog": {
+          "headline": "Your Website Is Current, But AI Still Talks Like It\u2019s 2022",
+          "angle": "AI search lags behind real-time business messaging, creating a visibility gap; companies must manage their entire digital footprint to keep AI narratives accurate and current."
+        },
+        "linkedin": {
+          "headline": "Your website is up to date, but AI is still pitching your business like it\u2019s 2022.",
+          "angle": "AI-driven search engines rely on outdated data caches, meaning your latest messaging might not reach customers\u2014founders need to rethink how they control their digital narrative."
+        },
+        "facebook": {
+          "headline": "Think updating your website is enough? Think again.",
+          "angle": "Businesses face a growing gap between their real-time messaging and what AI search engines present\u2014how are you managing the story AI tells about your brand?"
+        },
+        "instagram": {
+          "headline": "AI Talks About You Like It\u2019s Last Year",
+          "angle": "Keeping your website current isn\u2019t enough\u2014your digital footprint needs constant management to shape what AI says about your business."
+        },
+        "threads": {
+          "thread_hook": "AI search engines are stuck in the past when talking about your business.",
+          "angle": "This thread breaks down why updating your website alone won\u2019t fix outdated AI narratives and what founders must do to stay visible and relevant."
+        },
+        "stories": {
+          "story_question": "Is AI still pitching your business like it\u2019s last year?",
+          "angle": "Exploring the tension between real-time messaging and AI\u2019s slow data refresh that can leave your brand invisible or misrepresented."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947663/never-blank/posts/research/aa564245f2f53245/blog/1787947663.png",
+            "path": "reports/content_packages/images/aa564245f2f53245_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947667/never-blank/posts/research/aa564245f2f53245/linkedin/1787947667.png",
+            "path": "reports/content_packages/images/aa564245f2f53245_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947671/never-blank/posts/research/aa564245f2f53245/facebook/1787947671.png",
+            "path": "reports/content_packages/images/aa564245f2f53245_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947677/never-blank/posts/research/aa564245f2f53245/instagram/1787947677.png",
+            "path": "reports/content_packages/images/aa564245f2f53245_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947684/never-blank/posts/research/aa564245f2f53245/threads/1787947683.png",
+            "path": "reports/content_packages/images/aa564245f2f53245_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947691/never-blank/posts/research/aa564245f2f53245/stories/1787947690.png",
+            "path": "reports/content_packages/images/aa564245f2f53245_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "focus_rings",
+        "hook_text": "AI searches your business before you do."
+      }
+    },
+    {
+      "SIGNAL_ID": "3fad7c6500612d8a",
+      "HEADLINE": "AEO mentions vs. citations: Key differences explained",
+      "prepared_at": "2026-08-28 20:08 UTC",
+      "content": {
+        "blog": {
+          "headline": "AEO Mentions vs. Citations: Why AI Visibility Doesn\u2019t Guarantee Traffic",
+          "angle": "Brands see AI-generated mentions boosting perceived visibility but face flat traffic and engagement, forcing a rethink of measurement frameworks to align visibility metrics with real business impact."
+        },
+        "linkedin": {
+          "headline": "Your brand is showing up in AI answers, but your traffic chart is flatlining.",
+          "angle": "AI-generated mentions inflate perceived visibility, but without measurable citations, founders risk mistaking exposure for engagement and missing real growth signals."
+        },
+        "facebook": {
+          "headline": "AI is talking about your brand, but is anyone actually clicking?",
+          "angle": "Brands are increasingly mentioned in AI-generated answers, yet traffic and engagement remain stagnant\u2014how should founders recalibrate what counts as real visibility?"
+        },
+        "instagram": {
+          "headline": "Visibility Isn\u2019t Value Until It Moves Business",
+          "angle": "AI mentions might boost your brand\u2019s presence, but without measurable citations, founders are chasing vanity metrics instead of real impact."
+        },
+        "threads": {
+          "thread_hook": "AI mentions are inflating your brand\u2019s visibility\u2014but where\u2019s the traffic?",
+          "angle": "This thread breaks down the gap between AI-generated mentions and actionable citations, explaining why founders need new measurement frameworks to track true business impact."
+        },
+        "stories": {
+          "story_question": "Is your AI visibility actually driving business?",
+          "angle": "Exploring the tension between AI-generated brand mentions and the lack of measurable engagement that founders must address to avoid misleading metrics."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947696/never-blank/posts/research/3fad7c6500612d8a/blog/1787947696.png",
+            "path": "reports/content_packages/images/3fad7c6500612d8a_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947696/never-blank/posts/research/3fad7c6500612d8a/linkedin/1787947696.png",
+            "path": "reports/content_packages/images/3fad7c6500612d8a_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947697/never-blank/posts/research/3fad7c6500612d8a/facebook/1787947697.png",
+            "path": "reports/content_packages/images/3fad7c6500612d8a_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947698/never-blank/posts/research/3fad7c6500612d8a/instagram/1787947698.png",
+            "path": "reports/content_packages/images/3fad7c6500612d8a_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947699/never-blank/posts/research/3fad7c6500612d8a/threads/1787947698.png",
+            "path": "reports/content_packages/images/3fad7c6500612d8a_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947700/never-blank/posts/research/3fad7c6500612d8a/stories/1787947699.png",
+            "path": "reports/content_packages/images/3fad7c6500612d8a_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "sand_pause_card",
+        "hook_text": "Your brand is showing up in AI answers, but your traffic chart is flatlining."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "9cfe836ba02723cb",
+      "headline": "Google Updates Site Reputation Abuse (Parasite SEO) Policy via @sejournal, @martinibuster",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'risk now travels along the lines you draw between your own pages.'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ]
+}

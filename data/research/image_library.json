@@ -713,5 +713,35 @@
     "visual_family": "contrast_waves",
     "design_version": "3",
     "hook_text": "Agencies that evolve can extend client relationships to seven years."
+  },
+  "9cfe836ba02723cb": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947605/never-blank/posts/research/9cfe836ba02723cb/blog/1787947605.png",
+    "signal_type": "consistency failure",
+    "headline": "Google Updates Site Reputation Abuse (Parasite SEO) Policy via @sejournal, @martinibuster",
+    "created_at": "2026-08-28",
+    "method": "gpt-image-1",
+    "visual_family": "mountains_depth_layers",
+    "design_version": "3",
+    "hook_text": "New policy shifts the SEO landscape in the EEA."
+  },
+  "aa564245f2f53245": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947663/never-blank/posts/research/aa564245f2f53245/blog/1787947663.png",
+    "signal_type": "business becoming invisible",
+    "headline": "Your Next Customer Will Ask AI About Your Business. Here’s How to Shape What It Says",
+    "created_at": "2026-08-28",
+    "method": "gpt-image-1",
+    "visual_family": "focus_rings",
+    "design_version": "3",
+    "hook_text": "AI searches your business before you do."
+  },
+  "3fad7c6500612d8a": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947696/never-blank/posts/research/3fad7c6500612d8a/blog/1787947696.png",
+    "signal_type": "visibility interruption",
+    "headline": "AEO mentions vs. citations: Key differences explained",
+    "created_at": "2026-08-28",
+    "method": "quote_card",
+    "visual_family": "sand_pause_card",
+    "design_version": "3",
+    "hook_text": "Your brand is showing up in AI answers, but your traffic chart is flatlining."
   }
 }

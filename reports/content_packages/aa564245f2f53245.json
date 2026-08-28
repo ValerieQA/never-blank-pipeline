@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "aa564245f2f53245",
+  "HEADLINE": "Your Next Customer Will Ask AI About Your Business. Here’s How to Shape What It Says",
+  "prepared_at": "2026-08-28 20:08 UTC",
+  "content": {
+    "blog": {
+      "headline": "Your Website Is Current, But AI Still Talks Like It’s 2022",
+      "angle": "AI search lags behind real-time business messaging, creating a visibility gap; companies must manage their entire digital footprint to keep AI narratives accurate and current."
+    },
+    "linkedin": {
+      "headline": "Your website is up to date, but AI is still pitching your business like it’s 2022.",
+      "angle": "AI-driven search engines rely on outdated data caches, meaning your latest messaging might not reach customers—founders need to rethink how they control their digital narrative."
+    },
+    "facebook": {
+      "headline": "Think updating your website is enough? Think again.",
+      "angle": "Businesses face a growing gap between their real-time messaging and what AI search engines present—how are you managing the story AI tells about your brand?"
+    },
+    "instagram": {
+      "headline": "AI Talks About You Like It’s Last Year",
+      "angle": "Keeping your website current isn’t enough—your digital footprint needs constant management to shape what AI says about your business."
+    },
+    "threads": {
+      "thread_hook": "AI search engines are stuck in the past when talking about your business.",
+      "angle": "This thread breaks down why updating your website alone won’t fix outdated AI narratives and what founders must do to stay visible and relevant."
+    },
+    "stories": {
+      "story_question": "Is AI still pitching your business like it’s last year?",
+      "angle": "Exploring the tension between real-time messaging and AI’s slow data refresh that can leave your brand invisible or misrepresented."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947663/never-blank/posts/research/aa564245f2f53245/blog/1787947663.png",
+        "path": "reports/content_packages/images/aa564245f2f53245_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947667/never-blank/posts/research/aa564245f2f53245/linkedin/1787947667.png",
+        "path": "reports/content_packages/images/aa564245f2f53245_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947671/never-blank/posts/research/aa564245f2f53245/facebook/1787947671.png",
+        "path": "reports/content_packages/images/aa564245f2f53245_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947677/never-blank/posts/research/aa564245f2f53245/instagram/1787947677.png",
+        "path": "reports/content_packages/images/aa564245f2f53245_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947684/never-blank/posts/research/aa564245f2f53245/threads/1787947683.png",
+        "path": "reports/content_packages/images/aa564245f2f53245_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947691/never-blank/posts/research/aa564245f2f53245/stories/1787947690.png",
+        "path": "reports/content_packages/images/aa564245f2f53245_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "focus_rings",
+    "hook_text": "AI searches your business before you do."
+  }
+}

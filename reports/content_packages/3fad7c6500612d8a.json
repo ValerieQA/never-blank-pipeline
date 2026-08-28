@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "3fad7c6500612d8a",
+  "HEADLINE": "AEO mentions vs. citations: Key differences explained",
+  "prepared_at": "2026-08-28 20:08 UTC",
+  "content": {
+    "blog": {
+      "headline": "AEO Mentions vs. Citations: Why AI Visibility Doesn’t Guarantee Traffic",
+      "angle": "Brands see AI-generated mentions boosting perceived visibility but face flat traffic and engagement, forcing a rethink of measurement frameworks to align visibility metrics with real business impact."
+    },
+    "linkedin": {
+      "headline": "Your brand is showing up in AI answers, but your traffic chart is flatlining.",
+      "angle": "AI-generated mentions inflate perceived visibility, but without measurable citations, founders risk mistaking exposure for engagement and missing real growth signals."
+    },
+    "facebook": {
+      "headline": "AI is talking about your brand, but is anyone actually clicking?",
+      "angle": "Brands are increasingly mentioned in AI-generated answers, yet traffic and engagement remain stagnant—how should founders recalibrate what counts as real visibility?"
+    },
+    "instagram": {
+      "headline": "Visibility Isn’t Value Until It Moves Business",
+      "angle": "AI mentions might boost your brand’s presence, but without measurable citations, founders are chasing vanity metrics instead of real impact."
+    },
+    "threads": {
+      "thread_hook": "AI mentions are inflating your brand’s visibility—but where’s the traffic?",
+      "angle": "This thread breaks down the gap between AI-generated mentions and actionable citations, explaining why founders need new measurement frameworks to track true business impact."
+    },
+    "stories": {
+      "story_question": "Is your AI visibility actually driving business?",
+      "angle": "Exploring the tension between AI-generated brand mentions and the lack of measurable engagement that founders must address to avoid misleading metrics."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947696/never-blank/posts/research/3fad7c6500612d8a/blog/1787947696.png",
+        "path": "reports/content_packages/images/3fad7c6500612d8a_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947696/never-blank/posts/research/3fad7c6500612d8a/linkedin/1787947696.png",
+        "path": "reports/content_packages/images/3fad7c6500612d8a_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947697/never-blank/posts/research/3fad7c6500612d8a/facebook/1787947697.png",
+        "path": "reports/content_packages/images/3fad7c6500612d8a_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947698/never-blank/posts/research/3fad7c6500612d8a/instagram/1787947698.png",
+        "path": "reports/content_packages/images/3fad7c6500612d8a_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947699/never-blank/posts/research/3fad7c6500612d8a/threads/1787947698.png",
+        "path": "reports/content_packages/images/3fad7c6500612d8a_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947700/never-blank/posts/research/3fad7c6500612d8a/stories/1787947699.png",
+        "path": "reports/content_packages/images/3fad7c6500612d8a_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "sand_pause_card",
+    "hook_text": "Your brand is showing up in AI answers, but your traffic chart is flatlining."
+  }
+}

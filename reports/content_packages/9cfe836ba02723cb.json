@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "9cfe836ba02723cb",
+  "HEADLINE": "Google Updates Site Reputation Abuse (Parasite SEO) Policy via @sejournal, @martinibuster",
+  "prepared_at": "2026-08-28 20:07 UTC",
+  "content": {
+    "blog": {
+      "headline": "Google’s New Parasite SEO Policy: Why Your Site’s Sections Are Now Separate Battlegrounds",
+      "angle": "Google’s shift from manual, site-wide penalties to section-level ranking adjustments creates tension between fair enforcement and business risk, forcing companies to rethink digital structure as a strategic asset."
+    },
+    "linkedin": {
+      "headline": "When Google changes the rules, your site map becomes a liability.",
+      "angle": "Google’s updated Parasite SEO policy means businesses must now manage risk at the site-section level, impacting visibility and revenue in ways founders can’t ignore."
+    },
+    "facebook": {
+      "headline": "Google no longer penalizes entire sites for reputation abuse—now it targets specific sections. What does this mean for your business?",
+      "angle": "Google’s new section-based ranking penalties shift enforcement dynamics; how will your digital structure hold up under this microscope?"
+    },
+    "instagram": {
+      "headline": "Site Structure Is Your New Strategy",
+      "angle": "Google’s policy update means every part of your website is a standalone risk—and a potential opportunity."
+    },
+    "threads": {
+      "thread_hook": "Google just rewrote the rules on site reputation abuse. Your entire site isn’t guilty anymore—just the problematic parts.",
+      "angle": "This thread breaks down how Google’s move to section-based penalties forces businesses to rethink digital risk management and operational strategy."
+    },
+    "stories": {
+      "story_question": "Is your website’s weakest section putting your whole business at risk?",
+      "angle": "Exploring how Google’s updated policy forces founders to treat every site section as a separate risk factor for visibility and revenue."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947605/never-blank/posts/research/9cfe836ba02723cb/blog/1787947605.png",
+        "path": "reports/content_packages/images/9cfe836ba02723cb_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947609/never-blank/posts/research/9cfe836ba02723cb/linkedin/1787947609.png",
+        "path": "reports/content_packages/images/9cfe836ba02723cb_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947613/never-blank/posts/research/9cfe836ba02723cb/facebook/1787947612.png",
+        "path": "reports/content_packages/images/9cfe836ba02723cb_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947619/never-blank/posts/research/9cfe836ba02723cb/instagram/1787947618.png",
+        "path": "reports/content_packages/images/9cfe836ba02723cb_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947624/never-blank/posts/research/9cfe836ba02723cb/threads/1787947624.png",
+        "path": "reports/content_packages/images/9cfe836ba02723cb_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947632/never-blank/posts/research/9cfe836ba02723cb/stories/1787947632.png",
+        "path": "reports/content_packages/images/9cfe836ba02723cb_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "mountains_depth_layers",
+    "hook_text": "New policy shifts the SEO landscape in the EEA."
+  }
+}
