@@ -1,0 +1,24 @@
+# Max score: 10
+# Each criterion is binary (0 or weight value)
+criteria:
+  strong_business_signal:
+    weight: 2
+    description: "Clear business/economic signal, not opinion"
+  numerical_fact:
+    weight: 2
+    description: "Contains measurable data or identifiable trend"
+  real_company_available:
+    weight: 2
+    description: "Real company or business behavior identifiable"
+  clear_tension:
+    weight: 2
+    description: "Clear business tension visible (Trust vs Margin, etc.)"
+  channel_fit:
+    weight: 2
+    description: "Good fit for LinkedIn/Blog/Threads audience"
+
+thresholds:
+  enrich_minimum: 5
+  select_minimum: 7
+  top_n_to_enrich: 10
+  top_n_to_select: 3
