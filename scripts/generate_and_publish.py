@@ -141,6 +141,7 @@ from src.research.provider import (
     SourcePriority,
 )
 from src.research.adapters.exa import ExaResearchAdapter
+from src.research.adapters.direct_url import DirectUrlResearchProvider
 from src.research.assessment import EvidenceAssessmentError, EvidenceJudgmentTransport
 from src.research.lifecycle import (
     ResearchGateError,
@@ -1117,32 +1118,31 @@ def _run(
                 run_ctx, assignment, signal, strategy_execution.research,
                 now=datetime.now(timezone.utc),
             )
-            # #211: Wednesday's editorial supply is the restored July path,
-            # and the evidence stage must not quietly widen it. Provider-side
-            # open discovery would let today's retrieval surface sources July
-            # never had and reintroduce current discovery semantics through
-            # the back door, so for Wednesday it is refused outright rather
-            # than merely left unrequested. The stage keeps doing its real
-            # job — retrieving and assessing the source the July signal
-            # itself cites — which is what source transparency downstream
-            # attests to.
+            # #211: Wednesday is the historical control path, so its
+            # evidence stage must not widen the supply the July research
+            # chose. Retrieval fetches the exact SOURCE_URL that signal
+            # already cites and nothing else — the adapter below cannot
+            # discover — and this guard refuses the request before it is
+            # ever made, so a directive that would mean "go looking" stops
+            # the run rather than reaching any provider.
             if _wednesday_supply:
-                # The provider reaches its search endpoint — the only way a
-                # source nobody named can enter the artifact as
-                # PROVIDER_DISCOVERED — for exactly two directive shapes: a
-                # DISCOVERY directive under open discovery, and a non-URL
-                # (domain) directive. Both are refused here, so Wednesday's
-                # evidence can only ever be the exact source its own July
-                # research cited.
+                # Two directive shapes mean "go looking": a DISCOVERY
+                # directive, and anything that is not an exact URL. Both are
+                # refused, so Wednesday's evidence can only ever be the exact
+                # source its own July research cited.
+                #
+                # DirectUrlResearchProvider refuses these on its own — this is
+                # deliberately the same rule stated twice. It stops the run
+                # here, before a provider is constructed, and says so in terms
+                # of Wednesday's supply rather than of a provider contract.
+                # The two must agree; a test holds them to it.
                 _searchable = tuple(
                     directive.directive_id
                     for directive in research_request.source_directives
                     if directive.priority is not SourcePriority.EXCLUDED
                     and (
                         directive.priority is SourcePriority.DISCOVERY
-                        or directive.kind not in {
-                            SourceDirectiveKind.URL, SourceDirectiveKind.FEED,
-                        }
+                        or directive.kind is not SourceDirectiveKind.URL
                     )
                 )
                 if _searchable or research_request.freshness.allow_open_discovery:
@@ -1157,6 +1157,25 @@ def _run(
                     return 1
             if research_provider is not None:
                 provider = research_provider
+            elif _wednesday_supply:
+                # #211 product decision: Wednesday is the historical control
+                # path, and a control that borrows a stage from the system
+                # under test is not a control. July had no research provider
+                # at all — its evidence was the article its own discovery
+                # cited — so Wednesday retrieves exactly that URL directly.
+                # ExaResearchAdapter is not constructed on this path, and
+                # neither of its endpoints can be reached from here.
+                #
+                # This is fidelity, not distrust of the provider: Monday
+                # keeps Exa, unchanged. Verification is re-sourced, never
+                # removed — the fetch follows redirects, records the final
+                # URL, checks the authority, fails closed when the source
+                # cannot be read, and emits `not_assessed` evidence that the
+                # shared assessment stage and the canonical research gate
+                # judge to exactly the same READY standard as Monday's.
+                provider = DirectUrlResearchProvider()
+                print("  ✓  wednesday retrieval: direct-URL "
+                      "(no provider search, no Exa)")
             else:
                 try:
                     provider = ExaResearchAdapter()
