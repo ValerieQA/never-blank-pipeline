@@ -342,6 +342,19 @@ def _fake_canonical_verdict(**kwargs):
     )
 
 
+def _fake_wednesday_article() -> dict:
+    """A July-shaped generation result for the restored Wednesday path."""
+    import copy
+
+    article = copy.deepcopy(_FAKE_ARTICLE)
+    article.pop("pattern", None)                  # July had no Pattern Extractor
+    structured = article.setdefault("structured_article", {})
+    structured.setdefault("signature", structured.get("echo_line", ""))
+    for platform in article.get("platforms", {}).values():
+        platform.pop("title", None)               # July composed no title
+    return article
+
+
 def _make_formatting_mock():
     m = mock.MagicMock()
     m.source_line.return_value = ""
@@ -475,6 +488,14 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "_load_signal": mock.MagicMock(return_value=_RAW_SIGNAL),
         "_load_package_images": mock.MagicMock(return_value={}),
         "generate_article": mock.MagicMock(return_value=_FAKE_ARTICLE),
+        # #209: Wednesday generates through the restored July package. The
+        # harness stands in for the routing seam so any role-driven test
+        # reaches the same post-generation lifecycle. July's result carries
+        # no ``pattern`` and no composed ``title``; the routing adapter
+        # supplies ``echo_line`` from July's ``signature``.
+        "generate_for_wednesday": mock.MagicMock(
+            side_effect=lambda signal: _fake_wednesday_article()
+        ),
         "validate_article_for_publish": mock.MagicMock(return_value=None),
         "_save_generated": mock.MagicMock(),
         "generate_hashtags": mock.MagicMock(return_value=[]),

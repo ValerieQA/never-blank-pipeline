@@ -162,6 +162,11 @@ from src.editorial.source_transparency import (
     validate_social_lineage,
     validate_source_transparency,
 )
+from src.never_blank.wednesday_july import WednesdayGenerationError
+from src.never_blank.wednesday_routing import (
+    generate_for_wednesday,
+    is_wednesday_role,
+)
 from src.editorial.pipeline import (
     ArticleGenerationError,
     generate_article,
@@ -1079,14 +1084,23 @@ def _run(
         # ── Decision policy (Issue #152) ─────────────────────────────────────
         # A role may declare which decision policy governs the run between
         # READY research and generation. "role_bounded_r1" is the explicit R1
-        # product decision for the Monday documented-case role: the Decision
-        # Lens's audience-transfer semantics predate the corrected Monday
-        # strategy (reconciliation is #151), so the role proceeds on READY
-        # research alone. This is auditable, not silent — the policy is
-        # persisted on assignment.json's editorial_role — and it relaxes
-        # nothing downstream: acceptance, source transparency, preflight and
-        # the publishers are exactly as strict as before. Every other role,
-        # and every run with no role, takes the Decision Lens gate unchanged.
+        # product decision for two roles now:
+        #
+        #   Monday  — the Decision Lens's audience-transfer semantics predate
+        #             the corrected Monday strategy (reconciliation is #151).
+        #   Wednesday — the restored July path (#207/#209) IS Wednesday's
+        #             business reasoning, and the canonical Lens is current
+        #             shared reasoning that July never had. Leaving it in
+        #             front would let it stop a Wednesday run before the
+        #             restored path is reached at all — which is exactly what
+        #             happened in live run 32769085831, where both criteria
+        #             were satisfied and the Lens still returned "revise".
+        #
+        # This is auditable, not silent — the policy is persisted on
+        # assignment.json's editorial_role and in decision_policy.json — and
+        # it relaxes nothing downstream: acceptance, source transparency,
+        # preflight and the publishers are exactly as strict as before. Every
+        # other role, and every run with no role, takes the Lens unchanged.
         if (
             _editorial_role_identity is not None
             and _role.decision_policy == "role_bounded_r1"
@@ -1672,28 +1686,41 @@ def _run(
                     "medium": _editorial_role_rules["medium"]
                     + render_sources_of_record(research_artifact, surface="linkedin"),
                 }
-            article    = generate_article(
-                editorial.to_legacy_dict(),
-                cta_mode=cta_mode,
-                strategy_context=strategy_execution.decision_lens_editorial,
-                wix_strategy=strategy_execution.wix,
-                linkedin_strategy=strategy_execution.linkedin,
-                audience_selection=audience_selection,
-                research_artifact=research_artifact,
-                editorial_role_rules=_editorial_role_rules,
-                composer_formats=_R1_COMPOSER_FORMATS,
-                # #191: how this role closes its long-form surface. Roles that
-                # declare nothing keep the existing contract.
-                closing_contract=(
-                    _role.closing_contract if _role is not None else None
-                ),
-                # #191: compositions our own validator refuses are preserved
-                # for diagnosis instead of dying with the runner.
-                rejected_sink=_rejected_compositions,
-            )
+            # ── Wednesday runs the restored July path (#207/#209) ─────────
+            # Wednesday's editorial intelligence was lost to changes made for
+            # Monday — most decisively pattern_extractor, which asserts an
+            # owner protagonist and rejects large-company-strategy signals,
+            # and which did not exist in July. Rather than reconcile the two
+            # products in one engine, Wednesday generates through its own
+            # restored package. Everything after this branch — acceptance,
+            # transparency, composition acceptance, packaging, preflight and
+            # the whole publication lifecycle — is shared and unchanged.
+            if is_wednesday_role(_editorial_role_identity):
+                print("  ✓  editorial path: restored July Wednesday pipeline")
+                article = generate_for_wednesday(editorial.to_legacy_dict())
+            else:
+                article    = generate_article(
+                    editorial.to_legacy_dict(),
+                    cta_mode=cta_mode,
+                    strategy_context=strategy_execution.decision_lens_editorial,
+                    wix_strategy=strategy_execution.wix,
+                    linkedin_strategy=strategy_execution.linkedin,
+                    audience_selection=audience_selection,
+                    research_artifact=research_artifact,
+                    editorial_role_rules=_editorial_role_rules,
+                    composer_formats=_R1_COMPOSER_FORMATS,
+                    # #191: how this role closes its long-form surface. Roles
+                    # that declare nothing keep the existing contract.
+                    closing_contract=(
+                        _role.closing_contract if _role is not None else None
+                    ),
+                    # #191: compositions our own validator refuses are
+                    # preserved for diagnosis instead of dying with the runner.
+                    rejected_sink=_rejected_compositions,
+                )
             platforms  = article["platforms"]
             structured = article["structured_article"]
-        except ArticleGenerationError as exc:
+        except (ArticleGenerationError, WednesdayGenerationError) as exc:
             print(f"  ERROR: Editorial Engine failed at stage {exc.stage!r}: {exc.original}")
             _persist_rejected_compositions(run_dir, _rejected_compositions)
             return 1
