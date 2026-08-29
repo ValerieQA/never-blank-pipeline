@@ -631,6 +631,32 @@ def _attributed_article() -> dict:
     return article
 
 
+#: #211: what the restored July research hands the lifecycle on a Wednesday
+#: run. Shared by every suite that drives the entrypoint under the Wednesday
+#: role, so those suites test the thing they are about rather than the
+#: supply. The supply route itself is proven end to end, from a real RSS
+#: fixture, in tests/test_wednesday_supply.py.
+WEDNESDAY_SUPPLY = {
+    "SIGNAL_ID": "37a503640b83be6c",
+    "HEADLINE": "Versant agrees to buy golf simulator company Full Swing for $530 million",
+    "SOURCE_NAME": "CNBC Business",
+    "SOURCE_URL": (
+        "https://www.cnbc.com/2026/07/06/"
+        "versant-to-buy-golf-simulator-company-full-swing.html"
+    ),
+    "SOURCE_DATE": "2026-07-06",
+    "CORE_FACT": "Versant agreed to acquire Full Swing for $530 million.",
+    "REAL_COMPANY_EXAMPLE": "Versant",
+    "SOURCE_FOR_CASE": (
+        "https://www.cnbc.com/2026/07/06/"
+        "versant-to-buy-golf-simulator-company-full-swing.html"
+    ),
+    "CONFIDENCE": "high",
+    "SOURCE_PREMISE_VERIFIED": "true",
+    "ARTICLE_READY": "true",
+}
+
+
 def _run_with_role(tmp_path, role: str, article: dict | None = None):
     argv, patches = _entry_patches(tmp_path)
     argv = argv + ["--editorial-role", role]
@@ -640,6 +666,12 @@ def _run_with_role(tmp_path, role: str, article: dict | None = None):
     # #209: Wednesday generates through the restored July package, so the
     # helper supplies the same article on whichever path the role selects.
     patches["generate_for_wednesday"] = mock.MagicMock(return_value=article)
+    # #211: a Wednesday run no longer reads the shared signal store — it
+    # discovers its own through the restored July research. Stubbed at the
+    # supply seam so these suites make no network or paid call.
+    patches["supply_wednesday_signal"] = mock.MagicMock(
+        return_value=dict(WEDNESDAY_SUPPLY)
+    )
     evaluator, _ = _evaluator(_model_output())
     with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
         code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)

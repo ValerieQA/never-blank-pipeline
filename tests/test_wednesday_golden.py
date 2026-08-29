@@ -46,6 +46,7 @@ from src.strategy.execution_context import StrategyExecutionContext
 from tests.test_decision_lifecycle import _entry_patches, _evaluator, _model_output
 from tests.test_research_artifact_lifecycle import ReadyProvider
 from tests.test_generate_and_publish import _FAKE_ARTICLE
+from tests.test_monday_stream import WEDNESDAY_SUPPLY
 
 
 PROFILE_PATH = Path("config/never_blank/wednesday_golden.yaml")
@@ -58,6 +59,7 @@ WORKFLOW = Path(".github/workflows/wednesday_golden.yml")
 SITE = "https://www.inneros.online"
 ROLE_ID = "never-blank-wednesday-golden"
 ET = ZoneInfo("America/New_York")
+
 
 
 @pytest.fixture(scope="module")
@@ -296,6 +298,13 @@ def test_canonical_entrypoint_records_role_and_routes_real_rules(tmp_path):
     patches["generate_for_wednesday"] = mock.MagicMock(
         return_value=_attributed_article()
     )
+    # #211: Wednesday supplies its own signal through the restored July
+    # research. These scenarios are about role rules and transparency, so
+    # the supply is stood in for here; the real supply route is proven in
+    # tests/test_wednesday_supply.py.
+    patches["supply_wednesday_signal"] = mock.MagicMock(
+        return_value=dict(WEDNESDAY_SUPPLY)
+    )
     argv += ["--editorial-role", ROLE_ID]
     evaluator, _ = _evaluator(_model_output())
 
@@ -352,6 +361,9 @@ def test_wednesday_source_transparency_blocks_before_publish_and_consumption(tmp
     # #209: Wednesday generates through the restored July package
     patches["generate_for_wednesday"] = mock.MagicMock(
         return_value=deepcopy(_FAKE_ARTICLE)
+    )
+    patches["supply_wednesday_signal"] = mock.MagicMock(
+        return_value=dict(WEDNESDAY_SUPPLY)
     )
     argv += ["--editorial-role", ROLE_ID]
     evaluator, _ = _evaluator(_model_output())
@@ -603,10 +615,18 @@ def test_wednesday_reuses_shared_eligibility_and_consumption_without_monday_poli
     assert "data/research/published_signal_ids.txt" in text
     assert "wednesday_published_signal_ids.txt" not in text
     assert "monday_selection" not in text
-    assert "select_eligible_signal.py" in text
+    # #211: the shared eligibility selector is gone from the Wednesday path.
+    # It reads the shared research store, which the 2026-07-21 supply changes
+    # retargeted at small-business feeds — the regression #206 identified.
+    # Wednesday now discovers its own signal inside the entrypoint, so the
+    # workflow must NOT reach the shared selector or its audit artifact.
+    assert "select_eligible_signal.py" not in text
+    assert "wednesday_selection.json" not in text
     assert '--editorial-role "$WEDNESDAY_ROLE"' in text
-    assert "wednesday_selection.json" in text
     assert "never-blank-monday" not in text
+    # the shared consumption marker is still canonical infrastructure and is
+    # deliberately unchanged: a signal published once is never eligible again
+    assert "wednesday_signal_id=" in text
 
 
 def _signal(signal_id: str) -> dict[str, str]:
