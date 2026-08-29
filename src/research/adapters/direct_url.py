@@ -13,11 +13,17 @@ asked to do anything wider than fetch those URLs it refuses rather than
 improvising, because the one thing that must never happen here is Wednesday
 quietly acquiring a source July never had.
 
-**Verification is not weakened, only re-sourced.** The URL is fetched over
-plain HTTP, redirects are followed and the final URL recorded, the authority
-is checked by the same `require_safe_url_authority` every provider uses, and
-a source that cannot be retrieved produces a typed failure — which the
-research gate turns into a stopped run. The evidence it emits is
+**Verification is not weakened, only re-sourced.** Retrieval fetching from
+our own runner rather than a provider's infrastructure changes who is exposed
+to a hostile URL, so every hop is validated *before* it is requested: scheme,
+authority, literal address, every resolved address, and same-site. Redirects
+are followed by hand, one hop at a time, with automatic following disabled —
+letting the client follow a redirect means the request to the target has
+already happened by the time anything can object. The connection is opened to
+an address that was already checked, while TLS still verifies the certificate
+against the real hostname, so a second DNS answer cannot be substituted
+between validation and connect. A source that cannot be retrieved produces a
+typed failure — which the research gate turns into a stopped run. The evidence it emits is
 ``not_assessed``, exactly as Exa's is, so the shared assessment stage judges
 it and the canonical gate holds it to the same READY standard as everything
 else. Nothing downstream can tell which adapter retrieved the page, which is
@@ -32,13 +38,12 @@ from __future__ import annotations
 import hashlib
 import ipaddress
 import re
+import socket
 import uuid
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from typing import Callable, Sequence
-from urllib.parse import urlsplit
-
-import requests
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from src.research.evidence import (
     EvidenceDisposition,
@@ -68,7 +73,12 @@ from src.research.provider import (
     SourcePriority,
     SourceRetrievalOutcome,
 )
-from src.research.url_safety import UnsafeResearchUrl, require_safe_url_authority
+from src.research.url_safety import (
+    UnsafeResearchUrl,
+    is_within_domain,
+    registrable_host,
+    require_safe_url_authority,
+)
 from src.utils.logger import get_logger
 
 log = get_logger("research.direct_url")
@@ -192,19 +202,21 @@ def _parse_published(value: str | None) -> datetime | None:
 #: while this adapter fetches from our runner, so a URL pointing inward would
 #: reach our own network. `require_safe_url_authority` rejects credentials in
 #: the authority but not loopback or private ranges, so this closes that.
+#: A hostname that merely *resolves* inward is caught separately, by
+#: `resolve_public_addresses`, before any socket is opened.
 _LOCAL_HOST_SUFFIXES = (".local", ".internal", ".localdomain", ".home.arpa")
 _LOCAL_HOST_NAMES = frozenset({"localhost", "localhost.localdomain", "ip6-localhost"})
 
 
 def _require_public_http_url(url: str) -> None:
-    """Refuse anything that is not a public http(s) URL.
+    """Refuse anything that is not a public http(s) URL, by inspection alone.
 
-    Literal addresses are checked against the reserved ranges. Hostnames are
-    checked by name only — deliberately no DNS resolution, which would be a
-    network call and would race its own answer anyway. That leaves a name
-    resolving inward as a residual risk this cannot see; the narrow directive
-    contract is what bounds it, since the only URLs reaching here are ones a
-    signal's own research already selected.
+    The cheap first pass: scheme, obvious local names, and literal addresses
+    in the reserved ranges. It says nothing about where a *hostname* points —
+    ``resolve_public_addresses`` answers that, and the caller runs both before
+    any connection is opened. Keeping them separate is what lets this one
+    refuse a redirect target the instant the Location header is read, before
+    anything is resolved or contacted.
     """
     parsed = urlsplit(url)
     if parsed.scheme.lower() not in ("http", "https"):
@@ -248,80 +260,228 @@ def _invocation_id(seed: str) -> str:
     return str(uuid.UUID(bytes=bytes(raw)))
 
 
-def fetch_source(
-    url: str,
+#: Redirect statuses this follows. 300 (multiple choices) and 304 are not
+#: redirections to a single new resource and are treated as failures.
+_REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
+
+
+def _require_public_address(address: str, *, context: str) -> None:
+    """Refuse a resolved address that is not on the public internet."""
+    try:
+        parsed = ipaddress.ip_address(address)
+    except ValueError as exc:
+        raise DirectUrlFetchError(
+            f"unsafe source authority: unparseable address for {context}"
+        ) from exc
+    if (parsed.is_private or parsed.is_loopback or parsed.is_link_local
+            or parsed.is_reserved or parsed.is_multicast
+            or parsed.is_unspecified):
+        raise DirectUrlFetchError(
+            f"unsafe source authority: {context} resolves to the non-public "
+            f"address {address!r}"
+        )
+
+
+def resolve_public_addresses(
+    host: str,
+    port: int,
     *,
-    session_factory: Callable[[], "requests.Session"] | None = None,
-    sleep: Callable[[float], None] | None = None,
-) -> _FetchedPage:
-    """GET exactly this URL, following redirects, and read what came back.
+    resolver: Callable[..., list] | None = None,
+) -> tuple[str, ...]:
+    """Resolve a hostname and refuse it unless EVERY answer is public.
 
-    Raises :class:`DirectUrlFetchError` on an unsafe authority, a transport
-    failure, or a non-2xx response. There is no partial success: a source
-    that could not be read is not evidence.
+    Every answer, not merely the one that gets used: a name that resolves to
+    one public and one private address is a name under someone else's control
+    pointing inward, and picking the public answer would only mean the attack
+    needs a second attempt.
+
+    The addresses are returned so the caller can *connect to one of them*
+    rather than resolving the name again at connection time. That pinning is
+    what closes the DNS-rebinding window — validating a name and then handing
+    the name to a socket re-resolves it, and the second answer is the one
+    that gets connected to.
     """
-    import time
+    lookup = resolver or socket.getaddrinfo
+    try:
+        infos = lookup(host, port, 0, socket.SOCK_STREAM)
+    except OSError as exc:
+        raise DirectUrlFetchError(
+            f"source host could not be resolved ({host}): {exc}"
+        ) from exc
+    addresses = tuple(dict.fromkeys(str(info[4][0]) for info in infos))
+    if not addresses:
+        raise DirectUrlFetchError(f"source host resolved to nothing ({host})")
+    for address in addresses:
+        _require_public_address(address, context=host)
+    return addresses
 
-    pause = sleep or time.sleep
-    # Resolved here, not bound as a default argument, so the transport is
-    # replaceable — and so `requests` is only touched when a fetch happens.
-    open_session = session_factory or requests.Session
+
+def _pinned_transport(
+    url: str, *, pinned_ip: str, headers: dict, timeout: float
+) -> "_RawResponse":
+    """One HTTP request to a VALIDATED address, with no redirect following.
+
+    The connection is opened to ``pinned_ip`` — the address already checked —
+    while TLS still verifies the certificate against the real hostname, so a
+    second DNS answer cannot be substituted between validation and connect.
+    Redirects are never followed here; the caller does that a hop at a time,
+    validating each destination first.
+    """
+    import urllib3
+
+    parsed = urlsplit(url)
+    hostname = parsed.hostname or ""
+    scheme = parsed.scheme.lower()
+    port = parsed.port or (443 if scheme == "https" else 80)
+    target = urlunsplit(("", "", parsed.path or "/", parsed.query, ""))
+
+    if scheme == "https":
+        import certifi
+
+        pool = urllib3.HTTPSConnectionPool(
+            host=pinned_ip, port=port, timeout=timeout, retries=False,
+            cert_reqs="CERT_REQUIRED", ca_certs=certifi.where(),
+            server_hostname=hostname, assert_hostname=hostname,
+        )
+    else:
+        pool = urllib3.HTTPConnectionPool(
+            host=pinned_ip, port=port, timeout=timeout, retries=False,
+        )
+    try:
+        response = pool.request(
+            "GET", target, headers={**headers, "Host": hostname},
+            redirect=False, preload_content=True,
+        )
+        return _RawResponse(
+            status=int(response.status),
+            headers={k.lower(): v for k, v in response.headers.items()},
+            text=response.data.decode("utf-8", errors="replace"),
+        )
+    finally:
+        pool.close()
+
+
+class _RawResponse:
+    __slots__ = ("status", "headers", "text")
+
+    def __init__(self, *, status: int, headers: dict, text: str):
+        self.status = status
+        self.headers = headers
+        self.text = text
+
+
+def _validate_hop(url: str, *, origin: str | None) -> None:
+    """Everything that must be true BEFORE a request is made to ``url``."""
     try:
         require_safe_url_authority(url)
     except UnsafeResearchUrl as exc:
         raise DirectUrlFetchError(f"unsafe source authority: {exc}") from exc
     _require_public_http_url(url)
+    if origin is not None and not is_within_domain(url, origin):
+        # A redirect that leaves the site is a different publication, and
+        # attesting the cited URL with another site's content is exactly what
+        # source transparency exists to prevent. Fail closed rather than
+        # silently re-source the article.
+        raise DirectUrlFetchError(
+            f"source redirected off-site: {registrable_host(url)!r} is not "
+            f"{registrable_host(origin)!r} or a subdomain of it"
+        )
 
-    last: Exception | None = None
-    for attempt in range(1, MAX_ATTEMPTS + 1):
-        try:
-            session = open_session()
-            session.max_redirects = MAX_REDIRECTS
-            response = session.get(
-                url, timeout=REQUEST_TIMEOUT_SECONDS, allow_redirects=True,
-                headers={"User-Agent": USER_AGENT},
-            )
-            status = int(getattr(response, "status_code", 0) or 0)
-            final_url = str(getattr(response, "url", "") or url)
-            if not 200 <= status < 300:
-                raise DirectUrlFetchError(
-                    f"source returned HTTP {status} ({url})"
+
+def fetch_source(
+    url: str,
+    *,
+    transport: Callable[..., "_RawResponse"] | None = None,
+    resolver: Callable[..., list] | None = None,
+    sleep: Callable[[float], None] | None = None,
+) -> _FetchedPage:
+    """GET exactly this URL, following redirects by hand, and read the result.
+
+    Every hop is validated *before* it is requested — scheme, authority,
+    literal address, resolved addresses and same-site — so an unsafe
+    destination is never contacted at all rather than contacted and then
+    rejected. ``allow_redirects`` is not used anywhere: letting the HTTP
+    client follow a redirect means the request to the redirect target has
+    already happened by the time anything can object to it.
+
+    Raises :class:`DirectUrlFetchError` on anything that is not a clean
+    same-site 2xx. There is no partial success: a source that could not be
+    read is not evidence.
+    """
+    import time
+
+    pause = sleep or time.sleep
+    send = transport or _pinned_transport
+    origin = url
+
+    current = url
+    hops: list[str] = []
+    for _hop in range(MAX_REDIRECTS + 1):
+        # Validated before the request, every time — including the first.
+        _validate_hop(current, origin=None if current == origin else origin)
+        parsed = urlsplit(current)
+        port = parsed.port or (443 if parsed.scheme.lower() == "https" else 80)
+        addresses = resolve_public_addresses(
+            parsed.hostname or "", port, resolver=resolver
+        )
+
+        last: Exception | None = None
+        raw = None
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            try:
+                raw = send(
+                    current, pinned_ip=addresses[0],
+                    headers={"User-Agent": USER_AGENT},
+                    timeout=REQUEST_TIMEOUT_SECONDS,
                 )
-            # The final URL is verified too: a redirect that lands somewhere
-            # unsafe is still a source this run must not cite.
-            if final_url != url:
-                try:
-                    require_safe_url_authority(final_url)
-                    _require_public_http_url(final_url)
-                except UnsafeResearchUrl as exc:
-                    raise DirectUrlFetchError(
-                        f"source redirected to an unsafe authority: {exc}"
-                    ) from exc
-                except DirectUrlFetchError as exc:
-                    raise DirectUrlFetchError(
-                        f"source redirected to an unsafe authority: {exc}"
-                    ) from exc
-
-            reader = _PageReader()
-            reader.feed(getattr(response, "text", "") or "")
-            title = reader.title.strip() or _publisher_of(final_url)
-            return _FetchedPage(
-                requested_url=url,
-                final_url=final_url,
-                status=status,
-                title=title[:300],
-                publisher=(reader.publisher or _publisher_of(final_url))[:200],
-                published_at=_parse_published(reader.published_at),
-                text=reader.text or title,
-                redirected=final_url != url,
+                break
+            except DirectUrlFetchError:
+                raise
+            except Exception as exc:                   # transport-level only
+                last = exc
+                if attempt < MAX_ATTEMPTS:
+                    pause(RETRY_DELAY_SECONDS)
+        if raw is None:
+            raise DirectUrlFetchError(
+                f"source could not be retrieved ({current}): {last}"
             )
-        except DirectUrlFetchError:
-            raise
-        except Exception as exc:                       # transport-level only
-            last = exc
-            if attempt < MAX_ATTEMPTS:
-                pause(RETRY_DELAY_SECONDS)
-    raise DirectUrlFetchError(f"source could not be retrieved ({url}): {last}")
+
+        if raw.status in _REDIRECT_STATUSES:
+            location = (raw.headers.get("location") or "").strip()
+            if not location:
+                raise DirectUrlFetchError(
+                    f"source returned HTTP {raw.status} with no Location ({current})"
+                )
+            destination = urljoin(current, location)
+            # Validated here, immediately, so the refusal names the redirect
+            # rather than surfacing as a generic failure one loop later.
+            _validate_hop(destination, origin=origin)
+            hops.append(destination)
+            current = destination
+            continue
+
+        if not 200 <= raw.status < 300:
+            raise DirectUrlFetchError(
+                f"source returned HTTP {raw.status} ({current})"
+            )
+
+        reader = _PageReader()
+        reader.feed(raw.text or "")
+        title = reader.title.strip() or _publisher_of(current)
+        return _FetchedPage(
+            requested_url=url,
+            final_url=current,
+            status=raw.status,
+            title=title[:300],
+            publisher=(reader.publisher or _publisher_of(current))[:200],
+            published_at=_parse_published(reader.published_at),
+            text=reader.text or title,
+            redirected=current != url,
+        )
+
+    raise DirectUrlFetchError(
+        f"source exceeded {MAX_REDIRECTS} redirects ({url} → {hops!r})"
+    )
 
 
 class DirectUrlResearchProvider:

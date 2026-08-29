@@ -124,32 +124,54 @@ class AcceptingJudgment:
         ]})
 
 
-class _Response:
-    def __init__(self, body: str, *, status: int = 200, url: str | None = None):
-        self.text = body
-        self.content = body.encode()
-        self.status_code = status
+class _Hop:
+    """One recorded HTTP attempt: what was requested, and to which address."""
+
+    __slots__ = ("url", "pinned_ip")
+
+    def __init__(self, url, pinned_ip):
         self.url = url
+        self.pinned_ip = pinned_ip
+
+    def __repr__(self):
+        return f"<{self.url} via {self.pinned_ip}>"
 
 
-class _Session:
-    """Stands in for requests.Session at the direct-fetch boundary."""
+def _transport(pages: dict, attempted: list):
+    """A recording stand-in for the pinned transport.
 
-    def __init__(self, pages: dict, log: list):
-        self._pages = pages
-        self._log = log
-        self.max_redirects = None
+    ``pages`` maps URL → (status, headers, body). Every attempt is appended
+    to ``attempted`` BEFORE the response is produced, so a test can prove a
+    request was never made — the whole point of the redirect regressions.
+    """
+    def send(url, *, pinned_ip, headers, timeout):
+        attempted.append(_Hop(url, pinned_ip))
+        if url not in pages:
+            raise AssertionError(f"a URL nobody named was requested: {url}")
+        status, response_headers, body = pages[url]
+        return direct_url._RawResponse(
+            status=status, headers=response_headers, text=body
+        )
+    return send
 
-    def get(self, url, **kwargs):
-        self._log.append(url)
-        if url not in self._pages:
-            raise AssertionError(f"a URL nobody named was fetched: {url}")
-        body, status, final = self._pages[url]
-        return _Response(body, status=status, url=final or url)
+
+def _resolver(mapping: dict | None = None):
+    """A stand-in for getaddrinfo. Unknown hosts resolve to a public address."""
+    mapping = mapping or {}
+
+    def resolve(host, port, *args, **kwargs):
+        addresses = mapping.get(host, ["93.184.216.34"])
+        return [(2, 1, 6, "", (address, port)) for address in addresses]
+
+    return resolve
 
 
-def _direct_transport(pages: dict, log: list):
-    return lambda: _Session(pages, log)
+def _ok(body: str = None):
+    return (200, {}, body if body is not None else VERSANT_PAGE)
+
+
+def _redirect(to: str, status: int = 301):
+    return (status, {"location": to}, "")
 
 
 def _run_wednesday(tmp_path, cnbc_feed, *, pages=None, dry_run=False,
@@ -182,13 +204,14 @@ def _run_wednesday(tmp_path, cnbc_feed, *, pages=None, dry_run=False,
     fetched: list = []
     http_calls: list = []
     prompts: list = []
-    pages = pages if pages is not None else {VERSANT_URL: (VERSANT_PAGE, 200, None)}
+    pages = pages if pages is not None else {VERSANT_URL: _ok()}
     transports = [
         mock.patch(f"{RESEARCH}.discover.requests.get",
                    side_effect=_feed_transport(cnbc_feed, http_calls)),
         mock.patch(f"{RESEARCH}.discover.datetime", _JulyClock),
-        mock.patch(f"{DIRECT}.requests.Session",
-                   side_effect=_direct_transport(pages, fetched)),
+        mock.patch(f"{DIRECT}._pinned_transport",
+                   side_effect=_transport(pages, fetched)),
+        mock.patch(f"{DIRECT}.socket.getaddrinfo", side_effect=_resolver()),
     ] + [
         mock.patch(f"{RESEARCH}.{module}.chat", side_effect=_llm_transport(prompts))
         for module in ("discover", "enrich", "angles", "score")
@@ -222,8 +245,8 @@ def test_wednesday_reaches_publication_through_direct_retrieval(tmp_path, cnbc_f
     # ── Exa is never constructed, so no Exa transport can be called ────────
     assert not patches["ExaResearchAdapter"].called
 
-    # ── only the exact SOURCE_URL July selected was fetched ────────────────
-    assert fetched == [VERSANT_URL]
+    # ── only the exact SOURCE_URL July selected was requested ──────────────
+    assert [hop.url for hop in fetched] == [VERSANT_URL]
 
     # ── the historical signal still reaches the restored generation ────────
     routed = patches["generate_for_wednesday"].call_args.args[0]
@@ -267,11 +290,11 @@ def test_wednesday_reaches_publication_through_direct_retrieval(tmp_path, cnbc_f
 def test_retrieval_failure_stops_the_run_fail_closed(tmp_path, cnbc_feed):
     """A source nobody could read is not evidence, and never becomes a post."""
     code, patches, fetched, _judgment = _run_wednesday(
-        tmp_path, cnbc_feed, pages={VERSANT_URL: ("", 404, None)}
+        tmp_path, cnbc_feed, pages={VERSANT_URL: (404, {}, "")}
     )
 
     assert code == 1
-    assert fetched == [VERSANT_URL]
+    assert [hop.url for hop in fetched] == [VERSANT_URL]
     assert not patches["generate_for_wednesday"].called
     assert not patches["WixPublisher"].return_value.publish.called
     assert not list(tmp_path.glob("*/runs/*/generated.json"))
@@ -281,11 +304,12 @@ def test_a_redirect_is_followed_and_the_final_url_recorded(tmp_path, cnbc_feed):
     redirected = "https://www.cnbc.com/2026/07/06/versant-full-swing-final.html"
     code, _patches, fetched, _judgment = _run_wednesday(
         tmp_path, cnbc_feed,
-        pages={VERSANT_URL: (VERSANT_PAGE, 200, redirected)},
+        pages={VERSANT_URL: _redirect(redirected), redirected: _ok()},
     )
 
     assert code == 0
-    assert fetched == [VERSANT_URL]                # requested the named URL…
+    # both hops were requested, in order, and both were on cnbc.com
+    assert [hop.url for hop in fetched] == [VERSANT_URL, redirected]
     research = json.loads(
         next(tmp_path.glob(f"{VERSANT_ID}/runs/*/research.json")).read_text()
     )
@@ -296,6 +320,35 @@ def test_a_redirect_is_followed_and_the_final_url_recorded(tmp_path, cnbc_feed):
     # new path has not become a different source, and treating it as one
     # would make transparency reject an article for citing its own research.
     assert research["result"]["artifact"]["sources"][0]["locator"]["value"] == VERSANT_URL
+
+
+def test_an_unsafe_redirect_stops_the_production_run_without_requesting_it(
+    tmp_path, cnbc_feed
+):
+    """The blocker, at the production entrypoint rather than the unit."""
+    code, patches, attempted, _judgment = _run_wednesday(
+        tmp_path, cnbc_feed,
+        pages={VERSANT_URL: _redirect("http://127.0.0.1/internal")},
+    )
+
+    assert code == 1
+    # the redirect target was never requested by the runner
+    assert [hop.url for hop in attempted] == [VERSANT_URL]
+    assert not patches["generate_for_wednesday"].called
+    assert not patches["WixPublisher"].return_value.publish.called
+    assert not list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+def test_a_cross_site_redirect_stops_the_production_run(tmp_path, cnbc_feed):
+    elsewhere = "https://www.example.com/republished.html"
+    code, patches, attempted, _judgment = _run_wednesday(
+        tmp_path, cnbc_feed,
+        pages={VERSANT_URL: _redirect(elsewhere), elsewhere: _ok()},
+    )
+
+    assert code == 1
+    assert [hop.url for hop in attempted] == [VERSANT_URL]
+    assert not patches["generate_for_wednesday"].called
 
 
 # ===========================================================================
@@ -474,18 +527,27 @@ def test_the_invocation_id_is_deterministic():
 
 
 # ===========================================================================
-# The fetch itself
+# The fetch: every hop validated BEFORE it is requested
 # ===========================================================================
+
+LOCAL_TARGET = "http://127.0.0.1/internal"
+PRIVATE_NAME = "https://intranet.cnbc.com/secrets"
+
+
+def _fetch(url=VERSANT_URL, *, pages=None, resolves=None, attempted=None):
+    attempted = attempted if attempted is not None else []
+    return fetch_source(
+        url,
+        transport=_transport(pages if pages is not None else {url: _ok()}, attempted),
+        resolver=_resolver(resolves),
+        sleep=lambda _s: None,
+    ), attempted
 
 
 def test_the_fetch_extracts_title_publisher_and_publication_time():
-    calls: list = []
-    page = fetch_source(
-        VERSANT_URL,
-        session_factory=_direct_transport({VERSANT_URL: (VERSANT_PAGE, 200, None)},
-                                          calls),
-    )
+    page, attempted = _fetch()
 
+    assert [hop.url for hop in attempted] == [VERSANT_URL]
     assert page.title == VERSANT_HEADLINE
     assert page.publisher == "CNBC"
     assert page.published_at == datetime(2026, 7, 6, 13, 5, tzinfo=timezone.utc)
@@ -496,50 +558,215 @@ def test_the_fetch_extracts_title_publisher_and_publication_time():
     assert page.redirected is False
 
 
-def test_the_fetch_refuses_an_unsafe_authority():
-    with pytest.raises(DirectUrlFetchError, match="unsafe source authority"):
-        fetch_source(
-            "http://127.0.0.1:8080/internal",
-            session_factory=_direct_transport({}, []),
+def test_the_connection_is_made_to_a_validated_address_not_a_hostname():
+    """The pinning that closes the rebinding window, asserted directly."""
+    _page, attempted = _fetch(resolves={"www.cnbc.com": ["93.184.216.34"]})
+    assert attempted[0].pinned_ip == "93.184.216.34"
+
+
+# ── the blocker: an unsafe redirect destination is never requested ─────────
+
+
+def test_a_redirect_to_loopback_is_never_requested():
+    attempted: list = []
+    pages = {VERSANT_URL: _redirect(LOCAL_TARGET)}
+
+    with pytest.raises(DirectUrlFetchError) as exc:
+        _fetch(pages=pages, attempted=attempted)
+
+    # the FIRST request happened; the second one never did
+    assert [hop.url for hop in attempted] == [VERSANT_URL]
+    assert LOCAL_TARGET not in [hop.url for hop in attempted]
+    assert "non-public address" in str(exc.value) or "unsafe" in str(exc.value)
+
+
+@pytest.mark.parametrize("target", [
+    "http://127.0.0.1/internal",
+    "http://169.254.169.254/latest/meta-data/",     # cloud metadata
+    "http://10.0.0.5/admin",
+    "http://192.168.1.1/",
+    "http://[::1]/internal",
+    "http://localhost/internal",
+])
+def test_no_redirect_into_non_public_space_is_ever_requested(target):
+    attempted: list = []
+    with pytest.raises(DirectUrlFetchError):
+        _fetch(pages={VERSANT_URL: _redirect(target)}, attempted=attempted)
+    assert [hop.url for hop in attempted] == [VERSANT_URL]
+
+
+def test_a_hostname_resolving_into_private_space_is_never_requested():
+    """The name looks public; its answer does not. Refused before connecting."""
+    attempted: list = []
+    with pytest.raises(DirectUrlFetchError, match="non-public address"):
+        _fetch(
+            PRIVATE_NAME,
+            pages={PRIVATE_NAME: _ok()},
+            resolves={"intranet.cnbc.com": ["10.1.2.3"]},
+            attempted=attempted,
         )
+    assert attempted == []                          # nothing was requested
 
 
-def test_the_fetch_refuses_a_redirect_to_an_unsafe_authority():
-    pages = {VERSANT_URL: (VERSANT_PAGE, 200, "http://localhost/admin")}
-    with pytest.raises(DirectUrlFetchError, match="unsafe authority"):
-        fetch_source(VERSANT_URL, session_factory=_direct_transport(pages, []))
+def test_a_redirect_to_a_name_resolving_into_private_space_is_never_requested():
+    attempted: list = []
+    with pytest.raises(DirectUrlFetchError, match="non-public address"):
+        _fetch(
+            pages={VERSANT_URL: _redirect(PRIVATE_NAME), PRIVATE_NAME: _ok()},
+            resolves={"intranet.cnbc.com": ["169.254.169.254"]},
+            attempted=attempted,
+        )
+    assert [hop.url for hop in attempted] == [VERSANT_URL]
+
+
+def test_a_name_with_one_private_answer_among_public_ones_is_refused():
+    """Picking the public answer would only mean trying again."""
+    attempted: list = []
+    with pytest.raises(DirectUrlFetchError, match="non-public address"):
+        _fetch(
+            resolves={"www.cnbc.com": ["93.184.216.34", "127.0.0.1"]},
+            attempted=attempted,
+        )
+    assert attempted == []
+
+
+# ── same-site redirects only ──────────────────────────────────────────────
+
+
+def test_a_same_site_redirect_is_followed():
+    final = "https://www.cnbc.com/2026/07/06/versant-full-swing-final.html"
+    page, attempted = _fetch(
+        pages={VERSANT_URL: _redirect(final), final: _ok()}
+    )
+    assert [hop.url for hop in attempted] == [VERSANT_URL, final]
+    assert page.final_url == final
+    assert page.requested_url == VERSANT_URL       # the cited URL is preserved
+    assert page.redirected is True
+
+
+def test_a_subdomain_redirect_is_followed():
+    final = "https://amp.cnbc.com/2026/07/06/versant-full-swing.html"
+    page, attempted = _fetch(pages={VERSANT_URL: _redirect(final), final: _ok()})
+    assert [hop.url for hop in attempted] == [VERSANT_URL, final]
+    assert page.final_url == final
+
+
+def test_a_relative_redirect_is_resolved_against_the_current_url():
+    final = "https://www.cnbc.com/2026/07/06/moved.html"
+    page, attempted = _fetch(
+        pages={VERSANT_URL: _redirect("/2026/07/06/moved.html"), final: _ok()}
+    )
+    assert [hop.url for hop in attempted] == [VERSANT_URL, final]
+
+
+def test_a_cross_site_redirect_fails_closed_and_is_never_requested():
+    """Attesting the cited URL with another site's content is the defect."""
+    elsewhere = "https://www.example.com/republished.html"
+    attempted: list = []
+    with pytest.raises(DirectUrlFetchError, match="off-site"):
+        _fetch(
+            pages={VERSANT_URL: _redirect(elsewhere), elsewhere: _ok()},
+            attempted=attempted,
+        )
+    assert [hop.url for hop in attempted] == [VERSANT_URL]
+
+
+def test_a_redirect_chain_cannot_walk_off_site_one_hop_at_a_time():
+    """Each hop is compared to the ORIGIN, not merely to the previous hop."""
+    hop1 = "https://amp.cnbc.com/a.html"
+    hop2 = "https://amp.cnbc.example.net/a.html"
+    attempted: list = []
+    with pytest.raises(DirectUrlFetchError, match="off-site"):
+        _fetch(
+            pages={VERSANT_URL: _redirect(hop1), hop1: _redirect(hop2),
+                   hop2: _ok()},
+            attempted=attempted,
+        )
+    assert [hop.url for hop in attempted] == [VERSANT_URL, hop1]
+
+
+def test_a_redirect_loop_is_bounded():
+    pages = {VERSANT_URL: _redirect(VERSANT_URL)}
+    attempted: list = []
+    with pytest.raises(DirectUrlFetchError, match="exceeded"):
+        _fetch(pages=pages, attempted=attempted)
+    assert len(attempted) == direct_url.MAX_REDIRECTS + 1
+
+
+def test_automatic_redirect_following_is_never_used():
+    """Structural: the client must not be allowed to follow a redirect."""
+    source = Path("src/research/adapters/direct_url.py").read_text()
+    assert "allow_redirects=True" not in source
+    assert "redirect=False" in source          # urllib3's equivalent, explicit
+
+
+def test_a_redirect_without_a_location_is_a_failure():
+    with pytest.raises(DirectUrlFetchError, match="no Location"):
+        _fetch(pages={VERSANT_URL: (301, {}, "")})
+
+
+# ── the rest of the fetch contract ────────────────────────────────────────
+
+
+def test_the_fetch_refuses_an_unsafe_authority_before_requesting():
+    attempted: list = []
+    with pytest.raises(DirectUrlFetchError, match="unsafe source authority"):
+        _fetch("http://127.0.0.1:8080/internal", pages={}, attempted=attempted)
+    assert attempted == []
+
+
+def test_a_non_http_scheme_is_refused_before_requesting():
+    attempted: list = []
+    with pytest.raises(DirectUrlFetchError, match="scheme"):
+        _fetch("file:///etc/passwd", pages={}, attempted=attempted)
+    assert attempted == []
 
 
 def test_a_non_success_status_is_a_failure_not_an_empty_page():
-    pages = {VERSANT_URL: ("<html></html>", 503, None)}
     with pytest.raises(DirectUrlFetchError, match="HTTP 503"):
-        fetch_source(VERSANT_URL, session_factory=_direct_transport(pages, []))
+        _fetch(pages={VERSANT_URL: (503, {}, "<html></html>")})
 
 
 def test_a_transport_error_is_retried_then_fails_closed():
     attempts: list = []
 
-    def flaky():
-        attempts.append(1)
+    def flaky(url, *, pinned_ip, headers, timeout):
+        attempts.append(url)
         raise OSError("connection reset")
 
     with pytest.raises(DirectUrlFetchError, match="could not be retrieved"):
-        fetch_source(VERSANT_URL, session_factory=flaky, sleep=lambda _s: None)
+        fetch_source(VERSANT_URL, transport=flaky, resolver=_resolver(),
+                     sleep=lambda _s: None)
     assert len(attempts) == direct_url.MAX_ATTEMPTS
 
 
 def test_a_transport_error_that_clears_is_not_a_failure():
     attempts: list = []
 
-    def flaky():
-        attempts.append(1)
+    def flaky(url, *, pinned_ip, headers, timeout):
+        attempts.append(url)
         if len(attempts) == 1:
             raise OSError("connection reset")
-        return _Session({VERSANT_URL: (VERSANT_PAGE, 200, None)}, [])
+        return direct_url._RawResponse(status=200, headers={}, text=VERSANT_PAGE)
 
-    page = fetch_source(VERSANT_URL, session_factory=flaky, sleep=lambda _s: None)
+    page = fetch_source(VERSANT_URL, transport=flaky, resolver=_resolver(),
+                        sleep=lambda _s: None)
     assert page.title == VERSANT_HEADLINE
     assert len(attempts) == 2
+
+
+def test_an_unresolvable_host_fails_closed_without_requesting():
+    import socket as _socket
+
+    attempted: list = []
+
+    def failing_resolver(*args, **kwargs):
+        raise _socket.gaierror("Name or service not known")
+
+    with pytest.raises(DirectUrlFetchError, match="could not be resolved"):
+        fetch_source(VERSANT_URL, transport=_transport({}, attempted),
+                     resolver=failing_resolver, sleep=lambda _s: None)
+    assert attempted == []
 
 
 def test_the_entrypoint_guard_and_the_adapter_refuse_the_same_things():
