@@ -306,9 +306,13 @@ WEDNESDAY_ROLE = "never-blank-wednesday-golden"
 def _build_wednesday_source_run(tmp_path) -> str:
     code, _, _ = _run_with_role(tmp_path, WEDNESDAY_ROLE)
     assert code == 0
-    decisions = list(tmp_path.glob("*/runs/*/decision.json"))
-    assert len(decisions) == 1          # Wednesday takes the Decision Lens
-    return decisions[0].parent.name
+    # #209: Wednesday's business reasoning is the restored July path, so its
+    # decision authority is the declared role policy, persisted as
+    # decision_policy.json — the canonical Lens no longer gates it.
+    policies = list(tmp_path.glob("*/runs/*/decision_policy.json"))
+    assert len(policies) == 1
+    assert not list(tmp_path.glob("*/runs/*/decision.json"))
+    return policies[0].parent.name
 
 
 def _source_assignment_path(tmp_path, source_run_id):

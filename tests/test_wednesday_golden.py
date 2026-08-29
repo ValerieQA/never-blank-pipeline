@@ -257,10 +257,15 @@ def test_wednesday_role_resolves_explicitly_from_strict_configuration(profile):
     assert identity == EditorialRoleIdentity(
         role_id=ROLE_ID,
         configuration_version=configuration.configuration_version,
+        # #209: Wednesday's business reasoning is the restored July path, so
+        # the current canonical Decision Lens does not gate it. The bypass is
+        # this declared policy — auditable in configuration, on the
+        # assignment anchor and in decision_policy.json — never a silence.
+        decision_policy="role_bounded_r1",
     )
     assert role.role_id == profile.editorial_role_id
     assert tuple(role.eligibility_criteria) == profile.source_eligibility_rules()
-    assert role.decision_policy == "decision_lens"
+    assert role.decision_policy == "role_bounded_r1"
     assert role.require_source_transparency is True
     assert role.acceptance_rubric_path == profile.acceptance_rubric_path
     assert role.acceptance_rubric_identity == profile.acceptance_rubric_identity
@@ -305,7 +310,7 @@ def test_canonical_entrypoint_records_role_and_routes_real_rules(tmp_path):
         "configuration_version": load_business_strategy_configuration(
             BUSINESS_CONFIG
         ).configuration_version,
-        "decision_policy": "decision_lens",
+        "decision_policy": "role_bounded_r1",
     }
 
     # #209: Wednesday routes to the restored July path and NOT to the shared

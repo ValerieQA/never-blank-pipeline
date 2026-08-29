@@ -33,7 +33,7 @@ from src.never_blank.wednesday_routing import (
     is_wednesday_role,
 )
 from tests.test_decision_lifecycle import _entry_patches, _evaluator, _model_output
-from tests.test_generate_and_publish import _make_ok_publish_result
+from tests.test_generate_and_publish import _make_ok_publish_result, _make_rc_mock
 from tests.test_monday_stream import FIXTURE_SOURCE_TITLE, FIXTURE_SOURCE_URL
 from tests.test_research_artifact_lifecycle import ReadyProvider
 
@@ -89,10 +89,33 @@ def _wednesday_article() -> dict:
     }
 
 
-def _run_wednesday(tmp_path, *, dry_run=True, article=None, overrides=None):
-    """Drive the REAL entrypoint with the Wednesday role."""
+def _run_wednesday(tmp_path, *, dry_run=True, article=None, overrides=None,
+                   signal=None):
+    """Drive the REAL entrypoint with the Wednesday role.
+
+    When ``signal`` is given it is injected as the run's raw signal AND as
+    the editorial context the entrypoint passes to generation, so the object
+    reaching the routing seam is the real one rather than a placeholder.
+    """
     argv, patches = _entry_patches(tmp_path, dry_run=dry_run)
     argv += ["--editorial-role", WEDNESDAY_ROLE_ID]
+    if signal is not None:
+        # the run must be dispatched for the injected signal's own id, so
+        # research lineage is written under the historical identity
+        argv = [
+            signal["SIGNAL_ID"] if part == argv[2] and i == 2 else part
+            for i, part in enumerate(argv)
+        ]
+        patches["_load_signal"] = mock.MagicMock(return_value=signal)
+
+        def _rc_with_signal(assignment, raw_signal, run_ctx):
+            rc = _make_rc_mock(run_ctx.run_id)
+            rc.to_editorial.return_value.to_legacy_dict.return_value = signal
+            return rc
+
+        patches["_build_legacy_research_context"] = mock.MagicMock(
+            side_effect=_rc_with_signal
+        )
     # stub only the routing seam — the branch under test is the entrypoint's
     patches["generate_for_wednesday"] = mock.MagicMock(
         return_value=article or _wednesday_article()
@@ -165,15 +188,39 @@ def test_the_routing_predicate_is_role_scoped():
 
 
 def test_versant_reaches_publication_preparation(tmp_path, versant):
-    """item 4 — the historical signal travels the real runtime route."""
-    code, patches = _run_wednesday(tmp_path, dry_run=False)
+    """item 4 — the HISTORICAL signal travels the real runtime route.
 
-    signal = patches["generate_for_wednesday"].call_args.args[0]
-    assert isinstance(signal, dict)
+    The Versant fixture is injected as the run's signal, so the object handed
+    to the restored generation seam is the real 46-field record, not a
+    placeholder. Generation itself stays stubbed: no paid call is made.
+    """
+    code, patches = _run_wednesday(tmp_path, dry_run=False, signal=versant)
+
     assert code == 0
-    # generation produced a publishable package and reached the publishers
+    routed = patches["generate_for_wednesday"].call_args.args[0]
+
+    # the exact historical identity reached the restored path …
+    assert routed["SIGNAL_ID"] == "37a503640b83be6c"
+    assert routed["HEADLINE"] == (
+        "Versant agrees to buy golf simulator company Full Swing for $530 million"
+    )
+    assert routed["SOURCE_NAME"] == "CNBC Business"
+    assert "cnbc.com" in routed["SOURCE_URL"]
+
+    # … carrying the July fields the restored stages actually consume
+    assert routed["CORE_FACT"] == versant["CORE_FACT"]
+    assert routed["CORE_TENSION"] == versant["CORE_TENSION"]
+    assert routed["BUSINESS_LESSON"] == versant["BUSINESS_LESSON"]
+    assert routed["WHY_THIS_CASE_IS_INTERESTING"] == (
+        versant["WHY_THIS_CASE_IS_INTERESTING"]
+    )
+    assert routed["COUNTER_EXAMPLE"] == versant["COUNTER_EXAMPLE"]
+
+    # … and the run reached publication preparation
     assert list(tmp_path.glob("*/runs/*/generated.json"))
     assert patches["WixPublisher"].return_value.publish.called
+    # the shared engine was never consulted for this signal
+    assert not patches["generate_article"].called
 
 
 def test_current_safety_still_executes_for_wednesday(tmp_path):
@@ -245,6 +292,70 @@ def test_the_adapter_invents_no_title():
         adapted = generate_for_wednesday({"SIGNAL_ID": "x"})
 
     assert "title" not in adapted["platforms"]["long"]
+
+
+# ===========================================================================
+# Wednesday's decision authority — the restored path is not gated by the
+# current canonical Decision Lens (#210 review, blocker 1)
+# ===========================================================================
+
+
+def test_wednesday_never_consults_the_canonical_decision_lens(tmp_path, versant):
+    """The Lens must not be able to stop Wednesday before generation.
+
+    Live run 32769085831 is the proof this matters: both Lens criteria came
+    back *satisfied* and it still returned ``revise``, killing the run before
+    any editorial stage ran. Wednesday's business reasoning is the restored
+    July path; current shared reasoning may not be a prerequisite for it.
+    """
+    exploding = mock.MagicMock(
+        side_effect=AssertionError("canonical Decision Lens consulted for Wednesday")
+    )
+    code, patches = _run_wednesday(
+        tmp_path, dry_run=False, signal=versant,
+        overrides={"evaluate_and_persist_decision": exploding,
+                   "production_evaluator": exploding},
+    )
+
+    assert code == 0
+    assert not exploding.called
+    assert patches["generate_for_wednesday"].called
+
+
+def test_wednesday_decision_authority_is_persisted_not_skipped(tmp_path, versant):
+    """Bypassing the Lens must leave an auditable record, never a silence."""
+    code, _patches = _run_wednesday(tmp_path, dry_run=False, signal=versant)
+    assert code == 0
+
+    policy_records = list(tmp_path.glob("*/runs/*/decision_policy.json"))
+    assert len(policy_records) == 1
+    policy = json.loads(policy_records[0].read_text())
+    assert policy["decision_policy"] == "role_bounded_r1"
+    assert policy["research_readiness"] == "ready"
+
+    # …and no canonical decision artifact was fabricated in its place
+    assert not list(tmp_path.glob("*/runs/*/decision.json"))
+
+    # the authority is also recorded on the immutable provenance anchor
+    assignment = json.loads(
+        next(tmp_path.glob("*/runs/*/assignment.json")).read_text()
+    )
+    assert assignment["editorial_role"]["role_id"] == WEDNESDAY_ROLE_ID
+    assert assignment["editorial_role"]["decision_policy"] == "role_bounded_r1"
+
+
+def test_the_wednesday_role_declares_the_policy_in_configuration():
+    """The authority is configuration a reviewer can read, not code."""
+    from pathlib import Path as _Path
+
+    from src.editorial.editorial_role import resolve_editorial_role
+    from src.strategy.business_config import load_business_strategy_configuration
+
+    configuration = load_business_strategy_configuration(
+        _Path("strategy/current/business_strategy.json")
+    )
+    _identity, role = resolve_editorial_role(configuration, WEDNESDAY_ROLE_ID)
+    assert role.decision_policy == "role_bounded_r1"
 
 
 # ===========================================================================

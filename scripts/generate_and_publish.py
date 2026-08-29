@@ -1084,14 +1084,23 @@ def _run(
         # ── Decision policy (Issue #152) ─────────────────────────────────────
         # A role may declare which decision policy governs the run between
         # READY research and generation. "role_bounded_r1" is the explicit R1
-        # product decision for the Monday documented-case role: the Decision
-        # Lens's audience-transfer semantics predate the corrected Monday
-        # strategy (reconciliation is #151), so the role proceeds on READY
-        # research alone. This is auditable, not silent — the policy is
-        # persisted on assignment.json's editorial_role — and it relaxes
-        # nothing downstream: acceptance, source transparency, preflight and
-        # the publishers are exactly as strict as before. Every other role,
-        # and every run with no role, takes the Decision Lens gate unchanged.
+        # product decision for two roles now:
+        #
+        #   Monday  — the Decision Lens's audience-transfer semantics predate
+        #             the corrected Monday strategy (reconciliation is #151).
+        #   Wednesday — the restored July path (#207/#209) IS Wednesday's
+        #             business reasoning, and the canonical Lens is current
+        #             shared reasoning that July never had. Leaving it in
+        #             front would let it stop a Wednesday run before the
+        #             restored path is reached at all — which is exactly what
+        #             happened in live run 32769085831, where both criteria
+        #             were satisfied and the Lens still returned "revise".
+        #
+        # This is auditable, not silent — the policy is persisted on
+        # assignment.json's editorial_role and in decision_policy.json — and
+        # it relaxes nothing downstream: acceptance, source transparency,
+        # preflight and the publishers are exactly as strict as before. Every
+        # other role, and every run with no role, takes the Lens unchanged.
         if (
             _editorial_role_identity is not None
             and _role.decision_policy == "role_bounded_r1"
