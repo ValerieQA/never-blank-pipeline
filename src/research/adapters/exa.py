@@ -45,7 +45,12 @@ from src.research.provider import (
     SourcePriority,
     SourceRetrievalOutcome,
 )
-from src.research.url_safety import UnsafeResearchUrl, require_safe_url_authority
+from src.research.url_safety import (
+    UnsafeResearchUrl,
+    is_within_domain,
+    registrable_host,
+    require_safe_url_authority,
+)
 
 
 EXA_PROVIDER_ID = "exa"
@@ -588,9 +593,10 @@ def _digest(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
 
 
-def _domain(value: str) -> str:
-    parsed = urlsplit(value if "://" in value else f"https://{value}")
-    return (parsed.hostname or value).casefold().rstrip(".").removeprefix("www.")
+#: #211: the definition moved to `url_safety` so the direct-URL adapter can
+#: share it instead of inventing a second one. Same function, same behaviour;
+#: the local names are kept so nothing else in this module changes.
+_domain = registrable_host
 
 
 def _canonical_url(value: str) -> str:
@@ -622,10 +628,7 @@ def _unsafe_url_failure() -> ProviderFailure:
     )
 
 
-def _is_within_domain(url_or_domain: str, expected_domain: str) -> bool:
-    candidate = _domain(url_or_domain)
-    expected = _domain(expected_domain)
-    return candidate == expected or candidate.endswith("." + expected)
+_is_within_domain = is_within_domain
 
 
 def _is_excluded(url_or_domain: str, exclusions: Sequence[str]) -> bool:

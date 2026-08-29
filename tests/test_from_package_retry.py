@@ -34,7 +34,11 @@ from tests.test_decision_lifecycle import (
     _model_output,
     _reuse_patches,
 )
-from tests.test_monday_stream import MONDAY_ROLE, _run_with_role
+from tests.test_monday_stream import (
+    MONDAY_ROLE,
+    WEDNESDAY_SUPPLY,
+    _run_with_role,
+)
 from tests.test_research_artifact_lifecycle import ReadyProvider
 
 
@@ -44,8 +48,18 @@ class ExplodingClient:
 
 
 def _reuse_main(tmp_path, source_run_id, *, argv_extra=(), monkeypatch=None,
-                evaluator=None):
+                evaluator=None, signal_id=None):
     argv, patches = _reuse_patches(tmp_path, source_run_id)
+    if signal_id is not None:
+        # #211: a Wednesday source run is filed under the id its own July
+        # research produced, so its retry is dispatched under that id — the
+        # workflow reads it back from the source run for exactly this reason.
+        # A retry reloads by identity through the shared store rather than
+        # rediscovering, so the loaded signal carries that id too.
+        argv = [signal_id if i == 2 else part for i, part in enumerate(argv)]
+        loaded = dict(patches["_load_signal"].return_value)
+        loaded["SIGNAL_ID"] = signal_id
+        patches["_load_signal"] = mock.MagicMock(return_value=loaded)
     argv = argv + list(argv_extra)
     with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches), \
             mock.patch(
@@ -229,7 +243,8 @@ def _steps(stream):
 
 def _resolve_step(stream):
     steps = _steps(stream)
-    name = "Select eligible signal" if stream == "monday" else "Resolve Wednesday signal"
+    name = ("Select eligible signal" if stream == "monday"
+            else "Resolve Wednesday retry signal")
     return steps[name]
 
 
@@ -260,8 +275,12 @@ def test_the_retry_short_circuit_is_guarded_and_skips_the_selector(stream):
     assert 'grep -Fxq "$RETRY_SIGNAL_ID" data/research/published_signal_ids.txt' in run
     # signal_id is mandatory for a retry
     assert "source_run_id requires signal_id" in run
-    # and the selector is skipped: the short-circuit exits before it
-    assert run.index('exit 0') < run.index("select_eligible_signal.py")
+    # and normal selection is skipped: the short-circuit exits before it.
+    # Monday's normal path is the shared selector; Wednesday's (#211) is the
+    # entrypoint's own July research, announced in this step.
+    marker = ("select_eligible_signal.py" if stream == "monday"
+              else "restored July research path")
+    assert run.index('exit 0') < run.index(marker)
 
 
 @pytest.mark.parametrize("stream", ["monday", "wednesday"])
@@ -278,10 +297,17 @@ def test_the_generate_step_forwards_the_from_package_flags(stream):
 def test_the_normal_scheduled_path_is_unchanged(stream):
     step = _resolve_step(stream)
     run = step["run"]
-    # empty source_run_id falls through the guard to the exact selector
-    # invocation and exit-code handling that existed before #174
-    assert "select_eligible_signal.py" in run
-    assert 'if [ "$RC" = "3" ]' in run
+    if stream == "monday":
+        # empty source_run_id falls through the guard to the exact selector
+        # invocation and exit-code handling that existed before #174
+        assert "select_eligible_signal.py" in run
+        assert 'if [ "$RC" = "3" ]' in run
+    else:
+        # #211: Wednesday's normal path is no longer resolved here at all —
+        # the entrypoint discovers the signal through the restored July
+        # research. The shared selector must not reappear on this path.
+        assert "select_eligible_signal.py" not in run
+        assert "restored July research path" in run
     # consumption conditions untouched: success only, never dry-run
     mark = _steps(stream)["Mark signal as published"]
     assert "success()" in mark["if"] and "dry_run != 'true'" in mark["if"]
@@ -290,7 +316,10 @@ def test_the_normal_scheduled_path_is_unchanged(stream):
 def test_monday_and_wednesday_retry_semantics_are_identical():
     def normalized_retry(stream):
         run = _resolve_step(stream)["run"]
-        block = run.split('if [ -n "$RETRY_RUN_ID" ]')[1].split("set +e")[0]
+        block = run.split('if [ -n "$RETRY_RUN_ID" ]')[1]
+        # the retry short-circuit ends where each stream's normal path begins
+        for terminator in ("set +e", "# Normal run:"):
+            block = block.split(terminator)[0]
         return re.sub(r"\s+", " ", block).replace("monday", "").replace("wednesday", "")
 
     assert normalized_retry("monday") == normalized_retry("wednesday")
@@ -331,6 +360,7 @@ def test_a_wednesday_source_republishes_under_the_wednesday_role(
     code, patches = _reuse_main(
         tmp_path, source_run_id,
         argv_extra=["--editorial-role", WEDNESDAY_ROLE],
+        signal_id=WEDNESDAY_SUPPLY["SIGNAL_ID"],
         evaluator=counting_evaluator,
     )
 
@@ -352,6 +382,7 @@ def test_a_roleless_source_cannot_be_republished_under_a_role(tmp_path):
     code, patches = _reuse_main(
         tmp_path, source_run_id,
         argv_extra=["--editorial-role", WEDNESDAY_ROLE],
+        signal_id=WEDNESDAY_SUPPLY["SIGNAL_ID"],
     )
 
     assert code == 1
@@ -395,6 +426,7 @@ def test_a_tampered_source_role_id_fails_binding(tmp_path):
     code, patches = _reuse_main(
         tmp_path, source_run_id,
         argv_extra=["--editorial-role", WEDNESDAY_ROLE],
+        signal_id=WEDNESDAY_SUPPLY["SIGNAL_ID"],
     )
 
     assert code == 1
@@ -411,6 +443,7 @@ def test_a_tampered_role_configuration_version_fails_binding(tmp_path):
     code, patches = _reuse_main(
         tmp_path, source_run_id,
         argv_extra=["--editorial-role", WEDNESDAY_ROLE],
+        signal_id=WEDNESDAY_SUPPLY["SIGNAL_ID"],
     )
 
     assert code == 1
@@ -424,6 +457,7 @@ def test_a_malformed_source_assignment_fails_binding(tmp_path):
     code, patches = _reuse_main(
         tmp_path, source_run_id,
         argv_extra=["--editorial-role", WEDNESDAY_ROLE],
+        signal_id=WEDNESDAY_SUPPLY["SIGNAL_ID"],
     )
 
     assert code == 1

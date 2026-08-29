@@ -139,8 +139,11 @@ def test_changing_one_stage_variable_does_not_affect_the_others(monkeypatch):
 _WORKFLOWS = {
     "monday": (".github/workflows/monday_publish.yml",
                "Select eligible signal", "Monday — Generate + Publish"),
+    # #211: Wednesday no longer has a model-calling selector step. It supplies
+    # its own signal inside the entrypoint through the restored July research,
+    # so there is no selector env to route — hence `None`.
     "wednesday": (".github/workflows/wednesday_golden.yml",
-                  "Resolve Wednesday signal", "Wednesday Golden — Generate + Publish"),
+                  None, "Wednesday Golden — Generate + Publish"),
 }
 
 
@@ -158,13 +161,20 @@ def test_the_workflows_carry_the_stage_variables_where_they_are_used(stream):
     path, selector_name, generate_prefix = _WORKFLOWS[stream]
     steps = _steps(path)
 
-    selector_env = next(env for name, env in steps.items()
-                        if name.startswith(selector_name))
     generate_env = next(env for name, env in steps.items()
                         if name.startswith(generate_prefix))
 
-    # the selector judges eligibility via model_enrich — and needs no more
-    assert selector_env["NB_ENRICH_MODEL"] == "${{ secrets.NB_ENRICH_MODEL }}"
+    if selector_name is None:
+        # Wednesday: no step outside generation may carry a model secret,
+        # because no step outside generation makes a model call any more.
+        for name, env in steps.items():
+            if not name.startswith(generate_prefix):
+                assert not [k for k in env if k.endswith("_MODEL")], name
+    else:
+        selector_env = next(env for name, env in steps.items()
+                            if name.startswith(selector_name))
+        # the selector judges eligibility via model_enrich — and needs no more
+        assert selector_env["NB_ENRICH_MODEL"] == "${{ secrets.NB_ENRICH_MODEL }}"
     # generation carries all three categories, plus the global fallback
     for var in ("NB_ENRICH_MODEL", "NB_ARTICLE_MODEL", "NB_SOCIAL_MODEL",
                 "NB_OPENAI_CHAT_MODEL"):
@@ -184,9 +194,27 @@ def test_the_routing_is_identical_infrastructure_not_weekday_branching():
             if any(k.startswith("NB_") and k.endswith("_MODEL") for k in env)
         }
 
-    # same variable sets per step kind on both weekdays
-    assert sorted(v for v in stage_vars(monday).values()) == \
-        sorted(v for v in stage_vars(wednesday).values())
+    # The generation step — the only stage both weekdays still share — routes
+    # through identical infrastructure. #211 removed Wednesday's selector
+    # stage entirely (it discovers its own signal in the entrypoint now), so
+    # the comparison is between what both streams actually run, not between
+    # a stage one of them no longer has.
+    def generation_vars(steps, prefix):
+        return next(sorted(v) for name, v in stage_vars(steps).items()
+                    if name.startswith(prefix))
+
+    assert generation_vars(monday, "Monday — Generate + Publish") == \
+        generation_vars(wednesday, "Wednesday Golden — Generate + Publish")
+
+    # and no weekday-specific MODEL variable exists on either side — the
+    # scheduling variables (MONDAY_TIME, WEDNESDAY_TZ) are runtime config,
+    # not routing
+    for steps in (monday, wednesday):
+        for name, env in steps.items():
+            assert not [
+                k for k in env
+                if k.endswith("_MODEL") and ("MONDAY" in k or "WEDNESDAY" in k)
+            ], name
 
 
 def test_no_production_code_hardcodes_a_routed_model():

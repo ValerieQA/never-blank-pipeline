@@ -34,11 +34,16 @@ from src.never_blank.wednesday_routing import (
 )
 from tests.test_decision_lifecycle import _entry_patches, _evaluator, _model_output
 from tests.test_generate_and_publish import _make_ok_publish_result, _make_rc_mock
-from tests.test_monday_stream import FIXTURE_SOURCE_TITLE, FIXTURE_SOURCE_URL
+from tests.test_monday_stream import (
+    FIXTURE_SOURCE_TITLE,
+    FIXTURE_SOURCE_URL,
+    WEDNESDAY_SUPPLY,
+)
 from tests.test_research_artifact_lifecycle import ReadyProvider
 
 FIXTURES = Path("tests/fixtures/wednesday_july")
 MONDAY_ROLE_ID = "never-blank-monday-documented-case"
+
 
 
 @pytest.fixture(scope="module")
@@ -99,15 +104,17 @@ def _run_wednesday(tmp_path, *, dry_run=True, article=None, overrides=None,
     """
     argv, patches = _entry_patches(tmp_path, dry_run=dry_run)
     argv += ["--editorial-role", WEDNESDAY_ROLE_ID]
+    # #211: Wednesday's fresh-generation runs no longer read the shared
+    # signal store — they discover their own through the restored July
+    # research. These scenarios are about ROUTING, so the supply is injected
+    # here at its own seam; the supply path itself is proven end to end,
+    # against a real RSS fixture, in tests/test_wednesday_supply.py.
+    supplied = signal if signal is not None else dict(WEDNESDAY_SUPPLY)
+    patches["supply_wednesday_signal"] = mock.MagicMock(return_value=supplied)
+    # the run must be dispatched under the supplied signal's own id, so
+    # research lineage is written under the historical identity
+    argv = [supplied["SIGNAL_ID"] if i == 2 else part for i, part in enumerate(argv)]
     if signal is not None:
-        # the run must be dispatched for the injected signal's own id, so
-        # research lineage is written under the historical identity
-        argv = [
-            signal["SIGNAL_ID"] if part == argv[2] and i == 2 else part
-            for i, part in enumerate(argv)
-        ]
-        patches["_load_signal"] = mock.MagicMock(return_value=signal)
-
         def _rc_with_signal(assignment, raw_signal, run_ctx):
             rc = _make_rc_mock(run_ctx.run_id)
             rc.to_editorial.return_value.to_legacy_dict.return_value = signal

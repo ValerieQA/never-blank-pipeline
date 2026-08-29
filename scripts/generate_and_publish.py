@@ -135,8 +135,13 @@ from src.run.decision_policy import (
     verify_decision_policy_record,
 )
 from src.lifecycle.signal_lifecycle import ResearchContext
-from src.research.provider import ResearchProvider
+from src.research.provider import (
+    ResearchProvider,
+    SourceDirectiveKind,
+    SourcePriority,
+)
 from src.research.adapters.exa import ExaResearchAdapter
+from src.research.adapters.direct_url import DirectUrlResearchProvider
 from src.research.assessment import EvidenceAssessmentError, EvidenceJudgmentTransport
 from src.research.lifecycle import (
     ResearchGateError,
@@ -166,6 +171,12 @@ from src.never_blank.wednesday_july import WednesdayGenerationError
 from src.never_blank.wednesday_routing import (
     generate_for_wednesday,
     is_wednesday_role,
+)
+from src.never_blank.wednesday_supply import (
+    WEDNESDAY_SIGNALS_FILE,
+    WednesdaySupplyError,
+    published_signal_ids,
+    supply_wednesday_signal,
 )
 from src.editorial.pipeline import (
     ArticleGenerationError,
@@ -298,6 +309,11 @@ PACKAGES_DIR.mkdir(parents=True, exist_ok=True)
 SIGNALS_FILES  = [
     Path("data/research/selected_signals.jsonl"),
     Path("data/research/signals_active.jsonl"),
+    # Wednesday's own store (#211). Present so a Wednesday signal can be
+    # reloaded by identity on a --from-package retry. Nothing writes Monday
+    # signals here and nothing writes Wednesday signals to the two above:
+    # the supplies are separate in both directions.
+    WEDNESDAY_SIGNALS_FILE,
 ]
 HISTORY_FILE   = Path("strategy/published_content_index.jsonl")
 SEP            = "─" * 64
@@ -765,7 +781,11 @@ def _run(
     article_revisor: ArticleRevisionTransport | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(description="Generate + publish one signal end-to-end")
-    parser.add_argument("--signal-id", required=True)
+    # #211: Wednesday's fresh-generation runs discover their own signal
+    # through the restored July research path, so the id is a filter there
+    # rather than an input. Every other path still requires it, enforced
+    # below once the role is known.
+    parser.add_argument("--signal-id", default="")
     parser.add_argument("--dry-run", action="store_true",
                         help="Generate and validate content, save generated.json, but do not publish")
     parser.add_argument("--from-package", action="store_true",
@@ -799,7 +819,8 @@ def _run(
             else "live (LLM generate)")
     print(f"\n{SEP}")
     print("  Never Blank — Generate + Publish")
-    print(f"  Signal: {signal_id}")
+    # #211: a Wednesday run has no signal id yet — it discovers one below.
+    print(f"  Signal: {signal_id or '(to be discovered)'}")
     print(f"  Mode:   {mode}")
     print(SEP)
 
@@ -887,13 +908,57 @@ def _run(
     print(f"  ✓  started_at:    {strategy_started_at}")
     print(f"  ✓  cta_mode:      {cta_mode}")
 
-    # ── 2. Load signal ─────────────────────────────────────────────────────────
-    print(f"\n[2/6] Loading signal {signal_id}…")
-    try:
-        signal = _load_signal(signal_id)
-    except FileNotFoundError as exc:
-        print(f"  ERROR: {exc}")
-        return 1
+    # ── 2. Obtain the signal ───────────────────────────────────────────────────
+    # Two supplies, chosen by role. Wednesday discovers its own signal through
+    # the restored July research path (#211); every other run loads one the
+    # shared research store already holds, exactly as before.
+    _wednesday_supply = (
+        is_wednesday_role(_editorial_role_identity)
+        and not args.from_package
+        and not args.legacy_package
+    )
+    if _wednesday_supply:
+        print("\n[2/6] Wednesday supply — restored July research (RSS → "
+              "select → enrich → score → angles)…")
+        try:
+            signal = supply_wednesday_signal(
+                signal_id, seen_ids=published_signal_ids()
+            )
+        except WednesdaySupplyError as exc:
+            # Before the run namespace exists there is no run to account for,
+            # so this returns without a terminal report — the same contract
+            # every other pre-intake failure follows.
+            print(f"  ERROR: {exc}")
+            return 1
+        if signal is None:
+            # July published nothing on a quiet day rather than lowering the
+            # bar, and neither does this. An empty Wednesday is a clean stop,
+            # never a fall-through to the shared store.
+            print("  ✓  no unseen Wednesday candidate — publishing nothing")
+            return 0
+        # The run is dispatched under the identity July's own algorithm
+        # produced, so every artifact this run writes is filed under the
+        # historical signal id.
+        signal_id = signal.get("SIGNAL_ID", "")
+        if not signal_id:
+            print("  ERROR: Wednesday research produced a signal with no SIGNAL_ID")
+            return 1
+        print(f"  ✓  Wednesday signal: {signal_id}")
+        # Machine-readable marker for the workflow, which cannot know the id
+        # in advance now that Wednesday discovers its own. Same convention as
+        # the shared selector's `selected=` line.
+        print(f"wednesday_signal_id={signal_id}")
+    else:
+        if not signal_id:
+            print("  ERROR: --signal-id is required for this run "
+                  "(only Wednesday fresh generation discovers its own signal)")
+            return 1
+        print(f"\n[2/6] Loading signal {signal_id}…")
+        try:
+            signal = _load_signal(signal_id)
+        except FileNotFoundError as exc:
+            print(f"  ERROR: {exc}")
+            return 1
 
     headline = signal.get("HEADLINE", signal_id)
     print(f"  ✓  Headline: {headline[:70]}")
@@ -1053,8 +1118,64 @@ def _run(
                 run_ctx, assignment, signal, strategy_execution.research,
                 now=datetime.now(timezone.utc),
             )
+            # #211: Wednesday is the historical control path, so its
+            # evidence stage must not widen the supply the July research
+            # chose. Retrieval fetches the exact SOURCE_URL that signal
+            # already cites and nothing else — the adapter below cannot
+            # discover — and this guard refuses the request before it is
+            # ever made, so a directive that would mean "go looking" stops
+            # the run rather than reaching any provider.
+            if _wednesday_supply:
+                # Two directive shapes mean "go looking": a DISCOVERY
+                # directive, and anything that is not an exact URL. Both are
+                # refused, so Wednesday's evidence can only ever be the exact
+                # source its own July research cited.
+                #
+                # DirectUrlResearchProvider refuses these on its own — this is
+                # deliberately the same rule stated twice. It stops the run
+                # here, before a provider is constructed, and says so in terms
+                # of Wednesday's supply rather than of a provider contract.
+                # The two must agree; a test holds them to it.
+                _searchable = tuple(
+                    directive.directive_id
+                    for directive in research_request.source_directives
+                    if directive.priority is not SourcePriority.EXCLUDED
+                    and (
+                        directive.priority is SourcePriority.DISCOVERY
+                        or directive.kind is not SourceDirectiveKind.URL
+                    )
+                )
+                if _searchable or research_request.freshness.allow_open_discovery:
+                    print(
+                        "  ERROR: Wednesday research would reach provider-side "
+                        f"search via {_searchable!r} — the restored July path "
+                        "supplies Wednesday's sources, and retrieval may only "
+                        "fetch the source that signal already cites"
+                    )
+                    state.ended(TerminalStage.RESEARCH, TerminalDisposition.FAILED,
+                                "wednesday research: provider search requested")
+                    return 1
             if research_provider is not None:
                 provider = research_provider
+            elif _wednesday_supply:
+                # #211 product decision: Wednesday is the historical control
+                # path, and a control that borrows a stage from the system
+                # under test is not a control. July had no research provider
+                # at all — its evidence was the article its own discovery
+                # cited — so Wednesday retrieves exactly that URL directly.
+                # ExaResearchAdapter is not constructed on this path, and
+                # neither of its endpoints can be reached from here.
+                #
+                # This is fidelity, not distrust of the provider: Monday
+                # keeps Exa, unchanged. Verification is re-sourced, never
+                # removed — the fetch follows redirects, records the final
+                # URL, checks the authority, fails closed when the source
+                # cannot be read, and emits `not_assessed` evidence that the
+                # shared assessment stage and the canonical research gate
+                # judge to exactly the same READY standard as Monday's.
+                provider = DirectUrlResearchProvider()
+                print("  ✓  wednesday retrieval: direct-URL "
+                      "(no provider search, no Exa)")
             else:
                 try:
                     provider = ExaResearchAdapter()

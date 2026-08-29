@@ -38,3 +38,26 @@ def require_safe_url_authority(value: str, *, allow_domain: bool = False) -> str
     if parsed.username is not None or "@" in decoded_authority:
         raise UnsafeResearchUrl(_SAFE_ERROR)
     return value
+
+
+def registrable_host(value: str) -> str:
+    """The comparable host of a URL or bare domain.
+
+    Moved here from ``adapters/exa.py`` (#211) unchanged, so the two adapters
+    share one definition of "the same site" rather than growing a second one.
+    Exa imports it from here and behaves exactly as before.
+    """
+    parsed = urlsplit(value if "://" in value else f"https://{value}")
+    return (parsed.hostname or value).casefold().rstrip(".").removeprefix("www.")
+
+
+def is_within_domain(url_or_domain: str, expected_domain: str) -> bool:
+    """Is the candidate the expected host, or a subdomain of it?
+
+    Also moved from ``adapters/exa.py`` unchanged. Not a public-suffix
+    implementation: it answers "same host or below it", which is what both
+    callers need and what the repository has always meant by same-site.
+    """
+    candidate = registrable_host(url_or_domain)
+    expected = registrable_host(expected_domain)
+    return candidate == expected or candidate.endswith("." + expected)

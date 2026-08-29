@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       signal_id:
-        description: "SIGNAL_ID (leave empty to select an unused eligible Wednesday case)"
+        description: "SIGNAL_ID — filters what Wednesday's own July research discovers; leave empty for a normal automatic run"
         required: false
         default: ""
         type: string
@@ -63,18 +63,20 @@ jobs:
         if: steps.window.outputs.due == 'true'
         run: pip install --quiet -r requirements.txt
 
-      # Reuse the generic role-eligibility selector merged with #142. The
-      # Wednesday source class is configuration, while the selector and the
-      # shared consumption marker are canonical cross-stream infrastructure.
-      - name: Resolve Wednesday signal
+      # #211: Wednesday no longer resolves its signal here. The shared
+      # role-eligibility selector reads the shared research store, which the
+      # 2026-07-21 supply changes retargeted at small-business feeds — the
+      # regression #206 identified. Wednesday's fresh-generation runs now
+      # discover their own signal inside the entrypoint, through the restored
+      # July research path, so this step handles only the from-package retry,
+      # where the signal was already judged in the source run.
+      - name: Resolve Wednesday retry signal
         id: resolve
         if: steps.window.outputs.due == 'true'
         env:
-          NB_OPENAI_API_KEY:    ${{ secrets.NB_OPENAI_API_KEY }}
-          NB_OPENAI_CHAT_MODEL: ${{ secrets.NB_OPENAI_CHAT_MODEL }}
-          # #173: the eligibility judgment is enrichment-class work; the
-          # stage model routes it without touching the global fallback.
-          NB_ENRICH_MODEL: ${{ secrets.NB_ENRICH_MODEL }}
+          # #211: no model call happens in this step any more — the shared
+          # eligibility selector is gone from the Wednesday path, so its
+          # model secrets are no longer passed here.
           RETRY_RUN_ID: ${{ inputs.source_run_id }}
           RETRY_SIGNAL_ID: ${{ inputs.signal_id }}
           WEDNESDAY_ROLE:       never-blank-wednesday-golden
@@ -82,7 +84,7 @@ jobs:
           # #174: from-package retry short-circuit. Validated through quoted
           # env vars with a strict charset guard — inputs can never inject
           # shell or traverse paths. The signal was judged eligible in the
-          # source run; the selector is skipped, costing zero model calls.
+          # source run, so it is reloaded by identity rather than rediscovered.
           if [ -n "$RETRY_RUN_ID" ]; then
             case "$RETRY_RUN_ID" in (*[!A-Za-z0-9-]*) echo "ERROR: invalid source_run_id"; exit 1;; esac
             if [ -z "$RETRY_SIGNAL_ID" ]; then
@@ -97,37 +99,18 @@ jobs:
             echo "From-package retry of run $RETRY_RUN_ID — eligibility selection skipped (already judged in the source run)."
             exit 0
           fi
-          set +e
-          python scripts/streams/select_eligible_signal.py \
-            --editorial-role "$WEDNESDAY_ROLE" \
-            --signal-id "${{ inputs.signal_id }}" \
-            --audit-out reports/stream_selection/wednesday_selection.json \
-            | tee selection.log
-          RC=${PIPESTATUS[0]}
-          set -e
-          if [ "$RC" = "3" ]; then
-            echo "signal_id=" >> "$GITHUB_OUTPUT"
-            echo "No eligible Wednesday candidate — publishing nothing."
-            exit 0
-          elif [ "$RC" != "0" ]; then
-            # Eligibility infrastructure failure or a truncated search is not
-            # a healthy empty Wednesday and must remain visible.
-            exit "$RC"
+          # Normal run: the entrypoint discovers the signal itself. An
+          # explicitly requested signal_id is passed through as a FILTER on
+          # what Wednesday's own research produces — never as a way to hand
+          # the Wednesday path a signal from the shared store.
+          if [ -n "${{ inputs.signal_id }}" ]; then
+            case "${{ inputs.signal_id }}" in (*[!A-Za-z0-9_-]*) echo "ERROR: invalid signal_id"; exit 1;; esac
           fi
-          SIGNAL_ID=$(grep '^selected=' selection.log | tail -1 | cut -d= -f2)
-          echo "signal_id=$SIGNAL_ID" >> "$GITHUB_OUTPUT"
-
-      - name: Preserve Wednesday selection audit
-        if: steps.window.outputs.due == 'true' && always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: wednesday-selection-audit
-          path: reports/stream_selection/wednesday_selection.json
-          if-no-files-found: warn
-          retention-days: 90
+          echo "signal_id=${{ inputs.signal_id }}" >> "$GITHUB_OUTPUT"
+          echo "Wednesday will discover its signal through the restored July research path."
 
       - name: Check OpenAI secret
-        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != ''
+        if: steps.window.outputs.due == 'true'
         run: |
           test -n "$NB_OPENAI_API_KEY" || { echo "ERROR: NB_OPENAI_API_KEY is not set"; exit 1; }
           echo "✓ NB_OPENAI_API_KEY = [SET]"
@@ -135,7 +118,7 @@ jobs:
           NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
 
       - name: Check R1 publish secrets
-        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && inputs.dry_run != 'true'
+        if: steps.window.outputs.due == 'true' && inputs.dry_run != 'true'
         run: |
           MISSING=""
           [ -z "$NB_WIX_API_KEY" ]                && MISSING="$MISSING NB_WIX_API_KEY"
@@ -152,8 +135,9 @@ jobs:
           NB_ZERNIO_API_KEY: ${{ secrets.NB_ZERNIO_API_KEY }}
           NB_ZERNIO_LINKEDIN_ACCOUNT_ID: ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
 
-      - name: "Wednesday Golden — Generate + Publish ${{ steps.resolve.outputs.signal_id }}"
-        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != ''
+      - name: "Wednesday Golden — Generate + Publish"
+        id: publish
+        if: steps.window.outputs.due == 'true'
         env:
           WEDNESDAY_ROLE: never-blank-wednesday-golden
           SOURCE_RUN_ID: ${{ inputs.source_run_id }}
@@ -184,27 +168,37 @@ jobs:
             FLAGS="$FLAGS --from-package --source-run-id $SOURCE_RUN_ID"
           fi
           [ "${{ inputs.dry_run }}" = "true" ] && FLAGS="$FLAGS --dry-run"
+          set +e
           python scripts/generate_and_publish.py \
             --signal-id "${{ steps.resolve.outputs.signal_id }}" \
-            --editorial-role "$WEDNESDAY_ROLE" $FLAGS
+            --editorial-role "$WEDNESDAY_ROLE" $FLAGS | tee publish.log
+          RC=${PIPESTATUS[0]}
+          set -e
+          # #211: on a fresh Wednesday the signal id is an OUTPUT of the run,
+          # not an input — the restored July research chose it. A retry keeps
+          # the id it was dispatched with.
+          SIGNAL_ID=$(grep '^wednesday_signal_id=' publish.log | tail -1 | cut -d= -f2)
+          [ -n "$SIGNAL_ID" ] || SIGNAL_ID="${{ steps.resolve.outputs.signal_id }}"
+          echo "signal_id=$SIGNAL_ID" >> "$GITHUB_OUTPUT"
+          exit "$RC"
 
       - name: Mark signal as published
-        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && success() && inputs.dry_run != 'true'
+        if: steps.window.outputs.due == 'true' && steps.publish.outputs.signal_id != '' && success() && inputs.dry_run != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash origin main
-          echo "${{ steps.resolve.outputs.signal_id }}" >> data/research/published_signal_ids.txt
+          echo "${{ steps.publish.outputs.signal_id }}" >> data/research/published_signal_ids.txt
           git add data/research/published_signal_ids.txt
           git add strategy/published_content_index.jsonl 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "Publish Wednesday ${{ steps.resolve.outputs.signal_id }} [skip ci]"
+          git diff --staged --quiet || git commit -m "Publish Wednesday ${{ steps.publish.outputs.signal_id }} [skip ci]"
           git push
 
       - name: Preserve canonical run evidence
-        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && always()
+        if: steps.window.outputs.due == 'true' && steps.publish.outputs.signal_id != '' && always()
         uses: actions/upload-artifact@v4
         with:
-          name: "wednesday-run-evidence-${{ steps.resolve.outputs.signal_id }}"
-          path: "reports/content_packages/${{ steps.resolve.outputs.signal_id }}/runs/"
+          name: "wednesday-run-evidence-${{ steps.publish.outputs.signal_id }}"
+          path: "reports/content_packages/${{ steps.publish.outputs.signal_id }}/runs/"
           if-no-files-found: warn
           retention-days: 90

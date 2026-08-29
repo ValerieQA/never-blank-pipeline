@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Reconstructed from preserved July evidence, NOT a captured live feed.
+  Every value below is copied from the historical signal committed at
+  c7d3a23 (data/research/signals_active.jsonl, SIGNAL_ID 37a503640b83be6c).
+  The raw CNBC feed body was never committed, so the item is rebuilt from the
+  fields the July pipeline recorded: HEADLINE, SOURCE_URL, SOURCE_DATE and
+  raw_summary. Deterministic and offline — no test fetches this over HTTP.
+-->
+<rss version="2.0">
+  <channel>
+    <title>CNBC Business</title>
+    <item>
+      <title>Versant agrees to buy golf simulator company Full Swing for $530 million</title>
+      <link>https://www.cnbc.com/2026/07/06/versant-to-buy-golf-simulator-company-full-swing.html</link>
+      <pubDate>Mon, 06 Jul 2026 12:00:00 GMT</pubDate>
+      <description>Versant agreed to acquire golf simulator company Full Swing for $530 million to expand its nontraditional media assets. This acquisition aims to diversify Versant's revenue beyond cable television.</description>
+    </item>
+    <item>
+      <title>Quarterly earnings roundup for regional utilities</title>
+      <link>https://www.cnbc.com/2026/07/06/utilities-earnings-roundup.html</link>
+      <pubDate>Mon, 06 Jul 2026 11:00:00 GMT</pubDate>
+      <description>A summary of regional utility earnings for the quarter.</description>
+    </item>
+  </channel>
+</rss>
