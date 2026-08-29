@@ -162,6 +162,11 @@ from src.editorial.source_transparency import (
     validate_social_lineage,
     validate_source_transparency,
 )
+from src.never_blank.wednesday_july import WednesdayGenerationError
+from src.never_blank.wednesday_routing import (
+    generate_for_wednesday,
+    is_wednesday_role,
+)
 from src.editorial.pipeline import (
     ArticleGenerationError,
     generate_article,
@@ -1672,28 +1677,41 @@ def _run(
                     "medium": _editorial_role_rules["medium"]
                     + render_sources_of_record(research_artifact, surface="linkedin"),
                 }
-            article    = generate_article(
-                editorial.to_legacy_dict(),
-                cta_mode=cta_mode,
-                strategy_context=strategy_execution.decision_lens_editorial,
-                wix_strategy=strategy_execution.wix,
-                linkedin_strategy=strategy_execution.linkedin,
-                audience_selection=audience_selection,
-                research_artifact=research_artifact,
-                editorial_role_rules=_editorial_role_rules,
-                composer_formats=_R1_COMPOSER_FORMATS,
-                # #191: how this role closes its long-form surface. Roles that
-                # declare nothing keep the existing contract.
-                closing_contract=(
-                    _role.closing_contract if _role is not None else None
-                ),
-                # #191: compositions our own validator refuses are preserved
-                # for diagnosis instead of dying with the runner.
-                rejected_sink=_rejected_compositions,
-            )
+            # ── Wednesday runs the restored July path (#207/#209) ─────────
+            # Wednesday's editorial intelligence was lost to changes made for
+            # Monday — most decisively pattern_extractor, which asserts an
+            # owner protagonist and rejects large-company-strategy signals,
+            # and which did not exist in July. Rather than reconcile the two
+            # products in one engine, Wednesday generates through its own
+            # restored package. Everything after this branch — acceptance,
+            # transparency, composition acceptance, packaging, preflight and
+            # the whole publication lifecycle — is shared and unchanged.
+            if is_wednesday_role(_editorial_role_identity):
+                print("  ✓  editorial path: restored July Wednesday pipeline")
+                article = generate_for_wednesday(editorial.to_legacy_dict())
+            else:
+                article    = generate_article(
+                    editorial.to_legacy_dict(),
+                    cta_mode=cta_mode,
+                    strategy_context=strategy_execution.decision_lens_editorial,
+                    wix_strategy=strategy_execution.wix,
+                    linkedin_strategy=strategy_execution.linkedin,
+                    audience_selection=audience_selection,
+                    research_artifact=research_artifact,
+                    editorial_role_rules=_editorial_role_rules,
+                    composer_formats=_R1_COMPOSER_FORMATS,
+                    # #191: how this role closes its long-form surface. Roles
+                    # that declare nothing keep the existing contract.
+                    closing_contract=(
+                        _role.closing_contract if _role is not None else None
+                    ),
+                    # #191: compositions our own validator refuses are
+                    # preserved for diagnosis instead of dying with the runner.
+                    rejected_sink=_rejected_compositions,
+                )
             platforms  = article["platforms"]
             structured = article["structured_article"]
-        except ArticleGenerationError as exc:
+        except (ArticleGenerationError, WednesdayGenerationError) as exc:
             print(f"  ERROR: Editorial Engine failed at stage {exc.stage!r}: {exc.original}")
             _persist_rejected_compositions(run_dir, _rejected_compositions)
             return 1

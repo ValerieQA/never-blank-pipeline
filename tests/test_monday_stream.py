@@ -637,6 +637,9 @@ def _run_with_role(tmp_path, role: str, article: dict | None = None):
     if article is None:
         article = _attributed_article()
     patches["generate_article"] = mock.MagicMock(return_value=article)
+    # #209: Wednesday generates through the restored July package, so the
+    # helper supplies the same article on whichever path the role selects.
+    patches["generate_for_wednesday"] = mock.MagicMock(return_value=article)
     evaluator, _ = _evaluator(_model_output())
     with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
         code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)

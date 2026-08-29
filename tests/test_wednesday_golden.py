@@ -273,9 +273,24 @@ def test_unknown_or_blank_editorial_role_fails_closed():
             resolve_editorial_role(configuration, requested)
 
 
+def render_editorial_role_rules_for_both_surfaces() -> dict:
+    """The per-surface role rules, still rendered and still contract-tested."""
+    configuration = load_business_strategy_configuration(BUSINESS_CONFIG)
+    _identity, role = resolve_editorial_role(configuration, ROLE_ID)
+    return {
+        "long": render_editorial_role_rules(role, surface="wix"),
+        "medium": render_editorial_role_rules(role, surface="linkedin"),
+    }
+
+
 def test_canonical_entrypoint_records_role_and_routes_real_rules(tmp_path):
     argv, patches = _entry_patches(tmp_path)
-    patches["generate_article"] = mock.MagicMock(return_value=_attributed_article())
+    # #209: Wednesday generates through the restored July package, so the
+    # routing seam is what the harness stands in for. The shared engine is
+    # left in place and asserted unused below.
+    patches["generate_for_wednesday"] = mock.MagicMock(
+        return_value=_attributed_article()
+    )
     argv += ["--editorial-role", ROLE_ID]
     evaluator, _ = _evaluator(_model_output())
 
@@ -293,25 +308,28 @@ def test_canonical_entrypoint_records_role_and_routes_real_rules(tmp_path):
         "decision_policy": "decision_lens",
     }
 
-    role_rules = patches["generate_article"].call_args.kwargs[
-        "editorial_role_rules"
-    ]
+    # #209: Wednesday routes to the restored July path and NOT to the shared
+    # engine. July's pipeline takes only the signal, so role rules no longer
+    # reach Wednesday generation — they are still rendered and are still
+    # exercised against the prompt constructor by the tests below.
+    assert patches["generate_for_wednesday"].called
+    assert not patches["generate_article"].called
+    signal = patches["generate_for_wednesday"].call_args.args[0]
+    assert isinstance(signal, dict)
+
+    role_rules = render_editorial_role_rules_for_both_surfaces()
     assert set(role_rules) == {"long", "medium"}
     assert "obvious public interpretation X" in role_rules["long"]
     assert "exactly one primary mechanism" in role_rules["medium"]
     assert "evidence-grounded title tension" in role_rules["long"]
     assert "native compressed LinkedIn" in role_rules["medium"]
-    assert "SOURCES OF RECORD" in role_rules["long"]
-    # #196: the social surface receives the URL-free naming block instead
-    assert "SOURCES BEHIND THE ARTICLE" in role_rules["medium"]
-    assert "Verified report" in role_rules["long"]
-    # #196: the social surface names sources, never links them — the URL
-    # stays on the canonical article surface only
-    assert "Verified report" in role_rules["medium"]
-    assert "https://source.example/report" not in role_rules["medium"]
-    assert "Never write any URL in the post" in role_rules["medium"]
-    assert "Sources section" in role_rules["long"]
-    assert "close the article with a short Sources section" not in role_rules["medium"]
+    # NOTE (#209): the sources-of-record block is appended by the entrypoint
+    # onto the role rules it passes to the SHARED engine. Wednesday no longer
+    # takes that path, so those assertions moved out of this routing test.
+    # Their rendering is still covered by tests/test_monday_stream.py and by
+    # the prompt-constructor tests below; the consequence for Wednesday —
+    # role rules and the sources block no longer shape its prose — is
+    # recorded as a deviation in #209.
 
     rubric = patches["run_editorial_acceptance"].call_args.kwargs["rubric"]
     assert rubric.identity == "never-blank-golden-wednesday-acceptance/1.0"
@@ -326,7 +344,10 @@ def test_wednesday_source_transparency_blocks_before_publish_and_consumption(tmp
     argv, patches = _entry_patches(tmp_path, dry_run=False)
     patches["WixPublisher"] = mock.MagicMock()
     patches["LinkedInPublisher"] = mock.MagicMock()
-    patches["generate_article"] = mock.MagicMock(return_value=deepcopy(_FAKE_ARTICLE))
+    # #209: Wednesday generates through the restored July package
+    patches["generate_for_wednesday"] = mock.MagicMock(
+        return_value=deepcopy(_FAKE_ARTICLE)
+    )
     argv += ["--editorial-role", ROLE_ID]
     evaluator, _ = _evaluator(_model_output())
 
