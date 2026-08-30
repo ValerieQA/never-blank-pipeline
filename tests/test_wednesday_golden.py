@@ -346,7 +346,7 @@ def test_canonical_entrypoint_records_role_and_routes_real_rules(tmp_path):
     # recorded as a deviation in #209.
 
     rubric = patches["run_editorial_acceptance"].call_args.kwargs["rubric"]
-    assert rubric.identity == "never-blank-golden-wednesday-acceptance/1.0"
+    assert rubric.identity == "never-blank-golden-wednesday-acceptance/1.1"
     revision_sources = patches["run_editorial_acceptance"].call_args.kwargs[
         "sources_of_record"
     ]

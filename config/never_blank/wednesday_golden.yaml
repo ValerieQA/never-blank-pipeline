@@ -8,7 +8,7 @@ profile_id: never-blank-wednesday-golden
 profile_version: "1.0"
 editorial_role_id: never-blank-wednesday-golden
 acceptance_rubric_path: config/prompts/editorial_acceptance/never_blank_golden_wednesday.yaml
-acceptance_rubric_identity: never-blank-golden-wednesday-acceptance/1.0
+acceptance_rubric_identity: never-blank-golden-wednesday-acceptance/1.1
 cta_id: reflection
 website_destination: https://www.inneros.online
 
