@@ -361,6 +361,36 @@
       "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1787947696/never-blank/posts/research/3fad7c6500612d8a/blog/1787947696.png",
       "source_topic": "AEO mentions vs. citations: Key differences explained",
       "reuse_count": 1
+    },
+    {
+      "published_date": "2026-08-30T13:41:48Z",
+      "content_slug": "research/9bd7d291a8622425",
+      "visual_family": "dark_insight_card",
+      "dominant_palette": "deep_navy",
+      "hook_text": "Rank Math didn\u2019t need a vulnerability to lose trust\u2014just a silent admin login.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097302/never-blank/posts/research/9bd7d291a8622425/blog/1788097302.png",
+      "source_topic": "Rank Math WordPress Plugin Accused Of Secretly Taking Admin Access via @sejournal, @martinibuster",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-08-30T13:43:00Z",
+      "content_slug": "research/78bd728cf4981c3b",
+      "visual_family": "constellation_networks",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "Over 100 organizations urge stronger defenses against AI-driven attacks.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097355/never-blank/posts/research/78bd728cf4981c3b/blog/1788097355.png",
+      "source_topic": "AI Is Changing Website Security. Here\u2019s What SEO Teams Should Know via @sejournal, @vahandev",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-08-30T13:44:15Z",
+      "content_slug": "research/d47caca7ba2af94b",
+      "visual_family": "light_paths",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "AI booking transforms travel with seamless integration.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097429/never-blank/posts/research/d47caca7ba2af94b/blog/1788097429.png",
+      "source_topic": "Google Starts Rolling Out Hotel Booking In AI Mode via @sejournal, @MattGSouthern",
+      "reuse_count": 1
     }
   ]
 }

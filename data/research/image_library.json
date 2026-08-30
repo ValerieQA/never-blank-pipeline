@@ -743,5 +743,35 @@
     "visual_family": "sand_pause_card",
     "design_version": "3",
     "hook_text": "Your brand is showing up in AI answers, but your traffic chart is flatlining."
+  },
+  "9bd7d291a8622425": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097302/never-blank/posts/research/9bd7d291a8622425/blog/1788097302.png",
+    "signal_type": "trust accumulation pattern",
+    "headline": "Rank Math WordPress Plugin Accused Of Secretly Taking Admin Access via @sejournal, @martinibuster",
+    "created_at": "2026-08-30",
+    "method": "quote_card",
+    "visual_family": "dark_insight_card",
+    "design_version": "3",
+    "hook_text": "Rank Math didn’t need a vulnerability to lose trust—just a silent admin login."
+  },
+  "78bd728cf4981c3b": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097355/never-blank/posts/research/78bd728cf4981c3b/blog/1788097355.png",
+    "signal_type": "visibility interruption",
+    "headline": "AI Is Changing Website Security. Here’s What SEO Teams Should Know via @sejournal, @vahandev",
+    "created_at": "2026-08-30",
+    "method": "gpt-image-1",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "Over 100 organizations urge stronger defenses against AI-driven attacks."
+  },
+  "d47caca7ba2af94b": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097429/never-blank/posts/research/d47caca7ba2af94b/blog/1788097429.png",
+    "signal_type": "platform reach change for small business",
+    "headline": "Google Starts Rolling Out Hotel Booking In AI Mode via @sejournal, @MattGSouthern",
+    "created_at": "2026-08-30",
+    "method": "gpt-image-1",
+    "visual_family": "light_paths",
+    "design_version": "3",
+    "hook_text": "AI booking transforms travel with seamless integration."
   }
 }

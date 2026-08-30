@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "d47caca7ba2af94b",
+  "HEADLINE": "Google Starts Rolling Out Hotel Booking In AI Mode via @sejournal, @MattGSouthern",
+  "prepared_at": "2026-08-30 13:44 UTC",
+  "content": {
+    "blog": {
+      "headline": "Google’s AI Hotel Booking: How Small Hotels Lose More Than Reservations",
+      "angle": "Google’s AI-powered booking rollout creates a tension between hotels’ need for direct guest relationships and platform control, forcing small businesses to rethink digital strategies or risk becoming invisible suppliers."
+    },
+    "linkedin": {
+      "headline": "Google’s AI just put a wall between hotels and their guests—one booking at a time.",
+      "angle": "When platforms automate bookings with AI, small businesses face losing direct customer connections, which threatens their long-term competitiveness."
+    },
+    "facebook": {
+      "headline": "Google’s new AI booking feature is reshaping how hotels connect with guests.",
+      "angle": "Google’s AI-driven hotel bookings shift control away from small businesses—how will your hotel keep its customer relationships intact?"
+    },
+    "instagram": {
+      "headline": "When AI Controls Your Bookings",
+      "angle": "Google’s AI booking tools don’t just take reservations—they take control from small hotels, forcing founders to fight for their guest relationships."
+    },
+    "threads": {
+      "thread_hook": "Google’s AI hotel bookings aren’t just about convenience—they’re about control.",
+      "angle": "This thread breaks down how AI-powered bookings by major platforms threaten small hotels’ direct customer access and what founders must do to stay visible."
+    },
+    "stories": {
+      "story_question": "Is Google’s AI booking feature cutting you off from your guests?",
+      "angle": "Exploring how AI-driven platform bookings create a barrier between small businesses and their customers, risking long-term loyalty."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097429/never-blank/posts/research/d47caca7ba2af94b/blog/1788097429.png",
+        "path": "reports/content_packages/images/d47caca7ba2af94b_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097432/never-blank/posts/research/d47caca7ba2af94b/linkedin/1788097432.png",
+        "path": "reports/content_packages/images/d47caca7ba2af94b_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097436/never-blank/posts/research/d47caca7ba2af94b/facebook/1788097436.png",
+        "path": "reports/content_packages/images/d47caca7ba2af94b_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097442/never-blank/posts/research/d47caca7ba2af94b/instagram/1788097442.png",
+        "path": "reports/content_packages/images/d47caca7ba2af94b_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097447/never-blank/posts/research/d47caca7ba2af94b/threads/1788097447.png",
+        "path": "reports/content_packages/images/d47caca7ba2af94b_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097454/never-blank/posts/research/d47caca7ba2af94b/stories/1788097454.png",
+        "path": "reports/content_packages/images/d47caca7ba2af94b_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "light_paths",
+    "hook_text": "AI booking transforms travel with seamless integration."
+  }
+}

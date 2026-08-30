@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "78bd728cf4981c3b",
+  "HEADLINE": "AI Is Changing Website Security. Here’s What SEO Teams Should Know via @sejournal, @vahandev",
+  "prepared_at": "2026-08-30 13:43 UTC",
+  "content": {
+    "blog": {
+      "headline": "AI Is Turning Website Security Into SEO’s New Battleground",
+      "angle": "AI-driven cyberattacks escalate the risk to website security, forcing SEO teams to rethink collaboration with cybersecurity experts to protect search rankings and online visibility."
+    },
+    "linkedin": {
+      "headline": "Your SEO traffic can vanish overnight—not from an algorithm update, but from an AI-powered breach.",
+      "angle": "AI is not just a tool for growth; it’s a weapon in cyberattacks that threaten SEO performance, demanding tighter security and cross-team collaboration."
+    },
+    "facebook": {
+      "headline": "AI is making every website a target—are your SEO and security teams ready?",
+      "angle": "AI-driven cyberattacks are rising, putting SEO rankings at risk; how are businesses adapting to this new threat landscape?"
+    },
+    "instagram": {
+      "headline": "When AI Targets Your Website Security",
+      "angle": "AI-powered attacks are forcing a rethink of how SEO and security teams work together to protect online visibility."
+    },
+    "threads": {
+      "thread_hook": "AI is no longer just a growth tool—it’s the new front line in website security.",
+      "angle": "This thread breaks down how AI-driven cyberattacks threaten SEO, why traditional defenses fall short, and how integrated security and SEO strategies are the only way forward."
+    },
+    "stories": {
+      "story_question": "Could AI-driven hacks wipe out your SEO traffic overnight?",
+      "angle": "Exploring the urgent need for founders to bridge SEO and cybersecurity as AI-powered threats evolve."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097355/never-blank/posts/research/78bd728cf4981c3b/blog/1788097355.png",
+        "path": "reports/content_packages/images/78bd728cf4981c3b_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097358/never-blank/posts/research/78bd728cf4981c3b/linkedin/1788097358.png",
+        "path": "reports/content_packages/images/78bd728cf4981c3b_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097361/never-blank/posts/research/78bd728cf4981c3b/facebook/1788097361.png",
+        "path": "reports/content_packages/images/78bd728cf4981c3b_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097367/never-blank/posts/research/78bd728cf4981c3b/instagram/1788097367.png",
+        "path": "reports/content_packages/images/78bd728cf4981c3b_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097372/never-blank/posts/research/78bd728cf4981c3b/threads/1788097372.png",
+        "path": "reports/content_packages/images/78bd728cf4981c3b_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097380/never-blank/posts/research/78bd728cf4981c3b/stories/1788097380.png",
+        "path": "reports/content_packages/images/78bd728cf4981c3b_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "constellation_networks",
+    "hook_text": "Over 100 organizations urge stronger defenses against AI-driven attacks."
+  }
+}

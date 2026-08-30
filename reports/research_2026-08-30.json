@@ -1,0 +1,324 @@
+{
+  "date": "2026-08-30",
+  "candidates_found": 5,
+  "duplicates_skipped": 0,
+  "new_signals_added": 5,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Rank Math WordPress Plugin Accused Of Secretly Taking Admin Access via @sejourna",
+    "AI Is Changing Website Security. Here\u2019s What SEO Teams Should Know via @sejourna",
+    "Google Starts Rolling Out Hotel Booking In AI Mode via @sejournal, @MattGSouther"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "9bd7d291a8622425",
+      "headline": "Rank Math WordPress Plugin Accused Of Secretly Taking Admin Access via @sejournal, @martinibuster",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'once invisible access is granted, every promise of help becomes a reason to hesitate.'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "publish_failures": [
+    "editorial_gate: Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'once invisible access is granted, every promise of help becomes a reason to hesitate.'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "9bd7d291a8622425",
+      "HEADLINE": "Rank Math WordPress Plugin Accused Of Secretly Taking Admin Access via @sejournal, @martinibuster",
+      "prepared_at": "2026-08-30 13:41 UTC",
+      "content": {
+        "blog": {
+          "headline": "When Support Means Silent Admin Access: The Trust Cost of Rank Math\u2019s Permissions",
+          "angle": "Rank Math\u2019s covert admin access \u2192 user trust erodes \u2192 founders must demand transparency \u2192 clear communication preserves long-term relationships"
+        },
+        "linkedin": {
+          "headline": "Rank Math didn\u2019t need a vulnerability to lose trust\u2014just a silent admin login.",
+          "angle": "A plugin\u2019s technical need for admin access clashes with user consent, exposing how transparency failures can cripple founder confidence."
+        },
+        "facebook": {
+          "headline": "Rank Math\u2019s plugin quietly took admin control without telling users. Would you tolerate that?",
+          "angle": "Rank Math\u2019s secret admin access case spotlights the tension between necessary support permissions and user trust\u2014how do you draw the line?"
+        },
+        "instagram": {
+          "headline": "Silent Admin Access Destroys Trust",
+          "angle": "When software support hides permissions, founders face a trust deficit that no technical fix can patch."
+        },
+        "threads": {
+          "thread_hook": "Rank Math didn\u2019t hack your site. It just logged in without asking.",
+          "angle": "This thread unpacks why stealth admin access isn\u2019t a technical flaw\u2014it\u2019s a trust failure that founders can\u2019t afford."
+        },
+        "stories": {
+          "story_question": "Would you accept a plugin logging into your site without telling you?",
+          "angle": "Exploring the tension between necessary admin access for support and the risk of losing founder trust through silence."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097302/never-blank/posts/research/9bd7d291a8622425/blog/1788097302.png",
+            "path": "reports/content_packages/images/9bd7d291a8622425_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097303/never-blank/posts/research/9bd7d291a8622425/linkedin/1788097303.png",
+            "path": "reports/content_packages/images/9bd7d291a8622425_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097304/never-blank/posts/research/9bd7d291a8622425/facebook/1788097304.png",
+            "path": "reports/content_packages/images/9bd7d291a8622425_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097305/never-blank/posts/research/9bd7d291a8622425/instagram/1788097305.png",
+            "path": "reports/content_packages/images/9bd7d291a8622425_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097307/never-blank/posts/research/9bd7d291a8622425/threads/1788097307.png",
+            "path": "reports/content_packages/images/9bd7d291a8622425_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097308/never-blank/posts/research/9bd7d291a8622425/stories/1788097308.png",
+            "path": "reports/content_packages/images/9bd7d291a8622425_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "dark_insight_card",
+        "hook_text": "Rank Math didn\u2019t need a vulnerability to lose trust\u2014just a silent admin login."
+      }
+    },
+    {
+      "SIGNAL_ID": "78bd728cf4981c3b",
+      "HEADLINE": "AI Is Changing Website Security. Here\u2019s What SEO Teams Should Know via @sejournal, @vahandev",
+      "prepared_at": "2026-08-30 13:43 UTC",
+      "content": {
+        "blog": {
+          "headline": "AI Is Turning Website Security Into SEO\u2019s New Battleground",
+          "angle": "AI-driven cyberattacks escalate the risk to website security, forcing SEO teams to rethink collaboration with cybersecurity experts to protect search rankings and online visibility."
+        },
+        "linkedin": {
+          "headline": "Your SEO traffic can vanish overnight\u2014not from an algorithm update, but from an AI-powered breach.",
+          "angle": "AI is not just a tool for growth; it\u2019s a weapon in cyberattacks that threaten SEO performance, demanding tighter security and cross-team collaboration."
+        },
+        "facebook": {
+          "headline": "AI is making every website a target\u2014are your SEO and security teams ready?",
+          "angle": "AI-driven cyberattacks are rising, putting SEO rankings at risk; how are businesses adapting to this new threat landscape?"
+        },
+        "instagram": {
+          "headline": "When AI Targets Your Website Security",
+          "angle": "AI-powered attacks are forcing a rethink of how SEO and security teams work together to protect online visibility."
+        },
+        "threads": {
+          "thread_hook": "AI is no longer just a growth tool\u2014it\u2019s the new front line in website security.",
+          "angle": "This thread breaks down how AI-driven cyberattacks threaten SEO, why traditional defenses fall short, and how integrated security and SEO strategies are the only way forward."
+        },
+        "stories": {
+          "story_question": "Could AI-driven hacks wipe out your SEO traffic overnight?",
+          "angle": "Exploring the urgent need for founders to bridge SEO and cybersecurity as AI-powered threats evolve."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097355/never-blank/posts/research/78bd728cf4981c3b/blog/1788097355.png",
+            "path": "reports/content_packages/images/78bd728cf4981c3b_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097358/never-blank/posts/research/78bd728cf4981c3b/linkedin/1788097358.png",
+            "path": "reports/content_packages/images/78bd728cf4981c3b_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097361/never-blank/posts/research/78bd728cf4981c3b/facebook/1788097361.png",
+            "path": "reports/content_packages/images/78bd728cf4981c3b_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097367/never-blank/posts/research/78bd728cf4981c3b/instagram/1788097367.png",
+            "path": "reports/content_packages/images/78bd728cf4981c3b_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097372/never-blank/posts/research/78bd728cf4981c3b/threads/1788097372.png",
+            "path": "reports/content_packages/images/78bd728cf4981c3b_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097380/never-blank/posts/research/78bd728cf4981c3b/stories/1788097380.png",
+            "path": "reports/content_packages/images/78bd728cf4981c3b_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Over 100 organizations urge stronger defenses against AI-driven attacks."
+      }
+    },
+    {
+      "SIGNAL_ID": "d47caca7ba2af94b",
+      "HEADLINE": "Google Starts Rolling Out Hotel Booking In AI Mode via @sejournal, @MattGSouthern",
+      "prepared_at": "2026-08-30 13:44 UTC",
+      "content": {
+        "blog": {
+          "headline": "Google\u2019s AI Hotel Booking: How Small Hotels Lose More Than Reservations",
+          "angle": "Google\u2019s AI-powered booking rollout creates a tension between hotels\u2019 need for direct guest relationships and platform control, forcing small businesses to rethink digital strategies or risk becoming invisible suppliers."
+        },
+        "linkedin": {
+          "headline": "Google\u2019s AI just put a wall between hotels and their guests\u2014one booking at a time.",
+          "angle": "When platforms automate bookings with AI, small businesses face losing direct customer connections, which threatens their long-term competitiveness."
+        },
+        "facebook": {
+          "headline": "Google\u2019s new AI booking feature is reshaping how hotels connect with guests.",
+          "angle": "Google\u2019s AI-driven hotel bookings shift control away from small businesses\u2014how will your hotel keep its customer relationships intact?"
+        },
+        "instagram": {
+          "headline": "When AI Controls Your Bookings",
+          "angle": "Google\u2019s AI booking tools don\u2019t just take reservations\u2014they take control from small hotels, forcing founders to fight for their guest relationships."
+        },
+        "threads": {
+          "thread_hook": "Google\u2019s AI hotel bookings aren\u2019t just about convenience\u2014they\u2019re about control.",
+          "angle": "This thread breaks down how AI-powered bookings by major platforms threaten small hotels\u2019 direct customer access and what founders must do to stay visible."
+        },
+        "stories": {
+          "story_question": "Is Google\u2019s AI booking feature cutting you off from your guests?",
+          "angle": "Exploring how AI-driven platform bookings create a barrier between small businesses and their customers, risking long-term loyalty."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097429/never-blank/posts/research/d47caca7ba2af94b/blog/1788097429.png",
+            "path": "reports/content_packages/images/d47caca7ba2af94b_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097432/never-blank/posts/research/d47caca7ba2af94b/linkedin/1788097432.png",
+            "path": "reports/content_packages/images/d47caca7ba2af94b_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097436/never-blank/posts/research/d47caca7ba2af94b/facebook/1788097436.png",
+            "path": "reports/content_packages/images/d47caca7ba2af94b_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097442/never-blank/posts/research/d47caca7ba2af94b/instagram/1788097442.png",
+            "path": "reports/content_packages/images/d47caca7ba2af94b_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097447/never-blank/posts/research/d47caca7ba2af94b/threads/1788097447.png",
+            "path": "reports/content_packages/images/d47caca7ba2af94b_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097454/never-blank/posts/research/d47caca7ba2af94b/stories/1788097454.png",
+            "path": "reports/content_packages/images/d47caca7ba2af94b_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "light_paths",
+        "hook_text": "AI booking transforms travel with seamless integration."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "9bd7d291a8622425",
+      "headline": "Rank Math WordPress Plugin Accused Of Secretly Taking Admin Access via @sejournal, @martinibuster",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'once invisible access is granted, every promise of help becomes a reason to hesitate.'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ]
+}

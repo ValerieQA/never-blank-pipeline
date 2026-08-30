@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "9bd7d291a8622425",
+  "HEADLINE": "Rank Math WordPress Plugin Accused Of Secretly Taking Admin Access via @sejournal, @martinibuster",
+  "prepared_at": "2026-08-30 13:41 UTC",
+  "content": {
+    "blog": {
+      "headline": "When Support Means Silent Admin Access: The Trust Cost of Rank Math’s Permissions",
+      "angle": "Rank Math’s covert admin access → user trust erodes → founders must demand transparency → clear communication preserves long-term relationships"
+    },
+    "linkedin": {
+      "headline": "Rank Math didn’t need a vulnerability to lose trust—just a silent admin login.",
+      "angle": "A plugin’s technical need for admin access clashes with user consent, exposing how transparency failures can cripple founder confidence."
+    },
+    "facebook": {
+      "headline": "Rank Math’s plugin quietly took admin control without telling users. Would you tolerate that?",
+      "angle": "Rank Math’s secret admin access case spotlights the tension between necessary support permissions and user trust—how do you draw the line?"
+    },
+    "instagram": {
+      "headline": "Silent Admin Access Destroys Trust",
+      "angle": "When software support hides permissions, founders face a trust deficit that no technical fix can patch."
+    },
+    "threads": {
+      "thread_hook": "Rank Math didn’t hack your site. It just logged in without asking.",
+      "angle": "This thread unpacks why stealth admin access isn’t a technical flaw—it’s a trust failure that founders can’t afford."
+    },
+    "stories": {
+      "story_question": "Would you accept a plugin logging into your site without telling you?",
+      "angle": "Exploring the tension between necessary admin access for support and the risk of losing founder trust through silence."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097302/never-blank/posts/research/9bd7d291a8622425/blog/1788097302.png",
+        "path": "reports/content_packages/images/9bd7d291a8622425_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097303/never-blank/posts/research/9bd7d291a8622425/linkedin/1788097303.png",
+        "path": "reports/content_packages/images/9bd7d291a8622425_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097304/never-blank/posts/research/9bd7d291a8622425/facebook/1788097304.png",
+        "path": "reports/content_packages/images/9bd7d291a8622425_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097305/never-blank/posts/research/9bd7d291a8622425/instagram/1788097305.png",
+        "path": "reports/content_packages/images/9bd7d291a8622425_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097307/never-blank/posts/research/9bd7d291a8622425/threads/1788097307.png",
+        "path": "reports/content_packages/images/9bd7d291a8622425_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788097308/never-blank/posts/research/9bd7d291a8622425/stories/1788097308.png",
+        "path": "reports/content_packages/images/9bd7d291a8622425_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "dark_insight_card",
+    "hook_text": "Rank Math didn’t need a vulnerability to lose trust—just a silent admin login."
+  }
+}
