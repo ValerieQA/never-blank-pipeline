@@ -3,7 +3,7 @@
 # product artifact, not a change to the generic acceptance lifecycle.
 
 rubric_id: never-blank-golden-wednesday-acceptance
-version: "1.0"
+version: "1.1"
 
 criteria:
   - criterion_id: factual-anchor
@@ -44,8 +44,22 @@ instructions: |
   interpretation earns no special permission. ACCEPT only when every criterion
   passes. REVISE when one focused revision can plausibly fix every failure.
   REJECT when the Golden movement or evidence boundary cannot be repaired in
-  one revision. Return only the strict JSON verdict required by the existing
-  editorial acceptance contract.
+  one revision.
+
+  Return ONLY one valid JSON object, no text outside it:
+
+  {
+    "disposition": "accept | revise | reject",
+    "failed_criterion_ids": ["exact rubric criterion IDs, empty for accept"],
+    "rationale": "bounded honest explanation of the verdict",
+    "revision_guidance": "concrete guidance for revision (empty if none)"
+  }
+
+  These four keys are the whole contract. Any other key — "verdict" included —
+  is rejected by the parser and stops the run, so do not add, rename or nest
+  them. `disposition` is exactly one of the three lowercase values;
+  `failed_criterion_ids` is a list of strings; `rationale` and
+  `revision_guidance` are strings.
 
 revision_instructions: |
   Revise only the Never Blank Wednesday Golden Wix article. Preserve supported

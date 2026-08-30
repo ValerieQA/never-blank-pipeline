@@ -205,6 +205,10 @@ jobs:
           git diff --staged --quiet || git commit -m "Publish Wednesday ${{ steps.publish.outputs.signal_id }} [skip ci]"
           git push
 
+      # Uploads the whole run namespace on success AND failure, so it carries
+      # the #215 pre-acceptance diagnostics (signal_snapshot.json,
+      # generated_pre_acceptance.json) as well as the canonical artifacts.
+      # A run blocked at a gate is precisely the one whose output needs reading.
       - name: Preserve canonical run evidence
         if: steps.window.outputs.due == 'true' && steps.publish.outputs.signal_id != '' && always()
         uses: actions/upload-artifact@v4

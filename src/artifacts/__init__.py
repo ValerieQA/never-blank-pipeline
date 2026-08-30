@@ -421,6 +421,55 @@ def write_generated_json(run_dir: Path, data: dict) -> None:
     atomic_write_json(run_dir / "generated.json", data)
 
 
+#: Marks a file as evidence about a run rather than a product of it. Present
+#: on every diagnostic artifact so a reader — or a future loader — can tell in
+#: one field that the content was never accepted and must never be published.
+DIAGNOSTIC_MARKERS = {
+    "canonical": False,
+    "publishable": False,
+    "stage": "pre_acceptance",
+}
+
+
+def _diagnostic(data: dict) -> dict:
+    """Stamp a payload as non-canonical, unpublishable pre-acceptance evidence.
+
+    The markers lead the object so they are the first thing anyone reading the
+    file sees, and they overwrite rather than defer to the payload: a
+    diagnostic file cannot describe itself as canonical no matter what it was
+    handed.
+    """
+    return {**DIAGNOSTIC_MARKERS, **data, **DIAGNOSTIC_MARKERS}
+
+
+def write_signal_snapshot_json(run_dir: Path, signal: dict) -> None:
+    """Preserve the exact signal that entered generation (#215).
+
+    Diagnostic only. Written before editorial acceptance so a run blocked at
+    acceptance still shows which case was chosen and on what evidence — run
+    33283836847 generated a complete article and left nothing to inspect,
+    because the canonical artifact is written after the gate that stopped it.
+
+    The object is persisted as production held it. Nothing is recomputed,
+    filled in or normalized: a snapshot that differs from what generation
+    actually consumed would be worse than no snapshot.
+    """
+    atomic_write_json(run_dir / "signal_snapshot.json", _diagnostic({"signal": signal}))
+
+
+def write_generated_pre_acceptance_json(run_dir: Path, data: dict) -> None:
+    """Preserve generation's complete output before acceptance judges it (#215).
+
+    Diagnostic only, and deliberately named so it can never be mistaken for
+    ``generated.json``: it is not an accepted package, it does not authorize
+    publication, and no loader reads it. A blocked article stays blocked — the
+    only change is that it can be read afterwards.
+    """
+    atomic_write_json(
+        run_dir / "generated_pre_acceptance.json", _diagnostic(data)
+    )
+
+
 def write_business_strategy_snapshot(run_dir: Path, data: dict) -> None:
     """Commit the validated business strategy snapshot exactly once."""
     atomic_write_json(run_dir / "business_strategy.json", data)

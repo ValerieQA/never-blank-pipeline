@@ -440,7 +440,7 @@
       ],
       "require_source_transparency": true,
       "acceptance_rubric_path": "config/prompts/editorial_acceptance/never_blank_golden_wednesday.yaml",
-      "acceptance_rubric_identity": "never-blank-golden-wednesday-acceptance/1.0",
+      "acceptance_rubric_identity": "never-blank-golden-wednesday-acceptance/1.1",
       "decision_policy": "role_bounded_r1"
     }
   ]

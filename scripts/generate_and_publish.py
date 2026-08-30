@@ -253,6 +253,8 @@ from src.publishing.threads import ThreadsPublisher
 from src.publishing.wix import ProviderUrlLookup, WixPublisher
 from src.artifacts import (
     ArtifactCollisionError,
+    write_generated_pre_acceptance_json,
+    write_signal_snapshot_json,
     load_run_generated,
     load_business_strategy_snapshot,
     resolve_run_dir,
@@ -1863,6 +1865,59 @@ def _run(
         threads_seq    = _build_threads(structured)
         telegram_text  = _build_telegram(structured)
         echo_line      = structured.get("echo_line", "")
+
+        # ── Pre-acceptance diagnostic evidence (Issue #215) ──────────────────
+        # Generation is complete; nothing has judged it yet. The canonical
+        # generated.json is written much later, only for a run that survives
+        # acceptance — so live run 33283836847 produced a full article and
+        # left nothing to inspect when acceptance blocked it. That is exactly
+        # backwards: a blocked run is the one whose output you most need to
+        # read.
+        #
+        # These two files are evidence, never product. They are stamped
+        # canonical=false / publishable=false / stage=pre_acceptance, no
+        # loader reads them, --from-package still requires generated.json, and
+        # a blocked article stays blocked. The only thing that changes is that
+        # it can be examined afterwards.
+        #
+        # Written on a best-effort basis: failing to record diagnostics must
+        # never be the reason a run stops, in either direction.
+        try:
+            write_signal_snapshot_json(run_dir, signal)
+            write_generated_pre_acceptance_json(run_dir, {
+                "run_id": run_ctx.run_id,
+                "signal_id": signal_id,
+                "editorial_role": (
+                    _editorial_role_identity.role_id
+                    if _editorial_role_identity is not None else None
+                ),
+                # the composed title, or None when the composition produced
+                # none — never the source headline standing in for one
+                "title": _composed_title or None,
+                "structured_article": structured,
+                "platforms": platforms,
+                "echo_line": echo_line,
+                # Whatever the pipeline exposed of its own stages. The July
+                # path returns decision_lens/narrative_spine beside the
+                # article; anything else it publishes at this seam is captured
+                # by name rather than by an assumed schema, so a stage that
+                # starts reporting more is preserved without another change
+                # here — and none of it is required to exist.
+                "stages": {
+                    name: article[name]
+                    for name in (
+                        "decision_lens", "narrative_spine", "hook",
+                        "reader_context", "discovery", "story_assembly",
+                        "never_blank_voice", "pattern",
+                    )
+                    if name in article
+                },
+            })
+            print("  ℹ  pre-acceptance diagnostics written "
+                  f"({run_dir / 'generated_pre_acceptance.json'})")
+        except (ArtifactCollisionError, OSError, TypeError, ValueError) as exc:
+            print(f"  ⚠  pre-acceptance diagnostics not written ({exc}) — "
+                  "the run continues; this is evidence, not product")
 
         # ── Editorial acceptance gate (Issue #89 / Story #13) ────────────────
         # A technically valid article is not automatically publishable. One
