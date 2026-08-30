@@ -454,18 +454,71 @@ def test_the_diagnostic_and_the_canonical_package_are_different_files(tmp_path):
     assert diagnostic["canonical"] is False
 
 
-def test_monday_also_gets_diagnostics_without_any_behaviour_change(tmp_path):
-    """The seam is role-agnostic: it records, it never decides."""
+def test_monday_writes_neither_diagnostic(tmp_path):
+    """Two new files in a Monday run would be a change to Monday.
+
+    The diagnostics explain the restored Wednesday path, and the seam is
+    gated on the same role predicate that routes generation there. An earlier
+    revision of this change wrote them for every role on the reasoning that
+    recording decides nothing — but the file appearing at all is the change.
+    """
     code, patches = _run(tmp_path, role=MONDAY_ROLE, reviewer_payload={
         "disposition": "accept", "failed_criterion_ids": [],
         "rationale": "Every criterion passes.", "revision_guidance": "",
     })
+
     assert code == 0
     assert patches["generate_article"].called            # Monday's own engine
     assert not patches["generate_for_wednesday"].called
+
     run_dir = _run_dir(tmp_path)
+    assert not (run_dir / "signal_snapshot.json").exists()
+    assert not (run_dir / "generated_pre_acceptance.json").exists()
+    # …and Monday's own artifacts are exactly as before
     assert (run_dir / "generated.json").exists()
-    assert (run_dir / "generated_pre_acceptance.json").exists()
+    assert patches["WixPublisher"].return_value.publish.called
+
+
+def test_a_roleless_run_writes_neither_diagnostic(tmp_path):
+    code, patches = _run(tmp_path, role="", reviewer_payload={
+        "disposition": "accept", "failed_criterion_ids": [],
+        "rationale": "Every criterion passes.", "revision_guidance": "",
+    })
+
+    assert code == 0
+    run_dir = _run_dir(tmp_path)
+    assert not (run_dir / "signal_snapshot.json").exists()
+    assert not (run_dir / "generated_pre_acceptance.json").exists()
+    assert (run_dir / "generated.json").exists()
+
+
+def test_a_monday_run_writes_exactly_the_artifacts_it_wrote_before(tmp_path):
+    """Named explicitly, so a future diagnostic cannot leak in unnoticed."""
+    _code, _patches = _run(tmp_path, role=MONDAY_ROLE, reviewer_payload={
+        "disposition": "accept", "failed_criterion_ids": [],
+        "rationale": "Every criterion passes.", "revision_guidance": "",
+    })
+    written = {path.name for path in _run_dir(tmp_path).iterdir()}
+
+    assert not (written & {"signal_snapshot.json", "generated_pre_acceptance.json"})
+
+
+def test_the_diagnostic_gate_is_the_routing_predicate(tmp_path):
+    """One predicate decides both, so they cannot drift apart."""
+    import ast
+
+    tree = ast.parse(Path("scripts/generate_and_publish.py").read_text())
+    guards = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.If)
+        and isinstance(node.test, ast.Call)
+        and getattr(node.test.func, "id", "") == "is_wednesday_role"
+    ]
+    # one guards generation routing, one guards the diagnostics
+    assert len(guards) >= 2
+    bodies = [ast.dump(node) for node in guards]
+    assert any("generate_for_wednesday" in body for body in bodies)
+    assert any("write_signal_snapshot_json" in body for body in bodies)
 
 
 def test_a_failure_to_write_diagnostics_never_stops_a_run(tmp_path):

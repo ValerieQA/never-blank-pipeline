@@ -1880,44 +1880,52 @@ def _run(
         # a blocked article stays blocked. The only thing that changes is that
         # it can be examined afterwards.
         #
+        # Scoped to the Wednesday role, on the same predicate that routes
+        # generation to the restored July path. This first wrote for every
+        # role, on the reasoning that a recording seam decides nothing — but
+        # two new files appearing in a Monday run *is* a change to Monday, and
+        # these diagnostics exist to explain the restored Wednesday path in
+        # particular. Monday and role-less runs are left exactly as they were.
+        #
         # Written on a best-effort basis: failing to record diagnostics must
         # never be the reason a run stops, in either direction.
-        try:
-            write_signal_snapshot_json(run_dir, signal)
-            write_generated_pre_acceptance_json(run_dir, {
-                "run_id": run_ctx.run_id,
-                "signal_id": signal_id,
-                "editorial_role": (
-                    _editorial_role_identity.role_id
-                    if _editorial_role_identity is not None else None
-                ),
-                # the composed title, or None when the composition produced
-                # none — never the source headline standing in for one
-                "title": _composed_title or None,
-                "structured_article": structured,
-                "platforms": platforms,
-                "echo_line": echo_line,
-                # Whatever the pipeline exposed of its own stages. The July
-                # path returns decision_lens/narrative_spine beside the
-                # article; anything else it publishes at this seam is captured
-                # by name rather than by an assumed schema, so a stage that
-                # starts reporting more is preserved without another change
-                # here — and none of it is required to exist.
-                "stages": {
-                    name: article[name]
-                    for name in (
-                        "decision_lens", "narrative_spine", "hook",
-                        "reader_context", "discovery", "story_assembly",
-                        "never_blank_voice", "pattern",
-                    )
-                    if name in article
-                },
-            })
-            print("  ℹ  pre-acceptance diagnostics written "
-                  f"({run_dir / 'generated_pre_acceptance.json'})")
-        except (ArtifactCollisionError, OSError, TypeError, ValueError) as exc:
-            print(f"  ⚠  pre-acceptance diagnostics not written ({exc}) — "
-                  "the run continues; this is evidence, not product")
+        if is_wednesday_role(_editorial_role_identity):
+            try:
+                write_signal_snapshot_json(run_dir, signal)
+                write_generated_pre_acceptance_json(run_dir, {
+                    "run_id": run_ctx.run_id,
+                    "signal_id": signal_id,
+                    "editorial_role": (
+                        _editorial_role_identity.role_id
+                        if _editorial_role_identity is not None else None
+                    ),
+                    # the composed title, or None when the composition produced
+                    # none — never the source headline standing in for one
+                    "title": _composed_title or None,
+                    "structured_article": structured,
+                    "platforms": platforms,
+                    "echo_line": echo_line,
+                    # Whatever the pipeline exposed of its own stages. The July
+                    # path returns decision_lens/narrative_spine beside the
+                    # article; anything else it publishes at this seam is captured
+                    # by name rather than by an assumed schema, so a stage that
+                    # starts reporting more is preserved without another change
+                    # here — and none of it is required to exist.
+                    "stages": {
+                        name: article[name]
+                        for name in (
+                            "decision_lens", "narrative_spine", "hook",
+                            "reader_context", "discovery", "story_assembly",
+                            "never_blank_voice", "pattern",
+                        )
+                        if name in article
+                    },
+                })
+                print("  ℹ  pre-acceptance diagnostics written "
+                      f"({run_dir / 'generated_pre_acceptance.json'})")
+            except (ArtifactCollisionError, OSError, TypeError, ValueError) as exc:
+                print(f"  ⚠  pre-acceptance diagnostics not written ({exc}) — "
+                      "the run continues; this is evidence, not product")
 
         # ── Editorial acceptance gate (Issue #89 / Story #13) ────────────────
         # A technically valid article is not automatically publishable. One
