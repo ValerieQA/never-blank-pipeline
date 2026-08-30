@@ -142,10 +142,21 @@ jobs:
           WEDNESDAY_ROLE: never-blank-wednesday-golden
           SOURCE_RUN_ID: ${{ inputs.source_run_id }}
           NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
-          NB_EXA_API_KEY: ${{ secrets.NB_EXA_API_KEY }}
+          # #213: NB_EXA_API_KEY is deliberately absent. Wednesday retrieves
+          # its own already-selected SOURCE_URL (#211) and never constructs
+          # ExaResearchAdapter, so it requires zero Exa configuration.
           NB_OPENAI_CHAT_MODEL: ${{ secrets.NB_OPENAI_CHAT_MODEL }}
           # #173: stage-specific model routing (Issue #159) — same shared
           # infrastructure as Monday, never weekday branching.
+          #
+          # #213: discovery and scoring were missing here. Wednesday ran no
+          # research stage of its own until #211, so nothing needed them —
+          # and once it did, they fell back to NB_OPENAI_CHAT_MODEL, which
+          # the provider rejected with HTTP 400 `invalid model ID` in live
+          # run 33281894748. Same secrets and same convention as the daily
+          # research workflow, which has always passed both.
+          NB_DISCOVERY_MODEL: ${{ secrets.NB_DISCOVERY_MODEL }}
+          NB_SCORING_MODEL: ${{ secrets.NB_SCORING_MODEL }}
           NB_ENRICH_MODEL: ${{ secrets.NB_ENRICH_MODEL }}
           NB_ARTICLE_MODEL: ${{ secrets.NB_ARTICLE_MODEL }}
           NB_SOCIAL_MODEL: ${{ secrets.NB_SOCIAL_MODEL }}
