@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "cf91d47f07e87c9d",
+  "HEADLINE": "FTC Sues Amazon Over Alleged $20 Billion Advertising Surcharge Scheme via @sejournal, @brookeosmundson",
+  "prepared_at": "2026-09-01 13:19 UTC",
+  "content": {
+    "blog": {
+      "headline": "Amazon’s $20 Billion Ad Surcharge Lawsuit: What Founders Should Learn About Platform Transparency",
+      "angle": "Amazon’s complex ad auction changes triggered a $20 billion surcharge scandal → This exposes the tension between platform revenue tactics and advertiser trust → Founders must prioritize transparent, fair ad ecosystems to avoid regulatory and reputational fallout."
+    },
+    "linkedin": {
+      "headline": "Amazon’s ad platform quietly added a $20 billion surcharge—until the FTC stepped in.",
+      "angle": "When dominant platforms obscure profit grabs in ad systems, they risk regulatory action and erode advertiser trust, a critical lesson for founders building their own ecosystems."
+    },
+    "facebook": {
+      "headline": "Amazon faces a $20 billion lawsuit over hidden ad surcharges. What does this mean for advertisers and founders?",
+      "angle": "The FTC’s lawsuit against Amazon reveals how complex ad mechanisms can disguise massive overcharges—are your platform’s revenue tactics transparent enough to avoid the same fate?"
+    },
+    "instagram": {
+      "headline": "When Ad Complexity Becomes a Trap",
+      "angle": "Amazon’s $20 billion ad surcharge scandal shows why founders must build ad platforms that prioritize fairness over hidden fees."
+    },
+    "threads": {
+      "thread_hook": "Amazon’s $20 billion ad surcharge lawsuit isn’t just about money—it’s about trust and transparency in platform advertising.",
+      "angle": "This thread breaks down how Amazon’s opaque ad auction changes led to regulatory backlash and why founders need to design ad systems that don’t sacrifice long-term authority for short-term revenue."
+    },
+    "stories": {
+      "story_question": "Could your ad platform’s complexity be hiding costly surprises?",
+      "angle": "Exploring the tension between maximizing ad revenue and maintaining advertiser trust in light of Amazon’s $20 billion FTC lawsuit."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268770/never-blank/posts/research/cf91d47f07e87c9d/blog/1788268770.png",
+        "path": "reports/content_packages/images/cf91d47f07e87c9d_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268771/never-blank/posts/research/cf91d47f07e87c9d/linkedin/1788268771.png",
+        "path": "reports/content_packages/images/cf91d47f07e87c9d_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268772/never-blank/posts/research/cf91d47f07e87c9d/facebook/1788268772.png",
+        "path": "reports/content_packages/images/cf91d47f07e87c9d_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268773/never-blank/posts/research/cf91d47f07e87c9d/instagram/1788268773.png",
+        "path": "reports/content_packages/images/cf91d47f07e87c9d_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268774/never-blank/posts/research/cf91d47f07e87c9d/threads/1788268774.png",
+        "path": "reports/content_packages/images/cf91d47f07e87c9d_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268774/never-blank/posts/research/cf91d47f07e87c9d/stories/1788268774.png",
+        "path": "reports/content_packages/images/cf91d47f07e87c9d_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "light_message_card",
+    "hook_text": "Amazon’s ad platform made $20B disappear from advertisers’ pockets—without them noticing until the FTC showed up."
+  }
+}

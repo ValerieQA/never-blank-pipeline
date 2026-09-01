@@ -1,0 +1,237 @@
+{
+  "date": "2026-09-01",
+  "candidates_found": 7,
+  "duplicates_skipped": 0,
+  "new_signals_added": 7,
+  "selected_for_content": 2,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "The Small Decisions You Skip Are Costing Your Team 209 Hours a Year. Here\u2019s How ",
+    "FTC Sues Amazon Over Alleged $20 Billion Advertising Surcharge Scheme via @sejou"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "71ad7d0ea4393b48",
+      "headline": "The Small Decisions You Skip Are Costing Your Team 209 Hours a Year. Here\u2019s How to Fix It.",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'momentum is lost in the space between decisions left waiting.'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 2,
+  "images_new": 2,
+  "images_reused": 0,
+  "publish_failures": [
+    "editorial_gate: Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'momentum is lost in the space between decisions left waiting.'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "71ad7d0ea4393b48",
+      "HEADLINE": "The Small Decisions You Skip Are Costing Your Team 209 Hours a Year. Here\u2019s How to Fix It.",
+      "prepared_at": "2026-09-01 13:19 UTC",
+      "content": {
+        "blog": {
+          "headline": "The Small Decisions You Skip Are Costing Your Team 209 Hours a Year. Here\u2019s How to Fix It.",
+          "angle": "Leaders\u2019 fear of making the wrong call creates decision debt \u2192 This debt quietly drains team productivity \u2192 Addressing deferred decisions head-on restores operational efficiency \u2192 Proactive decision-making is a non-negotiable for founders."
+        },
+        "linkedin": {
+          "headline": "Every time you say 'let\u2019s circle back,' your team loses another hour.",
+          "angle": "Leaders avoiding small decisions build up decision debt that silently erodes team capacity and wastes hundreds of hours annually."
+        },
+        "facebook": {
+          "headline": "Skipping small decisions isn\u2019t saving time\u2014it\u2019s costing your team 209 hours a year.",
+          "angle": "When leaders defer minor calls, productivity takes a hit; what\u2019s your strategy to stop decision debt from piling up?"
+        },
+        "instagram": {
+          "headline": "Small Decisions, Big Time Drain",
+          "angle": "Avoiding quick calls adds up\u2014your team\u2019s lost hours reveal the hidden cost of decision debt."
+        },
+        "threads": {
+          "thread_hook": "Leaders who dodge small decisions aren\u2019t saving time\u2014they\u2019re stealing it from their teams.",
+          "angle": "This thread breaks down how deferred decisions accumulate into massive productivity losses and what founders can do to stop the leak."
+        },
+        "stories": {
+          "story_question": "How many hours is your team losing to \u2018decision debt\u2019?",
+          "angle": "Explores the tension between leaders\u2019 control instincts and the hidden productivity costs of delayed small decisions."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268738/never-blank/posts/research/71ad7d0ea4393b48/blog/1788268738.png",
+            "path": "reports/content_packages/images/71ad7d0ea4393b48_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268741/never-blank/posts/research/71ad7d0ea4393b48/linkedin/1788268741.png",
+            "path": "reports/content_packages/images/71ad7d0ea4393b48_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268744/never-blank/posts/research/71ad7d0ea4393b48/facebook/1788268744.png",
+            "path": "reports/content_packages/images/71ad7d0ea4393b48_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268751/never-blank/posts/research/71ad7d0ea4393b48/instagram/1788268751.png",
+            "path": "reports/content_packages/images/71ad7d0ea4393b48_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268756/never-blank/posts/research/71ad7d0ea4393b48/threads/1788268756.png",
+            "path": "reports/content_packages/images/71ad7d0ea4393b48_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268763/never-blank/posts/research/71ad7d0ea4393b48/stories/1788268763.png",
+            "path": "reports/content_packages/images/71ad7d0ea4393b48_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "particle_flow",
+        "hook_text": "209 hours lost to decision debt each year."
+      }
+    },
+    {
+      "SIGNAL_ID": "cf91d47f07e87c9d",
+      "HEADLINE": "FTC Sues Amazon Over Alleged $20 Billion Advertising Surcharge Scheme via @sejournal, @brookeosmundson",
+      "prepared_at": "2026-09-01 13:19 UTC",
+      "content": {
+        "blog": {
+          "headline": "Amazon\u2019s $20 Billion Ad Surcharge Lawsuit: What Founders Should Learn About Platform Transparency",
+          "angle": "Amazon\u2019s complex ad auction changes triggered a $20 billion surcharge scandal \u2192 This exposes the tension between platform revenue tactics and advertiser trust \u2192 Founders must prioritize transparent, fair ad ecosystems to avoid regulatory and reputational fallout."
+        },
+        "linkedin": {
+          "headline": "Amazon\u2019s ad platform quietly added a $20 billion surcharge\u2014until the FTC stepped in.",
+          "angle": "When dominant platforms obscure profit grabs in ad systems, they risk regulatory action and erode advertiser trust, a critical lesson for founders building their own ecosystems."
+        },
+        "facebook": {
+          "headline": "Amazon faces a $20 billion lawsuit over hidden ad surcharges. What does this mean for advertisers and founders?",
+          "angle": "The FTC\u2019s lawsuit against Amazon reveals how complex ad mechanisms can disguise massive overcharges\u2014are your platform\u2019s revenue tactics transparent enough to avoid the same fate?"
+        },
+        "instagram": {
+          "headline": "When Ad Complexity Becomes a Trap",
+          "angle": "Amazon\u2019s $20 billion ad surcharge scandal shows why founders must build ad platforms that prioritize fairness over hidden fees."
+        },
+        "threads": {
+          "thread_hook": "Amazon\u2019s $20 billion ad surcharge lawsuit isn\u2019t just about money\u2014it\u2019s about trust and transparency in platform advertising.",
+          "angle": "This thread breaks down how Amazon\u2019s opaque ad auction changes led to regulatory backlash and why founders need to design ad systems that don\u2019t sacrifice long-term authority for short-term revenue."
+        },
+        "stories": {
+          "story_question": "Could your ad platform\u2019s complexity be hiding costly surprises?",
+          "angle": "Exploring the tension between maximizing ad revenue and maintaining advertiser trust in light of Amazon\u2019s $20 billion FTC lawsuit."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268770/never-blank/posts/research/cf91d47f07e87c9d/blog/1788268770.png",
+            "path": "reports/content_packages/images/cf91d47f07e87c9d_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268771/never-blank/posts/research/cf91d47f07e87c9d/linkedin/1788268771.png",
+            "path": "reports/content_packages/images/cf91d47f07e87c9d_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268772/never-blank/posts/research/cf91d47f07e87c9d/facebook/1788268772.png",
+            "path": "reports/content_packages/images/cf91d47f07e87c9d_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268773/never-blank/posts/research/cf91d47f07e87c9d/instagram/1788268773.png",
+            "path": "reports/content_packages/images/cf91d47f07e87c9d_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268774/never-blank/posts/research/cf91d47f07e87c9d/threads/1788268774.png",
+            "path": "reports/content_packages/images/cf91d47f07e87c9d_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268774/never-blank/posts/research/cf91d47f07e87c9d/stories/1788268774.png",
+            "path": "reports/content_packages/images/cf91d47f07e87c9d_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "light_message_card",
+        "hook_text": "Amazon\u2019s ad platform made $20B disappear from advertisers\u2019 pockets\u2014without them noticing until the FTC showed up."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "71ad7d0ea4393b48",
+      "headline": "The Small Decisions You Skip Are Costing Your Team 209 Hours a Year. Here\u2019s How to Fix It.",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'threads'] repeat 'momentum is lost in the space between decisions left waiting.'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ]
+}

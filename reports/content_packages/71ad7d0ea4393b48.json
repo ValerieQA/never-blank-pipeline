@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "71ad7d0ea4393b48",
+  "HEADLINE": "The Small Decisions You Skip Are Costing Your Team 209 Hours a Year. Here’s How to Fix It.",
+  "prepared_at": "2026-09-01 13:19 UTC",
+  "content": {
+    "blog": {
+      "headline": "The Small Decisions You Skip Are Costing Your Team 209 Hours a Year. Here’s How to Fix It.",
+      "angle": "Leaders’ fear of making the wrong call creates decision debt → This debt quietly drains team productivity → Addressing deferred decisions head-on restores operational efficiency → Proactive decision-making is a non-negotiable for founders."
+    },
+    "linkedin": {
+      "headline": "Every time you say 'let’s circle back,' your team loses another hour.",
+      "angle": "Leaders avoiding small decisions build up decision debt that silently erodes team capacity and wastes hundreds of hours annually."
+    },
+    "facebook": {
+      "headline": "Skipping small decisions isn’t saving time—it’s costing your team 209 hours a year.",
+      "angle": "When leaders defer minor calls, productivity takes a hit; what’s your strategy to stop decision debt from piling up?"
+    },
+    "instagram": {
+      "headline": "Small Decisions, Big Time Drain",
+      "angle": "Avoiding quick calls adds up—your team’s lost hours reveal the hidden cost of decision debt."
+    },
+    "threads": {
+      "thread_hook": "Leaders who dodge small decisions aren’t saving time—they’re stealing it from their teams.",
+      "angle": "This thread breaks down how deferred decisions accumulate into massive productivity losses and what founders can do to stop the leak."
+    },
+    "stories": {
+      "story_question": "How many hours is your team losing to ‘decision debt’?",
+      "angle": "Explores the tension between leaders’ control instincts and the hidden productivity costs of delayed small decisions."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268738/never-blank/posts/research/71ad7d0ea4393b48/blog/1788268738.png",
+        "path": "reports/content_packages/images/71ad7d0ea4393b48_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268741/never-blank/posts/research/71ad7d0ea4393b48/linkedin/1788268741.png",
+        "path": "reports/content_packages/images/71ad7d0ea4393b48_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268744/never-blank/posts/research/71ad7d0ea4393b48/facebook/1788268744.png",
+        "path": "reports/content_packages/images/71ad7d0ea4393b48_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268751/never-blank/posts/research/71ad7d0ea4393b48/instagram/1788268751.png",
+        "path": "reports/content_packages/images/71ad7d0ea4393b48_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268756/never-blank/posts/research/71ad7d0ea4393b48/threads/1788268756.png",
+        "path": "reports/content_packages/images/71ad7d0ea4393b48_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268763/never-blank/posts/research/71ad7d0ea4393b48/stories/1788268763.png",
+        "path": "reports/content_packages/images/71ad7d0ea4393b48_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "particle_flow",
+    "hook_text": "209 hours lost to decision debt each year."
+  }
+}

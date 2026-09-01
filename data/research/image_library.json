@@ -773,5 +773,25 @@
     "visual_family": "light_paths",
     "design_version": "3",
     "hook_text": "AI booking transforms travel with seamless integration."
+  },
+  "71ad7d0ea4393b48": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268738/never-blank/posts/research/71ad7d0ea4393b48/blog/1788268738.png",
+    "signal_type": "owner bottleneck",
+    "headline": "The Small Decisions You Skip Are Costing Your Team 209 Hours a Year. Here’s How to Fix It.",
+    "created_at": "2026-09-01",
+    "method": "gpt-image-1",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "209 hours lost to decision debt each year."
+  },
+  "cf91d47f07e87c9d": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788268770/never-blank/posts/research/cf91d47f07e87c9d/blog/1788268770.png",
+    "signal_type": "authority erosion",
+    "headline": "FTC Sues Amazon Over Alleged $20 Billion Advertising Surcharge Scheme via @sejournal, @brookeosmundson",
+    "created_at": "2026-09-01",
+    "method": "quote_card",
+    "visual_family": "light_message_card",
+    "design_version": "3",
+    "hook_text": "Amazon’s ad platform made $20B disappear from advertisers’ pockets—without them noticing until the FTC showed up."
   }
 }
