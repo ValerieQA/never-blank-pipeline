@@ -21,13 +21,14 @@ which is deliberately NOT a ``ValueError``: the editorial ``_run_stage``
 retry catches ``ValueError``, and retrying an exhausted budget would be a
 guaranteed second refusal.
 
-Release 1 ceiling — derived from the audited call graph, not guessed:
+Release 1 default ceiling — derived from the audited shared call graph, not guessed:
 normal Monday ≈ 18 in-run calls, Wednesday ≈ 19, and the legitimate worst
 case (every stage retried once, one authorized revision round, package
 regeneration, both hashtag calls) is 34. The default and hard maximum is 40:
-every legitimate run fits with headroom under 20%, and a runaway loop stops
-within about twice a normal run's cost. Expected to drop as #174/#175/#176
-land.
+every legitimate shared-path run fits with headroom under 20%, and a runaway
+loop stops within about twice a normal run's cost. Wednesday's restored July
+path is the single explicit exception: its historical per-candidate research
+and five-surface composer require a finite role-scoped ceiling of 56 (#217).
 """
 
 from __future__ import annotations
@@ -41,6 +42,12 @@ from contextvars import ContextVar
 #: The hard upper bound on any configured ceiling. There is no unlimited
 #: override: a value above this is a refused configuration, not a policy.
 R1_MAX_CEILING = 40
+
+#: Finite hard ceiling for the isolated Wednesday July lifecycle (#217).
+#: This is not a new global maximum: callers must explicitly identify the
+#: Wednesday role, and every other role keeps ``R1_MAX_CEILING``.
+WEDNESDAY_MAX_CEILING = 56
+_WEDNESDAY_ROLE_ID = "never-blank-wednesday-golden"
 
 #: Default when NB_RUN_TEXT_CALL_BUDGET is unset. See the module docstring
 #: for the derivation.
@@ -71,7 +78,15 @@ class RunCallBudgetExceededError(RuntimeError):
         self.limit = limit
 
 
-def configured_run_call_ceiling() -> int:
+def _maximum_for_role(editorial_role_id: str | None) -> int:
+    return (
+        WEDNESDAY_MAX_CEILING
+        if editorial_role_id == _WEDNESDAY_ROLE_ID
+        else R1_MAX_CEILING
+    )
+
+
+def configured_run_call_ceiling(editorial_role_id: str | None = None) -> int:
     """The run ceiling from ``NB_RUN_TEXT_CALL_BUDGET``, strictly validated.
 
     Accepts only the canonical decimal representation of an integer in
@@ -82,15 +97,17 @@ def configured_run_call_ceiling() -> int:
     value is how the NB_OPENAI_MAX_RETRIES=999999 mistake would come back.
     """
     raw = os.environ.get("NB_RUN_TEXT_CALL_BUDGET")
+    maximum = _maximum_for_role(editorial_role_id)
     if raw is None:
         return DEFAULT_CEILING
     if raw.isascii() and raw.isdigit() and str(int(raw)) == raw:
         value = int(raw)
-        if 1 <= value <= R1_MAX_CEILING:
+        if 1 <= value <= maximum:
             return value
     raise CallBudgetConfigurationError(
         "NB_RUN_TEXT_CALL_BUDGET must be a canonical integer between 1 and "
-        f"{R1_MAX_CEILING} for Release 1; got {raw!r}. Refusing to start a "
+        f"{maximum} for Release 1 role {editorial_role_id!r}; got {raw!r}. "
+        "Refusing to start a "
         "run with an invalid call-budget configuration."
     )
 
@@ -104,12 +121,16 @@ class RunCallBudget:
     own instance, so "reset" is construction, not mutation.
     """
 
-    def __init__(self, limit: int) -> None:
+    def __init__(self, limit: int, *, hard_max: int = R1_MAX_CEILING) -> None:
         if not isinstance(limit, int) or isinstance(limit, bool):
             raise CallBudgetConfigurationError("call budget limit must be an integer")
-        if not 1 <= limit <= R1_MAX_CEILING:
+        if hard_max not in {R1_MAX_CEILING, WEDNESDAY_MAX_CEILING}:
             raise CallBudgetConfigurationError(
-                f"call budget limit must be between 1 and {R1_MAX_CEILING}; "
+                f"unsupported call budget hard maximum: {hard_max!r}"
+            )
+        if not 1 <= limit <= hard_max:
+            raise CallBudgetConfigurationError(
+                f"call budget limit must be between 1 and {hard_max}; "
                 f"got {limit!r}"
             )
         self.limit = limit

@@ -160,6 +160,10 @@ jobs:
           NB_ENRICH_MODEL: ${{ secrets.NB_ENRICH_MODEL }}
           NB_ARTICLE_MODEL: ${{ secrets.NB_ARTICLE_MODEL }}
           NB_SOCIAL_MODEL: ${{ secrets.NB_SOCIAL_MODEL }}
+          # #217: restored July research + generation has a verified maximum
+          # normal lifecycle of 53 calls. This finite Wednesday-only limit
+          # adds three calls of headroom; Monday and roleless/default stay 40.
+          NB_RUN_TEXT_CALL_BUDGET: "56"
           NB_WIX_API_KEY: ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID: ${{ secrets.NB_WIX_SITE_ID }}
           NB_WIX_POST_OWNER_ID: ${{ secrets.NB_WIX_POST_OWNER_ID }}
