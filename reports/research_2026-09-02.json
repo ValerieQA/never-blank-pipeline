@@ -1,0 +1,194 @@
+{
+  "date": "2026-09-02",
+  "candidates_found": 3,
+  "duplicates_skipped": 0,
+  "new_signals_added": 3,
+  "selected_for_content": 2,
+  "sheet_sync": "failed",
+  "archived": 0,
+  "top_signals": [
+    "Why 7-Figure Founders Become the Biggest Block to Business Growth",
+    "What Happens To PPC When You Stop Managing Google Ads Through Google Ads via @se"
+  ],
+  "publish_reports": [],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 2,
+  "images_new": 2,
+  "images_reused": 0,
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "ad7dfd48ffb273e1",
+      "HEADLINE": "Why 7-Figure Founders Become the Biggest Block to Business Growth",
+      "prepared_at": "2026-09-02 12:40 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why 7-Figure Founders Are Their Own Biggest Growth Bottleneck",
+          "angle": "Seven-figure founders face the tension of balancing hands-on control with the need for scalable autonomy, leading many to stall growth by clinging to operational roles; the solution is shifting to strategic leadership and empowering teams to decide."
+        },
+        "linkedin": {
+          "headline": "The founder\u2019s ambition built the business \u2014 but their habits are holding it back.",
+          "angle": "Founders who scale to seven figures often become the main bottleneck, forcing businesses to choose between founder control and sustainable growth."
+        },
+        "facebook": {
+          "headline": "Why do 7-figure founders often block their own growth?",
+          "angle": "Seven-figure founders frequently stall growth by over-involvement in decisions even after hiring teams \u2014 how can founders shift from operator to leader?"
+        },
+        "instagram": {
+          "headline": "When Founders Block Their Own Growth",
+          "angle": "Growth stalls when founders can\u2019t let go of decisions they used to own."
+        },
+        "threads": {
+          "thread_hook": "Seven-figure founders often become the biggest obstacle to scaling their own business.",
+          "angle": "This thread breaks down why founder over-involvement kills growth and how stepping back to empower teams is the real growth lever."
+        },
+        "stories": {
+          "story_question": "Is your hands-on style stalling your business growth?",
+          "angle": "Exploring the tension between founder control and the need for scalable decision-making to break past seven figures."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352810/never-blank/posts/research/ad7dfd48ffb273e1/blog/1788352809.png",
+            "path": "reports/content_packages/images/ad7dfd48ffb273e1_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352813/never-blank/posts/research/ad7dfd48ffb273e1/linkedin/1788352813.png",
+            "path": "reports/content_packages/images/ad7dfd48ffb273e1_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352817/never-blank/posts/research/ad7dfd48ffb273e1/facebook/1788352816.png",
+            "path": "reports/content_packages/images/ad7dfd48ffb273e1_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352823/never-blank/posts/research/ad7dfd48ffb273e1/instagram/1788352823.png",
+            "path": "reports/content_packages/images/ad7dfd48ffb273e1_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352828/never-blank/posts/research/ad7dfd48ffb273e1/threads/1788352828.png",
+            "path": "reports/content_packages/images/ad7dfd48ffb273e1_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352836/never-blank/posts/research/ad7dfd48ffb273e1/stories/1788352836.png",
+            "path": "reports/content_packages/images/ad7dfd48ffb273e1_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Founders often block their own growth."
+      }
+    },
+    {
+      "SIGNAL_ID": "7297b49ffe9773c8",
+      "HEADLINE": "What Happens To PPC When You Stop Managing Google Ads Through Google Ads via @sejournal, @siliconvallaeys",
+      "prepared_at": "2026-09-02 12:41 UTC",
+      "content": {
+        "blog": {
+          "headline": "When PPC Management Leaves Google Ads: The Hidden Costs of Automation",
+          "angle": "Businesses push for PPC scale and automation, but shifting management outside Google Ads creates trust and transparency gaps; the solution lies in building governance frameworks that protect campaign integrity."
+        },
+        "linkedin": {
+          "headline": "You can automate your PPC, but you can\u2019t automate trust.",
+          "angle": "Automating PPC through third-party platforms promises scale but risks transparency and control, forcing founders to rethink how they govern advertising management."
+        },
+        "facebook": {
+          "headline": "What happens when you stop managing Google Ads directly?",
+          "angle": "Moving PPC management to external platforms can boost efficiency but often sacrifices transparency\u2014how do you keep control without slowing down growth?"
+        },
+        "instagram": {
+          "headline": "Automation vs. Trust in PPC Management",
+          "angle": "Scaling PPC through automation shifts the challenge from managing ads to managing trust and governance."
+        },
+        "threads": {
+          "thread_hook": "Automating PPC isn\u2019t just about efficiency\u2014it\u2019s a test of trust.",
+          "angle": "This thread breaks down why moving PPC management outside Google Ads introduces governance risks and what founders must do to maintain control and campaign performance."
+        },
+        "stories": {
+          "story_question": "Can you really trust automated PPC management?",
+          "angle": "Exploring the tension between scaling PPC through automation and maintaining the transparency and control founders need."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352882/never-blank/posts/research/7297b49ffe9773c8/blog/1788352882.png",
+            "path": "reports/content_packages/images/7297b49ffe9773c8_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352885/never-blank/posts/research/7297b49ffe9773c8/linkedin/1788352885.png",
+            "path": "reports/content_packages/images/7297b49ffe9773c8_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352889/never-blank/posts/research/7297b49ffe9773c8/facebook/1788352889.png",
+            "path": "reports/content_packages/images/7297b49ffe9773c8_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352896/never-blank/posts/research/7297b49ffe9773c8/instagram/1788352896.png",
+            "path": "reports/content_packages/images/7297b49ffe9773c8_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352901/never-blank/posts/research/7297b49ffe9773c8/threads/1788352901.png",
+            "path": "reports/content_packages/images/7297b49ffe9773c8_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352909/never-blank/posts/research/7297b49ffe9773c8/stories/1788352909.png",
+            "path": "reports/content_packages/images/7297b49ffe9773c8_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "focus_rings",
+        "hook_text": "Trust erodes as control shifts from Google Ads."
+      }
+    }
+  ],
+  "_publish_reports": []
+}

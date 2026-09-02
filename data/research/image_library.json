@@ -793,5 +793,25 @@
     "visual_family": "light_message_card",
     "design_version": "3",
     "hook_text": "Amazon’s ad platform made $20B disappear from advertisers’ pockets—without them noticing until the FTC showed up."
+  },
+  "ad7dfd48ffb273e1": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352810/never-blank/posts/research/ad7dfd48ffb273e1/blog/1788352809.png",
+    "signal_type": "owner bottleneck",
+    "headline": "Why 7-Figure Founders Become the Biggest Block to Business Growth",
+    "created_at": "2026-09-02",
+    "method": "gpt-image-1",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Founders often block their own growth."
+  },
+  "7297b49ffe9773c8": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352882/never-blank/posts/research/7297b49ffe9773c8/blog/1788352882.png",
+    "signal_type": "trust accumulation pattern",
+    "headline": "What Happens To PPC When You Stop Managing Google Ads Through Google Ads via @sejournal, @siliconvallaeys",
+    "created_at": "2026-09-02",
+    "method": "gpt-image-1",
+    "visual_family": "focus_rings",
+    "design_version": "3",
+    "hook_text": "Trust erodes as control shifts from Google Ads."
   }
 }

@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "ad7dfd48ffb273e1",
+  "HEADLINE": "Why 7-Figure Founders Become the Biggest Block to Business Growth",
+  "prepared_at": "2026-09-02 12:40 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why 7-Figure Founders Are Their Own Biggest Growth Bottleneck",
+      "angle": "Seven-figure founders face the tension of balancing hands-on control with the need for scalable autonomy, leading many to stall growth by clinging to operational roles; the solution is shifting to strategic leadership and empowering teams to decide."
+    },
+    "linkedin": {
+      "headline": "The founder’s ambition built the business — but their habits are holding it back.",
+      "angle": "Founders who scale to seven figures often become the main bottleneck, forcing businesses to choose between founder control and sustainable growth."
+    },
+    "facebook": {
+      "headline": "Why do 7-figure founders often block their own growth?",
+      "angle": "Seven-figure founders frequently stall growth by over-involvement in decisions even after hiring teams — how can founders shift from operator to leader?"
+    },
+    "instagram": {
+      "headline": "When Founders Block Their Own Growth",
+      "angle": "Growth stalls when founders can’t let go of decisions they used to own."
+    },
+    "threads": {
+      "thread_hook": "Seven-figure founders often become the biggest obstacle to scaling their own business.",
+      "angle": "This thread breaks down why founder over-involvement kills growth and how stepping back to empower teams is the real growth lever."
+    },
+    "stories": {
+      "story_question": "Is your hands-on style stalling your business growth?",
+      "angle": "Exploring the tension between founder control and the need for scalable decision-making to break past seven figures."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352810/never-blank/posts/research/ad7dfd48ffb273e1/blog/1788352809.png",
+        "path": "reports/content_packages/images/ad7dfd48ffb273e1_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352813/never-blank/posts/research/ad7dfd48ffb273e1/linkedin/1788352813.png",
+        "path": "reports/content_packages/images/ad7dfd48ffb273e1_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352817/never-blank/posts/research/ad7dfd48ffb273e1/facebook/1788352816.png",
+        "path": "reports/content_packages/images/ad7dfd48ffb273e1_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352823/never-blank/posts/research/ad7dfd48ffb273e1/instagram/1788352823.png",
+        "path": "reports/content_packages/images/ad7dfd48ffb273e1_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352828/never-blank/posts/research/ad7dfd48ffb273e1/threads/1788352828.png",
+        "path": "reports/content_packages/images/ad7dfd48ffb273e1_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788352836/never-blank/posts/research/ad7dfd48ffb273e1/stories/1788352836.png",
+        "path": "reports/content_packages/images/ad7dfd48ffb273e1_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Founders often block their own growth."
+  }
+}
