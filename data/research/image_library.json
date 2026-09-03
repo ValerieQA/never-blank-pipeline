@@ -813,5 +813,25 @@
     "visual_family": "focus_rings",
     "design_version": "3",
     "hook_text": "Trust erodes as control shifts from Google Ads."
+  },
+  "8ccf0ed747c70414": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439411/never-blank/posts/research/8ccf0ed747c70414/blog/1788439410.png",
+    "signal_type": "owner bottleneck",
+    "headline": "37% of Business Leaders Are Losing Nearly a Full Workday to This Hidden ‘Operational Tax’",
+    "created_at": "2026-09-03",
+    "method": "gpt-image-1",
+    "visual_family": "mountains_depth_layers",
+    "design_version": "3",
+    "hook_text": "37% of leaders lose a full workday to inefficiencies."
+  },
+  "78a4cae64364db20": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439444/never-blank/posts/research/78a4cae64364db20/blog/1788439444.png",
+    "signal_type": "platform reach change for small business",
+    "headline": "Google AI Mode Prices Differ From Product Carousel For Same Items via @sejournal, @MattGSouthern",
+    "created_at": "2026-09-03",
+    "method": "quote_card",
+    "visual_family": "sand_pause_card",
+    "design_version": "3",
+    "hook_text": "Your product is in Google’s carousel—but invisible in AI Mode. Which version do your customers see?"
   }
 }

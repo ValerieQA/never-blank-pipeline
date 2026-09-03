@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "8ccf0ed747c70414",
+  "HEADLINE": "37% of Business Leaders Are Losing Nearly a Full Workday to This Hidden ‘Operational Tax’",
+  "prepared_at": "2026-09-03 12:43 UTC",
+  "content": {
+    "blog": {
+      "headline": "37% of Business Leaders Are Losing Nearly a Full Workday to This Hidden ‘Operational Tax’",
+      "angle": "Business leaders cling to control over purchasing → This creates a hidden operational tax in lost executive time → Streamlining these processes frees leadership to focus on growth → The lesson: Let go of routine control to reclaim your most valuable asset."
+    },
+    "linkedin": {
+      "headline": "The biggest drain on your leadership isn’t your market—it’s your own purchasing process.",
+      "angle": "When owners insist on hands-on control of routine purchases, they silently tax their own time, limiting strategic growth."
+    },
+    "facebook": {
+      "headline": "37% of business leaders lose nearly a full workday each week to inefficient purchasing. What if your need for control is costing you growth?",
+      "angle": "Inefficient purchasing processes are quietly stealing executive time—are you paying this operational tax without realizing it?"
+    },
+    "instagram": {
+      "headline": "Your Purchasing Process Is Costing You Time",
+      "angle": "Clinging to control over routine purchases drains leadership hours that could fuel growth."
+    },
+    "threads": {
+      "thread_hook": "Nearly 40% of business leaders lose a full day each week to inefficient purchasing. Here’s why that matters.",
+      "angle": "This thread breaks down how the need for control in purchasing creates a hidden operational tax and why automating these processes is the smartest move for leaders who want to focus on growth."
+    },
+    "stories": {
+      "story_question": "Is your need for control silently stealing your leadership time?",
+      "angle": "Exploring how hands-on purchasing oversight can become an operational tax that limits strategic focus."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439411/never-blank/posts/research/8ccf0ed747c70414/blog/1788439410.png",
+        "path": "reports/content_packages/images/8ccf0ed747c70414_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439415/never-blank/posts/research/8ccf0ed747c70414/linkedin/1788439414.png",
+        "path": "reports/content_packages/images/8ccf0ed747c70414_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439418/never-blank/posts/research/8ccf0ed747c70414/facebook/1788439417.png",
+        "path": "reports/content_packages/images/8ccf0ed747c70414_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439424/never-blank/posts/research/8ccf0ed747c70414/instagram/1788439423.png",
+        "path": "reports/content_packages/images/8ccf0ed747c70414_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439429/never-blank/posts/research/8ccf0ed747c70414/threads/1788439429.png",
+        "path": "reports/content_packages/images/8ccf0ed747c70414_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439438/never-blank/posts/research/8ccf0ed747c70414/stories/1788439438.png",
+        "path": "reports/content_packages/images/8ccf0ed747c70414_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "mountains_depth_layers",
+    "hook_text": "37% of leaders lose a full workday to inefficiencies."
+  }
+}

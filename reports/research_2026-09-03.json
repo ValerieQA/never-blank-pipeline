@@ -1,0 +1,237 @@
+{
+  "date": "2026-09-03",
+  "candidates_found": 4,
+  "duplicates_skipped": 0,
+  "new_signals_added": 4,
+  "selected_for_content": 2,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "37% of Business Leaders Are Losing Nearly a Full Workday to This Hidden \u2018Operati",
+    "Google AI Mode Prices Differ From Product Carousel For Same Items via @sejournal"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "8ccf0ed747c70414",
+      "headline": "37% of Business Leaders Are Losing Nearly a Full Workday to This Hidden \u2018Operational Tax\u2019",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'linkedin'] repeat 'where do routine approvals quietly set the limits on your own strategic capacity?'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 2,
+  "images_new": 2,
+  "images_reused": 0,
+  "publish_failures": [
+    "editorial_gate: Cross-platform copy detected before publishing: ['blog', 'facebook', 'linkedin'] repeat 'where do routine approvals quietly set the limits on your own strategic capacity?'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "8ccf0ed747c70414",
+      "HEADLINE": "37% of Business Leaders Are Losing Nearly a Full Workday to This Hidden \u2018Operational Tax\u2019",
+      "prepared_at": "2026-09-03 12:43 UTC",
+      "content": {
+        "blog": {
+          "headline": "37% of Business Leaders Are Losing Nearly a Full Workday to This Hidden \u2018Operational Tax\u2019",
+          "angle": "Business leaders cling to control over purchasing \u2192 This creates a hidden operational tax in lost executive time \u2192 Streamlining these processes frees leadership to focus on growth \u2192 The lesson: Let go of routine control to reclaim your most valuable asset."
+        },
+        "linkedin": {
+          "headline": "The biggest drain on your leadership isn\u2019t your market\u2014it\u2019s your own purchasing process.",
+          "angle": "When owners insist on hands-on control of routine purchases, they silently tax their own time, limiting strategic growth."
+        },
+        "facebook": {
+          "headline": "37% of business leaders lose nearly a full workday each week to inefficient purchasing. What if your need for control is costing you growth?",
+          "angle": "Inefficient purchasing processes are quietly stealing executive time\u2014are you paying this operational tax without realizing it?"
+        },
+        "instagram": {
+          "headline": "Your Purchasing Process Is Costing You Time",
+          "angle": "Clinging to control over routine purchases drains leadership hours that could fuel growth."
+        },
+        "threads": {
+          "thread_hook": "Nearly 40% of business leaders lose a full day each week to inefficient purchasing. Here\u2019s why that matters.",
+          "angle": "This thread breaks down how the need for control in purchasing creates a hidden operational tax and why automating these processes is the smartest move for leaders who want to focus on growth."
+        },
+        "stories": {
+          "story_question": "Is your need for control silently stealing your leadership time?",
+          "angle": "Exploring how hands-on purchasing oversight can become an operational tax that limits strategic focus."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439411/never-blank/posts/research/8ccf0ed747c70414/blog/1788439410.png",
+            "path": "reports/content_packages/images/8ccf0ed747c70414_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439415/never-blank/posts/research/8ccf0ed747c70414/linkedin/1788439414.png",
+            "path": "reports/content_packages/images/8ccf0ed747c70414_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439418/never-blank/posts/research/8ccf0ed747c70414/facebook/1788439417.png",
+            "path": "reports/content_packages/images/8ccf0ed747c70414_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439424/never-blank/posts/research/8ccf0ed747c70414/instagram/1788439423.png",
+            "path": "reports/content_packages/images/8ccf0ed747c70414_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439429/never-blank/posts/research/8ccf0ed747c70414/threads/1788439429.png",
+            "path": "reports/content_packages/images/8ccf0ed747c70414_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439438/never-blank/posts/research/8ccf0ed747c70414/stories/1788439438.png",
+            "path": "reports/content_packages/images/8ccf0ed747c70414_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "mountains_depth_layers",
+        "hook_text": "37% of leaders lose a full workday to inefficiencies."
+      }
+    },
+    {
+      "SIGNAL_ID": "78a4cae64364db20",
+      "HEADLINE": "Google AI Mode Prices Differ From Product Carousel For Same Items via @sejournal, @MattGSouthern",
+      "prepared_at": "2026-09-03 12:44 UTC",
+      "content": {
+        "blog": {
+          "headline": "Google\u2019s AI Mode Splits Product Pricing and Visibility: What Founders Need to Know",
+          "angle": "Google\u2019s AI Mode delivers different prices and product listings than its standard carousel, creating tension between AI-driven efficiency and seller transparency; founders must monitor these shifts closely to avoid losing visibility and sales."
+        },
+        "linkedin": {
+          "headline": "Your product shows up in Google\u2019s carousel\u2014but not in AI Mode. What does that mean for your sales?",
+          "angle": "Google\u2019s AI-driven search results are fragmenting product visibility, forcing founders to rethink how they track and adapt to algorithm changes that impact their bottom line."
+        },
+        "facebook": {
+          "headline": "Google\u2019s AI Mode is showing different prices and products than the usual carousel. How does that affect your business?",
+          "angle": "Google\u2019s split product listings create uneven seller visibility\u2014if your products vanish in AI Mode, how do you stay competitive and transparent?"
+        },
+        "instagram": {
+          "headline": "Invisible in Google AI Mode?",
+          "angle": "When Google\u2019s AI changes what shoppers see, founders face the risk of their products disappearing from key search results."
+        },
+        "threads": {
+          "thread_hook": "Google\u2019s AI Mode isn\u2019t just a new feature\u2014it\u2019s a marketplace divider.",
+          "angle": "This thread breaks down how AI-driven search results create hidden shifts in product visibility and pricing, forcing founders to rethink their digital marketing strategies or risk fading into algorithmic obscurity."
+        },
+        "stories": {
+          "story_question": "Is your product visible in Google\u2019s AI Mode or lost in the shuffle?",
+          "angle": "Exploring the tension between AI personalization and fair seller visibility on Google\u2019s evolving search platform."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439444/never-blank/posts/research/78a4cae64364db20/blog/1788439444.png",
+            "path": "reports/content_packages/images/78a4cae64364db20_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439446/never-blank/posts/research/78a4cae64364db20/linkedin/1788439445.png",
+            "path": "reports/content_packages/images/78a4cae64364db20_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439446/never-blank/posts/research/78a4cae64364db20/facebook/1788439446.png",
+            "path": "reports/content_packages/images/78a4cae64364db20_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439447/never-blank/posts/research/78a4cae64364db20/instagram/1788439447.png",
+            "path": "reports/content_packages/images/78a4cae64364db20_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439448/never-blank/posts/research/78a4cae64364db20/threads/1788439448.png",
+            "path": "reports/content_packages/images/78a4cae64364db20_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439449/never-blank/posts/research/78a4cae64364db20/stories/1788439449.png",
+            "path": "reports/content_packages/images/78a4cae64364db20_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "sand_pause_card",
+        "hook_text": "Your product is in Google\u2019s carousel\u2014but invisible in AI Mode. Which version do your customers see?"
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "8ccf0ed747c70414",
+      "headline": "37% of Business Leaders Are Losing Nearly a Full Workday to This Hidden \u2018Operational Tax\u2019",
+      "mode": "live",
+      "results": {
+        "editorial_gate": {
+          "platform": "editorial_gate",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Cross-platform copy detected before publishing: ['blog', 'facebook', 'linkedin'] repeat 'where do routine approvals quietly set the limits on your own strategic capacity?'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "generated_file": ""
+    }
+  ]
+}

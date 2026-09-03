@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "78a4cae64364db20",
+  "HEADLINE": "Google AI Mode Prices Differ From Product Carousel For Same Items via @sejournal, @MattGSouthern",
+  "prepared_at": "2026-09-03 12:44 UTC",
+  "content": {
+    "blog": {
+      "headline": "Google’s AI Mode Splits Product Pricing and Visibility: What Founders Need to Know",
+      "angle": "Google’s AI Mode delivers different prices and product listings than its standard carousel, creating tension between AI-driven efficiency and seller transparency; founders must monitor these shifts closely to avoid losing visibility and sales."
+    },
+    "linkedin": {
+      "headline": "Your product shows up in Google’s carousel—but not in AI Mode. What does that mean for your sales?",
+      "angle": "Google’s AI-driven search results are fragmenting product visibility, forcing founders to rethink how they track and adapt to algorithm changes that impact their bottom line."
+    },
+    "facebook": {
+      "headline": "Google’s AI Mode is showing different prices and products than the usual carousel. How does that affect your business?",
+      "angle": "Google’s split product listings create uneven seller visibility—if your products vanish in AI Mode, how do you stay competitive and transparent?"
+    },
+    "instagram": {
+      "headline": "Invisible in Google AI Mode?",
+      "angle": "When Google’s AI changes what shoppers see, founders face the risk of their products disappearing from key search results."
+    },
+    "threads": {
+      "thread_hook": "Google’s AI Mode isn’t just a new feature—it’s a marketplace divider.",
+      "angle": "This thread breaks down how AI-driven search results create hidden shifts in product visibility and pricing, forcing founders to rethink their digital marketing strategies or risk fading into algorithmic obscurity."
+    },
+    "stories": {
+      "story_question": "Is your product visible in Google’s AI Mode or lost in the shuffle?",
+      "angle": "Exploring the tension between AI personalization and fair seller visibility on Google’s evolving search platform."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439444/never-blank/posts/research/78a4cae64364db20/blog/1788439444.png",
+        "path": "reports/content_packages/images/78a4cae64364db20_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439446/never-blank/posts/research/78a4cae64364db20/linkedin/1788439445.png",
+        "path": "reports/content_packages/images/78a4cae64364db20_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439446/never-blank/posts/research/78a4cae64364db20/facebook/1788439446.png",
+        "path": "reports/content_packages/images/78a4cae64364db20_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439447/never-blank/posts/research/78a4cae64364db20/instagram/1788439447.png",
+        "path": "reports/content_packages/images/78a4cae64364db20_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439448/never-blank/posts/research/78a4cae64364db20/threads/1788439448.png",
+        "path": "reports/content_packages/images/78a4cae64364db20_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439449/never-blank/posts/research/78a4cae64364db20/stories/1788439449.png",
+        "path": "reports/content_packages/images/78a4cae64364db20_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "sand_pause_card",
+    "hook_text": "Your product is in Google’s carousel—but invisible in AI Mode. Which version do your customers see?"
+  }
+}
