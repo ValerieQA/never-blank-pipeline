@@ -95,7 +95,7 @@ def _composition(**overrides) -> dict:
         "configuration_identity": CONFIG.model_dump(),
         "strategy_id": "strategy-package",
         "strategy_version": "3",
-        "composition_rules_version": "linkedin-medium-native/1.0",
+        "composition_rules_version": "linkedin-medium-native/1.1",
         "linkedin_body": body,
         "word_count": len(body.split()),
         "status": "accepted",

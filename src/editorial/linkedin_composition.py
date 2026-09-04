@@ -3,10 +3,13 @@
 The canonical Release 1 LinkedIn artifact is the Platform Composer ``medium``
 body (product-owner decision: 120–220-word target). This module proves,
 deterministically and fail-closed, that the artifact the orchestrator is about
-to package for LinkedIn is channel-native and traceable:
+to package for LinkedIn is a real, traceable composition:
 
-- it is not the Wix article copied or shortened verbatim (no identical body,
-  no shared sentence-length phrase, distinct opening);
+- it is not the whole Wix article shipped as the post. **Sentence-level
+  overlap is allowed** (#221 product decision): the post is a shorter channel
+  version of the same idea, so a strong hook may open both surfaces, sentences
+  may recur, and the Never Blank Echo is expected to. Only whole-body identity
+  is prohibited, as the copy/wiring guard it always really was;
 - it stays within the accepted Release 1 length tolerance of the 120–220-word
   target contract;
 - it passes platform output validation under the correct ``linkedin``
@@ -30,10 +33,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from src.content.output_guard import (
-    repeated_cross_platform_phrases,
-    validate_platform_output,
-)
+from src.content.output_guard import validate_platform_output
 from src.editorial.platform_composer import (
     LINKEDIN_COMPOSITION_RULES_VERSION,
     _WORD_RANGE,
@@ -92,15 +92,6 @@ def article_digest(article_body: str) -> str:
     return "sha256:" + hashlib.sha256(article_body.encode("utf-8")).hexdigest()
 
 
-def _first_sentence(text: str) -> str:
-    stripped = text.strip()
-    for mark in (". ", "! ", "? ", "\n"):
-        index = stripped.find(mark)
-        if index > 0:
-            return stripped[: index + 1].strip().lower()
-    return stripped.lower()
-
-
 def accept_linkedin_composition(
     *,
     linkedin_body: str,
@@ -150,19 +141,22 @@ def accept_linkedin_composition(
     body = linkedin_body.strip()
     article = article_body.strip()
 
+    # #221 product decision: sentence-level overlap between Wix and LinkedIn is
+    # ALLOWED. The post is a shorter channel version of the same idea, so a
+    # strong hook may open both surfaces, individual sentences may recur, and
+    # the Never Blank Echo is expected to. Weakening a hook to manufacture
+    # cross-channel novelty made the product worse, and shared wording is not
+    # evidence of a copy defect: a reader arriving from LinkedIn is *helped* by
+    # recognising the opening they clicked.
+    #
+    # What remains prohibited is the actual wiring failure this guard exists
+    # for — shipping the whole Wix article as the LinkedIn body. That is a
+    # surface-integrity bug, not a stylistic judgment, so it stays fail-closed.
     if body == article:
         raise LinkedInCompositionError(
-            "LinkedIn body is identical to the Wix article — not a channel-native composition"
-        )
-    if _first_sentence(body) == _first_sentence(article):
-        raise LinkedInCompositionError(
-            "LinkedIn opening copies the Wix article opening — not channel-native"
-        )
-    shared = repeated_cross_platform_phrases({"blog": article, "linkedin": body})
-    if shared:
-        phrases = "; ".join(item["phrase"][:80] for item in shared[:3])
-        raise LinkedInCompositionError(
-            f"LinkedIn body copies sentence-length prose from the Wix article: {phrases}"
+            "LinkedIn body is identical to the Wix article — the whole article "
+            "was published as the post, which is a composition/wiring failure "
+            "rather than a shared sentence"
         )
 
     word_count = len(body.split())

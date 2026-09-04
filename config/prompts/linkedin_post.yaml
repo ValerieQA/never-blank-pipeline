@@ -199,10 +199,12 @@ user: |
   - Content goal: {content_goal}
   - Article URL: {wix_url}
 
-  ARTICLE BODY (source material — extract insight, do not copy):
+  ARTICLE BODY (source material — extract the insight; do not publish it as the post):
   {blog_body}
 
-  Follow the linkedin_angle. The post must not copy the blog intro.
+  Follow the linkedin_angle. Write a post, not the article at LinkedIn length.
+  Opening with the article's own hook is allowed — a strong opening is worth
+  repeating, and a reader who clicks through is helped by recognizing it.
   The reader is the central character — they must recognize their own situation.
   CTA: follow cta_mode exactly. If cta_mode is "none", include no CTA.
   If cta_mode requires a CTA, place it BEFORE any Echo.

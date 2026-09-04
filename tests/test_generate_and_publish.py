@@ -158,7 +158,7 @@ def _fake_reuse_visual_record(*args, **kwargs):
 def _fake_linkedin_composition(**kwargs):
     return SimpleNamespace(
         word_count=len(kwargs["linkedin_body"].split()),
-        composition_rules_version="linkedin-medium-native/1.0",
+        composition_rules_version="linkedin-medium-native/1.1",
         model_dump=lambda **_: {"status": "accepted"},
     )
 

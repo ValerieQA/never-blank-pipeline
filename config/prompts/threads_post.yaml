@@ -137,7 +137,7 @@ user: |
   - Observation: {observation_statement}
   - Content goal: {content_goal}
 
-  ARTICLE BODY (use for depth — do not copy):
+  ARTICLE BODY (source material — build the arc from it, do not post it as the thread):
   {blog_body}
 
   The Threads sequence is a cognitive arc — not a summary.

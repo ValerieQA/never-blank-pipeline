@@ -94,20 +94,6 @@ def validate_no_duplicate_echo(text: str, platform: str) -> None:
         raise ValueError(f"{platform} ends with two near-duplicate Echo lines")
 
 
-def repeated_cross_platform_phrases(texts: dict[str, str], min_words: int = 8) -> list[dict]:
-    """Return verbatim sentence-length phrases repeated across platform outputs."""
-    owners: dict[str, set[str]] = {}
-    for platform, text in texts.items():
-        for sentence in _sentences(text):
-            if len(sentence.split()) >= min_words:
-                owners.setdefault(sentence, set()).add(platform)
-    return [
-        {"phrase": phrase, "platforms": sorted(platforms)}
-        for phrase, platforms in owners.items()
-        if len(platforms) >= 2
-    ]
-
-
 def validate_platform_output(platform: str, text: str) -> None:
     validate_opening(text, platform)
     validate_no_detective_template(text, platform)
