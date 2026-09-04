@@ -67,10 +67,11 @@ _PLATFORM_NAMES = {
 # record; bump in a reviewed commit when composition semantics change.
 #
 # 1.1 (#221): the instruction no longer tells the model to avoid the article's
-# opening sentence. Sentence-level overlap between Wix and LinkedIn is a
-# product decision, so a shared hook is permitted rather than prohibited — a
-# real change in what the composer is asked to produce, and therefore a new
-# version on every record written from here on.
+# opening sentence. Sentence-level overlap between Never Blank surfaces — every
+# surface, not only Wix and LinkedIn — is a product decision, so a shared hook,
+# sentence or Echo is permitted rather than prohibited. That is a real change in
+# what the composer is asked to produce, and therefore a new version on every
+# record written from here on.
 LINKEDIN_COMPOSITION_RULES_VERSION = "linkedin-medium-native/1.1"
 
 _FORMAT_CONSTRAINTS = {
@@ -104,8 +105,9 @@ _FORMAT_CONSTRAINTS = {
         "no stacked evidence, no company-led opening. One sentence per paragraph."
     ),
     "short": (
-        "Express one native short-form thought. Do not summarize the article and do not reproduce "
-        "a paragraph from another platform."
+        "Express one native short-form thought. Do not summarize the article; "
+        "this surface carries a single idea, not a digest of the whole piece. "
+        "A line that also appears elsewhere is fine if it is the right line here."
     ),
 }
 

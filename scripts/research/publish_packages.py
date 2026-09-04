@@ -15,7 +15,6 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.content.output_guard import (
-    repeated_cross_platform_phrases,
     validate_platform_output,
     validate_telegram,
 )
@@ -122,16 +121,11 @@ def _validate_package(texts: dict[str, str], threads: list[str]) -> None:
     for post in threads:
         validate_platform_output("threads", post)
 
-    # Shared concepts are expected, but one prose sentence copied into three or more
-    # channels means the platform layer collapsed back into truncation/copy-paste.
-    duplicates = repeated_cross_platform_phrases({**texts, "threads": "\n".join(threads)})
-    severe = [d for d in duplicates if len(d.get("platforms", [])) >= 3]
-    if severe:
-        sample = severe[0]
-        raise ValueError(
-            "Cross-platform copy detected before publishing: "
-            f"{sample['platforms']} repeat {sample['phrase']!r}"
-        )
+    # #221: sentence-level overlap between surfaces is NOT validated here, by
+    # product decision. A hook, a sentence or the Never Blank Echo may recur on
+    # any number of channels; recurrence alone is not evidence of a defect and
+    # must not block publication. Whole-artifact and wiring failures are caught
+    # by the identity, lineage and provenance guards, not by comparing prose.
 
 
 def _build_draft(signal: dict, package: dict, blog_body: str, linkedin_text: str,

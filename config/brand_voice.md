@@ -276,7 +276,7 @@ Echo: verbatim.
 Each post adds a new cognitive step — not a restatement. No hashtags. No summary.
 Post 5 (Echo) is the final position — an uncomfortable truth or sharp consequence.
 Not a motivational close. Not "bridges must be built."
-Echo: adapted to Threads voice (short, punchy — not copy-pasted from Blog/LinkedIn).
+Echo: adapted to Threads voice (short, punchy) — or the canonical Echo itself when that lands.
 
 **Telegram** — signal format only. 3 lines maximum.
 Line 1: one sharp observation (the pattern itself, not a topic statement).

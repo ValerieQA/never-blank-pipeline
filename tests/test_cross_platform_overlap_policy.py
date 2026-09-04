@@ -1,21 +1,24 @@
-"""Issue #221: Wix↔LinkedIn sentence overlap is allowed.
+"""Issue #221: sentence-level overlap is allowed across ALL Never Blank surfaces.
 
 CONTROLLED_LIVE run 33913287027 produced an article that passed editorial
 acceptance and source transparency, then was blocked by:
 
     LinkedIn opening copies the Wix article opening — not channel-native
 
-The product owner has withdrawn that requirement globally. LinkedIn is a
-shorter channel version of the same article: a strong hook may open both
-surfaces, sentences may recur, and the Never Blank Echo is expected to. A
-reader arriving from LinkedIn is helped, not confused, by recognising the
-opening they clicked, and weakening a hook to manufacture cross-channel
-novelty made the product worse.
+The product owner withdrew that requirement, first for Wix↔LinkedIn and then —
+authoritatively — for every surface: Blog, LinkedIn, Instagram, Facebook,
+Threads, Telegram, and any future channel. A strong hook, a sentence, or the
+Never Blank Echo may recur anywhere. **Recurrence alone is not evidence of a
+defect and must never block publication.**
 
-The meaningful failure this guard exists for — publishing the whole Wix
-article as the LinkedIn body — stays fail-closed. These scenarios pin both
-halves, and pin that the withdrawn rule is not re-enforced anywhere else in
-the Never Blank publication path.
+The distinction that survives is whole-artifact, not sentence-level: LinkedIn
+must not accidentally receive the entire Wix article as its body, because that
+is a wiring failure rather than a style judgement. Those guards stay
+fail-closed and are pinned here too.
+
+The withdrawn rule must also not return in a weaker disguise — no similarity
+percentage, word- or paragraph-overlap threshold, paraphrase requirement, or
+LLM uniqueness judgement replaces it.
 
 No paid calls and no network calls.
 """
@@ -23,12 +26,11 @@ No paid calls and no network calls.
 from __future__ import annotations
 
 import ast
+import itertools
 from pathlib import Path
 
 import pytest
 
-from src.content.generator import _validate_cross_platform_outputs
-from src.content.output_guard import repeated_cross_platform_phrases
 from src.editorial.platform_composer import (
     _FORMAT_CONSTRAINTS,
     _SYSTEM_PROMPT,
@@ -42,98 +44,39 @@ LIVE_HOOK = ("Investors cheered not because ChargePoint promised more growth, "
 ECHO = ("Never Blank: Sometimes, the most compelling growth story is about "
         "knowing when to hit the brakes.")
 
-
-def _outputs(**overrides):
-    base = {
-        "blog": "The article develops the full argument about operational proof. "
-                "It runs on at length through the mechanism and its consequences.",
-        "linkedin": "A shorter take on the very same idea for the feed. "
-                    "It lands the point in far fewer words than the article does.",
-        "instagram": "A distinct caption written for the grid and nothing else here.",
-        "facebook": "A distinct reading-surface body written only for that channel.",
-        "threads": ["A distinct threads post written only for that channel here."],
-        "telegram": "A distinct telegram body written only for that channel here.",
-    }
-    base.update(overrides)
-    return base
+#: Every surface Never Blank publishes prose to today.
+SURFACES = ("blog", "linkedin", "instagram", "facebook", "threads", "telegram")
 
 
 # ===========================================================================
-# Allowed: Wix and LinkedIn may share sentences
+# The enforcement is gone from the production path
 # ===========================================================================
 
 
-def test_a_shared_hook_between_blog_and_linkedin_is_allowed():
-    outputs = _outputs()
-    outputs["blog"] = LIVE_HOOK + " " + outputs["blog"]
-    outputs["linkedin"] = LIVE_HOOK + " " + outputs["linkedin"]
-
-    _validate_cross_platform_outputs(**outputs)      # must not raise
+def _production_callers(symbol: str) -> list[str]:
+    """Modules that reference `symbol` outside of tests."""
+    roots = list(Path("src").rglob("*.py")) + list(Path("scripts").rglob("*.py"))
+    return [str(p) for p in roots if symbol in p.read_text()]
 
 
-def test_a_shared_echo_between_blog_and_linkedin_is_allowed():
-    outputs = _outputs()
-    outputs["blog"] = outputs["blog"] + " " + ECHO
-    outputs["linkedin"] = outputs["linkedin"] + " " + ECHO
-
-    _validate_cross_platform_outputs(**outputs)
+def test_no_production_code_policies_repeated_cross_platform_phrases():
+    """The rejection primitive has no production caller anywhere."""
+    assert _production_callers("repeated_cross_platform_phrases") == []
 
 
-def test_several_shared_sentences_between_blog_and_linkedin_are_allowed():
-    shared = ("Investors rewarded the discipline rather than the ambition on "
-              "display in that quarter's numbers.")
-    outputs = _outputs()
-    outputs["blog"] = f"{LIVE_HOOK} {outputs['blog']} {shared} {ECHO}"
-    outputs["linkedin"] = f"{LIVE_HOOK} {outputs['linkedin']} {shared} {ECHO}"
-
-    _validate_cross_platform_outputs(**outputs)
+def test_the_generator_no_longer_validates_across_platforms():
+    source = Path("src/content/generator.py").read_text()
+    assert "_validate_cross_platform_outputs" not in source
+    assert "Cross-platform copy detected" not in source
 
 
-# ===========================================================================
-# Still refused: every other channel pair, and whole-surface copying
-# ===========================================================================
+def test_publishing_no_longer_rejects_a_sentence_shared_by_three_channels():
+    source = Path("scripts/research/publish_packages.py").read_text()
+    assert "Cross-platform copy detected before publishing" not in source
+    assert 'len(d.get("platforms", [])) >= 3' not in source
 
 
-def test_a_sentence_shared_with_instagram_is_still_refused():
-    """The decision covers Wix↔LinkedIn, not every pair."""
-    shared = ("A business whose presence depends entirely on the owner will be "
-              "least visible when it most needs attention.")
-    outputs = _outputs()
-    outputs["blog"] = outputs["blog"] + " " + shared
-    outputs["instagram"] = outputs["instagram"] + " " + shared
-
-    with pytest.raises(ValueError, match="Cross-platform copy detected"):
-        _validate_cross_platform_outputs(**outputs)
-
-
-def test_a_sentence_shared_between_linkedin_and_telegram_is_still_refused():
-    shared = ("The mechanism was capacity all along, and the numbers only "
-              "made that visible after the fact.")
-    outputs = _outputs()
-    outputs["linkedin"] = outputs["linkedin"] + " " + shared
-    outputs["telegram"] = outputs["telegram"] + " " + shared
-
-    with pytest.raises(ValueError, match="Cross-platform copy detected"):
-        _validate_cross_platform_outputs(**outputs)
-
-
-def test_a_sentence_shared_across_three_channels_is_still_refused():
-    shared = ("Every channel repeating one sentence means the platform layer "
-              "collapsed back into copy-and-paste.")
-    outputs = _outputs()
-    for channel in ("blog", "linkedin", "instagram"):
-        outputs[channel] = outputs[channel] + " " + shared
-
-    with pytest.raises(ValueError, match="Cross-platform copy detected"):
-        _validate_cross_platform_outputs(**outputs)
-
-
-# ===========================================================================
-# The withdrawn rule is not enforced anywhere in the publication path
-# ===========================================================================
-
-
-def test_linkedin_acceptance_no_longer_reaches_the_phrase_check():
+def test_linkedin_acceptance_no_longer_reaches_a_phrase_check():
     source = Path("src/editorial/linkedin_composition.py").read_text()
     names = {
         node.id if isinstance(node, ast.Name) else node.attr
@@ -144,47 +87,135 @@ def test_linkedin_acceptance_no_longer_reaches_the_phrase_check():
     assert "_first_sentence" not in names
 
 
-def test_no_module_claims_the_withdrawn_rule_as_a_requirement():
-    """Item 6: no comment may still say LinkedIn must not share the opening."""
-    claims = (
-        "distinct opening",
-        "no shared sentence-length phrase",
-        "copies the Wix article opening",
-        "copies sentence-length prose",
+def test_the_rule_did_not_return_as_a_threshold():
+    """Explicitly out of bounds: no similarity/overlap heuristic replaces it."""
+    banned = (
+        "similarity_ratio", "SequenceMatcher", "difflib",
+        "jaccard", "overlap_ratio", "word_overlap",
+        "paraphrase", "uniqueness_score", "cosine_similarity",
     )
-    for path in list(Path("src").rglob("*.py")) + [
-        Path("scripts/generate_and_publish.py")
-    ]:
-        text = path.read_text()
-        for claim in claims:
-            assert claim not in text, f"{path}: still claims {claim!r}"
+    # Scoped to the modules that composed, validated or published prose — a
+    # `cosine_similarity` in the embeddings memory is unrelated to this rule.
+    guarded = (
+        "src/content/generator.py",
+        "src/content/output_guard.py",
+        "src/editorial/platform_composer.py",
+        "src/editorial/linkedin_composition.py",
+        "scripts/research/publish_packages.py",
+        "scripts/generate_and_publish.py",
+    )
+    for name in guarded:
+        text = Path(name).read_text()
+        for token in banned:
+            assert token not in text, f"{name}: introduces {token!r}"
 
 
-def test_the_shared_utility_itself_is_untouched():
-    """It is a generic detector; other pairs still legitimately use it."""
-    findings = repeated_cross_platform_phrases({
-        "instagram": "One shared sentence appears in both of these two bodies here.",
-        "telegram": "One shared sentence appears in both of these two bodies here.",
-    })
-    assert findings and findings[0]["platforms"] == ["instagram", "telegram"]
+# ===========================================================================
+# Allowed: the same sentence on any combination of surfaces
+# ===========================================================================
 
 
-def test_the_three_channel_publish_guard_is_untouched():
-    """`publish_packages` refuses ≥3 channels sharing a sentence, as before."""
+def _package(shared: str, surfaces: tuple[str, ...]) -> dict[str, str]:
+    """A package where exactly `surfaces` carry `shared`, each still native."""
+    bodies = {
+        s: f"A body written for {s} and nothing else, in its own shape and length."
+        for s in SURFACES
+    }
+    for surface in surfaces:
+        bodies[surface] = f"{shared} {bodies[surface]}"
+    return bodies
+
+
+def _publish_validation(bodies: dict[str, str]) -> None:
+    """Run the real pre-publication package validation."""
+    from scripts.research.publish_packages import _validate_package
+
+    texts = {k: v for k, v in bodies.items() if k != "threads"}
+    _validate_package(texts, [bodies["threads"], "Second post.", "Third post."])
+
+
+@pytest.mark.parametrize("surfaces", [
+    ("blog", "linkedin"),
+    ("blog", "instagram"),
+    ("linkedin", "telegram"),
+    ("blog", "linkedin", "instagram"),
+    ("instagram", "facebook", "threads", "telegram"),
+    SURFACES,
+])
+def test_one_sentence_may_be_shared_by_any_set_of_surfaces(surfaces):
+    """Item 5: sentence overlap alone never rejects the package."""
+    _publish_validation(_package(LIVE_HOOK, surfaces))     # must not raise
+
+
+def test_the_never_blank_echo_may_close_every_surface():
+    bodies = {
+        s: f"A body written for {s} and nothing else, in its own shape. {ECHO}"
+        for s in SURFACES
+    }
+    _publish_validation(bodies)
+
+
+def test_a_shared_hook_and_a_shared_echo_together_are_allowed():
+    bodies = {
+        s: f"{LIVE_HOOK} A body written for {s} in its own shape here. {ECHO}"
+        for s in SURFACES
+    }
+    _publish_validation(bodies)
+
+
+@pytest.mark.parametrize("pair", list(itertools.combinations(SURFACES, 2)))
+def test_every_surface_pair_may_share_a_sentence(pair):
+    """No pair is privileged: the decision is global, not a Wix↔LinkedIn carve-out."""
+    _publish_validation(_package(LIVE_HOOK, pair))
+
+
+# ===========================================================================
+# Still refused: whole-artifact and wiring failures
+# ===========================================================================
+
+
+def test_the_whole_body_guard_is_identity_not_similarity():
+    """Only an exact whole-body copy — no threshold hides behind the guard.
+
+    The behavioural proof that an identical body is rejected lives in
+    ``test_linkedin_composition.py``; what this pins is the *shape* of the
+    check, because a similarity threshold reintroduced here would silently
+    restore the withdrawn rule under the surviving guard's name.
+    """
+    tree = ast.parse(Path("src/editorial/linkedin_composition.py").read_text())
+    comparisons = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Compare) and isinstance(node.ops[0], ast.Eq)
+        and isinstance(node.left, ast.Name) and node.left.id == "body"
+    ]
+    assert comparisons, "the whole-body identity comparison disappeared"
+
+
+def test_per_surface_output_guards_still_run():
+    """Removing the cross-platform check must not disarm per-platform validation."""
     source = Path("scripts/research/publish_packages.py").read_text()
-    assert "repeated_cross_platform_phrases" in source
-    assert 'len(d.get("platforms", [])) >= 3' in source
+    assert "validate_platform_output(platform, text)" in source
+    assert "validate_article_for_publish(text, platform=platform)" in source
 
 
-# ---------------------------------------------------------------------------
-# The rule as an ACTIVE MODEL INSTRUCTION.
+def test_a_repeated_echo_within_one_body_is_still_refused():
+    """Within one surface, a duplicated Echo is still a generation defect."""
+    from src.content.output_guard import validate_no_duplicate_echo
+
+    doubled = f"{ECHO} Something in between the two closings here. {ECHO}"
+    with pytest.raises(ValueError):
+        validate_no_duplicate_echo(doubled, "linkedin")
+
+
+# ===========================================================================
+# The rule as an ACTIVE MODEL INSTRUCTION
 #
-# Removing the validator only stops the pipeline from *rejecting* a shared
-# opening. The composer was still being *told* not to write one, so the
-# withdrawn rule went on shaping every LinkedIn body — a product rule enforced
-# by prompt instead of by code, which is harder to see and just as binding.
-# These scenarios read the prompt actually sent to the model.
-# ---------------------------------------------------------------------------
+# Removing the validators only stops the pipeline from *rejecting* shared
+# prose. The composer was still being *told* not to write it, so the withdrawn
+# rule went on shaping every body — a product rule enforced by prompt instead
+# of by code, which is harder to see and just as binding. These scenarios read
+# the prompt actually sent to the model.
+# ===========================================================================
 
 ARTICLE = (
     f"{LIVE_HOOK} The company cut its expansion plan by a third and the market "
@@ -199,8 +230,8 @@ STRUCTURED = {
     "echo_line": ECHO,
 }
 
-#: Phrasings that would forbid the composer from opening LinkedIn with the
-#: article's own hook. Matched against the rendered prompt, lowercased.
+#: Phrasings that would forbid a composer from reusing a line another surface
+#: already uses. Matched against the rendered prompt, lowercased.
 FORBIDDING_PHRASINGS = (
     "never with the blog opening",
     "do not reuse the blog",
@@ -209,22 +240,25 @@ FORBIDDING_PHRASINGS = (
     "must not copy the blog intro",
     "do not trim or paraphrase another platform's prose",
     "copying its paragraphs or sentences wholesale",
+    "do not reproduce a paragraph from another platform",
+    "each platform must receive native wording",
 )
 
 
-def _linkedin_prompt(**kwargs) -> str:
-    """The real user prompt for the canonical LinkedIn (``medium``) artifact."""
-    return _build_user_prompt(STRUCTURED, "medium", "none", **kwargs)
+def _prompt(format_key: str, **kwargs) -> str:
+    return _build_user_prompt(STRUCTURED, format_key, "none", **kwargs)
 
 
+@pytest.mark.parametrize("format_key", sorted(_FORMAT_CONSTRAINTS))
 @pytest.mark.parametrize("phrase", FORBIDDING_PHRASINGS)
-def test_the_active_linkedin_prompt_does_not_forbid_the_blog_opening(phrase):
-    prompt = (_linkedin_prompt(canonical_body=ARTICLE) + "\n" + _SYSTEM_PROMPT).lower()
-    assert phrase not in prompt, f"active LinkedIn prompt still instructs: {phrase!r}"
+def test_no_active_format_prompt_forbids_reusing_another_surfaces_line(
+    format_key, phrase
+):
+    rendered = (_prompt(format_key, canonical_body=ARTICLE) + "\n" + _SYSTEM_PROMPT).lower()
+    assert phrase not in rendered, f"{format_key} prompt still instructs: {phrase!r}"
 
 
 def test_the_linkedin_format_rules_no_longer_mention_the_blog_opening():
-    """The `medium` constraint is the instruction the reviewer named."""
     rules = _FORMAT_CONSTRAINTS["medium"].lower()
     assert "opening sentence" not in rules
     assert "never with the blog" not in rules
@@ -238,30 +272,44 @@ def test_the_facebook_format_rules_no_longer_mention_the_blog_opening():
     assert "do not reuse the blog" not in rules
 
 
-def test_the_active_linkedin_prompt_still_forbids_republishing_the_article():
-    """Item 2: the distinction we keep — native post vs the whole article."""
-    prompt = _linkedin_prompt(canonical_body=ARTICLE).lower()
+def test_the_short_format_rules_no_longer_forbid_another_platforms_paragraph():
+    rules = _FORMAT_CONSTRAINTS["short"].lower()
+    assert "another platform" not in rules
+    # the format instruction survives: one thought, not a digest
+    assert "do not summarize the article" in rules
+
+
+def test_the_active_prompt_still_forbids_republishing_the_article():
+    """Item 4: the distinction we keep — native body vs the whole article."""
+    prompt = _prompt("medium", canonical_body=ARTICLE).lower()
     assert "not a shortened blog" in prompt
     assert "reproducing the long-form wholesale" in prompt
     assert "trimmed to length is rejected" in prompt
 
 
-def test_the_active_linkedin_prompt_does_not_instruct_copying_the_article():
-    """Item 2: permitting a shared hook is not the same as requesting a copy."""
-    prompt = _linkedin_prompt(canonical_body=ARTICLE).lower()
+def test_the_active_prompt_does_not_instruct_copying_the_article():
+    """Permitting shared prose is not the same as requesting a copy."""
+    prompt = _prompt("medium", canonical_body=ARTICLE).lower()
     for demand in ("copy the article", "reuse the article body",
                    "repeat the article", "use the same body"):
         assert demand not in prompt
 
 
 def test_the_echo_verbatim_carve_out_survives_the_rewrite():
-    """The canonical-content block still exempts required-verbatim elements."""
-    prompt = _linkedin_prompt(canonical_body=ARTICLE)
+    prompt = _prompt("medium", canonical_body=ARTICLE)
     assert "governs ORDINARY PROSE ONLY" in prompt
     assert "must still be reproduced exactly as supplied" in prompt
 
 
-def test_the_linkedin_post_yaml_prompt_no_longer_forbids_the_blog_intro():
+def test_format_instructions_are_preserved():
+    """Item 3: length, structure, CTA shape and hashtags are still instructed."""
+    prompt = _prompt("medium", canonical_body=ARTICLE)
+    assert "TARGET LENGTH:" in prompt
+    assert "short paragraphs of one to three sentences" in prompt
+    assert "CTA MODE:" in prompt
+
+
+def test_the_legacy_linkedin_yaml_prompt_no_longer_forbids_the_blog_intro():
     """The legacy `config/prompts/linkedin_post.yaml` carried the rule too.
 
     Read as text, not via ``load_prompt``: that file does not currently parse
@@ -275,6 +323,17 @@ def test_the_linkedin_post_yaml_prompt_no_longer_forbids_the_blog_intro():
     assert "post, not the article at linkedin length" in text
 
 
+def test_the_threads_and_brand_voice_instructions_dropped_the_rule_too():
+    """Item 3: the sweep covers every surface, not only LinkedIn."""
+    threads = Path("config/prompts/threads_post.yaml").read_text().lower()
+    assert "use for depth — do not copy" not in threads
+    # the thread's own progression rule is a format rule and survives
+    assert "do not repeat the same point" in threads
+
+    voice = Path("config/brand_voice.md").read_text().lower()
+    assert "not copy-pasted from blog/linkedin" not in voice
+
+
 def test_the_composition_rules_version_records_the_new_semantics():
-    """Item 5: the instruction changed, so records must not claim 1.0."""
+    """Item 7: the instruction changed, so records must not claim 1.0."""
     assert LINKEDIN_COMPOSITION_RULES_VERSION == "linkedin-medium-native/1.1"

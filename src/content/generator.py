@@ -10,7 +10,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from src.content.output_guard import repeated_cross_platform_phrases, validate_platform_output
+from src.content.output_guard import validate_platform_output
 from src.models import ContentBrief, ContentMatrix, ContentPackage
 from src.utils.config_loader import load_prompt
 from src.utils.llm_client import chat_json
@@ -187,45 +187,6 @@ def generate_stories(brief: ContentBrief, matrix: ContentMatrix) -> list[dict]:
     return frames
 
 
-def _validate_cross_platform_outputs(
-    blog: str,
-    linkedin: str,
-    instagram: str,
-    facebook: str,
-    threads: list[str],
-    telegram: str,
-) -> None:
-    # #221 product decision: Wix↔LinkedIn sentence overlap is ALLOWED. The post
-    # is a shorter channel version of the same article, so a shared hook, shared
-    # sentences and a shared Never Blank Echo are not defects. The blog and
-    # linkedin surfaces are therefore compared against the other channels but
-    # never against each other.
-    #
-    # Every other pair keeps the original rule: a sentence copied verbatim into,
-    # say, Instagram and Telegram still means the platform layer collapsed into
-    # copy-paste, and that is a real failure this check exists to catch.
-    repeated = [
-        item for item in repeated_cross_platform_phrases(
-            {
-                "blog": blog,
-                "linkedin": linkedin,
-                "instagram": instagram,
-                "facebook": facebook,
-                "threads": " ".join(threads),
-                "telegram": telegram,
-            }
-        )
-        if set(item["platforms"]) != {"blog", "linkedin"}
-    ]
-    if repeated:
-        preview = "; ".join(
-            f"{item['platforms']}: {item['phrase'][:80]}" for item in repeated[:3]
-        )
-        raise ValueError(
-            "Cross-platform copy detected. Each platform must receive native wording. " + preview
-        )
-
-
 def generate_content_package(brief: ContentBrief, matrix: ContentMatrix) -> ContentPackage:
     """Generate every platform body and fail closed when any active output is malformed."""
     _require_api_key()
@@ -239,15 +200,6 @@ def generate_content_package(brief: ContentBrief, matrix: ContentMatrix) -> Cont
     thr = generate_threads(brief, matrix, blog_body=body)
     tg = generate_telegram(brief, matrix)
     st = generate_stories(brief, matrix)
-
-    _validate_cross_platform_outputs(
-        body,
-        li.get("text", ""),
-        ig.get("caption", ""),
-        fb.get("text", ""),
-        thr.get("sequence", []),
-        tg.get("text", ""),
-    )
 
     log.info(
         "Content generation complete: blog=%d linkedin=%d ig=%d fb=%d threads=%d tg=%d stories=%d",

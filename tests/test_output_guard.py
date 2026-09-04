@@ -1,7 +1,6 @@
 import pytest
 
 from src.content.output_guard import (
-    repeated_cross_platform_phrases,
     validate_no_detective_template,
     validate_no_duplicate_echo,
     validate_opening,
@@ -57,10 +56,9 @@ def test_duplicate_echo_rejected():
         validate_no_duplicate_echo(text, "instagram")
 
 
-def test_cross_platform_verbatim_sentence_is_reported():
-    repeated = "Your busiest month can be the month customers stop encountering your business."
-    findings = repeated_cross_platform_phrases(
-        {"linkedin": repeated, "instagram": repeated, "telegram": "Different signal."}
-    )
-    assert len(findings) == 1
-    assert findings[0]["platforms"] == ["instagram", "linkedin"]
+def test_the_guard_module_no_longer_detects_cross_platform_repetition():
+    """#221: sentence recurrence across surfaces is allowed, so the detector
+    that existed only to reject it was removed with its two callers."""
+    import src.content.output_guard as guard
+
+    assert not hasattr(guard, "repeated_cross_platform_phrases")
