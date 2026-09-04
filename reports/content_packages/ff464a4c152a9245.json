@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "ff464a4c152a9245",
+  "HEADLINE": "AI Slop Cleanup Job Listings Up 87%, Report Says via @sejournal, @MattGSouthern",
+  "prepared_at": "2026-09-04 12:39 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why AI Content Cleanup Jobs Are Surging—and What It Means for Your Brand",
+      "angle": "The rapid rise in AI content cleanup listings reveals a tension between demand for scalable AI output and the reluctance to pay for human quality control, forcing businesses to confront the hidden costs of undervaluing essential oversight to protect content integrity and brand reputation."
+    },
+    "linkedin": {
+      "headline": "Everyone wants AI content at scale—no one wants to pay for the mess it makes.",
+      "angle": "The surge in AI cleanup jobs exposes a costly blind spot: skimping on human oversight risks bottlenecks and brand damage in content operations."
+    },
+    "facebook": {
+      "headline": "AI content cleanup jobs are up 87%—but freelancers say clients still undervalue the work.",
+      "angle": "As demand for AI-generated content grows, the reluctance to fairly compensate cleanup labor creates bottlenecks—how is your business handling quality assurance?"
+    },
+    "instagram": {
+      "headline": "Undervalued AI Cleanup Is Your Content Bottleneck",
+      "angle": "Scaling AI content without paying for quality control stalls operations and risks your brand’s credibility."
+    },
+    "threads": {
+      "thread_hook": "The AI content boom is hiding a costly bottleneck: underpaid cleanup work.",
+      "angle": "This thread breaks down why ignoring fair compensation for AI content cleanup creates operational choke points that can derail your content strategy and damage your brand."
+    },
+    "stories": {
+      "story_question": "Are you paying enough for the AI content cleanup your brand really needs?",
+      "angle": "Exploring how undervaluing human oversight in AI content pipelines can stall growth and harm brand trust."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525541/never-blank/posts/research/ff464a4c152a9245/blog/1788525540.png",
+        "path": "reports/content_packages/images/ff464a4c152a9245_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525544/never-blank/posts/research/ff464a4c152a9245/linkedin/1788525543.png",
+        "path": "reports/content_packages/images/ff464a4c152a9245_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525547/never-blank/posts/research/ff464a4c152a9245/facebook/1788525546.png",
+        "path": "reports/content_packages/images/ff464a4c152a9245_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525552/never-blank/posts/research/ff464a4c152a9245/instagram/1788525552.png",
+        "path": "reports/content_packages/images/ff464a4c152a9245_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525557/never-blank/posts/research/ff464a4c152a9245/threads/1788525556.png",
+        "path": "reports/content_packages/images/ff464a4c152a9245_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525565/never-blank/posts/research/ff464a4c152a9245/stories/1788525565.png",
+        "path": "reports/content_packages/images/ff464a4c152a9245_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "particle_flow",
+    "hook_text": "Job listings for AI cleanup surge 87%, but value remains low."
+  }
+}

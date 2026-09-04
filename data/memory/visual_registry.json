@@ -451,6 +451,36 @@
       "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788439444/never-blank/posts/research/78a4cae64364db20/blog/1788439444.png",
       "source_topic": "Google AI Mode Prices Differ From Product Carousel For Same Items via @sejournal, @MattGSouthern",
       "reuse_count": 1
+    },
+    {
+      "published_date": "2026-09-04T12:38:10Z",
+      "content_slug": "research/f858bf36b66123f1",
+      "visual_family": "dark_insight_card",
+      "dominant_palette": "deep_navy",
+      "hook_text": "Most B2B brands still treat product pages like digital catalogs\u2014meanwhile, AI is treating them like gospel.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525484/never-blank/posts/research/f858bf36b66123f1/blog/1788525483.png",
+      "source_topic": "Product Pages Get 24% Of AI Citations, Reddit & YouTube 4% via @sejournal, @gregjarboe",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-09-04T12:39:26Z",
+      "content_slug": "research/ff464a4c152a9245",
+      "visual_family": "particle_flow",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "Job listings for AI cleanup surge 87%, but value remains low.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525541/never-blank/posts/research/ff464a4c152a9245/blog/1788525540.png",
+      "source_topic": "AI Slop Cleanup Job Listings Up 87%, Report Says via @sejournal, @MattGSouthern",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-09-04T12:40:43Z",
+      "content_slug": "research/b1b47c3136be00e4",
+      "visual_family": "constellation_networks",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "Enhanced security: Two-step verification and passkeys.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525620/never-blank/posts/research/b1b47c3136be00e4/blog/1788525619.png",
+      "source_topic": "WhatsApp Enhances Security with Upgraded Two-Step Verification and Passkeys",
+      "reuse_count": 1
     }
   ]
 }

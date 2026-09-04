@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "f858bf36b66123f1",
+  "HEADLINE": "Product Pages Get 24% Of AI Citations, Reddit & YouTube 4% via @sejournal, @gregjarboe",
+  "prepared_at": "2026-09-04 12:38 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why Product Pages Command 24% of AI Citations and What That Means for B2B Founders",
+      "angle": "AI’s growing reliance on product pages creates tension for founders deciding where to invest—owned content or third-party platforms—and demands a new approach to optimize product pages for both humans and AI to secure visibility and trust."
+    },
+    "linkedin": {
+      "headline": "Most B2B brands still treat product pages like digital catalogs—meanwhile, AI is treating them like gospel.",
+      "angle": "Product pages now earn nearly a quarter of AI citations, signaling that founders who optimize these pages for AI and buyers can dominate discovery and trust in B2B e-commerce."
+    },
+    "facebook": {
+      "headline": "Product pages get 24% of AI citations, while Reddit and YouTube lag at 4% each.",
+      "angle": "A recent citation study reveals product pages as the go-to source for AI-driven B2B discovery—are you investing enough in your owned content to stay visible?"
+    },
+    "instagram": {
+      "headline": "Product Pages: AI’s Trusted Source",
+      "angle": "AI’s citation patterns show product pages are the new authority in B2B discovery—founders ignoring this risk fading into the noise."
+    },
+    "threads": {
+      "thread_hook": "AI citations put product pages in the spotlight—24% of all references come from them, dwarfing Reddit and YouTube.",
+      "angle": "This thread breaks down why founders must rethink product page strategy to balance human readability with AI’s criteria, or lose ground in B2B visibility."
+    },
+    "stories": {
+      "story_question": "Are your product pages built for AI as much as buyers?",
+      "angle": "Exploring the tension founders face between investing in owned product content versus chasing third-party platform traffic as AI reshapes discovery."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525484/never-blank/posts/research/f858bf36b66123f1/blog/1788525483.png",
+        "path": "reports/content_packages/images/f858bf36b66123f1_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525485/never-blank/posts/research/f858bf36b66123f1/linkedin/1788525485.png",
+        "path": "reports/content_packages/images/f858bf36b66123f1_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525486/never-blank/posts/research/f858bf36b66123f1/facebook/1788525486.png",
+        "path": "reports/content_packages/images/f858bf36b66123f1_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525487/never-blank/posts/research/f858bf36b66123f1/instagram/1788525487.png",
+        "path": "reports/content_packages/images/f858bf36b66123f1_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525488/never-blank/posts/research/f858bf36b66123f1/threads/1788525488.png",
+        "path": "reports/content_packages/images/f858bf36b66123f1_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525490/never-blank/posts/research/f858bf36b66123f1/stories/1788525489.png",
+        "path": "reports/content_packages/images/f858bf36b66123f1_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "dark_insight_card",
+    "hook_text": "Most B2B brands still treat product pages like digital catalogs—meanwhile, AI is treating them like gospel."
+  }
+}

@@ -833,5 +833,35 @@
     "visual_family": "sand_pause_card",
     "design_version": "3",
     "hook_text": "Your product is in Google’s carousel—but invisible in AI Mode. Which version do your customers see?"
+  },
+  "f858bf36b66123f1": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525484/never-blank/posts/research/f858bf36b66123f1/blog/1788525483.png",
+    "signal_type": "referral and word-of-mouth mechanism",
+    "headline": "Product Pages Get 24% Of AI Citations, Reddit & YouTube 4% via @sejournal, @gregjarboe",
+    "created_at": "2026-09-04",
+    "method": "quote_card",
+    "visual_family": "dark_insight_card",
+    "design_version": "3",
+    "hook_text": "Most B2B brands still treat product pages like digital catalogs—meanwhile, AI is treating them like gospel."
+  },
+  "ff464a4c152a9245": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525541/never-blank/posts/research/ff464a4c152a9245/blog/1788525540.png",
+    "signal_type": "owner bottleneck",
+    "headline": "AI Slop Cleanup Job Listings Up 87%, Report Says via @sejournal, @MattGSouthern",
+    "created_at": "2026-09-04",
+    "method": "gpt-image-1",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "Job listings for AI cleanup surge 87%, but value remains low."
+  },
+  "b1b47c3136be00e4": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788525620/never-blank/posts/research/b1b47c3136be00e4/blog/1788525619.png",
+    "signal_type": "trust accumulation pattern",
+    "headline": "WhatsApp Enhances Security with Upgraded Two-Step Verification and Passkeys",
+    "created_at": "2026-09-04",
+    "method": "gpt-image-1",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "Enhanced security: Two-step verification and passkeys."
   }
 }
