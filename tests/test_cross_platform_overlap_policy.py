@@ -29,6 +29,12 @@ import pytest
 
 from src.content.generator import _validate_cross_platform_outputs
 from src.content.output_guard import repeated_cross_platform_phrases
+from src.editorial.platform_composer import (
+    _FORMAT_CONSTRAINTS,
+    _SYSTEM_PROMPT,
+    _build_user_prompt,
+    LINKEDIN_COMPOSITION_RULES_VERSION,
+)
 
 #: The exact sentence that blocked run 33913287027.
 LIVE_HOOK = ("Investors cheered not because ChargePoint promised more growth, "
@@ -168,3 +174,107 @@ def test_the_three_channel_publish_guard_is_untouched():
     source = Path("scripts/research/publish_packages.py").read_text()
     assert "repeated_cross_platform_phrases" in source
     assert 'len(d.get("platforms", [])) >= 3' in source
+
+
+# ---------------------------------------------------------------------------
+# The rule as an ACTIVE MODEL INSTRUCTION.
+#
+# Removing the validator only stops the pipeline from *rejecting* a shared
+# opening. The composer was still being *told* not to write one, so the
+# withdrawn rule went on shaping every LinkedIn body — a product rule enforced
+# by prompt instead of by code, which is harder to see and just as binding.
+# These scenarios read the prompt actually sent to the model.
+# ---------------------------------------------------------------------------
+
+ARTICLE = (
+    f"{LIVE_HOOK} The company cut its expansion plan by a third and the market "
+    "read that as discipline rather than retreat. For an owner, the same "
+    "mechanism decides whether slowing down looks like control or collapse. "
+    f"{ECHO}"
+)
+
+STRUCTURED = {
+    "narrative_spine": "Slowing down can be the growth story.",
+    "hook": LIVE_HOOK,
+    "echo_line": ECHO,
+}
+
+#: Phrasings that would forbid the composer from opening LinkedIn with the
+#: article's own hook. Matched against the rendered prompt, lowercased.
+FORBIDDING_PHRASINGS = (
+    "never with the blog opening",
+    "do not reuse the blog",
+    "not reuse the blog or linkedin opening",
+    "do not copy sentences from another format",
+    "must not copy the blog intro",
+    "do not trim or paraphrase another platform's prose",
+    "copying its paragraphs or sentences wholesale",
+)
+
+
+def _linkedin_prompt(**kwargs) -> str:
+    """The real user prompt for the canonical LinkedIn (``medium``) artifact."""
+    return _build_user_prompt(STRUCTURED, "medium", "none", **kwargs)
+
+
+@pytest.mark.parametrize("phrase", FORBIDDING_PHRASINGS)
+def test_the_active_linkedin_prompt_does_not_forbid_the_blog_opening(phrase):
+    prompt = (_linkedin_prompt(canonical_body=ARTICLE) + "\n" + _SYSTEM_PROMPT).lower()
+    assert phrase not in prompt, f"active LinkedIn prompt still instructs: {phrase!r}"
+
+
+def test_the_linkedin_format_rules_no_longer_mention_the_blog_opening():
+    """The `medium` constraint is the instruction the reviewer named."""
+    rules = _FORMAT_CONSTRAINTS["medium"].lower()
+    assert "opening sentence" not in rules
+    assert "never with the blog" not in rules
+    # ...and the useful half survives.
+    assert "native linkedin post, not a shortened blog" in rules
+
+
+def test_the_facebook_format_rules_no_longer_mention_the_blog_opening():
+    rules = _FORMAT_CONSTRAINTS["reading"].lower()
+    assert "opening sentence" not in rules
+    assert "do not reuse the blog" not in rules
+
+
+def test_the_active_linkedin_prompt_still_forbids_republishing_the_article():
+    """Item 2: the distinction we keep — native post vs the whole article."""
+    prompt = _linkedin_prompt(canonical_body=ARTICLE).lower()
+    assert "not a shortened blog" in prompt
+    assert "reproducing the long-form wholesale" in prompt
+    assert "trimmed to length is rejected" in prompt
+
+
+def test_the_active_linkedin_prompt_does_not_instruct_copying_the_article():
+    """Item 2: permitting a shared hook is not the same as requesting a copy."""
+    prompt = _linkedin_prompt(canonical_body=ARTICLE).lower()
+    for demand in ("copy the article", "reuse the article body",
+                   "repeat the article", "use the same body"):
+        assert demand not in prompt
+
+
+def test_the_echo_verbatim_carve_out_survives_the_rewrite():
+    """The canonical-content block still exempts required-verbatim elements."""
+    prompt = _linkedin_prompt(canonical_body=ARTICLE)
+    assert "governs ORDINARY PROSE ONLY" in prompt
+    assert "must still be reproduced exactly as supplied" in prompt
+
+
+def test_the_linkedin_post_yaml_prompt_no_longer_forbids_the_blog_intro():
+    """The legacy `config/prompts/linkedin_post.yaml` carried the rule too.
+
+    Read as text, not via ``load_prompt``: that file does not currently parse
+    as YAML (an inline ``#hashtag`` truncates a scalar around line 64), a
+    pre-existing defect on the non-R1 ``generate_content_package`` path. The
+    withdrawn instruction is still removed, so the rule cannot return with the
+    prompt if that path is ever repaired.
+    """
+    text = Path("config/prompts/linkedin_post.yaml").read_text().lower()
+    assert "must not copy the blog intro" not in text
+    assert "post, not the article at linkedin length" in text
+
+
+def test_the_composition_rules_version_records_the_new_semantics():
+    """Item 5: the instruction changed, so records must not claim 1.0."""
+    assert LINKEDIN_COMPOSITION_RULES_VERSION == "linkedin-medium-native/1.1"

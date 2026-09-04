@@ -281,13 +281,17 @@ def _canonical_prompt() -> str:
 def test_the_copying_rule_is_scoped_to_ordinary_prose():
     prompt = _canonical_prompt()
 
-    # the derive-don't-copy principle is stated …
-    assert "rather than copying its paragraphs or sentences wholesale" in prompt
+    # the derive-don't-republish principle is stated …
+    assert "rather than reproducing the long-form wholesale" in prompt
     # … and it is explicitly limited to ordinary prose, not stated absolutely
     assert "This rule governs ORDINARY PROSE ONLY" in prompt
     # the unqualified form that could not coexist with a verbatim Echo is gone
     assert "Derive, never copy" not in prompt
     assert "reusing its sentences verbatim is rejected" not in prompt
+    # #221: and it is no longer stated at sentence level either — a shared
+    # hook is a product decision, so the rule now names the whole-body copy
+    assert "copying its paragraphs or sentences wholesale" not in prompt
+    assert "sentences MAY recur where they earn it" in prompt
 
 
 def test_contract_required_verbatim_content_is_explicitly_exempt():
@@ -312,7 +316,7 @@ def test_the_exception_travels_with_the_prohibition():
     prompt = _canonical_prompt()
     block = prompt.split("FINAL CANONICAL CONTENT")[1].split(_ECHO)[0]
 
-    prohibition = block.index("rather than copying its paragraphs")
+    prohibition = block.index("rather than reproducing the long-form wholesale")
     exemption = block.index("This rule governs ORDINARY PROSE ONLY")
     assert prohibition < exemption
 

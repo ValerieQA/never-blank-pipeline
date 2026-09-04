@@ -65,7 +65,13 @@ _PLATFORM_NAMES = {
 # Version of the LinkedIn-native composition instruction and rule wiring for
 # the canonical ``medium`` artifact. Recorded in every LinkedIn composition
 # record; bump in a reviewed commit when composition semantics change.
-LINKEDIN_COMPOSITION_RULES_VERSION = "linkedin-medium-native/1.0"
+#
+# 1.1 (#221): the instruction no longer tells the model to avoid the article's
+# opening sentence. Sentence-level overlap between Wix and LinkedIn is a
+# product decision, so a shared hook is permitted rather than prohibited — a
+# real change in what the composer is asked to produce, and therefore a new
+# version on every record written from here on.
+LINKEDIN_COMPOSITION_RULES_VERSION = "linkedin-medium-native/1.1"
 
 _FORMAT_CONSTRAINTS = {
     "long": (
@@ -81,14 +87,17 @@ _FORMAT_CONSTRAINTS = {
     # Facebook long-form. Format keys stay stable; only channel semantics
     # were realigned to the authoritative consumer.
     "reading": (
-        "Write conversationally for Facebook. Use a human owner scenario and one complete "
-        "mechanism. Do not reuse the Blog or LinkedIn opening sentence."
+        "Write conversationally for Facebook. Use a human owner scenario and one "
+        "complete mechanism. Compose for this surface rather than trimming another "
+        "channel's body; a shared opening line or Echo is allowed."
     ),
     "medium": (
-        "Write a native LinkedIn post, not a shortened blog. Begin with the owner's "
-        "recognizable situation, never with the Blog opening sentence. Use short paragraphs "
-        "of one to three sentences. One corporate example maximum. Stay within the target "
-        "length; LinkedIn readers scan."
+        "Write a native LinkedIn post, not a shortened blog: compose it for the feed "
+        "rather than trimming the article down to length. It MAY open with the "
+        "article's own hook — a strong opening is worth repeating, and a reader who "
+        "arrives at the article from this post is helped by recognising it. "
+        "Use short paragraphs of one to three sentences. One corporate example "
+        "maximum. Stay within the target length; LinkedIn readers scan."
     ),
     "instagram": (
         "Make the reader feel a specific owner situation before explaining it. No research diary, "
@@ -103,7 +112,9 @@ _FORMAT_CONSTRAINTS = {
 _SYSTEM_PROMPT = """You are the Platform Composer for Never Blank.
 
 The small-business owner is the central character. Write a fresh native body for the requested
-format from structured semantic fields. Do not trim or paraphrase another platform's prose.
+format from structured semantic fields. Compose for the format rather than trimming another
+platform's body down to size; individual lines — a strong hook, the Echo — may recur across
+formats.
 
 Article arc (production): Hook → Recognition → Tension → Market Observation → Investigation →
 Mechanism → Business Consequence → Reframe → Echo → Soft CTA.
@@ -404,9 +415,11 @@ def _build_user_prompt(
             "not supported by it, and where the structured fields below "
             "differ from it, the final content wins. Write this format's "
             "prose as your own derivative of that content rather than "
-            "copying its paragraphs or sentences wholesale — reused "
-            "long-form prose is rejected as non-channel-native. This rule "
-            "governs ORDINARY PROSE ONLY: any element an instruction below "
+            "reproducing the long-form wholesale — a body that is simply "
+            "the article trimmed to length is rejected. Individual "
+            "sentences MAY recur where they earn it: the hook and the Echo "
+            "in particular are meant to travel between surfaces. "
+            "This rule governs ORDINARY PROSE ONLY: any element an instruction below "
             "requires to appear verbatim (the ECHO MODE line, for example) "
             "must still be reproduced exactly as supplied, even when the "
             "same wording also appears in the content above. Those "
@@ -469,7 +482,11 @@ def _build_user_prompt(
     else:
         lines.append("ECHO MODE: none; do not invent an echo.")
 
-    lines.append("Write the native platform body now. Do not copy sentences from another format.")
+    lines.append(
+        "Write the native platform body now. Compose it for this format rather "
+        "than pasting another format's body; a line that belongs on this surface "
+        "— the hook, the Echo — may be the same line another format uses."
+    )
     if editorial_role_rules:
         # Issue #142: which editorial role this run is producing. The rules are
         # configured by the business, never inferred here from a weekday.
