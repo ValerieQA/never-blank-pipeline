@@ -162,7 +162,10 @@ from src.editorial.editorial_role import (
     render_editorial_role_rules,
     resolve_editorial_role,
 )
-from src.editorial.sources_of_record import render_sources_of_record
+from src.editorial.sources_of_record import (
+    render_sources_of_record,
+    source_records,
+)
 from src.editorial.source_transparency import (
     SocialLineageError,
     SourceTransparencyError,
@@ -216,6 +219,7 @@ from src.editorial.editorial_acceptance import (
     run_editorial_acceptance,
 )
 from src.publishing import formatting
+from src.publishing.formatting import ensure_source_line
 from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
 from src.publishing.hashtags import generate_hashtags
 from src.publishing.facebook import FacebookPublisher
@@ -332,6 +336,34 @@ _OK_STATUSES   = {"PUBLISHED", "DRAFT_CREATED", "published_url_unavailable"}
 # neither a successful publication nor a completed one.
 _COMPLETED_STATUSES = _OK_STATUSES | {"REUSED"}
 DEFAULT_INTAKE_ADAPTER: IntakeAdapter = JsonlIntakeAdapter()
+
+
+def _source_of_record_attribution(signal: dict, research) -> Optional[tuple]:
+    """The (name, url) Wednesday may cite, or None (#219).
+
+    The URL must be one the run's research artifact actually recorded, because
+    that artifact is exactly what the source-transparency gate validates
+    against. Citing anything else would either fail that gate or, worse, put a
+    link in the published article that no stage ever retrieved.
+
+    The label is the signal's own ``SOURCE_NAME`` — the same value the
+    formatting stage already uses — so the footer this produces is
+    byte-identical to the one the run would have appended later anyway.
+    Nothing here invents a field: a signal with no URL, or a URL the run did
+    not retrieve, returns None and the gate stops the run on its own terms.
+    """
+    url = str(signal.get("SOURCE_URL") or "").strip()
+    if not url:
+        return None
+    try:
+        of_record = {
+            item["url"] for item in source_records(research) if item.get("url")
+        }
+    except Exception:                      # a malformed artifact cites nothing
+        return None
+    if url not in of_record:
+        return None
+    return str(signal.get("SOURCE_NAME") or "").strip(), url
 
 
 def _load_signal(signal_id: str) -> dict:
@@ -2196,6 +2228,38 @@ def _run(
             # but the run says so honestly instead of silently.
             print(f"  ⚠  accepted compositions could not be preserved: {exc}")
 
+        # ── Wednesday deterministic attribution (Issue #219) ────────────────
+        # The restored July composer writes no attribution: July had no
+        # transparency gate, and Wednesday's role rules are deliberately inert
+        # during generation (#209/#210), so the block that tells Monday's
+        # model to cite never reaches it. Live run 33884765429 produced a
+        # complete, ACCEPTED article and was stopped here, correctly.
+        #
+        # The footer is not new: the formatting stage below already appends
+        # exactly this line to every stream. It simply appended it *after* this
+        # gate, so the body being validated was never the body being published.
+        # Applying it here for Wednesday closes both problems at once — the
+        # article gains real attribution, and validated body == published body.
+        #
+        # Deterministic and derived, never generated: no model call, no prompt
+        # change, and the URL must be one the research artifact recorded.
+        # Placed after social recomposition so the LinkedIn derivation is
+        # untouched — the post carries the canonical article link, never the
+        # original source URL (#196).
+        _attribution_applied = False
+        if is_wednesday_role(_editorial_role_identity):
+            _attribution = _source_of_record_attribution(signal, research_artifact)
+            if _attribution is not None:
+                blog_body = ensure_source_line(
+                    blog_body, _attribution[0], _attribution[1], "blog_markdown"
+                )
+                _attribution_applied = True
+                print(f"  ✓  wednesday attribution: {_attribution[0] or _attribution[1]}")
+            else:
+                # Fail open here would be fail open at the gate. Say nothing
+                # was added and let source transparency stop the run.
+                print("  ⚠  wednesday attribution: no source-of-record URL to cite")
+
         # Issue #142 review round 2: a role may require source transparency
         # as a fail-closed publication condition. The prompt asked for
         # attribution; here the accepted CANONICAL ARTICLE is verified against
@@ -2260,7 +2324,14 @@ def _run(
         # ── 5. Apply formatting + save ─────────────────────────────────────────
         source_name = signal.get("SOURCE_NAME", "")
         source_url  = signal.get("SOURCE_URL", "")
-        blog_body      += formatting.source_line(source_name, source_url, "blog_markdown")
+        # #219: Wednesday already applied this exact footer before the
+        # transparency gate, so validated body == published body. Skipped
+        # rather than made idempotent here so this line stays byte-identical
+        # for every other stream.
+        if not _attribution_applied:
+            blog_body += formatting.source_line(
+                source_name, source_url, "blog_markdown"
+            )
         # #196: the LinkedIn post no longer carries the original source's URL
         # — the canonical Never Blank article owns the external-source links,
         # and the post's destination is the published article itself. That
