@@ -195,16 +195,28 @@ def _validate_cross_platform_outputs(
     threads: list[str],
     telegram: str,
 ) -> None:
-    repeated = repeated_cross_platform_phrases(
-        {
-            "blog": blog,
-            "linkedin": linkedin,
-            "instagram": instagram,
-            "facebook": facebook,
-            "threads": " ".join(threads),
-            "telegram": telegram,
-        }
-    )
+    # #221 product decision: Wix↔LinkedIn sentence overlap is ALLOWED. The post
+    # is a shorter channel version of the same article, so a shared hook, shared
+    # sentences and a shared Never Blank Echo are not defects. The blog and
+    # linkedin surfaces are therefore compared against the other channels but
+    # never against each other.
+    #
+    # Every other pair keeps the original rule: a sentence copied verbatim into,
+    # say, Instagram and Telegram still means the platform layer collapsed into
+    # copy-paste, and that is a real failure this check exists to catch.
+    repeated = [
+        item for item in repeated_cross_platform_phrases(
+            {
+                "blog": blog,
+                "linkedin": linkedin,
+                "instagram": instagram,
+                "facebook": facebook,
+                "threads": " ".join(threads),
+                "telegram": telegram,
+            }
+        )
+        if set(item["platforms"]) != {"blog", "linkedin"}
+    ]
     if repeated:
         preview = "; ".join(
             f"{item['platforms']}: {item['phrase'][:80]}" for item in repeated[:3]

@@ -15,6 +15,8 @@ from unittest import mock
 
 import pytest
 
+from pathlib import Path
+
 import scripts.generate_and_publish as gap
 from scripts.generate_and_publish import main
 from src.editorial.linkedin_composition import (
@@ -173,26 +175,84 @@ def test_identical_copy_of_the_article_is_rejected():
         accept_linkedin_composition(**_accept_kwargs(linkedin_body=ARTICLE_BODY))
 
 
-def test_copied_opening_is_rejected():
-    body = ("The blog article develops a complete owner-centered argument about "
-            "structural visibility debt. " + _native_linkedin_body())
-    with pytest.raises(LinkedInCompositionError, match="opening"):
-        accept_linkedin_composition(**_accept_kwargs(
-            linkedin_body=body,
-            article_body="The blog article develops a complete owner-centered "
-                         "argument about structural visibility debt. And then "
-                         "continues into the long-form reasoning at length.",
-        ))
+#: The exact Wix opening from CONTROLLED_LIVE run 33913287027, which the
+#: withdrawn rule rejected. The hook is the article's strongest sentence and
+#: the product owner wants it to open both surfaces.
+LIVE_HOOK = ("Investors cheered not because ChargePoint promised more growth, "
+             "but because it finally slowed down.")
 
 
-def test_sentence_length_copying_is_rejected():
-    stolen = ("A business whose presence depends entirely on the owner will be "
+def test_a_shared_opening_sentence_is_accepted():
+    """#221: the live blocker from run 33913287027, now allowed.
+
+    A reader arriving from LinkedIn is helped, not confused, by recognising
+    the opening they clicked. Weakening the hook to manufacture cross-channel
+    novelty made the product worse, so the rule was withdrawn.
+    """
+    article = LIVE_HOOK + " " + ARTICLE_BODY
+    body = LIVE_HOOK + " " + _native_linkedin_body()
+
+    record = accept_linkedin_composition(**_accept_kwargs(
+        linkedin_body=body, article_body=article))
+
+    assert record.linkedin_body == body.strip()
+    assert record.linkedin_body.startswith(LIVE_HOOK)
+
+
+def test_a_shared_never_blank_echo_is_accepted():
+    """The Echo is *meant* to recur — it is the brand's closing signature."""
+    echo = ("Never Blank: Sometimes, the most compelling growth story is about "
+            "knowing when to hit the brakes.")
+    article = ARTICLE_BODY + " " + echo
+    body = _native_linkedin_body() + " " + echo
+
+    record = accept_linkedin_composition(**_accept_kwargs(
+        linkedin_body=body, article_body=article))
+
+    assert record.linkedin_body.endswith(echo)
+
+
+def test_shared_sentence_length_prose_is_accepted():
+    """Sentence overlap alone is not evidence of a copy defect (#221)."""
+    shared = ("A business whose presence depends entirely on the owner will be "
               "least visible when it most needs attention.")
-    article = ARTICLE_BODY + " " + stolen
-    body = _native_linkedin_body() + " " + stolen
-    with pytest.raises(LinkedInCompositionError, match="copies sentence-length"):
-        accept_linkedin_composition(**_accept_kwargs(
-            linkedin_body=body, article_body=article))
+    article = ARTICLE_BODY + " " + shared
+    body = _native_linkedin_body() + " " + shared
+
+    record = accept_linkedin_composition(**_accept_kwargs(
+        linkedin_body=body, article_body=article))
+
+    assert shared in record.linkedin_body
+
+
+def test_both_the_hook_and_the_echo_may_be_shared_at_once():
+    echo = "Never Blank: the boundary moved before the balance sheet did."
+    article = f"{LIVE_HOOK} {ARTICLE_BODY} {echo}"
+    body = f"{LIVE_HOOK} {_native_linkedin_body()} {echo}"
+
+    record = accept_linkedin_composition(**_accept_kwargs(
+        linkedin_body=body, article_body=article))
+
+    assert record.linkedin_body.startswith(LIVE_HOOK)
+    assert record.linkedin_body.endswith(echo)
+
+
+def test_the_withdrawn_rules_are_gone_from_the_module():
+    """Structural: no first-sentence rule, no shared-phrase rule (#221)."""
+    import ast
+
+    source = Path("src/editorial/linkedin_composition.py").read_text()
+    tree = ast.parse(source)
+    names = {
+        node.id if isinstance(node, ast.Name) else node.attr
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Name, ast.Attribute))
+    }
+    assert "repeated_cross_platform_phrases" not in names
+    assert "_first_sentence" not in names
+    # …and the module no longer claims the rule in prose either
+    assert "distinct opening" not in source
+    assert "no shared sentence-length phrase" not in source
 
 
 @pytest.mark.parametrize("words,expect", [(20, "outside"), (400, "outside")])
@@ -206,6 +266,25 @@ def test_length_outside_release1_tolerance_is_rejected(words, expect):
 def test_malformed_or_empty_composition_fails_closed(bad):
     with pytest.raises(LinkedInCompositionError, match="empty or malformed"):
         accept_linkedin_composition(**_accept_kwargs(linkedin_body=bad))
+
+
+@pytest.mark.parametrize("bad", ["", "   ", None])
+def test_missing_accepted_article_fails_closed(bad):
+    """#221 removed style rules, not lineage: an absent article still stops."""
+    with pytest.raises(LinkedInCompositionError, match="has no lineage"):
+        accept_linkedin_composition(**_accept_kwargs(article_body=bad))
+
+
+def test_invalid_platform_output_still_fails_closed():
+    """Platform output validation is untouched by the product decision.
+
+    A dictionary-style opening is what that validator exists to refuse; it is
+    unrelated to cross-channel overlap and must keep refusing it.
+    """
+    body = ("The Northwind Group is a company that provides charging services "
+            "to drivers across the region. ") + " ".join(["word"] * 140)
+    with pytest.raises(LinkedInCompositionError, match="platform output validation"):
+        accept_linkedin_composition(**_accept_kwargs(linkedin_body=body))
 
 
 def test_revised_article_invalidates_pre_revision_composition():
