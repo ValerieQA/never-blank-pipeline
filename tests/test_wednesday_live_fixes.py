@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -558,6 +559,15 @@ _LIVE_FEED = """<?xml version="1.0"?><rss version="2.0"><channel>
 </channel></rss>"""
 
 
+class _LiveRunClock(datetime):
+    """Keep the 2026-08-29 replay inside July discovery's 72-hour window."""
+
+    @classmethod
+    def now(cls, tz=None):
+        value = datetime(2026, 8, 30, 12, 0, tzinfo=timezone.utc)
+        return value if tz else value.replace(tzinfo=None)
+
+
 def test_the_live_invalid_model_failure_is_caught_through_the_real_modules(
     tmp_path,
 ):
@@ -581,7 +591,10 @@ def test_the_live_invalid_model_failure_is_caught_through_the_real_modules(
     def provider_rejects(*args, **kwargs):
         raise RuntimeError(INVALID_MODEL)
 
-    patches = [mock.patch(f"{RESEARCH}.discover.requests.get", side_effect=fetch)]
+    patches = [
+        mock.patch(f"{RESEARCH}.discover.requests.get", side_effect=fetch),
+        mock.patch(f"{RESEARCH}.discover.datetime", _LiveRunClock),
+    ]
     patches += [
         mock.patch(f"{RESEARCH}.{module}.chat", side_effect=provider_rejects)
         for module in ("discover", "enrich", "angles", "score")

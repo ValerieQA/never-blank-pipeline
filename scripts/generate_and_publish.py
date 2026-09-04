@@ -124,6 +124,8 @@ from src.intake.assignment_record import AssignmentRecord
 from src.intake.audience_routing import audience_request
 from src.run.code_identity import resolve_code_identity
 from src.run.call_budget import (
+    R1_MAX_CEILING,
+    WEDNESDAY_MAX_CEILING,
     RunCallBudget,
     RunCallBudgetExceededError,
     activate_call_budget,
@@ -169,6 +171,7 @@ from src.editorial.source_transparency import (
 )
 from src.never_blank.wednesday_july import WednesdayGenerationError
 from src.never_blank.wednesday_routing import (
+    WEDNESDAY_ROLE_ID,
     generate_for_wednesday,
     is_wednesday_role,
 )
@@ -744,12 +747,26 @@ def main(
     """
 
     state = _TerminalState()
+    # #217: resolve only the declared role needed to choose the finite budget
+    # before the full entrypoint parses and executes. Unknown arguments stay
+    # untouched for the canonical parser below.
+    budget_parser = argparse.ArgumentParser(add_help=False)
+    budget_parser.add_argument("--editorial-role", default="")
+    budget_args, _ = budget_parser.parse_known_args()
     # #171: one deterministic ceiling on paid text-model calls for the whole
     # run. The budget is constructed per run (reset = construction), charged
     # inside the shared client before each transport, and exhausted budgets
     # fail the run closed here — after the last reached stage is recorded,
     # before any further paid call, with the standard terminal accounting.
-    budget = RunCallBudget(limit=configured_run_call_ceiling())
+    budget_limit = configured_run_call_ceiling(budget_args.editorial_role or None)
+    budget = RunCallBudget(
+        limit=budget_limit,
+        hard_max=(
+            WEDNESDAY_MAX_CEILING
+            if budget_args.editorial_role == WEDNESDAY_ROLE_ID
+            else R1_MAX_CEILING
+        ),
+    )
     try:
         with activate_call_budget(budget):
             exit_code = _run(
