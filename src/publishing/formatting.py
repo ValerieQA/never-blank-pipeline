@@ -92,6 +92,28 @@ def source_line(source_name: str, source_url: str, style: str) -> str:
     return ""
 
 
+def ensure_source_line(
+    body: str, source_name: str, source_url: str, style: str
+) -> str:
+    """Append the source footer unless this exact footer is already the tail.
+
+    Same rendering as :func:`source_line`, made safe to call twice. Wednesday
+    (#219) needs the attribution present *before* the source-transparency
+    gate, while the formatting stage still appends it for every other stream
+    afterwards; without idempotence the Wednesday article would carry two
+    identical Source sections.
+
+    Deliberately an exact-suffix comparison, not a search for the URL: a body
+    that merely mentions the URL in its prose still gets the footer, so no
+    stream loses the attribution it has today. The only call this turns into
+    a no-op is one that would have appended a byte-identical duplicate.
+    """
+    footer = source_line(source_name, source_url, style)
+    if not footer or body.endswith(footer):
+        return body
+    return body + footer
+
+
 #: The invitation that carries a reader from a social derivative to the
 #: canonical Never Blank article. Deliberately plain: the destination is the
 #: point, and LinkedIn's post-text API has no anchor text to dress it with.
