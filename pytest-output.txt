@@ -40,7 +40,7 @@
 =============================== warnings summary ===============================
 tests/test_research_pipeline.py::test_compose_quote_card_dark_uses_texture_light_stays_flat
 tests/test_research_pipeline.py::test_compose_quote_card_dark_card_includes_logo_light_card_skips_it
-  /private/tmp/orch-build-223-b6tHqZ/src/publishing/image_pipeline.py:134: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  /private/tmp/orch-build-223-aJu8m1/src/publishing/image_pipeline.py:134: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
     pixels = list(grey.getdata())
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
@@ -49,4 +49,4 @@ FAILED tests/test_editorial_pipeline.py::TestGeneratorTelegramStories::test_gene
 FAILED tests/test_editorial_pipeline.py::TestGeneratorTelegramStories::test_generate_telegram_returns_none_text_on_empty_response
 FAILED tests/test_editorial_pipeline.py::TestGeneratorTelegramStories::test_generate_stories_returns_none_on_failure
 FAILED tests/test_editorial_pipeline.py::TestGeneratorTelegramStories::test_generate_stories_returns_none_on_empty_frames
-4 failed, 2778 passed, 20 skipped, 2 warnings in 152.10s (0:02:32)
+4 failed, 2778 passed, 20 skipped, 2 warnings in 741.20s (0:12:21)

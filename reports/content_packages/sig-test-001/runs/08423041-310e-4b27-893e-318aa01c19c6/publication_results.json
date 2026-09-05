@@ -1,0 +1,51 @@
+{
+  "run_id": "08423041-310e-4b27-893e-318aa01c19c6",
+  "signal_id": "sig-test-001",
+  "source_run_id": "08423041-310e-4b27-893e-318aa01c19c6",
+  "generation_run_id": "08423041-310e-4b27-893e-318aa01c19c6",
+  "execution_mode": "controlled-live",
+  "configuration_identity": {
+    "schema_version": "1",
+    "configuration_id": "never-blank",
+    "configuration_version": "1",
+    "configuration_hash": "sha256:29d71a4bdc505d6449dc28ae40ee15364bda44f44d2eb59267d6c6482fd93393"
+  },
+  "published_at": "2026-09-05T18:31:29.958385+00:00",
+  "results": {
+    "wix": {
+      "platform": "wix",
+      "status": "PUBLISHED",
+      "external_id": "wix-post-id",
+      "url": "https://example.com/wix",
+      "error_message": null,
+      "run_id": ""
+    },
+    "linkedin": {
+      "platform": "linkedin",
+      "status": "PUBLISHED",
+      "external_id": "linkedin-post-id",
+      "url": "https://example.com/linkedin",
+      "error_message": null,
+      "run_id": "",
+      "published_package_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "derived_from_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "canonical_article_url": "https://example.com/wix"
+    }
+  },
+  "completed": true,
+  "errors": [],
+  "wix_url": "https://example.com/wix",
+  "wix_post_id": "wix-post-id",
+  "wix_reused_from_run_id": null,
+  "unusable_prior_publication_evidence": null,
+  "canonical_url_verification": {
+    "url": "https://example.com/wix",
+    "provenance": "provider_lookup",
+    "verified": true,
+    "final_resolved_url": null,
+    "failure_reason": null,
+    "reachability_status": 200,
+    "attempts": 1
+  },
+  "canonical_url_provider_lookup": null
+}

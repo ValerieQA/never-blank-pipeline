@@ -1,0 +1,27 @@
+{
+  "run_id": "bbca789b-dbec-44c1-b7a9-af69cd5dca98",
+  "signal_id": "sig-test-001",
+  "headline": "AI adoption accelerates in SMBs",
+  "generated_at": "2026-09-05T18:31:27.555954+00:00",
+  "strategy_id": "2026-07-presence-debt-campaign-1",
+  "strategy_version": "1",
+  "strategy_started_at": "2026-07-22",
+  "configuration_identity": {
+    "schema_version": "1",
+    "configuration_id": "never-blank",
+    "configuration_version": "1",
+    "configuration_hash": "sha256:29d71a4bdc505d6449dc28ae40ee15364bda44f44d2eb59267d6c6482fd93393"
+  },
+  "blog_article": "Blog body text.",
+  "linkedin_post": "LinkedIn post text.",
+  "facebook_post": "Facebook post text.",
+  "instagram_caption": "Instagram caption text.",
+  "threads_sequence": [
+    "60% of SMBs will adopt AI.",
+    "Most SMBs do not realize the gap.",
+    "The data is clear and compelling.",
+    "This is a strategic imperative now.",
+    "Presence matters more than ever."
+  ],
+  "telegram_text": "Most SMBs do not realize the gap.\nThis is a strategic imperative now."
+}
