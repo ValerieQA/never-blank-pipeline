@@ -18,8 +18,12 @@ name: Monday — Never Blank Business Case
 
 on:
   schedule:
-    - cron: "0 10 * * 1"   # 10:00 UTC = 06:00 ET (EDT)
-    - cron: "0 11 * * 1"   # 11:00 UTC = 06:00 ET (EST)
+    # #224: minute 17, not :00. GitHub itself warns that runs scheduled at the
+    # top of the hour are the most likely to be delayed, and a delayed firing
+    # is exactly what suppressed 2026-08-31. The product hour is unchanged —
+    # 06:xx America/New_York — only the minute inside it moved.
+    - cron: "17 10 * * 1"   # 10:17 UTC = 06:17 ET (EDT)
+    - cron: "17 11 * * 1"   # 11:17 UTC = 06:17 ET (EST)
 
   workflow_dispatch:
     inputs:
@@ -64,11 +68,20 @@ jobs:
       # under EDT, once under EST. This decides which firing is the real one,
       # before anything is generated or any credential is read. A manual
       # dispatch is always the real one.
+      #
+      # #224: the decision is bound to the cron that actually fired, not to the
+      # runner's clock, so a firing delayed by hours still knows which Monday
+      # it belongs to and still publishes — for as long as it is that Monday
+      # in America/New_York. Once the local day has advanced it is stale and
+      # publishes nothing, rather than being reinterpreted as Tuesday.
       - name: Monday publish window
         id: window
         run: |
           if python scripts/streams/due_check.py \
                --day monday --time "$MONDAY_TIME" --timezone "$MONDAY_TZ" \
+               --event "$GITHUB_EVENT_NAME" --cron "$FIRED_CRON" \
+               --role "$MONDAY_ROLE" \
+               --decision-out reports/scheduling/monday_scheduling_decision.json \
                ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}; then
             echo "due=true" >> $GITHUB_OUTPUT
           else
@@ -76,8 +89,23 @@ jobs:
             echo "Not the Monday window — no work will run."
           fi
         env:
-          MONDAY_TIME: "06:00"
+          MONDAY_TIME: "06:17"
           MONDAY_TZ: "America/New_York"
+          MONDAY_ROLE: never-blank-monday-documented-case
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          FIRED_CRON: ${{ github.event.schedule }}
+
+      # #224: written on EVERY path, including the skips. Deliberately NOT
+      # gated on `due` — a run that publishes nothing is exactly the run whose
+      # reason has to survive, and before this the skip left no artifact at all.
+      - name: Preserve scheduling decision
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monday-scheduling-decision
+          path: reports/scheduling/monday_scheduling_decision.json
+          if-no-files-found: warn
+          retention-days: 90
 
       - run: pip install --quiet -r requirements.txt
         if: steps.window.outputs.due == 'true'

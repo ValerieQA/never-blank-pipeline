@@ -12,8 +12,11 @@ name: Scheduled Publisher
 
 on:
   schedule:
-    - cron: "0 10 * * 5"   # 10:00 UTC = 06:00 ET (DST) / 05:00 ET (std)
-    - cron: "0 11 * * 5"   # 11:00 UTC = 06:00 ET (std) / 07:00 ET (DST)
+    # #224: minute 17, not :00 — GitHub delays top-of-hour schedules the most,
+    # and that delay silently cancelled Friday on 2026-08-28 and 2026-09-04.
+    # The product hour is unchanged.
+    - cron: "17 10 * * 5"   # 10:17 UTC = 06:17 ET (DST) / 05:17 ET (std)
+    - cron: "17 11 * * 5"   # 11:17 UTC = 06:17 ET (std) / 07:17 ET (DST)
 
   workflow_dispatch:
     inputs:
@@ -48,6 +51,8 @@ jobs:
 
       - name: Run scheduled publisher
         env:
+          GITHUB_EVENT_NAME:                 ${{ github.event_name }}
+          FIRED_CRON:                        ${{ github.event.schedule }}
           NB_OPENAI_API_KEY:                 ${{ secrets.NB_OPENAI_API_KEY }}
           NB_WIX_API_KEY:                    ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID:                    ${{ secrets.NB_WIX_SITE_ID }}
@@ -67,13 +72,31 @@ jobs:
           NB_GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.NB_GOOGLE_SHEETS_CREDENTIALS_JSON }}
           NB_GOOGLE_SHEET_ID:                ${{ secrets.NB_GOOGLE_SHEET_ID }}
         run: |
+          # #224: the same product semantics Monday and Wednesday use — the
+          # firing is identified by the cron that fired, and it may publish at
+          # any later time on its intended local day. --force and --check-only
+          # behave exactly as before.
+          OUT=reports/scheduling/friday_scheduling_decision.json
           if [ "${{ inputs.force }}" = "true" ]; then
-            python scripts/scheduled_publish.py --force
+            python scripts/scheduled_publish.py --force --decision-out "$OUT"
           elif [ "${{ inputs.check_only }}" = "true" ]; then
-            python scripts/scheduled_publish.py --check-only
+            python scripts/scheduled_publish.py --check-only \
+              --event "$GITHUB_EVENT_NAME" --cron "$FIRED_CRON" --decision-out "$OUT"
           else
-            python scripts/scheduled_publish.py
+            python scripts/scheduled_publish.py \
+              --event "$GITHUB_EVENT_NAME" --cron "$FIRED_CRON" --decision-out "$OUT"
           fi
+
+      # #224: written on EVERY path, including a stale skip — deliberately
+      # separate from the publish report, which only exists when work ran.
+      - name: Preserve scheduling decision
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: friday-scheduling-decision
+          path: reports/scheduling/friday_scheduling_decision.json
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Upload scheduled publish report
         if: always()
