@@ -1,7 +1,7 @@
 {
   "SIGNAL_ID": "sig-identity-test-001",
   "HEADLINE": "Run identity propagation test signal",
-  "prepared_at": "2026-08-18 01:46 UTC",
+  "prepared_at": "2026-09-05 17:40 UTC",
   "content": {},
   "images": {
     "platform_images": {
@@ -16,34 +16,10 @@
         "path": "reports/content_packages/images/sig-identity-test-001_blog.png",
         "size": "1200x628",
         "reused": true
-      },
-      "facebook": {
-        "url": "reports/content_packages/images/sig-identity-test-001_blog.png",
-        "path": "reports/content_packages/images/sig-identity-test-001_blog.png",
-        "size": "1200x628",
-        "reused": true
-      },
-      "instagram": {
-        "url": "reports/content_packages/images/sig-identity-test-001_blog.png",
-        "path": "reports/content_packages/images/sig-identity-test-001_blog.png",
-        "size": "1080x1350",
-        "reused": true
-      },
-      "threads": {
-        "url": "reports/content_packages/images/sig-identity-test-001_blog.png",
-        "path": "reports/content_packages/images/sig-identity-test-001_blog.png",
-        "size": "1080x1080",
-        "reused": true
-      },
-      "stories": {
-        "url": "reports/content_packages/images/sig-identity-test-001_blog.png",
-        "path": "reports/content_packages/images/sig-identity-test-001_blog.png",
-        "size": "1080x1920",
-        "reused": true
       }
     },
     "new_images": 0,
-    "reused_images": 6,
+    "reused_images": 2,
     "reuse_rate": "100%",
     "image_method": "reused",
     "reuse_source": "same_signal (Run identity propagation test signal)",

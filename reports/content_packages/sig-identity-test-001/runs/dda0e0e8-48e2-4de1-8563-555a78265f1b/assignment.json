@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.2",
+  "run_id": "dda0e0e8-48e2-4de1-8563-555a78265f1b",
+  "execution_mode": "controlled-live",
+  "configuration_identity": {
+    "schema_version": "1",
+    "configuration_id": "never-blank",
+    "configuration_version": "1",
+    "configuration_hash": "sha256:29d71a4bdc505d6449dc28ae40ee15364bda44f44d2eb59267d6c6482fd93393"
+  },
+  "assignment": {
+    "assignment_id": "sig-identity-test-001",
+    "origin": "jsonl",
+    "topic": "Run identity propagation test signal",
+    "source_material": "Synthetic fact for identity tracing.",
+    "submitted_at": "2026-09-05T17:40:58.826070Z",
+    "user_instruction": null,
+    "target_audience": "agencies",
+    "publishing_constraints": {},
+    "references": [],
+    "strategy_ref": "2026-07-presence-debt-campaign-1",
+    "strategy_version": "1",
+    "correlation": null
+  },
+  "code_identity": {
+    "commit_sha": "a82d4796b05da517f356a2a1ddc390ceed8aab37",
+    "tracked_worktree_clean": false,
+    "clean_policy": "tracked-source-v1"
+  },
+  "editorial_role": null
+}

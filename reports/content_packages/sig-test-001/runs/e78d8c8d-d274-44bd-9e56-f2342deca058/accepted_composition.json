@@ -1,0 +1,18 @@
+{
+  "artifact_kind": "accepted_composition",
+  "publishable": false,
+  "notice": "Editorially accepted compositions preserved at the moment of acceptance, for diagnosis and product review only. NOT publishable and never a packaging or publication input: acceptance is one gate, not the last — transparency, image, visual, preflight and publication gates may still block this run, and this record says nothing about whether they did.",
+  "run_id": "e78d8c8d-d274-44bd-9e56-f2342deca058",
+  "signal_id": "sig-test-001",
+  "assignment_id": "sig-test-001",
+  "editorial": {
+    "rubric": "never-blank-editorial-acceptance/1.0",
+    "revised": false
+  },
+  "content": {
+    "title": "AI adoption accelerates in SMBs",
+    "echo": "Presence matters more than ever.",
+    "article_body": "Blog body text.",
+    "linkedin_body": "LinkedIn post text."
+  }
+}

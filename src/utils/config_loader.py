@@ -10,10 +10,24 @@ CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
 
 def load_yaml(path: str | Path) -> dict:
     p = Path(path)
-    if not p.is_absolute():
+    resolved_against_config_dir = not p.is_absolute()
+    if resolved_against_config_dir:
         p = CONFIG_DIR / p
-    with open(p, encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+    try:
+        with open(p, encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    except FileNotFoundError as exc:
+        # A bare FileNotFoundError names an absolute path the caller never
+        # wrote, and says nothing about the resolution that produced it.
+        detail = ""
+        if resolved_against_config_dir:
+            detail = (
+                " — relative names are resolved against the configuration "
+                f"directory {CONFIG_DIR}"
+            )
+        raise FileNotFoundError(
+            f"Config file '{path}' not found at {p}{detail}"
+        ) from exc
 
 
 def load_prompt(name: str, variables: dict | None = None) -> dict:

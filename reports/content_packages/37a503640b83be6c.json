@@ -1,19 +1,19 @@
 {
-  "SIGNAL_ID": "sig-test-001",
-  "HEADLINE": "AI adoption accelerates in SMBs",
+  "SIGNAL_ID": "37a503640b83be6c",
+  "HEADLINE": "Versant agrees to buy golf simulator company Full Swing for $530 million",
   "prepared_at": "2026-09-05 17:41 UTC",
   "content": {},
   "images": {
     "platform_images": {
       "blog": {
-        "url": "reports/content_packages/images/sig-test-001_blog.png",
-        "path": "reports/content_packages/images/sig-test-001_blog.png",
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359417/never-blank/posts/research/37a503640b83be6c/blog/1783359416.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359417/never-blank/posts/research/37a503640b83be6c/blog/1783359416.png",
         "size": "1920x1080",
         "reused": true
       },
       "linkedin": {
-        "url": "reports/content_packages/images/sig-test-001_blog.png",
-        "path": "reports/content_packages/images/sig-test-001_blog.png",
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359417/never-blank/posts/research/37a503640b83be6c/blog/1783359416.png",
+        "path": "https://res.cloudinary.com/df0lt7izx/image/upload/v1783359417/never-blank/posts/research/37a503640b83be6c/blog/1783359416.png",
         "size": "1200x628",
         "reused": true
       }
@@ -22,9 +22,9 @@
     "reused_images": 2,
     "reuse_rate": "100%",
     "image_method": "reused",
-    "reuse_source": "same_signal (AI adoption accelerates in SMBs)",
-    "visual_family": "light_paths",
-    "hook_text": "According to Gartner, 60 percent of SMBs",
+    "reuse_source": "same_signal (Versant agrees to buy golf simulator com)",
+    "visual_family": "dark_insight_card",
+    "hook_text": "Versant agreed to acquire golf simulator company",
     "design_version": "3"
   },
   "strategy_audience": {
@@ -42,6 +42,6 @@
       "Maintaining the system may consume as much time as writing manually.",
       "Content activity may not produce commercially meaningful conversations."
     ],
-    "selection_source": "assignment"
+    "selection_source": "configured-default"
   }
 }
