@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "run_id": "05b278f6-1028-4816-a7eb-48b56f5727a2",
+  "signal_id": "sig-test-001",
+  "execution_mode": "controlled-live",
+  "configuration_identity": {
+    "schema_version": "1",
+    "configuration_id": "never-blank",
+    "configuration_version": "1",
+    "configuration_hash": "sha256:29d71a4bdc505d6449dc28ae40ee15364bda44f44d2eb59267d6c6482fd93393"
+  },
+  "code_identity": {
+    "commit_sha": "299e74794de17cf2e0f44e1ffc18f38a152d5ebd",
+    "tracked_worktree_clean": false,
+    "clean_policy": "tracked-source-v1"
+  },
+  "reported_at": "2026-09-05T19:14:29.790302Z",
+  "terminal_stage": "intake",
+  "terminal_disposition": "failed",
+  "completed": false,
+  "provenance": {
+    "verified": true,
+    "run_kind": "generation",
+    "stopped_after": "business_strategy"
+  },
+  "channels": [],
+  "override_state": null,
+  "unusable_prior_evidence": null,
+  "errors": [],
+  "artifacts": [
+    {
+      "name": "assignment.json",
+      "digest": null
+    },
+    {
+      "name": "business_strategy.json",
+      "digest": null
+    }
+  ]
+}

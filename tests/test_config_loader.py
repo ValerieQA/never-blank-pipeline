@@ -29,7 +29,7 @@ def test_a_missing_relative_name_names_both_the_name_and_the_path(
         load_yaml("no_such_file.yaml")
 
     message = str(excinfo.value)
-    assert "no_such_file.yaml" in message                  # what was asked for
+    assert "no_such_file.yaml" in message  # what was asked for
     assert str(tmp_path / "no_such_file.yaml") in message  # what was opened
     # and the rule that connects the two, which the caller could not see
     assert "configuration directory" in message.lower()

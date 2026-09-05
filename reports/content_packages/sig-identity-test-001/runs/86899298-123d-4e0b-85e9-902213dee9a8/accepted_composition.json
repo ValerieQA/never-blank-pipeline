@@ -1,0 +1,18 @@
+{
+  "artifact_kind": "accepted_composition",
+  "publishable": false,
+  "notice": "Editorially accepted compositions preserved at the moment of acceptance, for diagnosis and product review only. NOT publishable and never a packaging or publication input: acceptance is one gate, not the last — transparency, image, visual, preflight and publication gates may still block this run, and this record says nothing about whether they did.",
+  "run_id": "86899298-123d-4e0b-85e9-902213dee9a8",
+  "signal_id": "sig-identity-test-001",
+  "assignment_id": "sig-identity-test-001",
+  "editorial": {
+    "rubric": "never-blank-editorial-acceptance/1.0",
+    "revised": false
+  },
+  "content": {
+    "title": "Run identity propagation test signal",
+    "echo": "Trace it.",
+    "article_body": "Blog body text for identity test. presence consistent trust",
+    "linkedin_body": "LinkedIn post for identity test. presence compound"
+  }
+}
