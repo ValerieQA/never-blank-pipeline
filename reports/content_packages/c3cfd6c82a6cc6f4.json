@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "c3cfd6c82a6cc6f4",
+  "HEADLINE": "SBA Reclaims $34 Million in Shuttered Venue Grants Amid Fraud Concerns",
+  "prepared_at": "2026-09-06 12:03 UTC",
+  "content": {
+    "blog": {
+      "headline": "When Fast Relief Turns Costly: SBA Reclaims $34M in Venue Grants Amid Fraud Scrutiny",
+      "angle": "The rush to distribute emergency aid created openings for fraud → The SBA’s clawback exposes the risks of lax oversight → Founders must treat compliance as a non-negotiable from day one → The lesson: quick money without strict controls can lead to expensive paybacks."
+    },
+    "linkedin": {
+      "headline": "The SBA gave out millions to save venues—now it’s demanding $34 million back.",
+      "angle": "Emergency aid programs prioritize speed but invite fraud risk, forcing founders to balance urgent funding with airtight compliance to avoid costly clawbacks."
+    },
+    "facebook": {
+      "headline": "The SBA just reclaimed $34 million from shuttered venue grants over fraud concerns.",
+      "angle": "When the government rushed aid to struggling venues, fraud slipped through—how prepared are you to meet strict compliance if your business seeks relief?"
+    },
+    "instagram": {
+      "headline": "Fast Money, Slow Consequences",
+      "angle": "Urgent relief funds come with hidden costs—founders ignoring compliance risk expensive paybacks and damaged reputations."
+    },
+    "threads": {
+      "thread_hook": "The fastest money is often the most expensive. The SBA just reclaimed $34 million in shuttered venue grants due to fraud.",
+      "angle": "This thread breaks down how emergency aid’s speed compromises program integrity, why founders must prioritize compliance from the start, and what the SBA’s clawback means for anyone chasing government relief."
+    },
+    "stories": {
+      "story_question": "Is your business ready if the government comes knocking for repayment?",
+      "angle": "Exploring the tension between quick access to relief funds and the unforgiving nature of post-award fraud investigations."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696219/never-blank/posts/research/c3cfd6c82a6cc6f4/blog/1788696219.png",
+        "path": "reports/content_packages/images/c3cfd6c82a6cc6f4_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696219/never-blank/posts/research/c3cfd6c82a6cc6f4/linkedin/1788696219.png",
+        "path": "reports/content_packages/images/c3cfd6c82a6cc6f4_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696220/never-blank/posts/research/c3cfd6c82a6cc6f4/facebook/1788696220.png",
+        "path": "reports/content_packages/images/c3cfd6c82a6cc6f4_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696221/never-blank/posts/research/c3cfd6c82a6cc6f4/instagram/1788696221.png",
+        "path": "reports/content_packages/images/c3cfd6c82a6cc6f4_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696221/never-blank/posts/research/c3cfd6c82a6cc6f4/threads/1788696221.png",
+        "path": "reports/content_packages/images/c3cfd6c82a6cc6f4_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696222/never-blank/posts/research/c3cfd6c82a6cc6f4/stories/1788696222.png",
+        "path": "reports/content_packages/images/c3cfd6c82a6cc6f4_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "light_message_card",
+    "hook_text": "The SBA gave out millions to save venues—now it’s demanding $34 million back."
+  }
+}

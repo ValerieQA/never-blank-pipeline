@@ -863,5 +863,35 @@
     "visual_family": "constellation_networks",
     "design_version": "3",
     "hook_text": "Enhanced security: Two-step verification and passkeys."
+  },
+  "9d9bbaacdde4f7a9": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696193/never-blank/posts/research/9d9bbaacdde4f7a9/blog/1788696192.png",
+    "signal_type": "platform reach change for small business",
+    "headline": "Ahrefs Brand Radar alternatives for marketing teams",
+    "created_at": "2026-09-06",
+    "method": "gpt-image-1",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "51% of buyers start with AI chatbots."
+  },
+  "c3cfd6c82a6cc6f4": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696219/never-blank/posts/research/c3cfd6c82a6cc6f4/blog/1788696219.png",
+    "signal_type": "trust accumulation pattern",
+    "headline": "SBA Reclaims $34 Million in Shuttered Venue Grants Amid Fraud Concerns",
+    "created_at": "2026-09-06",
+    "method": "quote_card",
+    "visual_family": "light_message_card",
+    "design_version": "3",
+    "hook_text": "The SBA gave out millions to save venues—now it’s demanding $34 million back."
+  },
+  "e082ddf0f3106729": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696265/never-blank/posts/research/e082ddf0f3106729/blog/1788696265.png",
+    "signal_type": "delivery vs visibility conflict",
+    "headline": "Getting Your Product Into ChatGPT Isn’t The Hard Part, Getting It Through Checkout Is via @sejournal, @gregjarboe",
+    "created_at": "2026-09-06",
+    "method": "gpt-image-1",
+    "visual_family": "light_paths",
+    "design_version": "3",
+    "hook_text": "Seamless integration, but checkout remains a maze."
   }
 }

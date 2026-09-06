@@ -1,0 +1,506 @@
+{
+  "date": "2026-09-06",
+  "candidates_found": 6,
+  "duplicates_skipped": 0,
+  "new_signals_added": 6,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Ahrefs Brand Radar alternatives for marketing teams",
+    "SBA Reclaims $34 Million in Shuttered Venue Grants Amid Fraud Concerns",
+    "Getting Your Product Into ChatGPT Isn\u2019t The Hard Part, Getting It Through Checko"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "9d9bbaacdde4f7a9",
+      "headline": "Ahrefs Brand Radar alternatives for marketing teams",
+      "published_at": "2026-09-06 12:05 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122133230817356169",
+          "external_id": "1219637131228622_122133230817356169",
+          "error_message": null,
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/Dc8fvD4G75R/",
+          "external_id": "18054918932798401",
+          "error_message": null,
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Could not resolve Threads user ID (HTTP 400)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/55",
+          "external_id": "55",
+          "error_message": null,
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/9d9bbaacdde4f7a9_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696193/never-blank/posts/research/9d9bbaacdde4f7a9/blog/1788696192.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696197/never-blank/posts/research/9d9bbaacdde4f7a9/linkedin/1788696196.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696200/never-blank/posts/research/9d9bbaacdde4f7a9/facebook/1788696200.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696205/never-blank/posts/research/9d9bbaacdde4f7a9/instagram/1788696205.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696210/never-blank/posts/research/9d9bbaacdde4f7a9/threads/1788696210.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696215/never-blank/posts/research/9d9bbaacdde4f7a9/stories/1788696215.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "51% of buyers start with AI chatbots.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "gpt-image-1"
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "publish_failures": [
+    "wix: 'DraftPackage' object has no attribute 'title'",
+    "linkedin: 'DraftPackage' object has no attribute 'linkedin_body'",
+    "threads: Could not resolve Threads user ID (HTTP 400)"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "9d9bbaacdde4f7a9",
+      "HEADLINE": "Ahrefs Brand Radar alternatives for marketing teams",
+      "prepared_at": "2026-09-06 12:03 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why Marketing Teams Need Alternatives to Ahrefs Brand Radar Now",
+          "angle": "Buyer behavior is shifting rapidly toward AI-powered research, leaving traditional brand monitoring tools behind; marketing teams must adapt their strategies and tech stacks to track brand visibility across emerging AI channels or risk falling off the radar."
+        },
+        "linkedin": {
+          "headline": "Half your prospects start with AI chatbots \u2014 is your marketing stack still stuck on Google?",
+          "angle": "As B2B buyers move to AI-driven research, marketing teams ignoring AI brand tracking tools risk losing visibility and influence in critical decision-making moments."
+        },
+        "facebook": {
+          "headline": "51% of B2B buyers begin research with AI chatbots \u2014 are your tools keeping up?",
+          "angle": "With buyer behavior shifting to AI assistants, marketing teams using only traditional brand monitoring tools face blind spots; how are you adapting your strategy to stay visible where it counts?"
+        },
+        "instagram": {
+          "headline": "Your Brand Isn\u2019t Just Googled Anymore",
+          "angle": "Marketing teams must rethink brand monitoring as buyers turn to AI chatbots, demanding new tools to track brand mentions beyond traditional search."
+        },
+        "threads": {
+          "thread_hook": "Marketing tools built for Google searches are missing half the conversation.",
+          "angle": "This thread breaks down how buyer research moving to AI chatbots exposes blind spots in traditional brand monitoring and why marketing teams need to evolve their toolkits to maintain visibility."
+        },
+        "stories": {
+          "story_question": "Are your marketing tools blind to AI chatbot brand mentions?",
+          "angle": "Exploring the risk marketing teams face by relying on outdated tools while buyers shift research to AI-powered platforms."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696193/never-blank/posts/research/9d9bbaacdde4f7a9/blog/1788696192.png",
+            "path": "reports/content_packages/images/9d9bbaacdde4f7a9_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696197/never-blank/posts/research/9d9bbaacdde4f7a9/linkedin/1788696196.png",
+            "path": "reports/content_packages/images/9d9bbaacdde4f7a9_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696200/never-blank/posts/research/9d9bbaacdde4f7a9/facebook/1788696200.png",
+            "path": "reports/content_packages/images/9d9bbaacdde4f7a9_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696205/never-blank/posts/research/9d9bbaacdde4f7a9/instagram/1788696205.png",
+            "path": "reports/content_packages/images/9d9bbaacdde4f7a9_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696210/never-blank/posts/research/9d9bbaacdde4f7a9/threads/1788696210.png",
+            "path": "reports/content_packages/images/9d9bbaacdde4f7a9_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696215/never-blank/posts/research/9d9bbaacdde4f7a9/stories/1788696215.png",
+            "path": "reports/content_packages/images/9d9bbaacdde4f7a9_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "51% of buyers start with AI chatbots."
+      }
+    },
+    {
+      "SIGNAL_ID": "c3cfd6c82a6cc6f4",
+      "HEADLINE": "SBA Reclaims $34 Million in Shuttered Venue Grants Amid Fraud Concerns",
+      "prepared_at": "2026-09-06 12:03 UTC",
+      "content": {
+        "blog": {
+          "headline": "When Fast Relief Turns Costly: SBA Reclaims $34M in Venue Grants Amid Fraud Scrutiny",
+          "angle": "The rush to distribute emergency aid created openings for fraud \u2192 The SBA\u2019s clawback exposes the risks of lax oversight \u2192 Founders must treat compliance as a non-negotiable from day one \u2192 The lesson: quick money without strict controls can lead to expensive paybacks."
+        },
+        "linkedin": {
+          "headline": "The SBA gave out millions to save venues\u2014now it\u2019s demanding $34 million back.",
+          "angle": "Emergency aid programs prioritize speed but invite fraud risk, forcing founders to balance urgent funding with airtight compliance to avoid costly clawbacks."
+        },
+        "facebook": {
+          "headline": "The SBA just reclaimed $34 million from shuttered venue grants over fraud concerns.",
+          "angle": "When the government rushed aid to struggling venues, fraud slipped through\u2014how prepared are you to meet strict compliance if your business seeks relief?"
+        },
+        "instagram": {
+          "headline": "Fast Money, Slow Consequences",
+          "angle": "Urgent relief funds come with hidden costs\u2014founders ignoring compliance risk expensive paybacks and damaged reputations."
+        },
+        "threads": {
+          "thread_hook": "The fastest money is often the most expensive. The SBA just reclaimed $34 million in shuttered venue grants due to fraud.",
+          "angle": "This thread breaks down how emergency aid\u2019s speed compromises program integrity, why founders must prioritize compliance from the start, and what the SBA\u2019s clawback means for anyone chasing government relief."
+        },
+        "stories": {
+          "story_question": "Is your business ready if the government comes knocking for repayment?",
+          "angle": "Exploring the tension between quick access to relief funds and the unforgiving nature of post-award fraud investigations."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696219/never-blank/posts/research/c3cfd6c82a6cc6f4/blog/1788696219.png",
+            "path": "reports/content_packages/images/c3cfd6c82a6cc6f4_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696219/never-blank/posts/research/c3cfd6c82a6cc6f4/linkedin/1788696219.png",
+            "path": "reports/content_packages/images/c3cfd6c82a6cc6f4_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696220/never-blank/posts/research/c3cfd6c82a6cc6f4/facebook/1788696220.png",
+            "path": "reports/content_packages/images/c3cfd6c82a6cc6f4_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696221/never-blank/posts/research/c3cfd6c82a6cc6f4/instagram/1788696221.png",
+            "path": "reports/content_packages/images/c3cfd6c82a6cc6f4_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696221/never-blank/posts/research/c3cfd6c82a6cc6f4/threads/1788696221.png",
+            "path": "reports/content_packages/images/c3cfd6c82a6cc6f4_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696222/never-blank/posts/research/c3cfd6c82a6cc6f4/stories/1788696222.png",
+            "path": "reports/content_packages/images/c3cfd6c82a6cc6f4_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "light_message_card",
+        "hook_text": "The SBA gave out millions to save venues\u2014now it\u2019s demanding $34 million back."
+      }
+    },
+    {
+      "SIGNAL_ID": "e082ddf0f3106729",
+      "HEADLINE": "Getting Your Product Into ChatGPT Isn\u2019t The Hard Part, Getting It Through Checkout Is via @sejournal, @gregjarboe",
+      "prepared_at": "2026-09-06 12:04 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why Getting Your Product Into ChatGPT Is Easy \u2014 But Checkout Is a Nightmare",
+          "angle": "AI platforms make product discovery effortless, but the real challenge lies in building secure, seamless checkout flows within conversational commerce; retailers ignoring this risk losing revenue and trust."
+        },
+        "linkedin": {
+          "headline": "Everyone\u2019s racing to get their products into ChatGPT, but almost no one is fixing the checkout bottleneck.",
+          "angle": "Integrating products into AI chat platforms is straightforward, but without frictionless, secure checkout, retailers miss out on converting AI-driven interest into sales."
+        },
+        "facebook": {
+          "headline": "Getting your product seen by ChatGPT users is the easy part. But can you actually get paid?",
+          "angle": "Products surfacing in AI chats is happening fast, yet the messy challenge of checkout remains unsolved \u2014 how are you handling this gap?"
+        },
+        "instagram": {
+          "headline": "Visibility is cheap. Conversion is infrastructure.",
+          "angle": "AI makes your product discoverable, but the real test is whether your checkout can handle the new conversational commerce reality."
+        },
+        "threads": {
+          "thread_hook": "Everyone\u2019s focused on getting products into ChatGPT. But the real bottleneck? Checkout.",
+          "angle": "This thread breaks down why AI-driven discovery is the easy part, and why building secure, seamless checkout inside chat platforms is the overlooked, critical challenge for founders."
+        },
+        "stories": {
+          "story_question": "Your product\u2019s in ChatGPT. But can customers actually buy it there?",
+          "angle": "Exploring the tension between easy AI integration for product discovery and the complex, often invisible work needed to enable secure checkout in conversational commerce."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696265/never-blank/posts/research/e082ddf0f3106729/blog/1788696265.png",
+            "path": "reports/content_packages/images/e082ddf0f3106729_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696268/never-blank/posts/research/e082ddf0f3106729/linkedin/1788696268.png",
+            "path": "reports/content_packages/images/e082ddf0f3106729_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696271/never-blank/posts/research/e082ddf0f3106729/facebook/1788696271.png",
+            "path": "reports/content_packages/images/e082ddf0f3106729_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696277/never-blank/posts/research/e082ddf0f3106729/instagram/1788696277.png",
+            "path": "reports/content_packages/images/e082ddf0f3106729_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696282/never-blank/posts/research/e082ddf0f3106729/threads/1788696282.png",
+            "path": "reports/content_packages/images/e082ddf0f3106729_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696290/never-blank/posts/research/e082ddf0f3106729/stories/1788696290.png",
+            "path": "reports/content_packages/images/e082ddf0f3106729_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "light_paths",
+        "hook_text": "Seamless integration, but checkout remains a maze."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "9d9bbaacdde4f7a9",
+      "headline": "Ahrefs Brand Radar alternatives for marketing teams",
+      "published_at": "2026-09-06 12:05 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122133230817356169",
+          "external_id": "1219637131228622_122133230817356169",
+          "error_message": null,
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/Dc8fvD4G75R/",
+          "external_id": "18054918932798401",
+          "error_message": null,
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Could not resolve Threads user ID (HTTP 400)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/55",
+          "external_id": "55",
+          "error_message": null,
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/9d9bbaacdde4f7a9_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696193/never-blank/posts/research/9d9bbaacdde4f7a9/blog/1788696192.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696197/never-blank/posts/research/9d9bbaacdde4f7a9/linkedin/1788696196.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696200/never-blank/posts/research/9d9bbaacdde4f7a9/facebook/1788696200.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696205/never-blank/posts/research/9d9bbaacdde4f7a9/instagram/1788696205.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696210/never-blank/posts/research/9d9bbaacdde4f7a9/threads/1788696210.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788696215/never-blank/posts/research/9d9bbaacdde4f7a9/stories/1788696215.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "51% of buyers start with AI chatbots.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "gpt-image-1"
+    }
+  ]
+}
