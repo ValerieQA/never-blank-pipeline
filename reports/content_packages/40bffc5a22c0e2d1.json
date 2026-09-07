@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "40bffc5a22c0e2d1",
+  "HEADLINE": "SBA Proposes Major Overhaul to Small Business Size Standards, Expanding Eligibility",
+  "prepared_at": "2026-09-07 14:08 UTC",
+  "content": {
+    "blog": {
+      "headline": "SBA’s Size Standard Shake-Up: What Founders Need to Know About the Expanding Small Business Definition",
+      "angle": "The SBA’s proposal to broaden small business eligibility creates tension between growth-stage firms seeking new opportunities and the smallest businesses facing increased competition, prompting founders to reassess strategy and advocate effectively during regulatory shifts."
+    },
+    "linkedin": {
+      "headline": "The SBA just made 'small business' a bigger club—so who gets squeezed out?",
+      "angle": "Expanding small business eligibility changes the competitive landscape, forcing founders to rethink their positioning and resource strategies."
+    },
+    "facebook": {
+      "headline": "The SBA is rewriting the rules on who counts as a small business. What does this mean for startups and growth-stage companies?",
+      "angle": "With the SBA expanding eligibility, businesses must navigate increased competition and shifting access to federal programs—how will your company adapt?"
+    },
+    "instagram": {
+      "headline": "Small Business, Bigger Club: Who Wins?",
+      "angle": "The SBA’s size standard overhaul forces founders to choose between fighting for a bigger slice or finding a new pie."
+    },
+    "threads": {
+      "thread_hook": "The SBA just expanded the definition of 'small business.' That’s not just a bureaucratic tweak—it’s a strategic headache.",
+      "angle": "This thread breaks down how the SBA’s proposed changes shift competitive dynamics, challenge the smallest firms, and demand sharper strategic responses from founders."
+    },
+    "stories": {
+      "story_question": "SBA’s new rules: More businesses qualify as 'small.' Who really benefits?",
+      "angle": "Exploring the tension between broader eligibility and protecting the smallest firms in a changing regulatory landscape."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790063/never-blank/posts/research/40bffc5a22c0e2d1/blog/1788790062.png",
+        "path": "reports/content_packages/images/40bffc5a22c0e2d1_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790067/never-blank/posts/research/40bffc5a22c0e2d1/linkedin/1788790066.png",
+        "path": "reports/content_packages/images/40bffc5a22c0e2d1_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790070/never-blank/posts/research/40bffc5a22c0e2d1/facebook/1788790069.png",
+        "path": "reports/content_packages/images/40bffc5a22c0e2d1_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790075/never-blank/posts/research/40bffc5a22c0e2d1/instagram/1788790075.png",
+        "path": "reports/content_packages/images/40bffc5a22c0e2d1_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790080/never-blank/posts/research/40bffc5a22c0e2d1/threads/1788790080.png",
+        "path": "reports/content_packages/images/40bffc5a22c0e2d1_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790089/never-blank/posts/research/40bffc5a22c0e2d1/stories/1788790089.png",
+        "path": "reports/content_packages/images/40bffc5a22c0e2d1_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "mountains_depth_layers",
+    "hook_text": "New standards could redefine eligibility for 1.2 million businesses."
+  }
+}

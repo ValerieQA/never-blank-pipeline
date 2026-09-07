@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "7b7cf64b627ce0d3",
+  "HEADLINE": "Your Biggest AI Search Risk Is Conflicting Information About Your Brand via @sejournal, @cshel",
+  "prepared_at": "2026-09-07 14:09 UTC",
+  "content": {
+    "blog": {
+      "headline": "When AI Search Turns Your Brand Into a Puzzle of Conflicting Facts",
+      "angle": "AI search engines amplify every inconsistency about your brand → This rapid, large-scale content aggregation outpaces your ability to control your narrative → Brands must proactively manage all digital touchpoints to prevent reputational damage → Consistency is the only defense against algorithmic confusion."
+    },
+    "linkedin": {
+      "headline": "The fastest way to lose control of your brand? Let AI search engines decide who you are.",
+      "angle": "AI-driven search multiplies conflicting brand information, forcing founders to rethink how they manage digital narratives to protect trust and equity."
+    },
+    "facebook": {
+      "headline": "AI search engines can turn small brand inconsistencies into big problems.",
+      "angle": "AI content aggregation speeds past brand control, risking fragmented perceptions—how prepared is your brand to stay consistent?"
+    },
+    "instagram": {
+      "headline": "Consistency: Your Brand’s Only Defense",
+      "angle": "AI search magnifies every mixed message; founders must own their brand story across every digital channel to avoid fragmentation."
+    },
+    "threads": {
+      "thread_hook": "AI search doesn’t just find your brand — it fractures it.",
+      "angle": "This thread breaks down how AI-driven content aggregation exposes brand inconsistencies, why that matters for founders, and what proactive steps can stop your brand from unraveling."
+    },
+    "stories": {
+      "story_question": "Is AI search turning your brand into a collection of conflicting stories?",
+      "angle": "Explores how the speed of AI content aggregation challenges founders to maintain a consistent brand image before fragmentation erodes trust."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790173/never-blank/posts/research/7b7cf64b627ce0d3/blog/1788790173.png",
+        "path": "reports/content_packages/images/7b7cf64b627ce0d3_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790174/never-blank/posts/research/7b7cf64b627ce0d3/linkedin/1788790174.png",
+        "path": "reports/content_packages/images/7b7cf64b627ce0d3_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790174/never-blank/posts/research/7b7cf64b627ce0d3/facebook/1788790174.png",
+        "path": "reports/content_packages/images/7b7cf64b627ce0d3_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790175/never-blank/posts/research/7b7cf64b627ce0d3/instagram/1788790175.png",
+        "path": "reports/content_packages/images/7b7cf64b627ce0d3_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790176/never-blank/posts/research/7b7cf64b627ce0d3/threads/1788790176.png",
+        "path": "reports/content_packages/images/7b7cf64b627ce0d3_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790177/never-blank/posts/research/7b7cf64b627ce0d3/stories/1788790177.png",
+        "path": "reports/content_packages/images/7b7cf64b627ce0d3_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "sand_pause_card",
+    "hook_text": "The fastest way to lose control of your brand is to let AI search engines decide who you are."
+  }
+}

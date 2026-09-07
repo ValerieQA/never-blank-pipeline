@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "15ae00db53779619",
+  "HEADLINE": "A Bad Registered Agent Can Cost You Hundreds of Dollars — or Your Entire Business. Here’s How to Find a Good One.",
+  "prepared_at": "2026-09-07 14:09 UTC",
+  "content": {
+    "blog": {
+      "headline": "How a Bad Registered Agent Can Shut Down Your Business Overnight",
+      "angle": "Founders often cut costs on registered agents → ignoring compliance risks → the business faces fines or dissolution → choose a reliable agent to avoid existential threats."
+    },
+    "linkedin": {
+      "headline": "Most founders don’t even know who their registered agent is — until it’s too late.",
+      "angle": "Ignoring the role of your registered agent risks costly fines and business shutdowns."
+    },
+    "facebook": {
+      "headline": "Cutting corners on your registered agent can cost you more than you think.",
+      "angle": "Many businesses save on administrative services only to face severe penalties — how confident are you in your registered agent?"
+    },
+    "instagram": {
+      "headline": "Your Registered Agent Could Cost You Everything",
+      "angle": "Choosing the wrong registered agent turns a minor admin detail into a business-ending risk."
+    },
+    "threads": {
+      "thread_hook": "A bad registered agent isn’t just an admin headache — it can kill your business.",
+      "angle": "This thread breaks down how neglecting your registered agent leads to missed legal notices, fines, and even forced dissolution."
+    },
+    "stories": {
+      "story_question": "Do you know who your registered agent is? What if they fail you?",
+      "angle": "Exploring the hidden risks of cheap registered agents and why compliance isn’t optional."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790140/never-blank/posts/research/15ae00db53779619/blog/1788790140.png",
+        "path": "reports/content_packages/images/15ae00db53779619_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790144/never-blank/posts/research/15ae00db53779619/linkedin/1788790144.png",
+        "path": "reports/content_packages/images/15ae00db53779619_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790147/never-blank/posts/research/15ae00db53779619/facebook/1788790147.png",
+        "path": "reports/content_packages/images/15ae00db53779619_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790153/never-blank/posts/research/15ae00db53779619/instagram/1788790153.png",
+        "path": "reports/content_packages/images/15ae00db53779619_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790159/never-blank/posts/research/15ae00db53779619/threads/1788790159.png",
+        "path": "reports/content_packages/images/15ae00db53779619_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790168/never-blank/posts/research/15ae00db53779619/stories/1788790168.png",
+        "path": "reports/content_packages/images/15ae00db53779619_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "focus_rings",
+    "hook_text": "A single mistake can lead to costly consequences."
+  }
+}

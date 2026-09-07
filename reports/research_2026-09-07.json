@@ -1,0 +1,506 @@
+{
+  "date": "2026-09-07",
+  "candidates_found": 5,
+  "duplicates_skipped": 0,
+  "new_signals_added": 5,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "SBA Proposes Major Overhaul to Small Business Size Standards, Expanding Eligibil",
+    "A Bad Registered Agent Can Cost You Hundreds of Dollars \u2014 or Your Entire Busines",
+    "Your Biggest AI Search Risk Is Conflicting Information About Your Brand via @sej"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "40bffc5a22c0e2d1",
+      "headline": "SBA Proposes Major Overhaul to Small Business Size Standards, Expanding Eligibility",
+      "published_at": "2026-09-07 14:10 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122133485853356169",
+          "external_id": "1219637131228622_122133485853356169",
+          "error_message": null,
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/Dc_Sz3jlGzZ/",
+          "external_id": "18091717430148853",
+          "error_message": null,
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Could not resolve Threads user ID (HTTP 400)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/56",
+          "external_id": "56",
+          "error_message": null,
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/40bffc5a22c0e2d1_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790063/never-blank/posts/research/40bffc5a22c0e2d1/blog/1788790062.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790067/never-blank/posts/research/40bffc5a22c0e2d1/linkedin/1788790066.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790070/never-blank/posts/research/40bffc5a22c0e2d1/facebook/1788790069.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790075/never-blank/posts/research/40bffc5a22c0e2d1/instagram/1788790075.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790080/never-blank/posts/research/40bffc5a22c0e2d1/threads/1788790080.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790089/never-blank/posts/research/40bffc5a22c0e2d1/stories/1788790089.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "New standards could redefine eligibility for 1.2 million businesses.",
+      "image_visual_family": "mountains_depth_layers",
+      "image_method": "gpt-image-1"
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "publish_failures": [
+    "wix: 'DraftPackage' object has no attribute 'title'",
+    "linkedin: 'DraftPackage' object has no attribute 'linkedin_body'",
+    "threads: Could not resolve Threads user ID (HTTP 400)"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "40bffc5a22c0e2d1",
+      "HEADLINE": "SBA Proposes Major Overhaul to Small Business Size Standards, Expanding Eligibility",
+      "prepared_at": "2026-09-07 14:08 UTC",
+      "content": {
+        "blog": {
+          "headline": "SBA\u2019s Size Standard Shake-Up: What Founders Need to Know About the Expanding Small Business Definition",
+          "angle": "The SBA\u2019s proposal to broaden small business eligibility creates tension between growth-stage firms seeking new opportunities and the smallest businesses facing increased competition, prompting founders to reassess strategy and advocate effectively during regulatory shifts."
+        },
+        "linkedin": {
+          "headline": "The SBA just made 'small business' a bigger club\u2014so who gets squeezed out?",
+          "angle": "Expanding small business eligibility changes the competitive landscape, forcing founders to rethink their positioning and resource strategies."
+        },
+        "facebook": {
+          "headline": "The SBA is rewriting the rules on who counts as a small business. What does this mean for startups and growth-stage companies?",
+          "angle": "With the SBA expanding eligibility, businesses must navigate increased competition and shifting access to federal programs\u2014how will your company adapt?"
+        },
+        "instagram": {
+          "headline": "Small Business, Bigger Club: Who Wins?",
+          "angle": "The SBA\u2019s size standard overhaul forces founders to choose between fighting for a bigger slice or finding a new pie."
+        },
+        "threads": {
+          "thread_hook": "The SBA just expanded the definition of 'small business.' That\u2019s not just a bureaucratic tweak\u2014it\u2019s a strategic headache.",
+          "angle": "This thread breaks down how the SBA\u2019s proposed changes shift competitive dynamics, challenge the smallest firms, and demand sharper strategic responses from founders."
+        },
+        "stories": {
+          "story_question": "SBA\u2019s new rules: More businesses qualify as 'small.' Who really benefits?",
+          "angle": "Exploring the tension between broader eligibility and protecting the smallest firms in a changing regulatory landscape."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790063/never-blank/posts/research/40bffc5a22c0e2d1/blog/1788790062.png",
+            "path": "reports/content_packages/images/40bffc5a22c0e2d1_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790067/never-blank/posts/research/40bffc5a22c0e2d1/linkedin/1788790066.png",
+            "path": "reports/content_packages/images/40bffc5a22c0e2d1_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790070/never-blank/posts/research/40bffc5a22c0e2d1/facebook/1788790069.png",
+            "path": "reports/content_packages/images/40bffc5a22c0e2d1_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790075/never-blank/posts/research/40bffc5a22c0e2d1/instagram/1788790075.png",
+            "path": "reports/content_packages/images/40bffc5a22c0e2d1_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790080/never-blank/posts/research/40bffc5a22c0e2d1/threads/1788790080.png",
+            "path": "reports/content_packages/images/40bffc5a22c0e2d1_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790089/never-blank/posts/research/40bffc5a22c0e2d1/stories/1788790089.png",
+            "path": "reports/content_packages/images/40bffc5a22c0e2d1_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "mountains_depth_layers",
+        "hook_text": "New standards could redefine eligibility for 1.2 million businesses."
+      }
+    },
+    {
+      "SIGNAL_ID": "15ae00db53779619",
+      "HEADLINE": "A Bad Registered Agent Can Cost You Hundreds of Dollars \u2014 or Your Entire Business. Here\u2019s How to Find a Good One.",
+      "prepared_at": "2026-09-07 14:09 UTC",
+      "content": {
+        "blog": {
+          "headline": "How a Bad Registered Agent Can Shut Down Your Business Overnight",
+          "angle": "Founders often cut costs on registered agents \u2192 ignoring compliance risks \u2192 the business faces fines or dissolution \u2192 choose a reliable agent to avoid existential threats."
+        },
+        "linkedin": {
+          "headline": "Most founders don\u2019t even know who their registered agent is \u2014 until it\u2019s too late.",
+          "angle": "Ignoring the role of your registered agent risks costly fines and business shutdowns."
+        },
+        "facebook": {
+          "headline": "Cutting corners on your registered agent can cost you more than you think.",
+          "angle": "Many businesses save on administrative services only to face severe penalties \u2014 how confident are you in your registered agent?"
+        },
+        "instagram": {
+          "headline": "Your Registered Agent Could Cost You Everything",
+          "angle": "Choosing the wrong registered agent turns a minor admin detail into a business-ending risk."
+        },
+        "threads": {
+          "thread_hook": "A bad registered agent isn\u2019t just an admin headache \u2014 it can kill your business.",
+          "angle": "This thread breaks down how neglecting your registered agent leads to missed legal notices, fines, and even forced dissolution."
+        },
+        "stories": {
+          "story_question": "Do you know who your registered agent is? What if they fail you?",
+          "angle": "Exploring the hidden risks of cheap registered agents and why compliance isn\u2019t optional."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790140/never-blank/posts/research/15ae00db53779619/blog/1788790140.png",
+            "path": "reports/content_packages/images/15ae00db53779619_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790144/never-blank/posts/research/15ae00db53779619/linkedin/1788790144.png",
+            "path": "reports/content_packages/images/15ae00db53779619_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790147/never-blank/posts/research/15ae00db53779619/facebook/1788790147.png",
+            "path": "reports/content_packages/images/15ae00db53779619_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790153/never-blank/posts/research/15ae00db53779619/instagram/1788790153.png",
+            "path": "reports/content_packages/images/15ae00db53779619_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790159/never-blank/posts/research/15ae00db53779619/threads/1788790159.png",
+            "path": "reports/content_packages/images/15ae00db53779619_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790168/never-blank/posts/research/15ae00db53779619/stories/1788790168.png",
+            "path": "reports/content_packages/images/15ae00db53779619_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "focus_rings",
+        "hook_text": "A single mistake can lead to costly consequences."
+      }
+    },
+    {
+      "SIGNAL_ID": "7b7cf64b627ce0d3",
+      "HEADLINE": "Your Biggest AI Search Risk Is Conflicting Information About Your Brand via @sejournal, @cshel",
+      "prepared_at": "2026-09-07 14:09 UTC",
+      "content": {
+        "blog": {
+          "headline": "When AI Search Turns Your Brand Into a Puzzle of Conflicting Facts",
+          "angle": "AI search engines amplify every inconsistency about your brand \u2192 This rapid, large-scale content aggregation outpaces your ability to control your narrative \u2192 Brands must proactively manage all digital touchpoints to prevent reputational damage \u2192 Consistency is the only defense against algorithmic confusion."
+        },
+        "linkedin": {
+          "headline": "The fastest way to lose control of your brand? Let AI search engines decide who you are.",
+          "angle": "AI-driven search multiplies conflicting brand information, forcing founders to rethink how they manage digital narratives to protect trust and equity."
+        },
+        "facebook": {
+          "headline": "AI search engines can turn small brand inconsistencies into big problems.",
+          "angle": "AI content aggregation speeds past brand control, risking fragmented perceptions\u2014how prepared is your brand to stay consistent?"
+        },
+        "instagram": {
+          "headline": "Consistency: Your Brand\u2019s Only Defense",
+          "angle": "AI search magnifies every mixed message; founders must own their brand story across every digital channel to avoid fragmentation."
+        },
+        "threads": {
+          "thread_hook": "AI search doesn\u2019t just find your brand \u2014 it fractures it.",
+          "angle": "This thread breaks down how AI-driven content aggregation exposes brand inconsistencies, why that matters for founders, and what proactive steps can stop your brand from unraveling."
+        },
+        "stories": {
+          "story_question": "Is AI search turning your brand into a collection of conflicting stories?",
+          "angle": "Explores how the speed of AI content aggregation challenges founders to maintain a consistent brand image before fragmentation erodes trust."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790173/never-blank/posts/research/7b7cf64b627ce0d3/blog/1788790173.png",
+            "path": "reports/content_packages/images/7b7cf64b627ce0d3_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790174/never-blank/posts/research/7b7cf64b627ce0d3/linkedin/1788790174.png",
+            "path": "reports/content_packages/images/7b7cf64b627ce0d3_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790174/never-blank/posts/research/7b7cf64b627ce0d3/facebook/1788790174.png",
+            "path": "reports/content_packages/images/7b7cf64b627ce0d3_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790175/never-blank/posts/research/7b7cf64b627ce0d3/instagram/1788790175.png",
+            "path": "reports/content_packages/images/7b7cf64b627ce0d3_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790176/never-blank/posts/research/7b7cf64b627ce0d3/threads/1788790176.png",
+            "path": "reports/content_packages/images/7b7cf64b627ce0d3_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790177/never-blank/posts/research/7b7cf64b627ce0d3/stories/1788790177.png",
+            "path": "reports/content_packages/images/7b7cf64b627ce0d3_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "sand_pause_card",
+        "hook_text": "The fastest way to lose control of your brand is to let AI search engines decide who you are."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "40bffc5a22c0e2d1",
+      "headline": "SBA Proposes Major Overhaul to Small Business Size Standards, Expanding Eligibility",
+      "published_at": "2026-09-07 14:10 UTC",
+      "mode": "live",
+      "results": {
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "facebook": {
+          "platform": "facebook",
+          "status": "PUBLISHED",
+          "url": "https://www.facebook.com/1219637131228622_122133485853356169",
+          "external_id": "1219637131228622_122133485853356169",
+          "error_message": null,
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "PUBLISHED",
+          "url": "https://www.instagram.com/p/Dc_Sz3jlGzZ/",
+          "external_id": "18091717430148853",
+          "error_message": null,
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "Could not resolve Threads user ID (HTTP 400)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "PUBLISHED",
+          "url": "https://t.me/never_blank_inneros/56",
+          "external_id": "56",
+          "error_message": null,
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/40bffc5a22c0e2d1_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790063/never-blank/posts/research/40bffc5a22c0e2d1/blog/1788790062.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790067/never-blank/posts/research/40bffc5a22c0e2d1/linkedin/1788790066.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790070/never-blank/posts/research/40bffc5a22c0e2d1/facebook/1788790069.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790075/never-blank/posts/research/40bffc5a22c0e2d1/instagram/1788790075.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790080/never-blank/posts/research/40bffc5a22c0e2d1/threads/1788790080.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790089/never-blank/posts/research/40bffc5a22c0e2d1/stories/1788790089.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "New standards could redefine eligibility for 1.2 million businesses.",
+      "image_visual_family": "mountains_depth_layers",
+      "image_method": "gpt-image-1"
+    }
+  ]
+}

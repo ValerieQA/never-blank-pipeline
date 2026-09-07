@@ -893,5 +893,35 @@
     "visual_family": "light_paths",
     "design_version": "3",
     "hook_text": "Seamless integration, but checkout remains a maze."
+  },
+  "40bffc5a22c0e2d1": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790063/never-blank/posts/research/40bffc5a22c0e2d1/blog/1788790062.png",
+    "signal_type": "authority erosion",
+    "headline": "SBA Proposes Major Overhaul to Small Business Size Standards, Expanding Eligibility",
+    "created_at": "2026-09-07",
+    "method": "gpt-image-1",
+    "visual_family": "mountains_depth_layers",
+    "design_version": "3",
+    "hook_text": "New standards could redefine eligibility for 1.2 million businesses."
+  },
+  "15ae00db53779619": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790140/never-blank/posts/research/15ae00db53779619/blog/1788790140.png",
+    "signal_type": "owner bottleneck",
+    "headline": "A Bad Registered Agent Can Cost You Hundreds of Dollars — or Your Entire Business. Here’s How to Find a Good One.",
+    "created_at": "2026-09-07",
+    "method": "gpt-image-1",
+    "visual_family": "focus_rings",
+    "design_version": "3",
+    "hook_text": "A single mistake can lead to costly consequences."
+  },
+  "7b7cf64b627ce0d3": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788790173/never-blank/posts/research/7b7cf64b627ce0d3/blog/1788790173.png",
+    "signal_type": "consistency failure",
+    "headline": "Your Biggest AI Search Risk Is Conflicting Information About Your Brand via @sejournal, @cshel",
+    "created_at": "2026-09-07",
+    "method": "quote_card",
+    "visual_family": "sand_pause_card",
+    "design_version": "3",
+    "hook_text": "The fastest way to lose control of your brand is to let AI search engines decide who you are."
   }
 }
