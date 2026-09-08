@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import scripts.research.publish_packages as pp
 import src.strategy.history as h
+from src.publishing.release_scope import NON_R1_PUBLISH_CHANNELS
 from src.publishing.result import PublishResult, PublishStatus
 
 
@@ -202,6 +203,13 @@ class TestPublishPackagesAllPlatformFailure:
         # Reports retain FAILED results
         assert len(reports) == 1
         result_statuses = {k: v["status"] for k, v in reports[0]["results"].items()}
-        assert all(s == "FAILED" for s in result_statuses.values()), (
-            f"All publisher results must be FAILED, got: {result_statuses}"
+        # #227: the channels outside Release 1's publishing scope are recorded
+        # as SKIPPED rather than omitted, so the report says why they are absent
+        # instead of leaving a silent gap. Every channel that was *attempted*
+        # still has to have failed for this scenario to mean anything.
+        attempted = {k: v for k, v in result_statuses.items() if v != "SKIPPED"}
+        assert attempted, "no publisher was attempted; the scenario proves nothing"
+        assert all(s == "FAILED" for s in attempted.values()), (
+            f"Every attempted publisher must be FAILED, got: {result_statuses}"
         )
+        assert set(result_statuses) - set(attempted) <= set(NON_R1_PUBLISH_CHANNELS)

@@ -40,6 +40,10 @@ from src.publishing.image_pipeline import ImageSpec, generate_and_upload_card
 from src.publishing.facebook import FacebookPublisher
 from src.publishing.instagram import InstagramPublisher
 from src.publishing.linkedin import LinkedInPublisher
+from src.publishing.release_scope import (
+    out_of_release_scope,
+    restrict_to_release_scope,
+)
 from src.publishing.telegram import TelegramPublisher
 from src.publishing.threads import ThreadsPublisher
 from src.publishing.wix import WixPublisher
@@ -282,7 +286,10 @@ def _publish_platforms(
     wix_url = ""
     wix_post_id = ""
 
-    publishers = [
+    # #227: every publisher this script knows how to drive. The classes stay
+    # imported and complete — they are working code a manual tool may use —
+    # but the scheduled Tuesday/Thursday run may only reach the Release 1 two.
+    all_publishers = [
         ("wix",       WixPublisher()),
         ("linkedin",  LinkedInPublisher()),
         ("facebook",  FacebookPublisher()),
@@ -290,6 +297,19 @@ def _publish_platforms(
         ("threads",   ThreadsPublisher()),
         ("telegram",  TelegramPublisher()),
     ]
+    publishers = restrict_to_release_scope(all_publishers)
+
+    # This path published Telegram on 2026-08-20 and stopped only when an
+    # unrelated model-ID error began failing the run earlier (#159). Authorizing
+    # the channels here means repairing that error cannot quietly bring non-R1
+    # publishing back with it.
+    for name in out_of_release_scope([name for name, _ in all_publishers]):
+        print(f"  —  {name:<12} outside the Release 1 publishing scope")
+        results.setdefault(name, {
+            "platform": name, "status": "SKIPPED",
+            "error_message": "outside the Release 1 publishing scope (#227)",
+            "external_id": None, "url": None,
+        })
 
     for name, publisher in publishers:
         prior = results.get(name, {})
