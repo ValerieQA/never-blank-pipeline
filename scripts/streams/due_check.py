@@ -77,7 +77,9 @@ OFF_SEASON_SKIP = "OFF_SEASON_SKIP"
 #: Distinct from STALE_SKIP so the record never claims a staleness judgement
 #: it did not make.
 WINDOW_SKIP = "WINDOW_SKIP"
-#: Manual dispatch, or any non-schedule event. The window is not evaluated.
+#: Manual dispatch, or any non-schedule event, running for real. The window is
+#: not evaluated. A check-only evaluation never takes this value: a check that
+#: answered FORCED to every manual dispatch would not be a check at all.
 FORCED = "FORCED"
 
 
@@ -226,10 +228,17 @@ def evaluate(
     cron: "str | None" = None,
     role: "str | None" = None,
     force: bool = False,
+    check_only: bool = False,
 ) -> SchedulingDecision:
     """Decide whether this runner publishes, and record why.
 
     ``now`` may be in any timezone; it is converted to ``timezone_name``.
+
+    ``check_only`` keeps a manual dispatch honest: the caller only wants the
+    schedule's answer, so a non-schedule ``event`` must not short-circuit to
+    ``FORCED`` — the window is evaluated exactly as a scheduled firing's would
+    be. ``force`` still wins, because a forced run bypasses the window by
+    explicit instruction, not by accident of the triggering event.
     """
     days = _normalize_days(day)
     tz = ZoneInfo(timezone_name)
@@ -240,7 +249,7 @@ def evaluate(
         stream=stream, role=role, tz_name=timezone_name,
     )
 
-    if force or event != "schedule":
+    if force or (event != "schedule" and not check_only):
         return _decide(
             **common, intended_local=None, decision=FORCED,
             reason=f"{event} run — the schedule window is not evaluated",

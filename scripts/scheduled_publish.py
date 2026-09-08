@@ -49,6 +49,7 @@ def evaluate_schedule(
     event: str = "schedule",
     cron: str | None = None,
     force: bool = False,
+    check_only: bool = False,
 ) -> SchedulingDecision:
     """Friday's scheduling decision — the same seam Monday and Wednesday use.
 
@@ -68,6 +69,7 @@ def evaluate_schedule(
         cron=cron,
         role="never-blank-friday-legacy",
         force=force,
+        check_only=check_only,
     )
 
 
@@ -176,8 +178,11 @@ def main() -> int:
     args = parser.parse_args()
 
     cfg      = load_config()
+    # check_only rides along so a manual dispatch of the check stays a real
+    # schedule evaluation instead of collapsing to FORCED (#226 review).
     decision = evaluate_schedule(
-        cfg, event=args.event, cron=args.cron or None, force=args.force
+        cfg, event=args.event, cron=args.cron or None, force=args.force,
+        check_only=args.check_only,
     )
     due, why = decision.publishes, decision.reason
 

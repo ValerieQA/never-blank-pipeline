@@ -333,6 +333,72 @@ def test_every_workflow_still_forces_on_manual_dispatch():
 
 
 # ===========================================================================
+# --check-only is a schedule check, not a forced run (#226 review)
+# ===========================================================================
+
+
+def test_a_saturday_manual_check_reports_not_due():
+    """The regression the review caught: the workflow's check_only branch
+    passes --event workflow_dispatch, which made every manual check FORCED and
+    therefore DUE — on a Saturday, at midnight, always. A check that cannot say
+    "no" is not a check."""
+    decision = evaluate(
+        _at(datetime(2026, 9, 5, 10, 0)),  # a Saturday
+        day="friday", time="06:17", timezone_name=TZ,
+        event="workflow_dispatch", check_only=True,
+    )
+    assert decision.decision != FORCED
+    assert not decision.publishes
+    assert "saturday" in decision.reason
+
+
+def test_a_manual_check_evaluates_the_same_window_a_scheduled_run_would():
+    """Same instants as the Friday seam test: check-only answers what the
+    schedule would answer, it just answers it from a workflow_dispatch."""
+    from scripts.scheduled_publish import evaluate_schedule, load_config
+
+    cfg = load_config()
+    late = evaluate_schedule(
+        cfg, now=_at(datetime(2026, 9, 4, 14, 51)), cron=FRIDAY_EDT,
+        event="workflow_dispatch", check_only=True,
+    )
+    saturday = evaluate_schedule(
+        cfg, now=_at(datetime(2026, 9, 5, 0, 5)), cron=FRIDAY_EDT,
+        event="workflow_dispatch", check_only=True,
+    )
+
+    assert late.decision == RUN and late.publishes
+    assert saturday.decision == STALE_SKIP and not saturday.publishes
+
+
+def test_a_forced_manual_publish_remains_forced():
+    """check_only widens nothing else: --force still bypasses the window by
+    explicit instruction, and a plain manual publish still forces as before."""
+    forced = evaluate(
+        _at(datetime(2026, 9, 5, 10, 0)), day="friday", time="06:17",
+        timezone_name=TZ, event="workflow_dispatch", force=True, check_only=True,
+    )
+    plain_manual = evaluate(
+        _at(datetime(2026, 9, 5, 10, 0)), day="friday", time="06:17",
+        timezone_name=TZ, event="workflow_dispatch",
+    )
+    assert forced.decision == FORCED and forced.publishes
+    assert plain_manual.decision == FORCED and plain_manual.publishes
+
+
+def test_the_friday_workflow_check_branch_carries_no_force():
+    """The workflow seam itself: the check_only branch must invoke --check-only
+    with the real event name and never --force, so the fix above is actually
+    reachable from the button that exposed the bug."""
+    steps = _workflow("scheduled_publish.yml")["jobs"].popitem()[1]["steps"]
+    run = next(s for s in steps if s["name"] == "Run scheduled publisher")["run"]
+    check_branch = run.split("inputs.check_only")[1].split("else")[0]
+    assert "--check-only" in check_branch
+    assert "--event" in check_branch
+    assert "--force" not in check_branch
+
+
+# ===========================================================================
 # Observability — no skip path leaves nothing behind
 # ===========================================================================
 
