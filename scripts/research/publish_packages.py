@@ -28,6 +28,10 @@ from src.publishing.facebook import FacebookPublisher
 from src.publishing.hashtags import generate_hashtags
 from src.publishing.instagram import InstagramPublisher
 from src.publishing.linkedin import LinkedInPublisher
+from src.publishing.release_scope import (
+    out_of_release_scope,
+    restrict_to_release_scope,
+)
 from src.publishing.result import PublishResult, PublishStatus
 from src.publishing.telegram import TelegramPublisher
 from src.publishing.threads import ThreadsPublisher
@@ -37,7 +41,10 @@ from src.utils.logger import get_logger
 log = get_logger("research.publish_packages")
 PACKAGES_DIR = Path("reports/content_packages")
 
-_PUBLISHERS = [
+#: Every publisher this stage knows how to drive. Kept complete on purpose:
+#: the classes are real, tested and usable by a manual operator tool, and
+#: deleting them would lose working code that Release 2 will want back.
+_ALL_PUBLISHERS = [
     ("wix", WixPublisher()),
     ("linkedin", LinkedInPublisher()),
     ("facebook", FacebookPublisher()),
@@ -45,6 +52,20 @@ _PUBLISHERS = [
     ("threads", ThreadsPublisher()),
     ("telegram", TelegramPublisher()),
 ]
+
+#: What this stage may actually publish. #227: this list was the six above,
+#: written before Release 1 narrowed its scope and never updated when it did.
+#: On 2026-09-06 and 2026-09-07 it published Facebook, Instagram and Telegram
+#: while Wix and LinkedIn failed (#159). Authorization now comes from the one
+#: shared definition rather than from a literal maintained here.
+#:
+#: It had looked safe only because an unrelated repeated-sentence check
+#: happened to reject these packages first; #222 removed that check, correctly,
+#: and the accident it had been covering became visible the next day. An
+#: incidental guard is not channel authorization, so this is the authorization.
+_PUBLISHERS = restrict_to_release_scope(_ALL_PUBLISHERS)
+
+_WITHHELD_CHANNELS = out_of_release_scope([name for name, _ in _ALL_PUBLISHERS])
 
 
 def _slugify(text: str) -> str:
@@ -181,6 +202,16 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
     _strategy_id        = strategy_context.get("strategy_id", "")
     _strategy_started_at = str(active_strategy.started_at) if active_strategy and active_strategy.started_at else ""
     log.info("Strategy context: id=%s cta_mode=%s", _strategy_id, strategy_cta)
+    # #227: say out loud what this stage will not publish. The previous
+    # behaviour was not a decision anyone had made — it was a list nobody had
+    # revisited — and it stayed invisible because nothing ever named it.
+    if _WITHHELD_CHANNELS:
+        log.info(
+            "Release 1 scope: publishing %s; withholding %s (generated and "
+            "packaged, not published)",
+            ", ".join(name for name, _ in _PUBLISHERS),
+            ", ".join(_WITHHELD_CHANNELS),
+        )
 
     for signal in signals:
         rc = ResearchContext.from_dict(signal)
@@ -259,7 +290,14 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
                         facebook_text, instagram_text, threads_seq, telegram_text, "",
                         strategy_id=_strategy_id, strategy_started_at=_strategy_started_at)
 
-        results: dict = {}
+        results: dict = {
+            name: PublishResult(
+                platform=name,
+                status=PublishStatus.SKIPPED,
+                error_message="outside the Release 1 publishing scope (#227)",
+            ).to_dict()
+            for name in _WITHHELD_CHANNELS
+        }
         wix_url = ""
         wix_post_id: Optional[str] = None
         for name, publisher in _PUBLISHERS:

@@ -255,6 +255,10 @@ from src.publishing.canonical_url import (
     verify_canonical_url,
 )
 from src.publishing.result import PublishResult, PublishStatus
+from src.publishing.release_scope import (
+    NON_R1_PUBLISH_CHANNELS,
+    R1_PUBLISH_CHANNELS,
+)
 from src.publishing.telegram import TelegramPublisher
 from src.publishing.threads import ThreadsPublisher
 from src.publishing.wix import ProviderUrlLookup, WixPublisher
@@ -490,8 +494,12 @@ def _save_generated(
 
 
 # Release 1 publishing scope — only these two publishers are invoked.
-_R1_PUBLISHERS = ("wix", "linkedin")
-_NON_R1_PUBLISHERS = ("facebook", "instagram", "threads", "telegram")
+# #227: the values are unchanged; they now come from the single authority in
+# src/publishing/release_scope.py, because two older automatic paths carried
+# their own copy of this list and silently published four channels Release 1
+# does not publish.
+_R1_PUBLISHERS = R1_PUBLISH_CHANNELS
+_NON_R1_PUBLISHERS = NON_R1_PUBLISH_CHANNELS
 
 # #175: the composer formats and image surfaces the active R1 publishers
 # actually consume. Inactive surfaces execute nothing — no composition
