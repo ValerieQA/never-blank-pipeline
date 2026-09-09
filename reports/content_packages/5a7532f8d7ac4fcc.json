@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "5a7532f8d7ac4fcc",
+  "HEADLINE": "UK Publisher Loses 98% Of News Search Visibility After .com Move via @sejournal, @MattGSouthern",
+  "prepared_at": "2026-09-09 12:50 UTC",
+  "content": {
+    "blog": {
+      "headline": "When a Domain Shift Wipes Out 98% of Your Search Visibility",
+      "angle": "A UK publisher’s move from .co.uk to .com promised global scale but triggered a catastrophic loss in search visibility, revealing how domain migrations can silently dismantle digital equity and why founders must plan for SEO fallout before chasing growth."
+    },
+    "linkedin": {
+      "headline": "One domain change, and a publisher’s audience disappeared overnight.",
+      "angle": "Domain migrations aimed at globalizing a brand can obliterate hard-earned search visibility, forcing founders to rethink digital expansion strategies."
+    },
+    "facebook": {
+      "headline": "A UK news publisher lost almost all its search visibility after switching domains. Could your brand survive the same?",
+      "angle": "When a .co.uk site moved to .com, it lost 98% of trending search traffic—what does that mean for your digital growth plans?"
+    },
+    "instagram": {
+      "headline": "Domain Change Destroyed 98% Visibility",
+      "angle": "Scaling a brand by changing domains can erase your digital footprint overnight—visibility isn’t guaranteed."
+    },
+    "threads": {
+      "thread_hook": "Switching your domain can kill your search traffic. Here’s what happened when a UK publisher moved from .co.uk to .com and lost 98% of its news search visibility.",
+      "angle": "This thread breaks down the hidden risks of domain migrations, why SEO doesn’t always follow the move, and what founders need to know before shifting their digital foundation."
+    },
+    "stories": {
+      "story_question": "Thinking of switching your domain to scale? What if you lose 98% of your search traffic?",
+      "angle": "Exploring the tension between global ambitions and the fragile digital equity that can vanish with a domain change."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958209/never-blank/posts/research/5a7532f8d7ac4fcc/blog/1788958208.png",
+        "path": "reports/content_packages/images/5a7532f8d7ac4fcc_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958210/never-blank/posts/research/5a7532f8d7ac4fcc/linkedin/1788958210.png",
+        "path": "reports/content_packages/images/5a7532f8d7ac4fcc_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958212/never-blank/posts/research/5a7532f8d7ac4fcc/facebook/1788958211.png",
+        "path": "reports/content_packages/images/5a7532f8d7ac4fcc_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958213/never-blank/posts/research/5a7532f8d7ac4fcc/instagram/1788958213.png",
+        "path": "reports/content_packages/images/5a7532f8d7ac4fcc_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958214/never-blank/posts/research/5a7532f8d7ac4fcc/threads/1788958214.png",
+        "path": "reports/content_packages/images/5a7532f8d7ac4fcc_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958216/never-blank/posts/research/5a7532f8d7ac4fcc/stories/1788958216.png",
+        "path": "reports/content_packages/images/5a7532f8d7ac4fcc_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "dark_insight_card",
+    "hook_text": "One domain change, and a publisher’s audience disappeared overnight."
+  }
+}

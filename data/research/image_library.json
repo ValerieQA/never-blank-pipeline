@@ -923,5 +923,35 @@
     "visual_family": "sand_pause_card",
     "design_version": "3",
     "hook_text": "The fastest way to lose control of your brand is to let AI search engines decide who you are."
+  },
+  "5a7532f8d7ac4fcc": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958209/never-blank/posts/research/5a7532f8d7ac4fcc/blog/1788958208.png",
+    "signal_type": "business becoming invisible",
+    "headline": "UK Publisher Loses 98% Of News Search Visibility After .com Move via @sejournal, @MattGSouthern",
+    "created_at": "2026-09-09",
+    "method": "quote_card",
+    "visual_family": "dark_insight_card",
+    "design_version": "3",
+    "hook_text": "One domain change, and a publisher’s audience disappeared overnight."
+  },
+  "95c24927f143e382": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958264/never-blank/posts/research/95c24927f143e382/blog/1788958263.png",
+    "signal_type": "platform reach change for small business",
+    "headline": "AI Visibility For Local Businesses: How To Get Recommended By ChatGPT & AI Overviews In 90 Days via @sejournal, @reviewlyAI",
+    "created_at": "2026-09-09",
+    "method": "gpt-image-1",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "90 days to AI-driven visibility for local businesses."
+  },
+  "2467acdd6a80b7b7": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958339/never-blank/posts/research/2467acdd6a80b7b7/blog/1788958338.png",
+    "signal_type": "consistency failure",
+    "headline": "Google Says Old Low-Value Pages May Affect Site Recovery via @sejournal, @MattGSouthern",
+    "created_at": "2026-09-09",
+    "method": "gpt-image-1",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Old pages cast shadows on recovery efforts."
   }
 }

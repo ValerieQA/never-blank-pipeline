@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "95c24927f143e382",
+  "HEADLINE": "AI Visibility For Local Businesses: How To Get Recommended By ChatGPT & AI Overviews In 90 Days via @sejournal, @reviewlyAI",
+  "prepared_at": "2026-09-09 12:51 UTC",
+  "content": {
+    "blog": {
+      "headline": "AI Visibility For Local Businesses: Why Being Online Isn’t Enough Anymore",
+      "angle": "Local businesses face a widening gap as AI platforms redefine discovery faster than they can adapt; the response is proactive digital optimization to secure AI recommendations, proving that visibility now means winning algorithmic attention."
+    },
+    "linkedin": {
+      "headline": "Most local businesses think they’re online. AI thinks otherwise.",
+      "angle": "AI-driven platforms are reshaping how consumers find local services, forcing businesses to rethink their digital presence or risk invisibility."
+    },
+    "facebook": {
+      "headline": "Is your local business ready to be recommended by ChatGPT and AI overviews?",
+      "angle": "With AI platforms changing discovery habits rapidly, local businesses must optimize their digital info or watch customers go elsewhere—how prepared are you?"
+    },
+    "instagram": {
+      "headline": "When AI Picks Your Customers For You",
+      "angle": "Local businesses must shift from just being online to being chosen by AI-driven recommendation engines."
+    },
+    "threads": {
+      "thread_hook": "Local businesses aren’t just fighting for foot traffic anymore—they’re battling for AI’s attention.",
+      "angle": "This thread breaks down how AI platforms like ChatGPT and Google’s AI Overviews are rewriting local discovery rules and what businesses must do to stay visible."
+    },
+    "stories": {
+      "story_question": "Is your business showing up where AI recommends?",
+      "angle": "Explores the urgent need for local businesses to manage their digital presence proactively as AI becomes the new gatekeeper of customer discovery."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958264/never-blank/posts/research/95c24927f143e382/blog/1788958263.png",
+        "path": "reports/content_packages/images/95c24927f143e382_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958267/never-blank/posts/research/95c24927f143e382/linkedin/1788958267.png",
+        "path": "reports/content_packages/images/95c24927f143e382_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958271/never-blank/posts/research/95c24927f143e382/facebook/1788958270.png",
+        "path": "reports/content_packages/images/95c24927f143e382_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958276/never-blank/posts/research/95c24927f143e382/instagram/1788958276.png",
+        "path": "reports/content_packages/images/95c24927f143e382_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958281/never-blank/posts/research/95c24927f143e382/threads/1788958281.png",
+        "path": "reports/content_packages/images/95c24927f143e382_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958289/never-blank/posts/research/95c24927f143e382/stories/1788958288.png",
+        "path": "reports/content_packages/images/95c24927f143e382_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "constellation_networks",
+    "hook_text": "90 days to AI-driven visibility for local businesses."
+  }
+}

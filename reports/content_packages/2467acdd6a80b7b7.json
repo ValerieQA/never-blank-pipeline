@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "2467acdd6a80b7b7",
+  "HEADLINE": "Google Says Old Low-Value Pages May Affect Site Recovery via @sejournal, @MattGSouthern",
+  "prepared_at": "2026-09-09 12:52 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why Your Old Low-Value Pages Are Dragging Down SEO Recovery",
+      "angle": "Google signals that legacy low-value content slows SEO recovery → Founders rush surface fixes hoping for quick wins → The real fix is ruthless, ongoing content pruning → Lesson: Your past content is your present liability."
+    },
+    "linkedin": {
+      "headline": "Most SEO recoveries fail because founders can’t bear to delete their own dead weight.",
+      "angle": "Google’s warning on old low-value pages reveals that superficial SEO fixes won’t cut it; businesses must embrace ruthless content curation to truly recover search rankings."
+    },
+    "facebook": {
+      "headline": "Think a few quick SEO tweaks will fix your rankings? Think again.",
+      "angle": "Google says old low-value pages can hold back site recovery. Without cutting dead weight, how can your SEO bounce back? What’s your plan for ruthless content pruning?"
+    },
+    "instagram": {
+      "headline": "Your Past Content Is Your Present Liability",
+      "angle": "Old, low-value pages don’t just sit quietly—they drag your SEO down long after you’ve tried to fix it."
+    },
+    "threads": {
+      "thread_hook": "SEO recovery isn’t about polishing a few pages. It’s about facing the content you’re afraid to delete.",
+      "angle": "This thread breaks down why legacy low-value pages keep sites stuck in search limbo and how ruthless content curation is the only way forward."
+    },
+    "stories": {
+      "story_question": "Can your SEO really recover without deleting old content?",
+      "angle": "Explores the tension between wanting quick SEO wins and the slow, necessary process of cutting legacy low-value pages to rebuild trust with Google."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958339/never-blank/posts/research/2467acdd6a80b7b7/blog/1788958338.png",
+        "path": "reports/content_packages/images/2467acdd6a80b7b7_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958342/never-blank/posts/research/2467acdd6a80b7b7/linkedin/1788958342.png",
+        "path": "reports/content_packages/images/2467acdd6a80b7b7_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958346/never-blank/posts/research/2467acdd6a80b7b7/facebook/1788958345.png",
+        "path": "reports/content_packages/images/2467acdd6a80b7b7_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958352/never-blank/posts/research/2467acdd6a80b7b7/instagram/1788958352.png",
+        "path": "reports/content_packages/images/2467acdd6a80b7b7_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958357/never-blank/posts/research/2467acdd6a80b7b7/threads/1788958356.png",
+        "path": "reports/content_packages/images/2467acdd6a80b7b7_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1788958365/never-blank/posts/research/2467acdd6a80b7b7/stories/1788958365.png",
+        "path": "reports/content_packages/images/2467acdd6a80b7b7_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Old pages cast shadows on recovery efforts."
+  }
+}
