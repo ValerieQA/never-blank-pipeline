@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "913e16bd311edd6d",
+  "HEADLINE": "5 AI Models, 4 Signals: What 120K Mentions Reveal About Multi-Location SEO",
+  "prepared_at": "2026-09-10 12:49 UTC",
+  "content": {
+    "blog": {
+      "headline": "5 AI Models, 4 Signals: Why Most Multi-Location Businesses Are Invisible in Search",
+      "angle": "AI search models are evolving faster than multi-location businesses can adapt their SEO, causing a visibility crisis; the solution is real-time strategy shifts based on AI signal tracking."
+    },
+    "linkedin": {
+      "headline": "120,000 mentions, five AI models—most multi-location businesses are already invisible and don’t know it.",
+      "angle": "The rapid shift in AI-driven search demands multi-location businesses rethink SEO or risk losing local visibility and customers."
+    },
+    "facebook": {
+      "headline": "Are your multi-location SEO efforts keeping up with AI search models?",
+      "angle": "An analysis of 120,000 mentions shows businesses ignoring AI signals are losing visibility—how prepared is your strategy?"
+    },
+    "instagram": {
+      "headline": "Invisible in AI Search? Here’s Why",
+      "angle": "Multi-location businesses must track AI search signals and rebuild SEO strategies fast or risk fading from local results."
+    },
+    "threads": {
+      "thread_hook": "Most multi-location businesses are invisible in AI search—and they don’t even realize it.",
+      "angle": "This thread breaks down how five AI models and four signal types reveal the SEO blind spots costing businesses local visibility and what to do about it."
+    },
+    "stories": {
+      "story_question": "Is your local SEO strategy invisible to AI search?",
+      "angle": "Exploring the risk multi-location businesses face by not adapting SEO to fast-changing AI search models."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044589/never-blank/posts/research/913e16bd311edd6d/blog/1789044588.png",
+        "path": "reports/content_packages/images/913e16bd311edd6d_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044589/never-blank/posts/research/913e16bd311edd6d/linkedin/1789044589.png",
+        "path": "reports/content_packages/images/913e16bd311edd6d_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044590/never-blank/posts/research/913e16bd311edd6d/facebook/1789044590.png",
+        "path": "reports/content_packages/images/913e16bd311edd6d_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044592/never-blank/posts/research/913e16bd311edd6d/instagram/1789044591.png",
+        "path": "reports/content_packages/images/913e16bd311edd6d_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044593/never-blank/posts/research/913e16bd311edd6d/threads/1789044593.png",
+        "path": "reports/content_packages/images/913e16bd311edd6d_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044593/never-blank/posts/research/913e16bd311edd6d/stories/1789044593.png",
+        "path": "reports/content_packages/images/913e16bd311edd6d_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "light_message_card",
+    "hook_text": "120,000 mentions, five AI models—most multi-location businesses are already invisible and don’t know it."
+  }
+}

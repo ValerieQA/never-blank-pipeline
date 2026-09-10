@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "f4a973ac8df323af",
+  "HEADLINE": "ChatGPT Shopping Results Lean Hard On Product Feeds via @sejournal, @MattGSouthern",
+  "prepared_at": "2026-09-10 12:51 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why Your Product Feed Is the New Frontline in AI Shopping Visibility",
+      "angle": "ChatGPT’s shopping results prioritize product feeds → Brands face the tension of technical feed optimization vs. broad visibility → The response is mastering feed management → Lesson: Feed quality directly controls e-commerce discoverability in AI-driven channels."
+    },
+    "linkedin": {
+      "headline": "Your product might be perfect, but if your feed is broken, you’re invisible to AI shoppers.",
+      "angle": "E-commerce brands must now optimize product feeds not just for customers, but for AI algorithms that determine visibility."
+    },
+    "facebook": {
+      "headline": "Think your product sells itself? Think again—ChatGPT shopping results depend heavily on your product feed.",
+      "angle": "ChatGPT’s reliance on product feeds means poor feed management can bury your products; how are you adapting to this shift?"
+    },
+    "instagram": {
+      "headline": "Product Feeds: The AI Shopping Gatekeeper",
+      "angle": "E-commerce visibility now hinges on feed quality—no feed, no find."
+    },
+    "threads": {
+      "thread_hook": "AI shopping isn’t about the best product anymore—it’s about the best feed.",
+      "angle": "This thread breaks down how ChatGPT’s shopping results depend on feed optimization and why founders must treat feed management as a core business function."
+    },
+    "stories": {
+      "story_question": "Is your product feed costing you AI-driven sales?",
+      "angle": "Exploring how technical feed issues can silently kill your product’s visibility in new AI shopping channels."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044638/never-blank/posts/research/f4a973ac8df323af/blog/1789044637.png",
+        "path": "reports/content_packages/images/f4a973ac8df323af_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044641/never-blank/posts/research/f4a973ac8df323af/linkedin/1789044641.png",
+        "path": "reports/content_packages/images/f4a973ac8df323af_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044645/never-blank/posts/research/f4a973ac8df323af/facebook/1789044644.png",
+        "path": "reports/content_packages/images/f4a973ac8df323af_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044650/never-blank/posts/research/f4a973ac8df323af/instagram/1789044650.png",
+        "path": "reports/content_packages/images/f4a973ac8df323af_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044655/never-blank/posts/research/f4a973ac8df323af/threads/1789044654.png",
+        "path": "reports/content_packages/images/f4a973ac8df323af_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044662/never-blank/posts/research/f4a973ac8df323af/stories/1789044662.png",
+        "path": "reports/content_packages/images/f4a973ac8df323af_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "mountains_depth_layers",
+    "hook_text": "Quality product feeds define AI shopping visibility."
+  }
+}

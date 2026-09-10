@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "c6ca3c38a985dea9",
+  "HEADLINE": "How Freshpet Earned AI’s Trust: A GEO & AI Visibility Playbook via @sejournal, @hethr_campbell",
+  "prepared_at": "2026-09-10 12:49 UTC",
+  "content": {
+    "blog": {
+      "headline": "How Freshpet Rewired Its Content to Win AI’s Trust",
+      "angle": "Brands face a clash between crafting content for humans and meeting AI’s technical demands; Freshpet’s strategic audit and GEO alignment show how adapting content for AI citation builds authority and visibility."
+    },
+    "linkedin": {
+      "headline": "Your content might be perfect for people, but invisible to AI.",
+      "angle": "Brands that ignore AI’s citation criteria risk losing visibility; Freshpet’s approach reveals why adapting content and geographic signals is now essential for digital authority."
+    },
+    "facebook": {
+      "headline": "Freshpet discovered that great content isn’t enough if AI can’t cite you.",
+      "angle": "Freshpet’s collaboration with Intero Digital to audit and restructure content for AI trust raises the question: Is your brand visible to the algorithms that matter?"
+    },
+    "instagram": {
+      "headline": "If AI can’t cite you, you don’t exist",
+      "angle": "Freshpet’s content overhaul proves that winning AI’s trust requires more than human appeal—it demands strategic visibility and citation."
+    },
+    "threads": {
+      "thread_hook": "AI isn’t just reading your content—it’s deciding if you’re trustworthy.",
+      "angle": "This thread breaks down how Freshpet’s GEO and content audit reshaped their digital presence to meet AI’s citation standards and why founders must rethink content strategy."
+    },
+    "stories": {
+      "story_question": "Is your content invisible to AI’s trust signals?",
+      "angle": "Exploring the tension between human-friendly content and AI’s technical requirements for citation and visibility."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044560/never-blank/posts/research/c6ca3c38a985dea9/blog/1789044560.png",
+        "path": "reports/content_packages/images/c6ca3c38a985dea9_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044564/never-blank/posts/research/c6ca3c38a985dea9/linkedin/1789044563.png",
+        "path": "reports/content_packages/images/c6ca3c38a985dea9_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044567/never-blank/posts/research/c6ca3c38a985dea9/facebook/1789044567.png",
+        "path": "reports/content_packages/images/c6ca3c38a985dea9_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044573/never-blank/posts/research/c6ca3c38a985dea9/instagram/1789044572.png",
+        "path": "reports/content_packages/images/c6ca3c38a985dea9_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044578/never-blank/posts/research/c6ca3c38a985dea9/threads/1789044577.png",
+        "path": "reports/content_packages/images/c6ca3c38a985dea9_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044584/never-blank/posts/research/c6ca3c38a985dea9/stories/1789044584.png",
+        "path": "reports/content_packages/images/c6ca3c38a985dea9_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "particle_flow",
+    "hook_text": "Restructuring content for AI visibility and trust."
+  }
+}

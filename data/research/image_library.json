@@ -953,5 +953,35 @@
     "visual_family": "contrast_waves",
     "design_version": "3",
     "hook_text": "Old pages cast shadows on recovery efforts."
+  },
+  "c6ca3c38a985dea9": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044560/never-blank/posts/research/c6ca3c38a985dea9/blog/1789044560.png",
+    "signal_type": "trust accumulation pattern",
+    "headline": "How Freshpet Earned AI’s Trust: A GEO & AI Visibility Playbook via @sejournal, @hethr_campbell",
+    "created_at": "2026-09-10",
+    "method": "gpt-image-1",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "Restructuring content for AI visibility and trust."
+  },
+  "913e16bd311edd6d": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044589/never-blank/posts/research/913e16bd311edd6d/blog/1789044588.png",
+    "signal_type": "platform reach change for small business",
+    "headline": "5 AI Models, 4 Signals: What 120K Mentions Reveal About Multi-Location SEO",
+    "created_at": "2026-09-10",
+    "method": "quote_card",
+    "visual_family": "light_message_card",
+    "design_version": "3",
+    "hook_text": "120,000 mentions, five AI models—most multi-location businesses are already invisible and don’t know it."
+  },
+  "f4a973ac8df323af": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044638/never-blank/posts/research/f4a973ac8df323af/blog/1789044637.png",
+    "signal_type": "visibility interruption",
+    "headline": "ChatGPT Shopping Results Lean Hard On Product Feeds via @sejournal, @MattGSouthern",
+    "created_at": "2026-09-10",
+    "method": "gpt-image-1",
+    "visual_family": "mountains_depth_layers",
+    "design_version": "3",
+    "hook_text": "Quality product feeds define AI shopping visibility."
   }
 }

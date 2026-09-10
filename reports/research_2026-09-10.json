@@ -1,0 +1,505 @@
+{
+  "date": "2026-09-10",
+  "candidates_found": 6,
+  "duplicates_skipped": 0,
+  "new_signals_added": 6,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "How Freshpet Earned AI\u2019s Trust: A GEO & AI Visibility Playbook via @sejournal, @",
+    "5 AI Models, 4 Signals: What 120K Mentions Reveal About Multi-Location SEO",
+    "ChatGPT Shopping Results Lean Hard On Product Feeds via @sejournal, @MattGSouthe"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "c6ca3c38a985dea9",
+      "headline": "How Freshpet Earned AI\u2019s Trust: A GEO & AI Visibility Playbook via @sejournal, @hethr_campbell",
+      "published_at": "2026-09-10 12:51 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/c6ca3c38a985dea9_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044560/never-blank/posts/research/c6ca3c38a985dea9/blog/1789044560.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044564/never-blank/posts/research/c6ca3c38a985dea9/linkedin/1789044563.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044567/never-blank/posts/research/c6ca3c38a985dea9/facebook/1789044567.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044573/never-blank/posts/research/c6ca3c38a985dea9/instagram/1789044572.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044578/never-blank/posts/research/c6ca3c38a985dea9/threads/1789044577.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044584/never-blank/posts/research/c6ca3c38a985dea9/stories/1789044584.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "Restructuring content for AI visibility and trust.",
+      "image_visual_family": "particle_flow",
+      "image_method": "gpt-image-1"
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "publish_failures": [
+    "wix: 'DraftPackage' object has no attribute 'title'",
+    "linkedin: 'DraftPackage' object has no attribute 'linkedin_body'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "c6ca3c38a985dea9",
+      "HEADLINE": "How Freshpet Earned AI\u2019s Trust: A GEO & AI Visibility Playbook via @sejournal, @hethr_campbell",
+      "prepared_at": "2026-09-10 12:49 UTC",
+      "content": {
+        "blog": {
+          "headline": "How Freshpet Rewired Its Content to Win AI\u2019s Trust",
+          "angle": "Brands face a clash between crafting content for humans and meeting AI\u2019s technical demands; Freshpet\u2019s strategic audit and GEO alignment show how adapting content for AI citation builds authority and visibility."
+        },
+        "linkedin": {
+          "headline": "Your content might be perfect for people, but invisible to AI.",
+          "angle": "Brands that ignore AI\u2019s citation criteria risk losing visibility; Freshpet\u2019s approach reveals why adapting content and geographic signals is now essential for digital authority."
+        },
+        "facebook": {
+          "headline": "Freshpet discovered that great content isn\u2019t enough if AI can\u2019t cite you.",
+          "angle": "Freshpet\u2019s collaboration with Intero Digital to audit and restructure content for AI trust raises the question: Is your brand visible to the algorithms that matter?"
+        },
+        "instagram": {
+          "headline": "If AI can\u2019t cite you, you don\u2019t exist",
+          "angle": "Freshpet\u2019s content overhaul proves that winning AI\u2019s trust requires more than human appeal\u2014it demands strategic visibility and citation."
+        },
+        "threads": {
+          "thread_hook": "AI isn\u2019t just reading your content\u2014it\u2019s deciding if you\u2019re trustworthy.",
+          "angle": "This thread breaks down how Freshpet\u2019s GEO and content audit reshaped their digital presence to meet AI\u2019s citation standards and why founders must rethink content strategy."
+        },
+        "stories": {
+          "story_question": "Is your content invisible to AI\u2019s trust signals?",
+          "angle": "Exploring the tension between human-friendly content and AI\u2019s technical requirements for citation and visibility."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044560/never-blank/posts/research/c6ca3c38a985dea9/blog/1789044560.png",
+            "path": "reports/content_packages/images/c6ca3c38a985dea9_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044564/never-blank/posts/research/c6ca3c38a985dea9/linkedin/1789044563.png",
+            "path": "reports/content_packages/images/c6ca3c38a985dea9_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044567/never-blank/posts/research/c6ca3c38a985dea9/facebook/1789044567.png",
+            "path": "reports/content_packages/images/c6ca3c38a985dea9_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044573/never-blank/posts/research/c6ca3c38a985dea9/instagram/1789044572.png",
+            "path": "reports/content_packages/images/c6ca3c38a985dea9_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044578/never-blank/posts/research/c6ca3c38a985dea9/threads/1789044577.png",
+            "path": "reports/content_packages/images/c6ca3c38a985dea9_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044584/never-blank/posts/research/c6ca3c38a985dea9/stories/1789044584.png",
+            "path": "reports/content_packages/images/c6ca3c38a985dea9_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "particle_flow",
+        "hook_text": "Restructuring content for AI visibility and trust."
+      }
+    },
+    {
+      "SIGNAL_ID": "913e16bd311edd6d",
+      "HEADLINE": "5 AI Models, 4 Signals: What 120K Mentions Reveal About Multi-Location SEO",
+      "prepared_at": "2026-09-10 12:49 UTC",
+      "content": {
+        "blog": {
+          "headline": "5 AI Models, 4 Signals: Why Most Multi-Location Businesses Are Invisible in Search",
+          "angle": "AI search models are evolving faster than multi-location businesses can adapt their SEO, causing a visibility crisis; the solution is real-time strategy shifts based on AI signal tracking."
+        },
+        "linkedin": {
+          "headline": "120,000 mentions, five AI models\u2014most multi-location businesses are already invisible and don\u2019t know it.",
+          "angle": "The rapid shift in AI-driven search demands multi-location businesses rethink SEO or risk losing local visibility and customers."
+        },
+        "facebook": {
+          "headline": "Are your multi-location SEO efforts keeping up with AI search models?",
+          "angle": "An analysis of 120,000 mentions shows businesses ignoring AI signals are losing visibility\u2014how prepared is your strategy?"
+        },
+        "instagram": {
+          "headline": "Invisible in AI Search? Here\u2019s Why",
+          "angle": "Multi-location businesses must track AI search signals and rebuild SEO strategies fast or risk fading from local results."
+        },
+        "threads": {
+          "thread_hook": "Most multi-location businesses are invisible in AI search\u2014and they don\u2019t even realize it.",
+          "angle": "This thread breaks down how five AI models and four signal types reveal the SEO blind spots costing businesses local visibility and what to do about it."
+        },
+        "stories": {
+          "story_question": "Is your local SEO strategy invisible to AI search?",
+          "angle": "Exploring the risk multi-location businesses face by not adapting SEO to fast-changing AI search models."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044589/never-blank/posts/research/913e16bd311edd6d/blog/1789044588.png",
+            "path": "reports/content_packages/images/913e16bd311edd6d_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044589/never-blank/posts/research/913e16bd311edd6d/linkedin/1789044589.png",
+            "path": "reports/content_packages/images/913e16bd311edd6d_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044590/never-blank/posts/research/913e16bd311edd6d/facebook/1789044590.png",
+            "path": "reports/content_packages/images/913e16bd311edd6d_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044592/never-blank/posts/research/913e16bd311edd6d/instagram/1789044591.png",
+            "path": "reports/content_packages/images/913e16bd311edd6d_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044593/never-blank/posts/research/913e16bd311edd6d/threads/1789044593.png",
+            "path": "reports/content_packages/images/913e16bd311edd6d_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044593/never-blank/posts/research/913e16bd311edd6d/stories/1789044593.png",
+            "path": "reports/content_packages/images/913e16bd311edd6d_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "light_message_card",
+        "hook_text": "120,000 mentions, five AI models\u2014most multi-location businesses are already invisible and don\u2019t know it."
+      }
+    },
+    {
+      "SIGNAL_ID": "f4a973ac8df323af",
+      "HEADLINE": "ChatGPT Shopping Results Lean Hard On Product Feeds via @sejournal, @MattGSouthern",
+      "prepared_at": "2026-09-10 12:51 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why Your Product Feed Is the New Frontline in AI Shopping Visibility",
+          "angle": "ChatGPT\u2019s shopping results prioritize product feeds \u2192 Brands face the tension of technical feed optimization vs. broad visibility \u2192 The response is mastering feed management \u2192 Lesson: Feed quality directly controls e-commerce discoverability in AI-driven channels."
+        },
+        "linkedin": {
+          "headline": "Your product might be perfect, but if your feed is broken, you\u2019re invisible to AI shoppers.",
+          "angle": "E-commerce brands must now optimize product feeds not just for customers, but for AI algorithms that determine visibility."
+        },
+        "facebook": {
+          "headline": "Think your product sells itself? Think again\u2014ChatGPT shopping results depend heavily on your product feed.",
+          "angle": "ChatGPT\u2019s reliance on product feeds means poor feed management can bury your products; how are you adapting to this shift?"
+        },
+        "instagram": {
+          "headline": "Product Feeds: The AI Shopping Gatekeeper",
+          "angle": "E-commerce visibility now hinges on feed quality\u2014no feed, no find."
+        },
+        "threads": {
+          "thread_hook": "AI shopping isn\u2019t about the best product anymore\u2014it\u2019s about the best feed.",
+          "angle": "This thread breaks down how ChatGPT\u2019s shopping results depend on feed optimization and why founders must treat feed management as a core business function."
+        },
+        "stories": {
+          "story_question": "Is your product feed costing you AI-driven sales?",
+          "angle": "Exploring how technical feed issues can silently kill your product\u2019s visibility in new AI shopping channels."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044638/never-blank/posts/research/f4a973ac8df323af/blog/1789044637.png",
+            "path": "reports/content_packages/images/f4a973ac8df323af_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044641/never-blank/posts/research/f4a973ac8df323af/linkedin/1789044641.png",
+            "path": "reports/content_packages/images/f4a973ac8df323af_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044645/never-blank/posts/research/f4a973ac8df323af/facebook/1789044644.png",
+            "path": "reports/content_packages/images/f4a973ac8df323af_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044650/never-blank/posts/research/f4a973ac8df323af/instagram/1789044650.png",
+            "path": "reports/content_packages/images/f4a973ac8df323af_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044655/never-blank/posts/research/f4a973ac8df323af/threads/1789044654.png",
+            "path": "reports/content_packages/images/f4a973ac8df323af_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044662/never-blank/posts/research/f4a973ac8df323af/stories/1789044662.png",
+            "path": "reports/content_packages/images/f4a973ac8df323af_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "mountains_depth_layers",
+        "hook_text": "Quality product feeds define AI shopping visibility."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "c6ca3c38a985dea9",
+      "headline": "How Freshpet Earned AI\u2019s Trust: A GEO & AI Visibility Playbook via @sejournal, @hethr_campbell",
+      "published_at": "2026-09-10 12:51 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/c6ca3c38a985dea9_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044560/never-blank/posts/research/c6ca3c38a985dea9/blog/1789044560.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044564/never-blank/posts/research/c6ca3c38a985dea9/linkedin/1789044563.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044567/never-blank/posts/research/c6ca3c38a985dea9/facebook/1789044567.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044573/never-blank/posts/research/c6ca3c38a985dea9/instagram/1789044572.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044578/never-blank/posts/research/c6ca3c38a985dea9/threads/1789044577.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789044584/never-blank/posts/research/c6ca3c38a985dea9/stories/1789044584.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "Restructuring content for AI visibility and trust.",
+      "image_visual_family": "particle_flow",
+      "image_method": "gpt-image-1"
+    }
+  ]
+}
