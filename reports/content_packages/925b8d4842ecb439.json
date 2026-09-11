@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "925b8d4842ecb439",
+  "HEADLINE": "A Client Put $30K Into a Managed Amazon Storefront She Hardly Logged Into. It Now Clears 6 Figures a Month.",
+  "prepared_at": "2026-09-11 12:44 UTC",
+  "content": {
+    "blog": {
+      "headline": "How $30K and Minimal Oversight Turned Into a Six-Figure Amazon Storefront",
+      "angle": "A founder’s $30K bet on a managed Amazon storefront sparks tension between passive income allure and oversight risks, revealing that trust paired with verification systems drives scalable e-commerce success."
+    },
+    "linkedin": {
+      "headline": "She barely logged into her Amazon store—and it now clears six figures a month.",
+      "angle": "Managed e-commerce promises passive revenue, but without rigorous partner vetting and performance checks, founders risk handing over control to potential mismanagement."
+    },
+    "facebook": {
+      "headline": "Imagine investing $30K into an Amazon store you hardly touch—and it starts making six figures monthly.",
+      "angle": "A founder’s experience with a managed storefront highlights the tension between passive income dreams and the dangers of fraud or neglect—how do you decide who to trust?"
+    },
+    "instagram": {
+      "headline": "From $30K to Six Figures: The Trust Factor",
+      "angle": "Passive e-commerce income isn’t about automation alone—it’s about building trust and systems to keep it honest."
+    },
+    "threads": {
+      "thread_hook": "She put $30K into a managed Amazon storefront, barely logged in, and now it’s pulling six figures a month.",
+      "angle": "This thread breaks down why the real asset in managed e-commerce isn’t automation or tech—it’s the trust you extend and the checks you build to protect it."
+    },
+    "stories": {
+      "story_question": "Would you trust a stranger with your $30K investment if it meant six-figure returns?",
+      "angle": "Exploring the tension between the appeal of passive income and the risks of handing over control without oversight."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789130652/never-blank/posts/research/925b8d4842ecb439/blog/1789130651.png",
+        "path": "reports/content_packages/images/925b8d4842ecb439_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789130655/never-blank/posts/research/925b8d4842ecb439/linkedin/1789130654.png",
+        "path": "reports/content_packages/images/925b8d4842ecb439_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789130658/never-blank/posts/research/925b8d4842ecb439/facebook/1789130657.png",
+        "path": "reports/content_packages/images/925b8d4842ecb439_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789130663/never-blank/posts/research/925b8d4842ecb439/instagram/1789130663.png",
+        "path": "reports/content_packages/images/925b8d4842ecb439_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789130667/never-blank/posts/research/925b8d4842ecb439/threads/1789130667.png",
+        "path": "reports/content_packages/images/925b8d4842ecb439_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789130675/never-blank/posts/research/925b8d4842ecb439/stories/1789130675.png",
+        "path": "reports/content_packages/images/925b8d4842ecb439_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "focus_rings",
+    "hook_text": "$30K investment, now clearing six figures monthly."
+  }
+}

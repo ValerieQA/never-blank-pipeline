@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "14312088307d8685",
+  "HEADLINE": "Google Launches Meridian GeoX Globally via @sejournal, @brookeosmundson",
+  "prepared_at": "2026-09-11 12:45 UTC",
+  "content": {
+    "blog": {
+      "headline": "Google Meridian GeoX Goes Global: What It Means for Local Marketing Measurement",
+      "angle": "Google’s global launch of Meridian GeoX exposes the gap between small businesses’ need for precise local marketing metrics and their historical lack of scalable tools; the response is a free, robust geo experimentation platform that shifts the competitive edge from access to execution."
+    },
+    "linkedin": {
+      "headline": "Every small business just got handed a tool Fortune 500s used to guard like state secrets.",
+      "angle": "Google’s Meridian GeoX global rollout democratizes geo experimentation, forcing service businesses to rethink how they measure and optimize local marketing investments."
+    },
+    "facebook": {
+      "headline": "Google’s Meridian GeoX is now global—what does that mean for your local marketing?",
+      "angle": "Google launches a free geo experimentation tool that lets small businesses measure local marketing impact with precision—are you ready to move from guesswork to data-driven decisions?"
+    },
+    "instagram": {
+      "headline": "Local Marketing Measurement, Unlocked",
+      "angle": "Google’s Meridian GeoX puts advanced geo testing tools in the hands of small businesses, changing how local campaigns get measured and optimized."
+    },
+    "threads": {
+      "thread_hook": "Small businesses just got access to the same geo marketing tools Fortune 500s kept secret.",
+      "angle": "This thread breaks down how Google’s Meridian GeoX global launch transforms local marketing measurement from a luxury into a baseline expectation—and why execution now defines advantage."
+    },
+    "stories": {
+      "story_question": "Is your local marketing measurement stuck in the past?",
+      "angle": "Exploring how Google’s Meridian GeoX challenges small businesses to upgrade from limited local marketing insights to precise, data-driven experimentation."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789130725/never-blank/posts/research/14312088307d8685/blog/1789130724.png",
+        "path": "reports/content_packages/images/14312088307d8685_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789130728/never-blank/posts/research/14312088307d8685/linkedin/1789130728.png",
+        "path": "reports/content_packages/images/14312088307d8685_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789130732/never-blank/posts/research/14312088307d8685/facebook/1789130731.png",
+        "path": "reports/content_packages/images/14312088307d8685_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789130737/never-blank/posts/research/14312088307d8685/instagram/1789130737.png",
+        "path": "reports/content_packages/images/14312088307d8685_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789130742/never-blank/posts/research/14312088307d8685/threads/1789130741.png",
+        "path": "reports/content_packages/images/14312088307d8685_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789130749/never-blank/posts/research/14312088307d8685/stories/1789130749.png",
+        "path": "reports/content_packages/images/14312088307d8685_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "light_paths",
+    "hook_text": "Meridian GeoX: Optimize marketing with geo experiments."
+  }
+}
