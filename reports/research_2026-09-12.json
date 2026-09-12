@@ -1,0 +1,418 @@
+{
+  "date": "2026-09-12",
+  "candidates_found": 3,
+  "duplicates_skipped": 0,
+  "new_signals_added": 3,
+  "selected_for_content": 2,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Hiring Transparency Is Becoming a Competitive Advantage. Here\u2019s the Cost of Gett",
+    "What Scaling a Payments Company Taught Me About the Problems Success Creates"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "9dc7af7b02124e9d",
+      "headline": "Hiring Transparency Is Becoming a Competitive Advantage. Here\u2019s the Cost of Getting It Wrong.",
+      "published_at": "2026-09-12 12:03 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/9dc7af7b02124e9d_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214578/never-blank/posts/research/9dc7af7b02124e9d/blog/1789214578.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214579/never-blank/posts/research/9dc7af7b02124e9d/linkedin/1789214578.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214579/never-blank/posts/research/9dc7af7b02124e9d/facebook/1789214579.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214580/never-blank/posts/research/9dc7af7b02124e9d/instagram/1789214580.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214581/never-blank/posts/research/9dc7af7b02124e9d/threads/1789214581.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214581/never-blank/posts/research/9dc7af7b02124e9d/stories/1789214581.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "Every time you post a \u2018ghost job,\u2019 you\u2019re training top talent to look elsewhere.",
+      "image_visual_family": "sand_pause_card",
+      "image_method": "quote_card"
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 2,
+  "images_new": 2,
+  "images_reused": 0,
+  "publish_failures": [
+    "wix: 'DraftPackage' object has no attribute 'title'",
+    "linkedin: 'DraftPackage' object has no attribute 'linkedin_body'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "9dc7af7b02124e9d",
+      "HEADLINE": "Hiring Transparency Is Becoming a Competitive Advantage. Here\u2019s the Cost of Getting It Wrong.",
+      "prepared_at": "2026-09-12 12:03 UTC",
+      "content": {
+        "blog": {
+          "headline": "Hiring Transparency Is the New Talent Currency: Why Secrecy Costs You More Than You Think",
+          "angle": "As companies cling to secrecy in hiring, they push top talent away; adopting transparent hiring practices builds trust and attracts better candidates, proving openness is a strategic advantage."
+        },
+        "linkedin": {
+          "headline": "Every time you post a \u2018ghost job,\u2019 you\u2019re training top talent to look elsewhere.",
+          "angle": "Opaque hiring practices erode candidate trust, making transparency a critical differentiator in the war for talent."
+        },
+        "facebook": {
+          "headline": "Why are top candidates ghosting your job posts? It might be your hiring secrecy.",
+          "angle": "Employers hiding salary and role details lose out to transparent companies like Buffer\u2014are you ready to rethink your approach?"
+        },
+        "instagram": {
+          "headline": "Transparency: Your Hiring Secret Weapon",
+          "angle": "Showing candidates the full picture isn\u2019t a risk\u2014it\u2019s how you win the best talent in a crowded market."
+        },
+        "threads": {
+          "thread_hook": "Secrecy in hiring isn\u2019t protecting your company\u2014it\u2019s pushing talent away.",
+          "angle": "This thread breaks down how opaque hiring practices damage trust and why transparency is becoming the sharp edge in talent acquisition."
+        },
+        "stories": {
+          "story_question": "Are your hiring secrets costing you top talent?",
+          "angle": "Exploring the tension between keeping hiring details under wraps and the growing demand for transparency from candidates."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214578/never-blank/posts/research/9dc7af7b02124e9d/blog/1789214578.png",
+            "path": "reports/content_packages/images/9dc7af7b02124e9d_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214579/never-blank/posts/research/9dc7af7b02124e9d/linkedin/1789214578.png",
+            "path": "reports/content_packages/images/9dc7af7b02124e9d_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214579/never-blank/posts/research/9dc7af7b02124e9d/facebook/1789214579.png",
+            "path": "reports/content_packages/images/9dc7af7b02124e9d_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214580/never-blank/posts/research/9dc7af7b02124e9d/instagram/1789214580.png",
+            "path": "reports/content_packages/images/9dc7af7b02124e9d_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214581/never-blank/posts/research/9dc7af7b02124e9d/threads/1789214581.png",
+            "path": "reports/content_packages/images/9dc7af7b02124e9d_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214581/never-blank/posts/research/9dc7af7b02124e9d/stories/1789214581.png",
+            "path": "reports/content_packages/images/9dc7af7b02124e9d_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "sand_pause_card",
+        "hook_text": "Every time you post a \u2018ghost job,\u2019 you\u2019re training top talent to look elsewhere."
+      }
+    },
+    {
+      "SIGNAL_ID": "422a53e0ae83e40a",
+      "HEADLINE": "What Scaling a Payments Company Taught Me About the Problems Success Creates",
+      "prepared_at": "2026-09-12 12:03 UTC",
+      "content": {
+        "blog": {
+          "headline": "Scaling Payments: Why Growth Breaks More Than Just Records",
+          "angle": "Rapid growth in payments companies exposes fragile infrastructure, forcing leaders to rethink systems before operational failures cripple success."
+        },
+        "linkedin": {
+          "headline": "Stripe\u2019s first meltdown wasn\u2019t a competitor\u2014it was its own growth.",
+          "angle": "Fast scaling in payments demands more than customer wins; it requires anticipating the operational chaos growth unleashes."
+        },
+        "facebook": {
+          "headline": "When Stripe\u2019s systems buckled under its own success, what went wrong?",
+          "angle": "Payments companies often celebrate rapid growth, but Stripe\u2019s experience shows how scaling can shatter early systems\u2014are you ready for the fallout?"
+        },
+        "instagram": {
+          "headline": "Growth Breaks What You Built",
+          "angle": "Scaling payments startups face a brutal truth: the systems that got you here won\u2019t get you there."
+        },
+        "threads": {
+          "thread_hook": "The real test of a payments company isn\u2019t speed\u2014it\u2019s how fast it can fix what growth breaks.",
+          "angle": "This thread unpacks Stripe\u2019s operational meltdown to reveal why scaling payments businesses demands proactive system reinvention, not just customer acquisition."
+        },
+        "stories": {
+          "story_question": "Is your growth strategy ready for the chaos it creates?",
+          "angle": "Exploring the tension between rapid scaling and the operational breakdowns that follow in payments companies."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214586/never-blank/posts/research/422a53e0ae83e40a/blog/1789214586.png",
+            "path": "reports/content_packages/images/422a53e0ae83e40a_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214587/never-blank/posts/research/422a53e0ae83e40a/linkedin/1789214587.png",
+            "path": "reports/content_packages/images/422a53e0ae83e40a_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214588/never-blank/posts/research/422a53e0ae83e40a/facebook/1789214588.png",
+            "path": "reports/content_packages/images/422a53e0ae83e40a_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214589/never-blank/posts/research/422a53e0ae83e40a/instagram/1789214589.png",
+            "path": "reports/content_packages/images/422a53e0ae83e40a_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214590/never-blank/posts/research/422a53e0ae83e40a/threads/1789214590.png",
+            "path": "reports/content_packages/images/422a53e0ae83e40a_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214591/never-blank/posts/research/422a53e0ae83e40a/stories/1789214591.png",
+            "path": "reports/content_packages/images/422a53e0ae83e40a_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "dark_insight_card",
+        "hook_text": "Stripe\u2019s first operational meltdown didn\u2019t come from a competitor\u2014it came from its own runaway growth."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "9dc7af7b02124e9d",
+      "headline": "Hiring Transparency Is Becoming a Competitive Advantage. Here\u2019s the Cost of Getting It Wrong.",
+      "published_at": "2026-09-12 12:03 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/9dc7af7b02124e9d_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214578/never-blank/posts/research/9dc7af7b02124e9d/blog/1789214578.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214579/never-blank/posts/research/9dc7af7b02124e9d/linkedin/1789214578.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214579/never-blank/posts/research/9dc7af7b02124e9d/facebook/1789214579.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214580/never-blank/posts/research/9dc7af7b02124e9d/instagram/1789214580.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214581/never-blank/posts/research/9dc7af7b02124e9d/threads/1789214581.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214581/never-blank/posts/research/9dc7af7b02124e9d/stories/1789214581.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "Every time you post a \u2018ghost job,\u2019 you\u2019re training top talent to look elsewhere.",
+      "image_visual_family": "sand_pause_card",
+      "image_method": "quote_card"
+    }
+  ]
+}

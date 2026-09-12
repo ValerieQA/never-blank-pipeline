@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "9dc7af7b02124e9d",
+  "HEADLINE": "Hiring Transparency Is Becoming a Competitive Advantage. Here’s the Cost of Getting It Wrong.",
+  "prepared_at": "2026-09-12 12:03 UTC",
+  "content": {
+    "blog": {
+      "headline": "Hiring Transparency Is the New Talent Currency: Why Secrecy Costs You More Than You Think",
+      "angle": "As companies cling to secrecy in hiring, they push top talent away; adopting transparent hiring practices builds trust and attracts better candidates, proving openness is a strategic advantage."
+    },
+    "linkedin": {
+      "headline": "Every time you post a ‘ghost job,’ you’re training top talent to look elsewhere.",
+      "angle": "Opaque hiring practices erode candidate trust, making transparency a critical differentiator in the war for talent."
+    },
+    "facebook": {
+      "headline": "Why are top candidates ghosting your job posts? It might be your hiring secrecy.",
+      "angle": "Employers hiding salary and role details lose out to transparent companies like Buffer—are you ready to rethink your approach?"
+    },
+    "instagram": {
+      "headline": "Transparency: Your Hiring Secret Weapon",
+      "angle": "Showing candidates the full picture isn’t a risk—it’s how you win the best talent in a crowded market."
+    },
+    "threads": {
+      "thread_hook": "Secrecy in hiring isn’t protecting your company—it’s pushing talent away.",
+      "angle": "This thread breaks down how opaque hiring practices damage trust and why transparency is becoming the sharp edge in talent acquisition."
+    },
+    "stories": {
+      "story_question": "Are your hiring secrets costing you top talent?",
+      "angle": "Exploring the tension between keeping hiring details under wraps and the growing demand for transparency from candidates."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214578/never-blank/posts/research/9dc7af7b02124e9d/blog/1789214578.png",
+        "path": "reports/content_packages/images/9dc7af7b02124e9d_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214579/never-blank/posts/research/9dc7af7b02124e9d/linkedin/1789214578.png",
+        "path": "reports/content_packages/images/9dc7af7b02124e9d_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214579/never-blank/posts/research/9dc7af7b02124e9d/facebook/1789214579.png",
+        "path": "reports/content_packages/images/9dc7af7b02124e9d_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214580/never-blank/posts/research/9dc7af7b02124e9d/instagram/1789214580.png",
+        "path": "reports/content_packages/images/9dc7af7b02124e9d_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214581/never-blank/posts/research/9dc7af7b02124e9d/threads/1789214581.png",
+        "path": "reports/content_packages/images/9dc7af7b02124e9d_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214581/never-blank/posts/research/9dc7af7b02124e9d/stories/1789214581.png",
+        "path": "reports/content_packages/images/9dc7af7b02124e9d_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "sand_pause_card",
+    "hook_text": "Every time you post a ‘ghost job,’ you’re training top talent to look elsewhere."
+  }
+}

@@ -621,6 +621,26 @@
       "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789130725/never-blank/posts/research/14312088307d8685/blog/1789130724.png",
       "source_topic": "Google Launches Meridian GeoX Globally via @sejournal, @brookeosmundson",
       "reuse_count": 1
+    },
+    {
+      "published_date": "2026-09-12T12:03:02Z",
+      "content_slug": "research/9dc7af7b02124e9d",
+      "visual_family": "sand_pause_card",
+      "dominant_palette": "sand",
+      "hook_text": "Every time you post a \u2018ghost job,\u2019 you\u2019re training top talent to look elsewhere.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214578/never-blank/posts/research/9dc7af7b02124e9d/blog/1789214578.png",
+      "source_topic": "Hiring Transparency Is Becoming a Competitive Advantage. Here\u2019s the Cost of Getting It Wrong.",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-09-12T12:03:11Z",
+      "content_slug": "research/422a53e0ae83e40a",
+      "visual_family": "dark_insight_card",
+      "dominant_palette": "deep_navy",
+      "hook_text": "Stripe\u2019s first operational meltdown didn\u2019t come from a competitor\u2014it came from its own runaway growth.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214586/never-blank/posts/research/422a53e0ae83e40a/blog/1789214586.png",
+      "source_topic": "What Scaling a Payments Company Taught Me About the Problems Success Creates",
+      "reuse_count": 1
     }
   ]
 }

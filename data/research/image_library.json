@@ -1003,5 +1003,25 @@
     "visual_family": "light_paths",
     "design_version": "3",
     "hook_text": "Meridian GeoX: Optimize marketing with geo experiments."
+  },
+  "9dc7af7b02124e9d": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214578/never-blank/posts/research/9dc7af7b02124e9d/blog/1789214578.png",
+    "signal_type": "trust accumulation pattern",
+    "headline": "Hiring Transparency Is Becoming a Competitive Advantage. Here’s the Cost of Getting It Wrong.",
+    "created_at": "2026-09-12",
+    "method": "quote_card",
+    "visual_family": "sand_pause_card",
+    "design_version": "3",
+    "hook_text": "Every time you post a ‘ghost job,’ you’re training top talent to look elsewhere."
+  },
+  "422a53e0ae83e40a": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789214586/never-blank/posts/research/422a53e0ae83e40a/blog/1789214586.png",
+    "signal_type": "consistency failure",
+    "headline": "What Scaling a Payments Company Taught Me About the Problems Success Creates",
+    "created_at": "2026-09-12",
+    "method": "quote_card",
+    "visual_family": "dark_insight_card",
+    "design_version": "3",
+    "hook_text": "Stripe’s first operational meltdown didn’t come from a competitor—it came from its own runaway growth."
   }
 }
