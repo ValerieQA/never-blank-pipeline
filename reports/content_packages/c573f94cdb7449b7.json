@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "c573f94cdb7449b7",
+  "HEADLINE": "U.S. Uranium Production Hits Record High in 2025, Triples from 2024",
+  "prepared_at": "2026-09-13 13:14 UTC",
+  "content": {
+    "blog": {
+      "headline": "U.S. Uranium Production Triples in 2025: Why Managing the Backlash Matters More Than Output",
+      "angle": "The surge in U.S. uranium production exposes tensions between growth and regulatory, environmental, and market stability — founders must respond by prioritizing sustainable presence over sheer volume to navigate these risks."
+    },
+    "linkedin": {
+      "headline": "Tripling uranium output grabs headlines. But what about the regulatory and market backlash?",
+      "angle": "A rapid production spike signals opportunity but also invites complex regulatory and environmental challenges that can unsettle markets and business stability."
+    },
+    "facebook": {
+      "headline": "U.S. uranium production just tripled in a year. What happens next?",
+      "angle": "Record production growth creates market ripples and regulatory scrutiny—how will businesses balance expansion with the inevitable pushback?"
+    },
+    "instagram": {
+      "headline": "Tripled Output, Tripled Risks",
+      "angle": "When production surges, the real challenge is managing environmental and regulatory fallout without losing market footing."
+    },
+    "threads": {
+      "thread_hook": "U.S. uranium production didn’t just grow—it exploded. But growth isn’t the whole story.",
+      "angle": "This thread breaks down why founders need to look beyond output numbers and focus on navigating the environmental, regulatory, and market turbulence that rapid production invites."
+    },
+    "stories": {
+      "story_question": "Can you grow fast without losing control to regulation and market chaos?",
+      "angle": "Exploring the tension between rapid production growth and the need for stability amid environmental and regulatory pressures."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305257/never-blank/posts/research/c573f94cdb7449b7/blog/1789305256.png",
+        "path": "reports/content_packages/images/c573f94cdb7449b7_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305260/never-blank/posts/research/c573f94cdb7449b7/linkedin/1789305260.png",
+        "path": "reports/content_packages/images/c573f94cdb7449b7_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305264/never-blank/posts/research/c573f94cdb7449b7/facebook/1789305264.png",
+        "path": "reports/content_packages/images/c573f94cdb7449b7_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305271/never-blank/posts/research/c573f94cdb7449b7/instagram/1789305270.png",
+        "path": "reports/content_packages/images/c573f94cdb7449b7_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305276/never-blank/posts/research/c573f94cdb7449b7/threads/1789305275.png",
+        "path": "reports/content_packages/images/c573f94cdb7449b7_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305284/never-blank/posts/research/c573f94cdb7449b7/stories/1789305284.png",
+        "path": "reports/content_packages/images/c573f94cdb7449b7_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "constellation_networks",
+    "hook_text": "U.S. uranium production triples, reaching record highs."
+  }
+}

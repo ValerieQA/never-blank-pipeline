@@ -1023,5 +1023,25 @@
     "visual_family": "dark_insight_card",
     "design_version": "3",
     "hook_text": "Stripe’s first operational meltdown didn’t come from a competitor—it came from its own runaway growth."
+  },
+  "c573f94cdb7449b7": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305257/never-blank/posts/research/c573f94cdb7449b7/blog/1789305256.png",
+    "signal_type": "presence maintenance failure",
+    "headline": "U.S. Uranium Production Hits Record High in 2025, Triples from 2024",
+    "created_at": "2026-09-13",
+    "method": "gpt-image-1",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "U.S. uranium production triples, reaching record highs."
+  },
+  "9f8233d5d6738e4e": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305331/never-blank/posts/research/9f8233d5d6738e4e/blog/1789305330.png",
+    "signal_type": "trust accumulation pattern",
+    "headline": "Visa Unveils A2A Protect to Combat Fraud and Enhance Security for Banks",
+    "created_at": "2026-09-13",
+    "method": "gpt-image-1",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "A2A Protect: Shielding banks from unseen threats."
   }
 }

@@ -1,0 +1,418 @@
+{
+  "date": "2026-09-13",
+  "candidates_found": 9,
+  "duplicates_skipped": 0,
+  "new_signals_added": 9,
+  "selected_for_content": 2,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "U.S. Uranium Production Hits Record High in 2025, Triples from 2024",
+    "Visa Unveils A2A Protect to Combat Fraud and Enhance Security for Banks"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "c573f94cdb7449b7",
+      "headline": "U.S. Uranium Production Hits Record High in 2025, Triples from 2024",
+      "published_at": "2026-09-13 13:16 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/c573f94cdb7449b7_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305257/never-blank/posts/research/c573f94cdb7449b7/blog/1789305256.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305260/never-blank/posts/research/c573f94cdb7449b7/linkedin/1789305260.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305264/never-blank/posts/research/c573f94cdb7449b7/facebook/1789305264.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305271/never-blank/posts/research/c573f94cdb7449b7/instagram/1789305270.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305276/never-blank/posts/research/c573f94cdb7449b7/threads/1789305275.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305284/never-blank/posts/research/c573f94cdb7449b7/stories/1789305284.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "U.S. uranium production triples, reaching record highs.",
+      "image_visual_family": "constellation_networks",
+      "image_method": "gpt-image-1"
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 2,
+  "images_new": 2,
+  "images_reused": 0,
+  "publish_failures": [
+    "wix: 'DraftPackage' object has no attribute 'title'",
+    "linkedin: 'DraftPackage' object has no attribute 'linkedin_body'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "c573f94cdb7449b7",
+      "HEADLINE": "U.S. Uranium Production Hits Record High in 2025, Triples from 2024",
+      "prepared_at": "2026-09-13 13:14 UTC",
+      "content": {
+        "blog": {
+          "headline": "U.S. Uranium Production Triples in 2025: Why Managing the Backlash Matters More Than Output",
+          "angle": "The surge in U.S. uranium production exposes tensions between growth and regulatory, environmental, and market stability \u2014 founders must respond by prioritizing sustainable presence over sheer volume to navigate these risks."
+        },
+        "linkedin": {
+          "headline": "Tripling uranium output grabs headlines. But what about the regulatory and market backlash?",
+          "angle": "A rapid production spike signals opportunity but also invites complex regulatory and environmental challenges that can unsettle markets and business stability."
+        },
+        "facebook": {
+          "headline": "U.S. uranium production just tripled in a year. What happens next?",
+          "angle": "Record production growth creates market ripples and regulatory scrutiny\u2014how will businesses balance expansion with the inevitable pushback?"
+        },
+        "instagram": {
+          "headline": "Tripled Output, Tripled Risks",
+          "angle": "When production surges, the real challenge is managing environmental and regulatory fallout without losing market footing."
+        },
+        "threads": {
+          "thread_hook": "U.S. uranium production didn\u2019t just grow\u2014it exploded. But growth isn\u2019t the whole story.",
+          "angle": "This thread breaks down why founders need to look beyond output numbers and focus on navigating the environmental, regulatory, and market turbulence that rapid production invites."
+        },
+        "stories": {
+          "story_question": "Can you grow fast without losing control to regulation and market chaos?",
+          "angle": "Exploring the tension between rapid production growth and the need for stability amid environmental and regulatory pressures."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305257/never-blank/posts/research/c573f94cdb7449b7/blog/1789305256.png",
+            "path": "reports/content_packages/images/c573f94cdb7449b7_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305260/never-blank/posts/research/c573f94cdb7449b7/linkedin/1789305260.png",
+            "path": "reports/content_packages/images/c573f94cdb7449b7_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305264/never-blank/posts/research/c573f94cdb7449b7/facebook/1789305264.png",
+            "path": "reports/content_packages/images/c573f94cdb7449b7_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305271/never-blank/posts/research/c573f94cdb7449b7/instagram/1789305270.png",
+            "path": "reports/content_packages/images/c573f94cdb7449b7_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305276/never-blank/posts/research/c573f94cdb7449b7/threads/1789305275.png",
+            "path": "reports/content_packages/images/c573f94cdb7449b7_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305284/never-blank/posts/research/c573f94cdb7449b7/stories/1789305284.png",
+            "path": "reports/content_packages/images/c573f94cdb7449b7_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "U.S. uranium production triples, reaching record highs."
+      }
+    },
+    {
+      "SIGNAL_ID": "9f8233d5d6738e4e",
+      "HEADLINE": "Visa Unveils A2A Protect to Combat Fraud and Enhance Security for Banks",
+      "prepared_at": "2026-09-13 13:15 UTC",
+      "content": {
+        "blog": {
+          "headline": "Visa\u2019s A2A Protect: Outsourcing Trust in the Battle Against Fraud",
+          "angle": "As fraud risks escalate in digital banking, Visa\u2019s A2A Protect reveals how banks shift from owning customer experience to ceding control over security\u2014showing founders that trust is now a commodity bought, not built."
+        },
+        "linkedin": {
+          "headline": "Banks are buying trust from Visa because they can\u2019t build it fast enough.",
+          "angle": "When fraud spikes, financial institutions outsource security to maintain seamless experiences, signaling a shift in who truly controls customer trust."
+        },
+        "facebook": {
+          "headline": "Visa just launched A2A Protect to fight fraud in account-to-account payments. But what does it mean when banks hand over security control to a third party?",
+          "angle": "Visa\u2019s new solution tackles rising fraud, yet raises the question: can banks keep customer trust when they outsource the very security that protects it?"
+        },
+        "instagram": {
+          "headline": "Trust Isn\u2019t Built, It\u2019s Bought",
+          "angle": "Visa\u2019s A2A Protect shows that in digital finance, banks are outsourcing security to stay ahead of fraud\u2014and founders should watch who really owns their customers\u2019 trust."
+        },
+        "threads": {
+          "thread_hook": "Banks aren\u2019t just upgrading fraud tech\u2014they\u2019re outsourcing trust to Visa.",
+          "angle": "This thread breaks down how Visa\u2019s A2A Protect shifts the security battleground from customer experience to control, forcing founders to rethink trust in digital finance."
+        },
+        "stories": {
+          "story_question": "Can your bank afford to build trust alone against rising fraud?",
+          "angle": "Exploring the tension between seamless customer experience and the necessity of outsourcing security to combat evolving fraud risks."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305331/never-blank/posts/research/9f8233d5d6738e4e/blog/1789305330.png",
+            "path": "reports/content_packages/images/9f8233d5d6738e4e_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305335/never-blank/posts/research/9f8233d5d6738e4e/linkedin/1789305334.png",
+            "path": "reports/content_packages/images/9f8233d5d6738e4e_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305338/never-blank/posts/research/9f8233d5d6738e4e/facebook/1789305338.png",
+            "path": "reports/content_packages/images/9f8233d5d6738e4e_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305345/never-blank/posts/research/9f8233d5d6738e4e/instagram/1789305344.png",
+            "path": "reports/content_packages/images/9f8233d5d6738e4e_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305350/never-blank/posts/research/9f8233d5d6738e4e/threads/1789305350.png",
+            "path": "reports/content_packages/images/9f8233d5d6738e4e_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305358/never-blank/posts/research/9f8233d5d6738e4e/stories/1789305357.png",
+            "path": "reports/content_packages/images/9f8233d5d6738e4e_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "A2A Protect: Shielding banks from unseen threats."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "c573f94cdb7449b7",
+      "headline": "U.S. Uranium Production Hits Record High in 2025, Triples from 2024",
+      "published_at": "2026-09-13 13:16 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/c573f94cdb7449b7_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305257/never-blank/posts/research/c573f94cdb7449b7/blog/1789305256.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305260/never-blank/posts/research/c573f94cdb7449b7/linkedin/1789305260.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305264/never-blank/posts/research/c573f94cdb7449b7/facebook/1789305264.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305271/never-blank/posts/research/c573f94cdb7449b7/instagram/1789305270.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305276/never-blank/posts/research/c573f94cdb7449b7/threads/1789305275.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789305284/never-blank/posts/research/c573f94cdb7449b7/stories/1789305284.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "U.S. uranium production triples, reaching record highs.",
+      "image_visual_family": "constellation_networks",
+      "image_method": "gpt-image-1"
+    }
+  ]
+}
