@@ -20,6 +20,14 @@ from zoneinfo import ZoneInfo
 
 import yaml  # PyYAML
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from scripts.streams.due_check import (  # noqa: E402
+    SchedulingDecision,
+    evaluate,
+    write_decision,
+)
+
 REPO_ROOT   = Path(__file__).resolve().parent.parent
 CONFIG_PATH = REPO_ROOT / "config" / "schedule.yaml"
 REPORTS_DIR = REPO_ROOT / "reports"
@@ -29,36 +37,46 @@ DAY_NAMES = {
     "friday": 4, "saturday": 5, "sunday": 6,
 }
 
-PUBLISH_WINDOW_MINUTES = 30  # accept up to 30 min after scheduled time
-
-
 def load_config() -> dict:
     with open(CONFIG_PATH) as f:
         return yaml.safe_load(f)
 
 
+def evaluate_schedule(
+    cfg: dict,
+    *,
+    now: datetime.datetime | None = None,
+    event: str = "schedule",
+    cron: str | None = None,
+    force: bool = False,
+    check_only: bool = False,
+) -> SchedulingDecision:
+    """Friday's scheduling decision — the same seam Monday and Wednesday use.
+
+    This used to be a private 30-minute window with no DST disambiguation at
+    all: the two seasonal crons were told apart only by the fact that the
+    second landed outside the window. #224 replaced that with the shared rule —
+    identify the firing from the cron, then let it publish at any later time on
+    its intended local day. The publishing steps below are untouched.
+    """
+    sched = cfg["schedule"]
+    return evaluate(
+        now or datetime.datetime.now(datetime.timezone.utc),
+        day=list(sched["days"]),
+        time=sched["time"],
+        timezone_name=sched["timezone"],
+        event=event,
+        cron=cron,
+        role="never-blank-friday-legacy",
+        force=force,
+        check_only=check_only,
+    )
+
+
 def is_due(cfg: dict, now: datetime.datetime | None = None) -> tuple[bool, str]:
-    """Return (due, reason). now is in the schedule timezone if provided."""
-    sched   = cfg["schedule"]
-    tz      = ZoneInfo(sched["timezone"])
-    now     = now or datetime.datetime.now(tz)
-    day_num = now.weekday()
-
-    allowed_days = [DAY_NAMES[d.lower()] for d in sched["days"]]
-    if day_num not in allowed_days:
-        day_name = now.strftime("%A")
-        return False, f"Not a publish day ({day_name}); scheduled days: {', '.join(sched['days'])}"
-
-    sched_h, sched_m = map(int, sched["time"].split(":"))
-    sched_dt = now.replace(hour=sched_h, minute=sched_m, second=0, microsecond=0)
-    delta    = (now - sched_dt).total_seconds() / 60
-
-    if delta < 0:
-        return False, f"Too early — publish window opens at {sched['time']} {sched['timezone']} ({-delta:.0f} min away)"
-    if delta > PUBLISH_WINDOW_MINUTES:
-        return False, f"Window passed — publish was at {sched['time']} {sched['timezone']} ({delta:.0f} min ago)"
-
-    return True, f"Due — {now.strftime('%A %Y-%m-%d %H:%M %Z')} is within the publish window"
+    """Backwards-compatible (due, reason) view of :func:`evaluate_schedule`."""
+    decision = evaluate_schedule(cfg, now=now)
+    return decision.publishes, decision.reason
 
 
 def run_step(label: str, cmd: list[str]) -> tuple[int, str]:
@@ -151,14 +169,33 @@ def main() -> int:
     group  = parser.add_mutually_exclusive_group()
     group.add_argument("--force",      action="store_true", help="Run immediately, bypassing schedule check")
     group.add_argument("--check-only", action="store_true", help="Report whether a publish is due, then exit")
+    # #224: the firing's identity, and where its record goes. Both optional, so
+    # a local `python scripts/scheduled_publish.py` behaves as it always did.
+    parser.add_argument("--event", default="schedule", help="github.event_name")
+    parser.add_argument("--cron", default="", help="github.event.schedule — the cron that fired")
+    parser.add_argument("--decision-out", default="",
+                        help="Where to write the scheduling-decision record")
     args = parser.parse_args()
 
-    cfg       = load_config()
-    due, why  = is_due(cfg)
+    cfg      = load_config()
+    # check_only rides along so a manual dispatch of the check stays a real
+    # schedule evaluation instead of collapsing to FORCED (#226 review).
+    decision = evaluate_schedule(
+        cfg, event=args.event, cron=args.cron or None, force=args.force,
+        check_only=args.check_only,
+    )
+    due, why = decision.publishes, decision.reason
 
     print(f"\nNever Blank — Scheduled Publisher")
     print(f"Schedule: {', '.join(cfg['schedule']['days'])} at {cfg['schedule']['time']} {cfg['schedule']['timezone']}")
-    print(f"Due check: {why}")
+    print(f"Scheduling decision: {decision.decision} — {why}")
+    if decision.cron:
+        print(f"  cron={decision.cron!r} intended={decision.intended_local} "
+              f"actual={decision.actual_local}")
+
+    # Written before anything can exit, so the skip paths leave evidence too.
+    if args.decision_out:
+        print(f"  record: {write_decision(decision, args.decision_out)}")
 
     if args.check_only:
         print(f"\nStatus: {'DUE' if due else 'NOT DUE'}")

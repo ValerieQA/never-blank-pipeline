@@ -44,11 +44,22 @@ jobs:
         with:
           python-version: "3.12"
 
+      # #224: bound to the cron that actually fired rather than to the runner's
+      # clock, so a firing delayed by hours still knows which Wednesday it
+      # belongs to and still publishes — for as long as it is that Wednesday in
+      # America/New_York. Once the local day has advanced it is stale.
+      #
+      # The cron minute is deliberately left at :00 here. Monday and Friday
+      # moved to :17 under #224; Wednesday has just completed its restoration
+      # and stays untouched until that change is asked for separately.
       - name: Wednesday publish window
         id: window
         run: |
           if python scripts/streams/due_check.py \
                --day wednesday --time "$WEDNESDAY_TIME" --timezone "$WEDNESDAY_TZ" \
+               --event "$GITHUB_EVENT_NAME" --cron "$FIRED_CRON" \
+               --role "$WEDNESDAY_ROLE" \
+               --decision-out reports/scheduling/wednesday_scheduling_decision.json \
                ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}; then
             echo "due=true" >> "$GITHUB_OUTPUT"
           else
@@ -58,6 +69,20 @@ jobs:
         env:
           WEDNESDAY_TIME: "06:00"
           WEDNESDAY_TZ: "America/New_York"
+          WEDNESDAY_ROLE: never-blank-wednesday-golden
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          FIRED_CRON: ${{ github.event.schedule }}
+
+      # #224: written on EVERY path, including the skips — deliberately not
+      # gated on `due`.
+      - name: Preserve scheduling decision
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wednesday-scheduling-decision
+          path: reports/scheduling/wednesday_scheduling_decision.json
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Install dependencies
         if: steps.window.outputs.due == 'true'

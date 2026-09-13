@@ -22,7 +22,7 @@ from pydantic import ValidationError
 import scripts.generate_and_publish as gap
 from scripts.generate_and_publish import main
 from scripts.streams import due_check, select_eligible_signal
-from scripts.streams.due_check import NOT_DUE, is_due
+from scripts.streams.due_check import NOT_DUE, evaluate
 from src.editorial.editorial_role import (
     EditorialRoleError,
     EditorialRoleIdentity,
@@ -559,16 +559,18 @@ def test_exactly_one_authoritative_scheduled_wednesday_publisher():
 
 
 def test_legacy_owners_remove_only_wednesday_and_preserve_other_days():
-    assert _schedule(_workflow("scheduled_publish.yml")) == [
-        "0 10 * * 5",
-        "0 11 * * 5",
-    ]
+    # #224 moved Friday's minute off :00; the day-of-week is what this pins.
+    assert [
+        cron.split()[1:] for cron in _schedule(_workflow("scheduled_publish.yml"))
+    ] == [["10", "*", "*", "5"], ["11", "*", "*", "5"]]
     assert _schedule(_workflow("research_generate_and_publish.yml")) == [
         "0 7 * * 5,0"
     ]
     schedule = yaml.safe_load(Path("config/schedule.yaml").read_text())["schedule"]
     assert schedule["days"] == ["friday"]
-    assert schedule["time"] == "06:00"
+    # #224: the publication hour is unchanged; only the minute moved off
+    # the top of the hour, where GitHub delays scheduled runs the most.
+    assert schedule["time"] == "06:17"
     assert schedule["timezone"] == "America/New_York"
 
     visibility = _workflow("visibility_publish.yml")
@@ -578,29 +580,41 @@ def test_legacy_owners_remove_only_wednesday_and_preserve_other_days():
     ).read_text().lower()
 
 
+# #224: identified by the cron that fired, then allowed to run late for as
+# long as it is still that local Wednesday. Wednesday keeps its :00 crons.
+WEDNESDAY_EDT, WEDNESDAY_EST = "0 10 * * 3", "0 11 * * 3"
+
+
 @pytest.mark.parametrize(
-    "moment, expected",
+    "moment, cron, expected",
     [
-        (datetime(2026, 8, 26, 6, 0, tzinfo=ET), True),
-        (datetime(2026, 1, 7, 6, 0, tzinfo=ET), True),
-        (datetime(2026, 8, 26, 6, 40, tzinfo=ET), True),
-        (datetime(2026, 8, 26, 5, 30, tzinfo=ET), False),
-        (datetime(2026, 8, 26, 7, 30, tzinfo=ET), False),
-        (datetime(2026, 8, 24, 6, 0, tzinfo=ET), False),
+        (datetime(2026, 8, 26, 6, 0, tzinfo=ET), WEDNESDAY_EDT, True),
+        (datetime(2026, 1, 7, 6, 0, tzinfo=ET), WEDNESDAY_EST, True),
+        (datetime(2026, 8, 26, 6, 40, tzinfo=ET), WEDNESDAY_EDT, True),
+        (datetime(2026, 9, 2, 14, 51, tzinfo=ET), WEDNESDAY_EDT, True),  # the real delay
+        (datetime(2026, 8, 26, 6, 0, tzinfo=ET), WEDNESDAY_EST, False),  # the twin
+        (datetime(2026, 8, 27, 0, 30, tzinfo=ET), WEDNESDAY_EDT, False),  # stale
+        (datetime(2026, 8, 24, 6, 0, tzinfo=ET), "0 10 * * 1", False),   # Monday's
     ],
 )
-def test_wednesday_dst_window(moment, expected):
-    assert is_due(moment, day="wednesday", time="06:00")[0] is expected
+def test_wednesday_dst_window(moment, cron, expected):
+    decision = evaluate(
+        moment, day="wednesday", time="06:00",
+        timezone_name="America/New_York", cron=cron,
+    )
+
+    assert decision.publishes is expected
 
 
 def test_due_check_not_due_and_manual_force_are_unambiguous():
     with mock.patch.object(
         due_check,
         "datetime",
-        mock.Mock(now=lambda tz: datetime(2026, 8, 24, 6, 0, tzinfo=tz)),
+        mock.Mock(now=lambda tz=None: datetime(2026, 8, 24, 6, 0, tzinfo=ET)),
     ):
         assert due_check.main(
-            ["--day", "wednesday", "--time", "06:00", "--timezone", "America/New_York"]
+            ["--day", "wednesday", "--time", "06:00",
+             "--timezone", "America/New_York", "--cron", WEDNESDAY_EDT]
         ) == NOT_DUE
     assert due_check.main(
         [

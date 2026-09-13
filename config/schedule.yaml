@@ -3,7 +3,12 @@ schedule:
   days:
     # Monday and Wednesday moved to independent canonical streams (#142/#143).
     - friday
-  time: "06:00"
+  # #224: the publication hour is unchanged; only the minute inside it moved
+  # off the top of the hour, where GitHub delays scheduled runs the most. This
+  # value and the workflow's cron minute must agree — the scheduling seam
+  # identifies the firing by matching the cron's intended local time against
+  # exactly this string, and a test pins the two together.
+  time: "06:17"
   jitter_minutes: 0
 
 publication_order:
