@@ -1043,5 +1043,25 @@
     "visual_family": "contrast_waves",
     "design_version": "3",
     "hook_text": "A2A Protect: Shielding banks from unseen threats."
+  },
+  "d28e5cdad72f0346": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397597/never-blank/posts/research/d28e5cdad72f0346/blog/1789397597.png",
+    "signal_type": "platform reach change for small business",
+    "headline": "Ramp Launches Instant Stablecoin Payments with Stripe’s New Technology",
+    "created_at": "2026-09-14",
+    "method": "gpt-image-1",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "Instant payments redefine transaction efficiency."
+  },
+  "e7466a1db1e2453a": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397629/never-blank/posts/research/e7466a1db1e2453a/blog/1789397629.png",
+    "signal_type": "consistency failure",
+    "headline": "AI Isn’t Delivering Marketing Efficiency, It’s Repeating Programmatic’s Broken Promise via @sejournal, @gregjarboe",
+    "created_at": "2026-09-14",
+    "method": "quote_card",
+    "visual_family": "light_message_card",
+    "design_version": "3",
+    "hook_text": "Every time marketing tech promises to ‘run itself,’ someone ends up working overtime."
   }
 }

@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "e7466a1db1e2453a",
+  "HEADLINE": "AI Isn’t Delivering Marketing Efficiency, It’s Repeating Programmatic’s Broken Promise via @sejournal, @gregjarboe",
+  "prepared_at": "2026-09-14 14:53 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why AI Marketing Efficiency Is Just Programmatic’s Old Mistake in New Clothes",
+      "angle": "AI promised marketing automation efficiency but delivered hidden costs and relentless human oversight, proving that chasing automation often just shifts where effort is spent."
+    },
+    "linkedin": {
+      "headline": "Every time marketing tech promises to ‘run itself,’ someone ends up working overtime.",
+      "angle": "AI-driven marketing tools claim efficiency gains but often replicate programmatic’s hidden costs, forcing founders to rethink automation’s true price."
+    },
+    "facebook": {
+      "headline": "AI marketing promised to cut costs and save time. Instead, it’s repeating programmatic’s costly mistakes.",
+      "angle": "AI marketing tools are falling short on efficiency, much like programmatic advertising did before—are you ready to face the hidden costs in your automation strategy?"
+    },
+    "instagram": {
+      "headline": "Automation Doesn’t Erase Effort",
+      "angle": "Chasing AI-driven marketing efficiency often just moves the workload behind the scenes, not away from it."
+    },
+    "threads": {
+      "thread_hook": "AI marketing isn’t the efficiency fix it claims to be—it’s programmatic advertising’s déjà vu.",
+      "angle": "This thread breaks down how AI marketing tools mask hidden operational costs and why founders need to demand transparency before betting on automation."
+    },
+    "stories": {
+      "story_question": "Is your AI marketing saving time or just shifting the workload?",
+      "angle": "Exploring the tension between promised automation efficiency and the reality of ongoing human intervention in AI marketing."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397629/never-blank/posts/research/e7466a1db1e2453a/blog/1789397629.png",
+        "path": "reports/content_packages/images/e7466a1db1e2453a_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397630/never-blank/posts/research/e7466a1db1e2453a/linkedin/1789397630.png",
+        "path": "reports/content_packages/images/e7466a1db1e2453a_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397631/never-blank/posts/research/e7466a1db1e2453a/facebook/1789397631.png",
+        "path": "reports/content_packages/images/e7466a1db1e2453a_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397632/never-blank/posts/research/e7466a1db1e2453a/instagram/1789397632.png",
+        "path": "reports/content_packages/images/e7466a1db1e2453a_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397632/never-blank/posts/research/e7466a1db1e2453a/threads/1789397632.png",
+        "path": "reports/content_packages/images/e7466a1db1e2453a_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397633/never-blank/posts/research/e7466a1db1e2453a/stories/1789397633.png",
+        "path": "reports/content_packages/images/e7466a1db1e2453a_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "light_message_card",
+    "hook_text": "Every time marketing tech promises to ‘run itself,’ someone ends up working overtime."
+  }
+}

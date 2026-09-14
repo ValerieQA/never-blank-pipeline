@@ -1,0 +1,418 @@
+{
+  "date": "2026-09-14",
+  "candidates_found": 4,
+  "duplicates_skipped": 0,
+  "new_signals_added": 4,
+  "selected_for_content": 2,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Ramp Launches Instant Stablecoin Payments with Stripe\u2019s New Technology",
+    "AI Isn\u2019t Delivering Marketing Efficiency, It\u2019s Repeating Programmatic\u2019s Broken P"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "d28e5cdad72f0346",
+      "headline": "Ramp Launches Instant Stablecoin Payments with Stripe\u2019s New Technology",
+      "published_at": "2026-09-14 14:54 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/d28e5cdad72f0346_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397597/never-blank/posts/research/d28e5cdad72f0346/blog/1789397597.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397601/never-blank/posts/research/d28e5cdad72f0346/linkedin/1789397601.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397604/never-blank/posts/research/d28e5cdad72f0346/facebook/1789397604.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397610/never-blank/posts/research/d28e5cdad72f0346/instagram/1789397610.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397616/never-blank/posts/research/d28e5cdad72f0346/threads/1789397616.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397623/never-blank/posts/research/d28e5cdad72f0346/stories/1789397623.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "Instant payments redefine transaction efficiency.",
+      "image_visual_family": "particle_flow",
+      "image_method": "gpt-image-1"
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 2,
+  "images_new": 2,
+  "images_reused": 0,
+  "publish_failures": [
+    "wix: 'DraftPackage' object has no attribute 'title'",
+    "linkedin: 'DraftPackage' object has no attribute 'linkedin_body'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "d28e5cdad72f0346",
+      "HEADLINE": "Ramp Launches Instant Stablecoin Payments with Stripe\u2019s New Technology",
+      "prepared_at": "2026-09-14 14:53 UTC",
+      "content": {
+        "blog": {
+          "headline": "Ramp\u2019s Instant Stablecoin Payments: Speed vs. Regulatory Risk",
+          "angle": "Ramp\u2019s launch of instant stablecoin payments with Stripe highlights the tension between faster, cheaper transactions and the regulatory and security challenges fintechs must navigate, underscoring that adopting new payment rails is as much a risk calculation as a technical upgrade."
+        },
+        "linkedin": {
+          "headline": "Ramp just made payments instant\u2014and regulatory headaches inevitable.",
+          "angle": "Fintechs pushing for faster payment solutions face a trade-off: improved speed and cost efficiency come with heightened regulatory scrutiny and compliance demands."
+        },
+        "facebook": {
+          "headline": "Ramp\u2019s instant stablecoin payments promise speed\u2014but at what cost?",
+          "angle": "Ramp\u2019s move to integrate Stripe\u2019s stablecoin tech accelerates payments for businesses and consumers, but how prepared are founders to handle the regulatory and security fallout?"
+        },
+        "instagram": {
+          "headline": "Instant Payments, Lingering Risks",
+          "angle": "Ramp\u2019s new stablecoin payments show that faster transactions come with a complex web of regulatory and security challenges founders can\u2019t ignore."
+        },
+        "threads": {
+          "thread_hook": "Ramp\u2019s instant stablecoin payments are live. Fast money, slow compliance?",
+          "angle": "This thread breaks down why fintechs racing to adopt new payment rails face a strategic gamble balancing customer demand for speed against regulatory tolerance and security risks."
+        },
+        "stories": {
+          "story_question": "Is instant payment speed worth the regulatory risk?",
+          "angle": "Exploring the tension founders face when adopting cutting-edge payment tech that promises speed but invites compliance headaches."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397597/never-blank/posts/research/d28e5cdad72f0346/blog/1789397597.png",
+            "path": "reports/content_packages/images/d28e5cdad72f0346_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397601/never-blank/posts/research/d28e5cdad72f0346/linkedin/1789397601.png",
+            "path": "reports/content_packages/images/d28e5cdad72f0346_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397604/never-blank/posts/research/d28e5cdad72f0346/facebook/1789397604.png",
+            "path": "reports/content_packages/images/d28e5cdad72f0346_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397610/never-blank/posts/research/d28e5cdad72f0346/instagram/1789397610.png",
+            "path": "reports/content_packages/images/d28e5cdad72f0346_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397616/never-blank/posts/research/d28e5cdad72f0346/threads/1789397616.png",
+            "path": "reports/content_packages/images/d28e5cdad72f0346_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397623/never-blank/posts/research/d28e5cdad72f0346/stories/1789397623.png",
+            "path": "reports/content_packages/images/d28e5cdad72f0346_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "particle_flow",
+        "hook_text": "Instant payments redefine transaction efficiency."
+      }
+    },
+    {
+      "SIGNAL_ID": "e7466a1db1e2453a",
+      "HEADLINE": "AI Isn\u2019t Delivering Marketing Efficiency, It\u2019s Repeating Programmatic\u2019s Broken Promise via @sejournal, @gregjarboe",
+      "prepared_at": "2026-09-14 14:53 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why AI Marketing Efficiency Is Just Programmatic\u2019s Old Mistake in New Clothes",
+          "angle": "AI promised marketing automation efficiency but delivered hidden costs and relentless human oversight, proving that chasing automation often just shifts where effort is spent."
+        },
+        "linkedin": {
+          "headline": "Every time marketing tech promises to \u2018run itself,\u2019 someone ends up working overtime.",
+          "angle": "AI-driven marketing tools claim efficiency gains but often replicate programmatic\u2019s hidden costs, forcing founders to rethink automation\u2019s true price."
+        },
+        "facebook": {
+          "headline": "AI marketing promised to cut costs and save time. Instead, it\u2019s repeating programmatic\u2019s costly mistakes.",
+          "angle": "AI marketing tools are falling short on efficiency, much like programmatic advertising did before\u2014are you ready to face the hidden costs in your automation strategy?"
+        },
+        "instagram": {
+          "headline": "Automation Doesn\u2019t Erase Effort",
+          "angle": "Chasing AI-driven marketing efficiency often just moves the workload behind the scenes, not away from it."
+        },
+        "threads": {
+          "thread_hook": "AI marketing isn\u2019t the efficiency fix it claims to be\u2014it\u2019s programmatic advertising\u2019s d\u00e9j\u00e0 vu.",
+          "angle": "This thread breaks down how AI marketing tools mask hidden operational costs and why founders need to demand transparency before betting on automation."
+        },
+        "stories": {
+          "story_question": "Is your AI marketing saving time or just shifting the workload?",
+          "angle": "Exploring the tension between promised automation efficiency and the reality of ongoing human intervention in AI marketing."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397629/never-blank/posts/research/e7466a1db1e2453a/blog/1789397629.png",
+            "path": "reports/content_packages/images/e7466a1db1e2453a_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397630/never-blank/posts/research/e7466a1db1e2453a/linkedin/1789397630.png",
+            "path": "reports/content_packages/images/e7466a1db1e2453a_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397631/never-blank/posts/research/e7466a1db1e2453a/facebook/1789397631.png",
+            "path": "reports/content_packages/images/e7466a1db1e2453a_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397632/never-blank/posts/research/e7466a1db1e2453a/instagram/1789397632.png",
+            "path": "reports/content_packages/images/e7466a1db1e2453a_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397632/never-blank/posts/research/e7466a1db1e2453a/threads/1789397632.png",
+            "path": "reports/content_packages/images/e7466a1db1e2453a_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397633/never-blank/posts/research/e7466a1db1e2453a/stories/1789397633.png",
+            "path": "reports/content_packages/images/e7466a1db1e2453a_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "light_message_card",
+        "hook_text": "Every time marketing tech promises to \u2018run itself,\u2019 someone ends up working overtime."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "d28e5cdad72f0346",
+      "headline": "Ramp Launches Instant Stablecoin Payments with Stripe\u2019s New Technology",
+      "published_at": "2026-09-14 14:54 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/d28e5cdad72f0346_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397597/never-blank/posts/research/d28e5cdad72f0346/blog/1789397597.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397601/never-blank/posts/research/d28e5cdad72f0346/linkedin/1789397601.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397604/never-blank/posts/research/d28e5cdad72f0346/facebook/1789397604.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397610/never-blank/posts/research/d28e5cdad72f0346/instagram/1789397610.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397616/never-blank/posts/research/d28e5cdad72f0346/threads/1789397616.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397623/never-blank/posts/research/d28e5cdad72f0346/stories/1789397623.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "Instant payments redefine transaction efficiency.",
+      "image_visual_family": "particle_flow",
+      "image_method": "gpt-image-1"
+    }
+  ]
+}
