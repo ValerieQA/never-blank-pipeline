@@ -138,6 +138,15 @@ jobs:
           # evidence (live run 32259987125).
           NB_EXA_API_KEY:                 ${{ secrets.NB_EXA_API_KEY }}
           NB_OPENAI_CHAT_MODEL:           ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          # #236: every model call reachable from generate_and_publish.py is
+          # stage-routed. Without the stage secrets, the first one (evidence
+          # judgment, model_enrich) fell back to NB_OPENAI_CHAT_MODEL and the
+          # provider returned HTTP 400. Same stage secrets as Wednesday.
+          NB_DISCOVERY_MODEL:             ${{ secrets.NB_DISCOVERY_MODEL }}
+          NB_SCORING_MODEL:               ${{ secrets.NB_SCORING_MODEL }}
+          NB_ENRICH_MODEL:                ${{ secrets.NB_ENRICH_MODEL }}
+          NB_ARTICLE_MODEL:               ${{ secrets.NB_ARTICLE_MODEL }}
+          NB_SOCIAL_MODEL:                ${{ secrets.NB_SOCIAL_MODEL }}
           NB_WIX_API_KEY:                 ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID:                 ${{ secrets.NB_WIX_SITE_ID }}
           NB_WIX_POST_OWNER_ID:           ${{ secrets.NB_WIX_POST_OWNER_ID }}
