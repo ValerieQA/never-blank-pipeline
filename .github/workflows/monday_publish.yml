@@ -13,17 +13,21 @@ name: Monday — Never Blank Business Case
 # one day is two articles, and the consumption marker is written after a run
 # rather than before it — it can never act as a concurrency guard.
 #
-# The time is the accepted contract from config/schedule.yaml —
-# America/New_York 06:00 — not a new invention.
+# The time is the owner's accepted contract — America/New_York 04:17 — not a
+# new invention.
 
 on:
   schedule:
     # #224: minute 17, not :00. GitHub itself warns that runs scheduled at the
     # top of the hour are the most likely to be delayed, and a delayed firing
-    # is exactly what suppressed 2026-08-31. The product hour is unchanged —
-    # 06:xx America/New_York — only the minute inside it moved.
-    - cron: "17 10 * * 1"   # 10:17 UTC = 06:17 ET (EDT)
-    - cron: "17 11 * * 1"   # 11:17 UTC = 06:17 ET (EST)
+    # is exactly what suppressed 2026-08-31.
+    #
+    # #232: the hour moved from 06:17 to 04:17 America/New_York. Same-day
+    # recovery margin is the whole point — #226 lets a delayed firing publish
+    # at any later time on its own local day, and starting two hours earlier
+    # buys two more hours of that day before it runs out.
+    - cron: "17 8 * * 1"   # 08:17 UTC = 04:17 ET (EDT)
+    - cron: "17 9 * * 1"   # 09:17 UTC = 04:17 ET (EST)
 
   workflow_dispatch:
     inputs:
@@ -89,7 +93,7 @@ jobs:
             echo "Not the Monday window — no work will run."
           fi
         env:
-          MONDAY_TIME: "06:17"
+          MONDAY_TIME: "04:17"
           MONDAY_TZ: "America/New_York"
           MONDAY_ROLE: never-blank-monday-documented-case
           GITHUB_EVENT_NAME: ${{ github.event_name }}

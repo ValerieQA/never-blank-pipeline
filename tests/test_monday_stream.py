@@ -47,9 +47,9 @@ WORKFLOWS = Path(".github/workflows")
 MONDAY_ROLE = "never-blank-monday-documented-case"
 ET = ZoneInfo("America/New_York")
 
-#: #224: the crons this stream actually runs on.
-MONDAY_EDT, MONDAY_EST = "17 10 * * 1", "17 11 * * 1"
-WEDNESDAY_EDT = "0 10 * * 3"
+#: #224/#232: the crons this stream actually runs on.
+MONDAY_EDT, MONDAY_EST = "17 8 * * 1", "17 9 * * 1"
+WEDNESDAY_EDT = "17 8 * * 3"
 
 
 def _configuration():
@@ -432,18 +432,20 @@ def test_exactly_one_workflow_publishes_on_monday():
 def test_the_legacy_scheduler_kept_friday_after_independent_streams_split_out():
     crons = _schedule(_workflow("scheduled_publish.yml"))
 
-    # #224 moved the minute off the top of the hour; the day is the contract.
+    # #224 moved the minute off the top of the hour and #232 the hour itself;
+    # the day is the contract.
     assert [cron.split()[1:] for cron in crons] == [
-        ["10", "*", "*", "5"], ["11", "*", "*", "5"],
+        ["8", "*", "*", "5"], ["9", "*", "*", "5"],
     ]
     assert not any(_fires_on(cron, "1") for cron in crons)
     assert not any(_fires_on(cron, "3") for cron in crons)
     # and the configuration its script actually reads agrees
     schedule = yaml.safe_load(Path("config/schedule.yaml").read_text())["schedule"]
     assert schedule["days"] == ["friday"]
-    # #224: the publication hour is unchanged; only the minute moved off
-    # the top of the hour, where GitHub delays scheduled runs the most.
-    assert schedule["time"] == "06:17"
+    # #224 moved the minute off the top of the hour, where GitHub delays
+    # scheduled runs the most; #232 moved the hour to 04 for more same-day
+    # recovery margin.
+    assert schedule["time"] == "04:17"
     assert schedule["timezone"] == "America/New_York"
 
 
@@ -484,24 +486,25 @@ def test_monday_is_its_own_workflow_and_cannot_stop_other_streams():
 
 # #224: the discriminator moved from the runner's clock to the cron that
 # actually fired, so "07:30 local" is no longer evidence of anything — a
-# firing delivered at 07:30 may be the 06:17 slot running late. The seasonal
+# firing delivered at 07:30 may be the 04:17 slot running late. The seasonal
 # twin is now told apart by its own cron. Full coverage of the new rule lives
 # in tests/test_scheduling_window.py; these keep the stream-level contract.
 @pytest.mark.parametrize(
     "moment, cron, expected",
     [
-        (datetime(2026, 8, 24, 6, 17, tzinfo=ET), MONDAY_EDT, True),
-        (datetime(2026, 8, 24, 6, 40, tzinfo=ET), MONDAY_EDT, True),
+        (datetime(2026, 8, 24, 4, 17, tzinfo=ET), MONDAY_EDT, True),
+        (datetime(2026, 8, 24, 4, 40, tzinfo=ET), MONDAY_EDT, True),
         (datetime(2026, 8, 24, 15, 0, tzinfo=ET), MONDAY_EDT, True),   # hours late
-        (datetime(2026, 1, 5, 6, 17, tzinfo=ET), MONDAY_EST, True),    # EST season
-        (datetime(2026, 8, 24, 6, 17, tzinfo=ET), MONDAY_EST, False),  # the twin
+        (datetime(2026, 1, 5, 4, 17, tzinfo=ET), MONDAY_EST, True),    # EST season
+        (datetime(2026, 8, 24, 4, 17, tzinfo=ET), MONDAY_EST, False),  # the twin
+        (datetime(2026, 1, 5, 4, 17, tzinfo=ET), MONDAY_EDT, False),   # EST's twin
         (datetime(2026, 8, 25, 0, 30, tzinfo=ET), MONDAY_EDT, False),  # stale
-        (datetime(2026, 8, 26, 6, 17, tzinfo=ET), WEDNESDAY_EDT, False),
+        (datetime(2026, 8, 26, 4, 17, tzinfo=ET), WEDNESDAY_EDT, False),
     ],
 )
 def test_only_one_of_the_two_firings_is_the_window(moment, cron, expected):
     decision = evaluate(
-        moment, day="monday", time="06:17",
+        moment, day="monday", time="04:17",
         timezone_name="America/New_York", cron=cron,
     )
 
@@ -514,7 +517,7 @@ def test_the_window_check_exits_cleanly_when_not_due():
         mock.Mock(now=lambda tz=None: datetime(2026, 8, 26, 6, 17, tzinfo=ET)),
     ):
         code = due_check.main(
-            ["--day", "monday", "--time", "06:17",
+            ["--day", "monday", "--time", "04:17",
              "--timezone", "America/New_York", "--cron", MONDAY_EDT]
         )
 
@@ -523,7 +526,7 @@ def test_the_window_check_exits_cleanly_when_not_due():
 
 def test_a_manual_dispatch_is_always_the_window():
     assert due_check.main(
-        ["--day", "monday", "--time", "06:17",
+        ["--day", "monday", "--time", "04:17",
          "--timezone", "America/New_York", "--force"]
     ) == 0
 
