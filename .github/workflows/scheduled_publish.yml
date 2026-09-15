@@ -1,6 +1,6 @@
 name: Scheduled Publisher
 
-# Cron fires at 10:00/11:00 UTC Friday to cover EDT and EST.
+# Cron fires at 08:17/09:17 UTC Friday to cover EDT and EST.
 #
 # Monday was removed here by Issue #142: Monday is owned by
 # monday_publish.yml, which runs the canonical pipeline. Leaving Monday on
@@ -14,9 +14,14 @@ on:
   schedule:
     # #224: minute 17, not :00 — GitHub delays top-of-hour schedules the most,
     # and that delay silently cancelled Friday on 2026-08-28 and 2026-09-04.
-    # The product hour is unchanged.
-    - cron: "17 10 * * 5"   # 10:17 UTC = 06:17 ET (DST) / 05:17 ET (std)
-    - cron: "17 11 * * 5"   # 11:17 UTC = 06:17 ET (std) / 07:17 ET (DST)
+    #
+    # #232: 04:17 America/New_York, two hours earlier, for the same-day
+    # recovery margin #226 made usable. Each cron is the correct one in exactly
+    # one season and the seasonal twin skips itself — the earlier comments here
+    # described what each cron lands on in BOTH seasons, which read as though a
+    # single cron published at two different local times.
+    - cron: "17 8 * * 5"   # 08:17 UTC = 04:17 ET (EDT)
+    - cron: "17 9 * * 5"   # 09:17 UTC = 04:17 ET (EST)
 
   workflow_dispatch:
     inputs:

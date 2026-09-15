@@ -510,7 +510,7 @@ def test_golden_reference_fixtures_are_reasoning_annotations_not_prose_templates
 def test_wednesday_has_its_own_canonical_workflow_and_role():
     workflow = _workflow("wednesday_golden.yml")
     assert list(workflow["jobs"]) == ["wednesday-golden"]
-    assert _schedule(workflow) == ["0 10 * * 3", "0 11 * * 3"]
+    assert _schedule(workflow) == ["17 8 * * 3", "17 9 * * 3"]
 
     text = WORKFLOW.read_text()
     assert "scripts/generate_and_publish.py" in text
@@ -559,18 +559,20 @@ def test_exactly_one_authoritative_scheduled_wednesday_publisher():
 
 
 def test_legacy_owners_remove_only_wednesday_and_preserve_other_days():
-    # #224 moved Friday's minute off :00; the day-of-week is what this pins.
+    # #224 moved Friday's minute off :00 and #232 its hour to 04 ET; the
+    # day-of-week is what this pins.
     assert [
         cron.split()[1:] for cron in _schedule(_workflow("scheduled_publish.yml"))
-    ] == [["10", "*", "*", "5"], ["11", "*", "*", "5"]]
+    ] == [["8", "*", "*", "5"], ["9", "*", "*", "5"]]
     assert _schedule(_workflow("research_generate_and_publish.yml")) == [
         "0 7 * * 5,0"
     ]
     schedule = yaml.safe_load(Path("config/schedule.yaml").read_text())["schedule"]
     assert schedule["days"] == ["friday"]
-    # #224: the publication hour is unchanged; only the minute moved off
-    # the top of the hour, where GitHub delays scheduled runs the most.
-    assert schedule["time"] == "06:17"
+    # #224 moved the minute off the top of the hour, where GitHub delays
+    # scheduled runs the most; #232 moved the hour to 04 for more same-day
+    # recovery margin.
+    assert schedule["time"] == "04:17"
     assert schedule["timezone"] == "America/New_York"
 
     visibility = _workflow("visibility_publish.yml")
@@ -581,25 +583,27 @@ def test_legacy_owners_remove_only_wednesday_and_preserve_other_days():
 
 
 # #224: identified by the cron that fired, then allowed to run late for as
-# long as it is still that local Wednesday. Wednesday keeps its :00 crons.
-WEDNESDAY_EDT, WEDNESDAY_EST = "0 10 * * 3", "0 11 * * 3"
+# long as it is still that local Wednesday. #232: Wednesday joined Monday and
+# Friday on the paired 04:17 America/New_York schedule.
+WEDNESDAY_EDT, WEDNESDAY_EST = "17 8 * * 3", "17 9 * * 3"
 
 
 @pytest.mark.parametrize(
     "moment, cron, expected",
     [
-        (datetime(2026, 8, 26, 6, 0, tzinfo=ET), WEDNESDAY_EDT, True),
-        (datetime(2026, 1, 7, 6, 0, tzinfo=ET), WEDNESDAY_EST, True),
-        (datetime(2026, 8, 26, 6, 40, tzinfo=ET), WEDNESDAY_EDT, True),
+        (datetime(2026, 8, 26, 4, 17, tzinfo=ET), WEDNESDAY_EDT, True),
+        (datetime(2026, 1, 7, 4, 17, tzinfo=ET), WEDNESDAY_EST, True),
+        (datetime(2026, 8, 26, 4, 40, tzinfo=ET), WEDNESDAY_EDT, True),
         (datetime(2026, 9, 2, 14, 51, tzinfo=ET), WEDNESDAY_EDT, True),  # the real delay
-        (datetime(2026, 8, 26, 6, 0, tzinfo=ET), WEDNESDAY_EST, False),  # the twin
+        (datetime(2026, 8, 26, 4, 17, tzinfo=ET), WEDNESDAY_EST, False),  # the twin
+        (datetime(2026, 1, 7, 4, 17, tzinfo=ET), WEDNESDAY_EDT, False),  # EST's twin
         (datetime(2026, 8, 27, 0, 30, tzinfo=ET), WEDNESDAY_EDT, False),  # stale
-        (datetime(2026, 8, 24, 6, 0, tzinfo=ET), "0 10 * * 1", False),   # Monday's
+        (datetime(2026, 8, 24, 4, 17, tzinfo=ET), "17 8 * * 1", False),  # Monday's
     ],
 )
 def test_wednesday_dst_window(moment, cron, expected):
     decision = evaluate(
-        moment, day="wednesday", time="06:00",
+        moment, day="wednesday", time="04:17",
         timezone_name="America/New_York", cron=cron,
     )
 
@@ -610,15 +614,15 @@ def test_due_check_not_due_and_manual_force_are_unambiguous():
     with mock.patch.object(
         due_check,
         "datetime",
-        mock.Mock(now=lambda tz=None: datetime(2026, 8, 24, 6, 0, tzinfo=ET)),
+        mock.Mock(now=lambda tz=None: datetime(2026, 8, 24, 4, 17, tzinfo=ET)),
     ):
         assert due_check.main(
-            ["--day", "wednesday", "--time", "06:00",
+            ["--day", "wednesday", "--time", "04:17",
              "--timezone", "America/New_York", "--cron", WEDNESDAY_EDT]
         ) == NOT_DUE
     assert due_check.main(
         [
-            "--day", "wednesday", "--time", "06:00",
+            "--day", "wednesday", "--time", "04:17",
             "--timezone", "America/New_York", "--force",
         ]
     ) == 0

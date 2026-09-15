@@ -5,8 +5,11 @@ name: Wednesday — Never Blank Golden
 
 on:
   schedule:
-    - cron: "0 10 * * 3"   # 06:00 America/New_York under EDT
-    - cron: "0 11 * * 3"   # 06:00 America/New_York under EST
+    # #232: 04:17 America/New_York, matching Monday and Friday. The minute
+    # leaves the top of the hour (where GitHub delays schedules the most) and
+    # the earlier hour buys more of the local day for #226's same-day recovery.
+    - cron: "17 8 * * 3"   # 08:17 UTC = 04:17 ET (EDT)
+    - cron: "17 9 * * 3"   # 09:17 UTC = 04:17 ET (EST)
   workflow_dispatch:
     inputs:
       signal_id:
@@ -48,10 +51,6 @@ jobs:
       # clock, so a firing delayed by hours still knows which Wednesday it
       # belongs to and still publishes — for as long as it is that Wednesday in
       # America/New_York. Once the local day has advanced it is stale.
-      #
-      # The cron minute is deliberately left at :00 here. Monday and Friday
-      # moved to :17 under #224; Wednesday has just completed its restoration
-      # and stays untouched until that change is asked for separately.
       - name: Wednesday publish window
         id: window
         run: |
@@ -67,7 +66,7 @@ jobs:
             echo "Not the Wednesday window — no work will run."
           fi
         env:
-          WEDNESDAY_TIME: "06:00"
+          WEDNESDAY_TIME: "04:17"
           WEDNESDAY_TZ: "America/New_York"
           WEDNESDAY_ROLE: never-blank-wednesday-golden
           GITHUB_EVENT_NAME: ${{ github.event_name }}

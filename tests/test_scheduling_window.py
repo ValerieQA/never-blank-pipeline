@@ -49,9 +49,9 @@ WORKFLOWS = Path(".github/workflows")
 #: The three streams as they are actually configured, read from the workflows
 #: rather than restated here — a schedule this file merely echoed could drift
 #: away from the one that runs.
-MONDAY_EDT, MONDAY_EST = "17 10 * * 1", "17 11 * * 1"
-WEDNESDAY_EDT, WEDNESDAY_EST = "0 10 * * 3", "0 11 * * 3"
-FRIDAY_EDT, FRIDAY_EST = "17 10 * * 5", "17 11 * * 5"
+MONDAY_EDT, MONDAY_EST = "17 8 * * 1", "17 9 * * 1"
+WEDNESDAY_EDT, WEDNESDAY_EST = "17 8 * * 3", "17 9 * * 3"
+FRIDAY_EDT, FRIDAY_EST = "17 8 * * 5", "17 9 * * 5"
 
 
 def _at(local: datetime) -> datetime:
@@ -81,16 +81,16 @@ def _crons(name: str) -> list[str]:
 @pytest.mark.parametrize(
     "when, label",
     [
-        (datetime(2026, 8, 31, 6, 17), "on time"),
-        (datetime(2026, 8, 31, 6, 37), "+20 min"),
-        (datetime(2026, 8, 31, 7, 16), "+59 min — the old cliff edge"),
-        (datetime(2026, 8, 31, 12, 17), "+6 h"),
+        (datetime(2026, 8, 31, 4, 17), "on time"),
+        (datetime(2026, 8, 31, 4, 37), "+20 min"),
+        (datetime(2026, 8, 31, 5, 16), "+59 min — the old cliff edge"),
+        (datetime(2026, 8, 31, 10, 17), "+6 h"),
         (datetime(2026, 8, 31, 17, 45), "the delay that actually happened"),
         (datetime(2026, 8, 31, 23, 59), "one minute before local midnight"),
     ],
 )
 def test_a_late_monday_firing_still_publishes_on_its_own_day(when, label):
-    decision = _decide(when, MONDAY_EDT, "monday", "06:17")
+    decision = _decide(when, MONDAY_EDT, "monday", "04:17")
 
     assert decision.decision == RUN, label
     assert decision.publishes
@@ -98,7 +98,7 @@ def test_a_late_monday_firing_still_publishes_on_its_own_day(when, label):
 
 
 def test_a_monday_firing_that_crosses_local_midnight_is_stale():
-    decision = _decide(datetime(2026, 9, 1, 0, 1), MONDAY_EDT, "monday", "06:17")
+    decision = _decide(datetime(2026, 9, 1, 0, 1), MONDAY_EDT, "monday", "04:17")
 
     assert decision.decision == STALE_SKIP
     assert not decision.publishes
@@ -109,17 +109,17 @@ def test_a_monday_firing_that_crosses_local_midnight_is_stale():
 
 def test_the_delay_that_suppressed_2026_08_31_now_publishes():
     """The exact runner clock from the forensic record, both firings."""
-    active = _decide(datetime(2026, 8, 31, 13, 15), MONDAY_EDT, "monday", "06:17")
-    twin = _decide(datetime(2026, 8, 31, 13, 45), MONDAY_EST, "monday", "06:17")
+    active = _decide(datetime(2026, 8, 31, 13, 15), MONDAY_EDT, "monday", "04:17")
+    twin = _decide(datetime(2026, 8, 31, 13, 45), MONDAY_EST, "monday", "04:17")
 
     assert active.decision == RUN
     assert twin.decision == OFF_SEASON_SKIP    # still exactly one publication
 
 
 def test_staleness_is_the_local_day_not_an_hour_count():
-    """No hidden threshold: 17h58m late runs, 5 minutes later does not."""
-    assert _decide(datetime(2026, 8, 31, 23, 59), MONDAY_EDT, "monday", "06:17").decision == RUN
-    assert _decide(datetime(2026, 9, 1, 0, 0), MONDAY_EDT, "monday", "06:17").decision == STALE_SKIP
+    """No hidden threshold: 19h42m late runs, 1 minute later does not."""
+    assert _decide(datetime(2026, 8, 31, 23, 59), MONDAY_EDT, "monday", "04:17").decision == RUN
+    assert _decide(datetime(2026, 9, 1, 0, 0), MONDAY_EDT, "monday", "04:17").decision == STALE_SKIP
 
 
 # ===========================================================================
@@ -130,9 +130,9 @@ def test_staleness_is_the_local_day_not_an_hour_count():
 @pytest.mark.parametrize(
     "day, time, edt, est",
     [
-        ("monday", "06:17", MONDAY_EDT, MONDAY_EST),
-        ("wednesday", "06:00", WEDNESDAY_EDT, WEDNESDAY_EST),
-        ("friday", "06:17", FRIDAY_EDT, FRIDAY_EST),
+        ("monday", "04:17", MONDAY_EDT, MONDAY_EST),
+        ("wednesday", "04:17", WEDNESDAY_EDT, WEDNESDAY_EST),
+        ("friday", "04:17", FRIDAY_EDT, FRIDAY_EST),
     ],
 )
 def test_exactly_one_cron_owns_the_window_in_each_season(day, time, edt, est):
@@ -152,7 +152,7 @@ def test_the_inactive_seasonal_cron_never_publishes_however_late_it_starts():
     """The staleness rule widened the day; it must not widen the season."""
     for hour in (7, 12, 18, 23):
         decision = _decide(
-            datetime(2026, 8, 31, hour, 20), MONDAY_EST, "monday", "06:17"
+            datetime(2026, 8, 31, hour, 20), MONDAY_EST, "monday", "04:17"
         )
         assert decision.decision == OFF_SEASON_SKIP, hour
 
@@ -162,18 +162,19 @@ def test_the_inactive_seasonal_cron_never_publishes_however_late_it_starts():
     datetime(2026, 11, 2),   # the Monday after fall back (2026-11-01)
 ])
 def test_dst_transition_weeks_are_deterministic(date):
-    """Transitions land on Sunday, so no publish day has an ambiguous 06:17.
+    """Transitions land on Sunday at 02:00, so no publish day has an ambiguous
+    04:17 — and 04:17 is clear of the transition hour in either direction.
 
     The invariant is exactly one publication, not a particular refusal reason:
     in a transition week the dormant cron may not have fired yet today, so its
     most recent real firing is last week's — correctly refused as stale rather
     than as off-season. Either way it publishes nothing, at any hour of the day.
     """
-    for hour, minute in ((6, 17), (9, 0), (15, 0), (22, 0)):
+    for hour, minute in ((4, 17), (9, 0), (15, 0), (22, 0)):
         moment = date.replace(hour=hour, minute=minute)
         decisions = [
-            _decide(moment, MONDAY_EDT, "monday", "06:17"),
-            _decide(moment, MONDAY_EST, "monday", "06:17"),
+            _decide(moment, MONDAY_EDT, "monday", "04:17"),
+            _decide(moment, MONDAY_EST, "monday", "04:17"),
         ]
         publishing = [d for d in decisions if d.publishes]
         assert len(publishing) == 1, (moment, [d.decision for d in decisions])
@@ -182,16 +183,16 @@ def test_dst_transition_weeks_are_deterministic(date):
 
 def test_the_intended_firing_is_read_from_the_cron_not_the_clock():
     """A runner hours late still resolves to its own scheduled instant."""
-    late = datetime(2026, 8, 31, 21, 30, tzinfo=timezone.utc)   # +11 h
+    late = datetime(2026, 8, 31, 21, 30, tzinfo=timezone.utc)   # +13 h
 
     assert intended_firing(late, MONDAY_EDT) == datetime(
-        2026, 8, 31, 10, 17, tzinfo=timezone.utc
+        2026, 8, 31, 8, 17, tzinfo=timezone.utc
     )
 
 
 def test_a_firing_delayed_past_utc_midnight_keeps_its_local_day():
     """22:30 local Monday is 02:30 UTC Tuesday — still Monday's publication."""
-    decision = _decide(datetime(2026, 8, 31, 22, 30), MONDAY_EDT, "monday", "06:17")
+    decision = _decide(datetime(2026, 8, 31, 22, 30), MONDAY_EDT, "monday", "04:17")
 
     assert decision.decision == RUN
     assert decision.intended_local_date == decision.actual_local_date == "2026-08-31"
@@ -203,9 +204,9 @@ def test_a_firing_delayed_past_utc_midnight_keeps_its_local_day():
 
 
 @pytest.mark.parametrize("day, time, cron, same_day, next_day", [
-    ("wednesday", "06:00", WEDNESDAY_EDT,
+    ("wednesday", "04:17", WEDNESDAY_EDT,
      datetime(2026, 9, 2, 14, 51), datetime(2026, 9, 3, 0, 5)),
-    ("friday", "06:17", FRIDAY_EDT,
+    ("friday", "04:17", FRIDAY_EDT,
      datetime(2026, 9, 4, 14, 51), datetime(2026, 9, 5, 0, 5)),
 ])
 def test_every_stream_runs_late_same_day_and_skips_the_next(
@@ -237,19 +238,20 @@ def test_the_friday_stream_uses_the_same_seam():
 # ===========================================================================
 
 
-def test_monday_and_friday_left_the_top_of_the_hour():
-    """GitHub delays :00 schedules most; the product hour is unchanged."""
-    for name in ("monday_publish.yml", "scheduled_publish.yml"):
-        for cron in _crons(name):
-            minute, hour, _, _, _ = cron.split()
-            assert minute == "17", f"{name}: {cron}"
-            assert hour in ("10", "11"), f"{name}: {cron} moved the hour"
-
-
-def test_wednesday_is_deliberately_left_on_the_top_of_the_hour():
-    """Reported to the owner rather than changed: Wednesday has just been
-    restored, and this change is not the place for unrelated churn."""
-    assert _crons("wednesday_golden.yml") == [WEDNESDAY_EDT, WEDNESDAY_EST]
+@pytest.mark.parametrize("name, pair", [
+    ("monday_publish.yml", (MONDAY_EDT, MONDAY_EST)),
+    ("wednesday_golden.yml", (WEDNESDAY_EDT, WEDNESDAY_EST)),
+    ("scheduled_publish.yml", (FRIDAY_EDT, FRIDAY_EST)),
+])
+def test_every_canonical_stream_fires_at_04_17_off_the_top_of_the_hour(name, pair):
+    """#232: all three canonical streams on one paired UTC schedule. GitHub
+    delays :00 the most, and the earlier hour leaves more of the local day for
+    a delayed firing to still publish in."""
+    assert _crons(name) == list(pair)
+    for cron in _crons(name):
+        minute, hour, _, _, _ = cron.split()
+        assert minute == "17", f"{name}: {cron}"
+        assert hour in ("8", "9"), f"{name}: {cron} is not the 04:17 ET pair"
 
 
 @pytest.mark.parametrize("name, env_key, cron_pair", [
@@ -286,18 +288,26 @@ def test_the_friday_config_time_matches_the_friday_cron():
         _decide(datetime(2026, 8, 28, 12, 0), cron, "friday", configured).decision
         for cron in (FRIDAY_EDT, FRIDAY_EST)
     }
-    assert configured == "06:17"
+    assert configured == "04:17"
     assert seasons == {RUN, OFF_SEASON_SKIP}
 
 
-def test_the_publication_hour_did_not_move():
-    """Only the minute changed. 06:xx America/New_York in both seasons."""
-    for cron, season_date in ((MONDAY_EDT, datetime(2026, 8, 31)),
-                              (MONDAY_EST, datetime(2026, 1, 5))):
+@pytest.mark.parametrize("edt, est, summer, winter", [
+    (MONDAY_EDT, MONDAY_EST, datetime(2026, 8, 31), datetime(2026, 1, 5)),
+    (WEDNESDAY_EDT, WEDNESDAY_EST, datetime(2026, 8, 26), datetime(2026, 1, 7)),
+    (FRIDAY_EDT, FRIDAY_EST, datetime(2026, 8, 28), datetime(2026, 1, 9)),
+])
+def test_the_paired_crons_land_on_04_17_local_in_their_own_season(
+    edt, est, summer, winter
+):
+    """#232: the point of the pair is that each half is 04:17 America/New_York
+    in the season it owns — the UTC hour differs, the local time does not."""
+    for cron, season_date in ((edt, summer), (est, winter)):
         intended = intended_firing(
             season_date.replace(hour=23, tzinfo=ET).astimezone(timezone.utc), cron
         ).astimezone(ET)
-        assert intended.hour == 6, cron
+        assert (intended.hour, intended.minute) == (4, 17), cron
+        assert intended.date() == season_date.date(), cron
 
 
 # ===========================================================================
@@ -308,7 +318,7 @@ def test_the_publication_hour_did_not_move():
 def test_a_manual_dispatch_never_evaluates_the_window():
     for kwargs in ({"event": "workflow_dispatch"}, {"force": True}):
         decision = evaluate(
-            _at(datetime(2026, 9, 5, 14, 0)), day="monday", time="06:17",
+            _at(datetime(2026, 9, 5, 14, 0)), day="monday", time="04:17",
             timezone_name=TZ, cron=MONDAY_EDT, **kwargs,
         )
         assert decision.decision == FORCED
@@ -318,7 +328,7 @@ def test_a_manual_dispatch_never_evaluates_the_window():
 
 def test_the_forced_cli_still_exits_zero():
     assert due_check.main(
-        ["--day", "monday", "--time", "06:17", "--timezone", TZ, "--force"]
+        ["--day", "monday", "--time", "04:17", "--timezone", TZ, "--force"]
     ) == 0
 
 
@@ -344,7 +354,7 @@ def test_a_saturday_manual_check_reports_not_due():
     "no" is not a check."""
     decision = evaluate(
         _at(datetime(2026, 9, 5, 10, 0)),  # a Saturday
-        day="friday", time="06:17", timezone_name=TZ,
+        day="friday", time="04:17", timezone_name=TZ,
         event="workflow_dispatch", check_only=True,
     )
     assert decision.decision != FORCED
@@ -375,11 +385,11 @@ def test_a_forced_manual_publish_remains_forced():
     """check_only widens nothing else: --force still bypasses the window by
     explicit instruction, and a plain manual publish still forces as before."""
     forced = evaluate(
-        _at(datetime(2026, 9, 5, 10, 0)), day="friday", time="06:17",
+        _at(datetime(2026, 9, 5, 10, 0)), day="friday", time="04:17",
         timezone_name=TZ, event="workflow_dispatch", force=True, check_only=True,
     )
     plain_manual = evaluate(
-        _at(datetime(2026, 9, 5, 10, 0)), day="friday", time="06:17",
+        _at(datetime(2026, 9, 5, 10, 0)), day="friday", time="04:17",
         timezone_name=TZ, event="workflow_dispatch",
     )
     assert forced.decision == FORCED and forced.publishes
@@ -419,7 +429,7 @@ REQUIRED_FIELDS = (
 @pytest.mark.parametrize("frozen, expected", [
     (datetime(2026, 8, 31, 13, 15, tzinfo=ET), RUN),          # late, same day
     (datetime(2026, 9, 1, 0, 30, tzinfo=ET), STALE_SKIP),     # next local day
-    (datetime(2026, 8, 25, 6, 17, tzinfo=ET), STALE_SKIP),    # a Tuesday
+    (datetime(2026, 8, 25, 4, 17, tzinfo=ET), STALE_SKIP),    # a Tuesday
 ])
 def test_every_scheduled_outcome_writes_a_decision_record(
     tmp_path, monkeypatch, frozen, expected
@@ -429,7 +439,7 @@ def test_every_scheduled_outcome_writes_a_decision_record(
         type("_Frozen", (), {"now": staticmethod(lambda tz=None: frozen)}),
     )
     code, record = _record(tmp_path, [
-        "--day", "monday", "--time", "06:17", "--timezone", TZ,
+        "--day", "monday", "--time", "04:17", "--timezone", TZ,
         "--event", "schedule", "--cron", MONDAY_EDT,
         "--role", "never-blank-monday-documented-case",
     ])
@@ -451,10 +461,10 @@ def test_the_record_is_deterministic_and_needs_no_model(tmp_path, monkeypatch):
         type("_Frozen", (), {"now": staticmethod(lambda tz=None: frozen)}),
     )
     first = _record(tmp_path / "a", [
-        "--day", "monday", "--time", "06:17", "--timezone", TZ,
+        "--day", "monday", "--time", "04:17", "--timezone", TZ,
         "--cron", MONDAY_EDT])[1]
     second = _record(tmp_path / "b", [
-        "--day", "monday", "--time", "06:17", "--timezone", TZ,
+        "--day", "monday", "--time", "04:17", "--timezone", TZ,
         "--cron", MONDAY_EDT])[1]
 
     assert first == second
@@ -462,7 +472,7 @@ def test_the_record_is_deterministic_and_needs_no_model(tmp_path, monkeypatch):
 
 
 def test_the_record_survives_a_missing_directory(tmp_path):
-    decision = _decide(datetime(2026, 8, 31, 9, 0), MONDAY_EDT, "monday", "06:17")
+    decision = _decide(datetime(2026, 8, 31, 9, 0), MONDAY_EDT, "monday", "04:17")
     written = write_decision(decision, tmp_path / "deep" / "nested" / "d.json")
 
     assert json.loads(written.read_text())["decision"] == RUN
@@ -512,11 +522,11 @@ def test_an_unidentified_firing_falls_back_rather_than_publishing_twice():
     """Without a cron there is nothing to tell the seasonal twins apart, so the
     narrow window returns — missing an article beats publishing it twice."""
     inside = evaluate(
-        _at(datetime(2026, 8, 31, 6, 40)), day="monday", time="06:17",
+        _at(datetime(2026, 8, 31, 4, 40)), day="monday", time="04:17",
         timezone_name=TZ, cron=None,
     )
     outside = evaluate(
-        _at(datetime(2026, 8, 31, 13, 15)), day="monday", time="06:17",
+        _at(datetime(2026, 8, 31, 13, 15)), day="monday", time="04:17",
         timezone_name=TZ, cron=None,
     )
 
@@ -528,7 +538,7 @@ def test_an_unidentified_firing_falls_back_rather_than_publishing_twice():
 @pytest.mark.parametrize("cron", ["", "nonsense", "0 10 * *", "* * * * *", "0 10 5 * 1"])
 def test_an_unparseable_cron_degrades_instead_of_crashing(cron):
     decision = evaluate(
-        _at(datetime(2026, 8, 31, 13, 15)), day="monday", time="06:17",
+        _at(datetime(2026, 8, 31, 13, 15)), day="monday", time="04:17",
         timezone_name=TZ, cron=cron or None,
     )
 
