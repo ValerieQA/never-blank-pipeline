@@ -681,6 +681,36 @@
       "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789397629/never-blank/posts/research/e7466a1db1e2453a/blog/1789397629.png",
       "source_topic": "AI Isn\u2019t Delivering Marketing Efficiency, It\u2019s Repeating Programmatic\u2019s Broken Promise via @sejournal, @gregjarboe",
       "reuse_count": 1
+    },
+    {
+      "published_date": "2026-09-15T13:20:21Z",
+      "content_slug": "research/a9f03de8476c256a",
+      "visual_family": "mountains_depth_layers",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "Unlock the insights buried in your sales calls.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478400/never-blank/posts/research/a9f03de8476c256a/blog/1789478399.png",
+      "source_topic": "The Most Valuable AI Search Data in Your Business Is Already Sitting in Your Sales Calls",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-09-15T13:21:22Z",
+      "content_slug": "research/badee248346881c3",
+      "visual_family": "focus_rings",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "Audit your data before the shift to Performance Max.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478460/never-blank/posts/research/badee248346881c3/blog/1789478460.png",
+      "source_topic": "Local Services Ads To Performance Max: What To Audit Before Migration via @sejournal, @hethr_campbell",
+      "reuse_count": 1
+    },
+    {
+      "published_date": "2026-09-15T13:22:23Z",
+      "content_slug": "research/6cd9a1ef1a2af7f6",
+      "visual_family": "light_paths",
+      "dominant_palette": "Deep Navy",
+      "hook_text": "Google's AI answers could reshape publisher revenue.",
+      "image_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478522/never-blank/posts/research/6cd9a1ef1a2af7f6/blog/1789478521.png",
+      "source_topic": "Google Tests Paying Publishers For AI Answers Via Search Console via @sejournal, @MattGSouthern",
+      "reuse_count": 1
     }
   ]
 }

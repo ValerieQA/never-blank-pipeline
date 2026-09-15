@@ -1063,5 +1063,35 @@
     "visual_family": "light_message_card",
     "design_version": "3",
     "hook_text": "Every time marketing tech promises to ‘run itself,’ someone ends up working overtime."
+  },
+  "a9f03de8476c256a": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478400/never-blank/posts/research/a9f03de8476c256a/blog/1789478399.png",
+    "signal_type": "visibility interruption",
+    "headline": "The Most Valuable AI Search Data in Your Business Is Already Sitting in Your Sales Calls",
+    "created_at": "2026-09-15",
+    "method": "gpt-image-1",
+    "visual_family": "mountains_depth_layers",
+    "design_version": "3",
+    "hook_text": "Unlock the insights buried in your sales calls."
+  },
+  "badee248346881c3": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478460/never-blank/posts/research/badee248346881c3/blog/1789478460.png",
+    "signal_type": "consistency failure",
+    "headline": "Local Services Ads To Performance Max: What To Audit Before Migration via @sejournal, @hethr_campbell",
+    "created_at": "2026-09-15",
+    "method": "gpt-image-1",
+    "visual_family": "focus_rings",
+    "design_version": "3",
+    "hook_text": "Audit your data before the shift to Performance Max."
+  },
+  "6cd9a1ef1a2af7f6": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478522/never-blank/posts/research/6cd9a1ef1a2af7f6/blog/1789478521.png",
+    "signal_type": "trust accumulation pattern",
+    "headline": "Google Tests Paying Publishers For AI Answers Via Search Console via @sejournal, @MattGSouthern",
+    "created_at": "2026-09-15",
+    "method": "gpt-image-1",
+    "visual_family": "light_paths",
+    "design_version": "3",
+    "hook_text": "Google's AI answers could reshape publisher revenue."
   }
 }

@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "badee248346881c3",
+  "HEADLINE": "Local Services Ads To Performance Max: What To Audit Before Migration via @sejournal, @hethr_campbell",
+  "prepared_at": "2026-09-15 13:21 UTC",
+  "content": {
+    "blog": {
+      "headline": "Local Services Ads to Performance Max: The Audit You Can’t Skip Before Migration",
+      "angle": "Google’s shift from LSAs to Performance Max forces advertisers to confront data continuity risks — ignoring thorough audits risks losing lead quality and campaign performance — the lesson: treat audits as a survival tactic, not just a checkbox."
+    },
+    "linkedin": {
+      "headline": "The migration isn’t just about new features — it’s about whether your business still knows where its leads come from.",
+      "angle": "When Google forces a platform migration, businesses that skip pre-migration audits risk losing critical lead data and campaign effectiveness, undermining growth and ROI."
+    },
+    "facebook": {
+      "headline": "Google is moving Local Services Ads into Performance Max campaigns. Are you ready to audit your data before the switch?",
+      "angle": "With Google’s ad platform migration, businesses face the risk of losing lead tracking continuity—how are you ensuring your campaigns don’t lose performance in the shuffle?"
+    },
+    "instagram": {
+      "headline": "Audit Before You Migrate Ads",
+      "angle": "When Google changes its ad products, the smartest service businesses know the real win is keeping lead data intact, not chasing shiny new features."
+    },
+    "threads": {
+      "thread_hook": "Google’s shift from Local Services Ads to Performance Max isn’t just a feature update — it’s a data continuity test.",
+      "angle": "This thread breaks down why skipping audits before migrating ad campaigns risks losing lead quality and campaign performance, and how to safeguard your business during platform changes."
+    },
+    "stories": {
+      "story_question": "Is your business ready to lose track of its leads after Google’s ad migration?",
+      "angle": "Exploring the tension between adopting new ad tech and preserving the data thread that keeps lead flow and performance metrics reliable."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478460/never-blank/posts/research/badee248346881c3/blog/1789478460.png",
+        "path": "reports/content_packages/images/badee248346881c3_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478463/never-blank/posts/research/badee248346881c3/linkedin/1789478463.png",
+        "path": "reports/content_packages/images/badee248346881c3_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478466/never-blank/posts/research/badee248346881c3/facebook/1789478466.png",
+        "path": "reports/content_packages/images/badee248346881c3_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478471/never-blank/posts/research/badee248346881c3/instagram/1789478470.png",
+        "path": "reports/content_packages/images/badee248346881c3_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478475/never-blank/posts/research/badee248346881c3/threads/1789478475.png",
+        "path": "reports/content_packages/images/badee248346881c3_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478481/never-blank/posts/research/badee248346881c3/stories/1789478481.png",
+        "path": "reports/content_packages/images/badee248346881c3_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "focus_rings",
+    "hook_text": "Audit your data before the shift to Performance Max."
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "6cd9a1ef1a2af7f6",
+  "HEADLINE": "Google Tests Paying Publishers For AI Answers Via Search Console via @sejournal, @MattGSouthern",
+  "prepared_at": "2026-09-15 13:22 UTC",
+  "content": {
+    "blog": {
+      "headline": "Google’s New AI Payouts: How Paying Publishers Changes the Content Game",
+      "angle": "Google’s pilot to pay publishers for AI-generated answers exposes the tension between AI platforms’ need for quality content and publishers’ demand for fair compensation, prompting a strategic response that highlights the importance of proactive trust-building to avoid backlash and regulatory risks."
+    },
+    "linkedin": {
+      "headline": "Google’s AI now writes the answers—and the checks.",
+      "angle": "When AI platforms start paying publishers for content, it signals a shift in how intellectual property and AI intersect—founders must rethink content strategies to stay ahead of emerging compensation models."
+    },
+    "facebook": {
+      "headline": "Google is testing paying publishers for AI-generated answers. What does that mean for content creators?",
+      "angle": "Google’s pilot program to compensate publishers for AI usage raises questions about content ownership and fair pay—how will this reshape the relationship between AI platforms and publishers?"
+    },
+    "instagram": {
+      "headline": "Google Pays Publishers for AI Content",
+      "angle": "Google’s move to pay for AI-sourced content highlights a new battleground for intellectual property and trust in the AI era."
+    },
+    "threads": {
+      "thread_hook": "Google’s AI doesn’t just steal content—it’s starting to pay for it.",
+      "angle": "This thread breaks down why Google’s pilot program to compensate publishers for AI answers is a strategic move to preempt backlash, secure quality content, and set a new standard for AI content usage."
+    },
+    "stories": {
+      "story_question": "What happens when AI platforms start paying for your content?",
+      "angle": "Exploring the tension between AI’s appetite for quality content and publishers’ demand for fair compensation—and why founders should care."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478522/never-blank/posts/research/6cd9a1ef1a2af7f6/blog/1789478521.png",
+        "path": "reports/content_packages/images/6cd9a1ef1a2af7f6_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478524/never-blank/posts/research/6cd9a1ef1a2af7f6/linkedin/1789478524.png",
+        "path": "reports/content_packages/images/6cd9a1ef1a2af7f6_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478527/never-blank/posts/research/6cd9a1ef1a2af7f6/facebook/1789478527.png",
+        "path": "reports/content_packages/images/6cd9a1ef1a2af7f6_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478532/never-blank/posts/research/6cd9a1ef1a2af7f6/instagram/1789478531.png",
+        "path": "reports/content_packages/images/6cd9a1ef1a2af7f6_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478535/never-blank/posts/research/6cd9a1ef1a2af7f6/threads/1789478535.png",
+        "path": "reports/content_packages/images/6cd9a1ef1a2af7f6_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478542/never-blank/posts/research/6cd9a1ef1a2af7f6/stories/1789478542.png",
+        "path": "reports/content_packages/images/6cd9a1ef1a2af7f6_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "light_paths",
+    "hook_text": "Google's AI answers could reshape publisher revenue."
+  }
+}

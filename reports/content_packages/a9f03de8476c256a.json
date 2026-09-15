@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "a9f03de8476c256a",
+  "HEADLINE": "The Most Valuable AI Search Data in Your Business Is Already Sitting in Your Sales Calls",
+  "prepared_at": "2026-09-15 13:20 UTC",
+  "content": {
+    "blog": {
+      "headline": "Why Your Sales Calls Are the Best AI Data You’re Ignoring",
+      "angle": "Sales calls hold a trove of unstructured buyer insights that AI platforms fail to capture, creating a blind spot for founders; by systematically analyzing these calls, businesses can sharpen sales strategies and product fit."
+    },
+    "linkedin": {
+      "headline": "Most companies record sales calls—and then let that data rot.",
+      "angle": "Founders ignoring the rich, unfiltered buyer questions in sales calls are missing the clearest signals to improve sales and product decisions."
+    },
+    "facebook": {
+      "headline": "Your sales calls are packed with gold—are you mining it?",
+      "angle": "Sales calls contain real buyer concerns that AI platforms often overlook; Gong’s example shows what happens when you tap into this data. Are you capturing what your buyers really want?"
+    },
+    "instagram": {
+      "headline": "Sales Calls: Your Untapped AI Goldmine",
+      "angle": "Unstructured data from sales calls reveals what buyers truly care about—if you know where to look."
+    },
+    "threads": {
+      "thread_hook": "Sales calls are the richest AI data source most founders ignore.",
+      "angle": "This thread breaks down why AI visibility tools miss the real buyer signals in sales calls and how founders can turn that data into sharper sales and product moves."
+    },
+    "stories": {
+      "story_question": "What if your sales calls held the key to your next big win?",
+      "angle": "Exploring the gap between recording sales calls and actually using that data to improve sales effectiveness and product-market fit."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478400/never-blank/posts/research/a9f03de8476c256a/blog/1789478399.png",
+        "path": "reports/content_packages/images/a9f03de8476c256a_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478403/never-blank/posts/research/a9f03de8476c256a/linkedin/1789478402.png",
+        "path": "reports/content_packages/images/a9f03de8476c256a_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478406/never-blank/posts/research/a9f03de8476c256a/facebook/1789478405.png",
+        "path": "reports/content_packages/images/a9f03de8476c256a_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478410/never-blank/posts/research/a9f03de8476c256a/instagram/1789478410.png",
+        "path": "reports/content_packages/images/a9f03de8476c256a_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478414/never-blank/posts/research/a9f03de8476c256a/threads/1789478413.png",
+        "path": "reports/content_packages/images/a9f03de8476c256a_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789478420/never-blank/posts/research/a9f03de8476c256a/stories/1789478420.png",
+        "path": "reports/content_packages/images/a9f03de8476c256a_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "mountains_depth_layers",
+    "hook_text": "Unlock the insights buried in your sales calls."
+  }
+}
