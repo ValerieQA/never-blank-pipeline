@@ -1,0 +1,305 @@
+{
+  "schema_version": "1",
+  "issue": 233,
+  "audited_at": "2026-09-15",
+  "audited_ref": "orch/233 (base 58afe47)",
+  "note": "Discovery does not authorize repair. Each finding names the narrowly scoped follow-up it should become. Nothing here was fixed by issue #233.",
+  "findings": [
+    {
+      "id": "F1",
+      "rank": 1,
+      "title": "Wednesday's declared editorial role never reaches Wednesday's generation prompt",
+      "classification": "PRODUCT_CONFIG_UNWIRED",
+      "severity": "high",
+      "artifact": "strategy/current/business_strategy.json (role never-blank-wednesday-golden)",
+      "chain_expected": "business_strategy.json -> resolve_editorial_role -> render_editorial_role_rules -> platform_composer._build_user_prompt -> chat()",
+      "chain_actual": "business_strategy.json -> resolve_editorial_role -> render_editorial_role_rules -> _editorial_role_rules -> (dropped)",
+      "evidence": [
+        "scripts/generate_and_publish.py:920-922 renders the role's rules for both surfaces into _editorial_role_rules.",
+        "scripts/generate_and_publish.py:1863-1868 appends render_sources_of_record(...) to the same variable because the Wednesday role sets require_source_transparency: true (business_strategy.json:441).",
+        "scripts/generate_and_publish.py:1878-1880: `if is_wednesday_role(_editorial_role_identity): article = generate_for_wednesday(editorial.to_legacy_dict())` — one argument.",
+        "src/never_blank/wednesday_routing.py:57 `def generate_for_wednesday(signal: dict) -> dict` accepts no role rules, no CTA mode, no strategy views, no closing contract.",
+        "The Monday/Friday branch at scripts/generate_and_publish.py:1882-1890 passes editorial_role_rules=_editorial_role_rules into generate_article().",
+        "The only Wednesday consumer of _editorial_role_rules is recompose_platform(...) at scripts/generate_and_publish.py:2151-2157, which runs only when editorial acceptance revised the article."
+      ],
+      "consequence": "On a normal Wednesday run the role's nine structure rules, nine prohibitions and per-surface Wix/LinkedIn rules are computed and discarded, and the article is produced from the hardcoded _SYSTEM_PROMPT constants in src/never_blank/wednesday_july/*.py alone. Editing the Wednesday role in business_strategy.json changes nothing a reader sees, except after a revision. Note the boundary precisely: the Wednesday rubric (:924) and the sources-of-record block for the reviewer and reviser (:2013-2019) DO reach acceptance. It is generation, and only generation, that the role does not reach.",
+      "action": "Owner decision required. Do not repair here.",
+      "owner_decision_required": true,
+      "overlaps": "Issue #237 (editorial-wiring forensic) owns the Monday/Wednesday prompt-wiring question and is blocked on an owner choice. This audit records the reachability fact and makes no product choice.",
+      "follow_up": "Track under #237; do not open a competing issue."
+    },
+    {
+      "id": "F2",
+      "rank": 2,
+      "title": "The Wednesday product contract is declared twice; only one declaration runs",
+      "classification": "DUPLICATE_SUPERSEDED / PRODUCT_CONFIG_UNWIRED",
+      "severity": "high",
+      "artifact": "config/never_blank/wednesday_golden.yaml + src/never_blank/wednesday_golden.py",
+      "source_of_truth": "strategy/current/business_strategy.json:398-446",
+      "evidence": [
+        "WednesdayGoldenProfile.load() (src/never_blank/wednesday_golden.py:167) has no caller in src/ or scripts/.",
+        "generation_rules() (:195) and source_eligibility_rules() (:173) likewise have no production caller.",
+        "The module is imported at runtime only as a side effect of src/never_blank/__init__.py:7, so it appears reachable to an import-graph check while none of its behaviour executes.",
+        "Its own docstring at :197-201 states the canonical entrypoint carries the declared role through the generic renderer and that this renderer 'remains useful for strict profile tests'.",
+        "Callers are tests only: tests/test_wednesday_golden.py:37-42, tests/test_no_mandatory_thesis.py:296, and tests/test_wednesday_diagnostics.py:127 which parses the YAML directly."
+      ],
+      "consequence": "Two files describe the Wednesday editorial contract in product language. One is enforced, one is only validated by tests. A change made in the wrong one is silently inert, and the test suite will still pass.",
+      "action": "Name the source of truth in both files. Either give the profile a production consumer or mark it explicitly as a test-only conformance model, the way src/publishing/release_scope.py:20-26 marks its own boundary.",
+      "owner_decision_required": true,
+      "follow_up": "New issue: 'Wednesday Golden product contract has two declarations — name the source of truth'."
+    },
+    {
+      "id": "F3",
+      "rank": 3,
+      "title": "prompt_rule_references declares six documents as product rules; five are never loaded",
+      "classification": "PRODUCT_CONFIG_UNWIRED",
+      "severity": "high",
+      "artifact": "config/brand_voice.md, config/brand.yaml, strategy/methodology/{strategy_methodology,editorial_strategy,platform_strategy}.md, docs/PLATFORM_AND_VISUAL_STRATEGY.md",
+      "evidence": [
+        "strategy/current/business_strategy.json:306-341 declares seven prompt_rule_references.",
+        "Only 'active-campaign-strategy' is functionally consumed, and only as a version equality check: src/strategy/execution_context.py:296-315 assert_campaign_reference().",
+        "config/brand_voice.md has no reader in src/ or scripts/ at all.",
+        "config/brand.yaml is read by src/quality/voice.py:159, src/quality/rewrite.py:56 and src/internal/strategy.py:73 — all reachable only from scripts/generate.py and scripts/dry_run.py, neither of which any scheduled workflow runs.",
+        "No path under strategy/methodology/ or docs/PLATFORM_AND_VISUAL_STRATEGY.md is opened anywhere in src/ or scripts/.",
+        "The only assertion about any of them is tests/strategy/test_never_blank_business_config.py:80-86, which checks `resolved.is_file()`."
+      ],
+      "consequence": "The configuration states that the product's voice, editorial strategy, platform strategy and visual strategy are rules the run follows. Nothing reads them. A brand-voice change has no effect on any published article, and a green test suite says the references are fine.",
+      "action": "Either load the declared references into the prompt chain, or narrow prompt_rule_references to what is actually consumed and re-describe the rest as human methodology.",
+      "owner_decision_required": true,
+      "follow_up": "New issue: 'prompt_rule_references declare documents no loader reads'."
+    },
+    {
+      "id": "F4",
+      "rank": 4,
+      "title": "Publishing schedule has a duplicate Friday owner, an unserialized publisher, a Sunday firing and a secret-gated daily path",
+      "classification": "DUPLICATE_SUPERSEDED / ACTIVE_RUNTIME",
+      "severity": "high",
+      "sub_findings": [
+        {
+          "id": "F4a",
+          "title": "Two workflows publish on Friday",
+          "evidence": [
+            ".github/workflows/scheduled_publish.yml:23-24 — cron 17 8 and 17 9 on day 5 (Friday 04:17 ET); its header says 'Friday remains on this legacy path until #144'.",
+            ".github/workflows/research_generate_and_publish.yml:33 — cron '0 7 * * 5,0' (Friday and Sunday 07:00 UTC); its comment says only that Monday and Wednesday moved away, and that 'Friday and Sunday remain unchanged here'.",
+            "Both reach a publisher: scripts/scheduled_publish.py and scripts/generate_and_publish.py respectively."
+          ],
+          "consequence": "The reasoning the repository applied to Monday in #142 — two publishers on one day is two articles — applies unaddressed to Friday."
+        },
+        {
+          "id": "F4b",
+          "title": "The Friday legacy publisher is not in the shared concurrency group",
+          "evidence": [
+            "monday_publish.yml:53-55, wednesday_golden.yml:32-34 and research_generate_and_publish.yml:37-39 all declare `concurrency: group: never-blank-publish`.",
+            "scheduled_publish.yml declares no concurrency block at any level."
+          ],
+          "consequence": "Friday's legacy run is not serialized against the other publishers, which share strategy/published_content_index.jsonl and data/research/published_signal_ids.txt."
+        },
+        {
+          "id": "F4c",
+          "title": "Publishing days exist outside the stated Mon/Wed/Fri cadence",
+          "evidence": [
+            "research_generate_and_publish.yml:33 fires on Sunday as well as Friday.",
+            "visibility_publish.yml:6-7 fires Tuesday and Thursday.",
+            "The most recent scheduling work describes the cadence as Monday/Wednesday/Friday (commit 58afe47, '#232 Scheduling: Monday/Wednesday/Friday publish at 04:17 America/New_York')."
+          ],
+          "consequence": "Reverse reachability: live scheduled publishing on four days that the current scheduling narrative does not mention."
+        },
+        {
+          "id": "F4d",
+          "title": "The daily research workflow's publish behaviour is not answerable from the repository",
+          "evidence": [
+            "daily_signal_research.yml:5 runs every day; :85 runs the pipeline.",
+            ":82-83 an inline shell guard sets NB_RESEARCH_PUBLISH_ENABLED=false only when the local weekday is Wednesday.",
+            "On every other day the publish/no-publish decision is the value of the NB_RESEARCH_PUBLISH_ENABLED secret, which is not visible in the repository."
+          ],
+          "consequence": "Whether a second article is published on Monday, Friday or any other day cannot be determined from source. #159 forensics (src/publishing/release_scope.py:12-18) record that this path did publish live, to the wrong channels, for two days in September 2026."
+        }
+      ],
+      "action": "Establish a single documented owner per publishing day, put every publisher in the never-blank-publish concurrency group, and make the daily path's publish authorization readable from the repository.",
+      "owner_decision_required": true,
+      "follow_up": "New issue: 'One owner per publishing day; serialize every publisher'."
+    },
+    {
+      "id": "F5",
+      "rank": 5,
+      "title": "93% of tracked files are test-generated run artifacts for two synthetic signal IDs",
+      "classification": "DEAD_ORPHANED",
+      "severity": "high",
+      "artifact": "reports/content_packages/sig-identity-test-001/** (3,094 files), reports/content_packages/sig-test-001/** (4,702 files)",
+      "evidence": [
+        "7,796 of 8,380 tracked files are run directories under those two IDs; 1,176 run directories exist for sig-identity-test-001 alone.",
+        "Neither ID exists outside tests: tests/test_run_identity.py:63, tests/test_visual_contract.py:78, tests/test_wednesday_supply.py:302, tests/test_wednesday_live_fixes.py:401.",
+        "Root cause: scripts/generate_and_publish.py:320-321 — `PACKAGES_DIR = Path(\"reports/content_packages\")` followed by `PACKAGES_DIR.mkdir(parents=True, exist_ok=True)` at module import. The path is relative to the process CWD, so importing the module from a test writes into the tracked repository path.",
+        "The daily workflow's commit step (daily_signal_research.yml:106) adds `reports/content_packages/*.json` — a flat glob — so it is not the source of the nested directories; a developer `git add -A` after a local test run is."
+      ],
+      "consequence": "Repository integrity and reviewability: any diff, any search and any file-by-file audit is dominated by artifacts with no consumer. It also makes a real content package harder to distinguish from test residue.",
+      "action": "Give the artifact root an injectable base (or a tmp_path default under pytest) so tests cannot write into the tracked path, then remove the accumulated directories in a separate change.",
+      "owner_decision_required": false,
+      "follow_up": "New issue: 'Tests must not write into reports/content_packages/'. Cleanup of the 7,796 files should be a second, separate change so the mechanism fix is reviewable."
+    },
+    {
+      "id": "F6",
+      "rank": 6,
+      "title": "The prompts that look like the product's article prompts are unreachable from every scheduled run",
+      "classification": "PRODUCT_CONFIG_UNWIRED / LEGACY_INTENTIONAL",
+      "severity": "medium",
+      "sub_findings": [
+        {
+          "id": "F6a",
+          "title": "config/prompts/blog_post.yaml and linkedin_post.yaml are legacy-only",
+          "evidence": [
+            "src/content/generator.py:126 and :134 are their only loaders.",
+            "generator.py is reached only from scripts/generate.py, invoked only by generate_content.yml:47 and generate_and_publish.yml:52 — both workflow_dispatch-only.",
+            "The published article and LinkedIn derivative are produced from hardcoded _SYSTEM_PROMPT constants (src/editorial/platform_composer.py:114/:511, src/editorial/never_blank_voice.py:29/:162, and the wednesday_july equivalents) plus business_strategy.json role rules."
+          ]
+        },
+        {
+          "id": "F6b",
+          "title": "Workflow and script names collide",
+          "evidence": [
+            ".github/workflows/generate_and_publish.yml calls scripts/generate.py and scripts/publish.py (lines 52, 106-108).",
+            "scripts/generate_and_publish.py — the canonical entrypoint — is called by monday_publish.yml, wednesday_golden.yml and research_generate_and_publish.yml.",
+            "The workflow named after the canonical script is the one that does not call it."
+          ]
+        },
+        {
+          "id": "F6c",
+          "title": "docs/SYSTEM_MAP.md re-authorizes dead artifacts",
+          "evidence": [
+            "SYSTEM_MAP.md:28 lists config/content_matrix.yaml, which no code opens.",
+            ":29 lists config/intelligence.yaml, loaded only by the unreachable scripts/dry_run.py.",
+            ":30 presents config/prompts/blog_post.yaml as 'Blog generation prompt' without qualification.",
+            ":55-58 lists the four observation/topic prompts as current; three are orphaned and one is status: not_needed."
+          ]
+        }
+      ],
+      "action": "Correct docs/SYSTEM_MAP.md to say which path each artifact belongs to, and mark the legacy V1 prompt set as legacy in-band (the way config/prompts/image_hook.yaml uses `status: not_needed`).",
+      "owner_decision_required": false,
+      "follow_up": "New issue: 'SYSTEM_MAP describes the legacy path as current'."
+    },
+    {
+      "id": "F7",
+      "rank": 7,
+      "title": "Orphaned prompts and configuration kept alive by a single unreachable script",
+      "classification": "DEAD_ORPHANED",
+      "severity": "medium",
+      "artifact": "config/prompts/{observation_discovery,observation_score,topic_extract}.yaml, config/content_matrix.yaml, config/intelligence.yaml, scripts/dry_run.py, scripts/render_card_audit.py, reports/card_audit/*.png",
+      "evidence": [
+        "scripts/dry_run.py:95-100 is the sole loader of the three observation/topic prompts, and :82 the sole loader of config/intelligence.yaml.",
+        "No workflow runs scripts/dry_run.py and no test imports it, so those four artifacts have no executing consumer.",
+        "config/content_matrix.yaml has no loader at all; its only mention in the repository is docs/SYSTEM_MAP.md:28.",
+        "config/intelligence.yaml:1 reads `sources: []  # populated in Phase 7 (Intelligence Engine)`.",
+        "scripts/render_card_audit.py has no workflow or test; reports/card_audit/*.png (26 files) is its output and nothing reads it."
+      ],
+      "consequence": "Six configuration artifacts present themselves as current (`status: ready`) while nothing can execute them. The repository already has the better pattern: config/prompts/{image_hook,topic_score,strategy_brief}.yaml carry `status: not_needed` and src/utils/config_loader.py:49-53 refuses to load them.",
+      "action": "Confirm with the owner, then either mark these `status: not_needed` with a reason or remove them together with scripts/dry_run.py. Do not delete on static evidence alone.",
+      "owner_decision_required": true,
+      "follow_up": "New issue: 'Retire or re-declare the dry-run-only configuration artifacts'."
+    },
+    {
+      "id": "F8",
+      "rank": 8,
+      "title": "Artifacts whose purpose or reachability could not be established safely",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "severity": "medium",
+      "sub_findings": [
+        {
+          "id": "F8a",
+          "title": "src/investigation/hypothesis_generator.py has no production importer and a self-contradicting spec",
+          "evidence": [
+            "No import of src.investigation.* exists in src/ or scripts/; the only consumer is tests/test_hypothesis_generator.py.",
+            "docs/LERA_OPERATING_SYSTEM.md:5-7 records 'Branch: feature/business-investigation-layer / Status: Under development. Not merged to main' — while both the document and the module are in main."
+          ]
+        },
+        {
+          "id": "F8b",
+          "title": "The documented research Stage 8 has no caller",
+          "evidence": [
+            "docs/NEVER_BLANK_RESEARCH_PIPELINE.md:75 lists sync_from_sheets.py as 'Stage 8: Pull edits from Sheets'; :57 describes its allowlist behaviour as current.",
+            "scripts/research/run_daily_research.py:25-32 imports nine sibling stages; sync_from_sheets is not among them, and no workflow invokes it.",
+            "Its only repository consumer is tests/test_research_pipeline.py:14 importing ALLOWED_FIELDS."
+          ]
+        },
+        {
+          "id": "F8c",
+          "title": "A test double lives under src/",
+          "evidence": [
+            "src/research/adapters/fake.py has no production importer; tests/test_research_artifact_lifecycle.py:31 is its consumer."
+          ]
+        },
+        {
+          "id": "F8d",
+          "title": "Five operator scripts and four strategy modules have compile-only coverage and no runner",
+          "evidence": [
+            "scripts/strategy/{build_monthly_plan,run_weekly_review,run_monthly_review,approve_strategy_recommendation}.py are only py_compiled, at strategy_tests.yml:64-67; no workflow executes them and no test imports them.",
+            "They are the sole production consumers of src/strategy/{market_analyzer,content_planner,decision_engine,pattern_extractor}.py (build_monthly_plan.py:27-28, run_weekly_review.py:30, run_monthly_review.py:23).",
+            "approve_strategy_recommendation.py is the only path that archives a strategy after human approval (run_monthly_review.py:123)."
+          ]
+        }
+      ],
+      "action": "Record each one's status where a reader will find it: a module docstring or an in-band status marker, not a stale branch header or a pipeline document.",
+      "owner_decision_required": true,
+      "follow_up": "New issue: 'State the status of the investigation layer, Stage 8 and the strategy operator tools'."
+    },
+    {
+      "id": "F9",
+      "rank": 9,
+      "title": "Tests that prove existence or shape, not consumption",
+      "classification": "test-confidence gap",
+      "severity": "medium",
+      "sub_findings": [
+        {
+          "id": "F9a",
+          "title": "tests/strategy/test_never_blank_business_config.py:80-86 asserts declared references exist on disk",
+          "consequence": "This is the test that lets F3's five unconsumed documents pass as wired product rules. It would pass unchanged if every one of them were empty."
+        },
+        {
+          "id": "F9b",
+          "title": "tests/test_research_prompts.py asserts YAML shape and phrase presence in the file",
+          "consequence": "These prompts happen to be wired, but the test would not have noticed if they were not: it never observes a model call."
+        },
+        {
+          "id": "F9c",
+          "title": "tests/test_wednesday_golden.py validates a profile production never loads",
+          "consequence": "Substantial test weight behind config/never_blank/wednesday_golden.yaml makes F2's unwired duplicate look like the live contract."
+        },
+        {
+          "id": "F9d",
+          "title": "tests/test_cross_platform_overlap_policy.py:326-333 asserts on the text of config/brand_voice.md",
+          "consequence": "Asserting a rule's absence from a file nothing loads makes the file look governed."
+        }
+      ],
+      "action": "Adopt the guardrail in section 9 of the human report: for every artifact classified as authoritative product config, one test that puts a distinctive value in and finds it in the actual model message.",
+      "owner_decision_required": false,
+      "follow_up": "Covered by the guardrail issue."
+    },
+    {
+      "id": "F10",
+      "rank": 10,
+      "title": "Four permanently accepted test failures on the legacy generator",
+      "classification": "test debt",
+      "severity": "low",
+      "artifact": "tests/accepted_full_suite_failures.txt",
+      "evidence": [
+        "All four entries are tests/test_editorial_pipeline.py::TestGeneratorTelegramStories — the Telegram/Stories path of the legacy V1 generator (src/content/generator.py:158,:176).",
+        "The comparator itself is strict and fail-closed (scripts/ci/check_test_baseline.py:28-42): it rejects both new and resolved failures, so the baseline cannot silently grow."
+      ],
+      "consequence": "Small and well-contained, but the four failures are on a path classified LEGACY_INTENTIONAL, so they are debt on code nothing schedules.",
+      "action": "Resolve or delete alongside whatever decision F6a produces about the legacy V1 path.",
+      "owner_decision_required": false,
+      "follow_up": "Fold into the legacy-path decision."
+    }
+  ],
+  "repair_order": [
+    {"step": 1, "finding": "F4", "why": "A duplicate publisher on a live day can publish a second article this week. It is the only finding with a same-week product consequence."},
+    {"step": 2, "finding": "F1", "why": "The Wednesday role is declared and discarded. Blocked on the #237 owner decision; ranked here so it is not lost behind cleanup work."},
+    {"step": 3, "finding": "F3", "why": "Brand voice and editorial strategy are declared as rules the product runs on. Every week they stay unwired is a week of articles no voice document governed."},
+    {"step": 4, "finding": "F5", "why": "Mechanism fix first (tests stop writing into the tracked path), cleanup second. Cheap, non-controversial, and it makes every later review readable."},
+    {"step": 5, "finding": "F2", "why": "Two declarations of one contract; low risk to resolve once F1 is decided, and resolving it early prevents another inert edit."},
+    {"step": 6, "finding": "F9", "why": "The guardrail. Put it in before the cleanup below, so nothing re-enters the repository unwired."},
+    {"step": 7, "finding": "F6", "why": "Documentation correction. No runtime risk, high reader risk."},
+    {"step": 8, "finding": "F7", "why": "Orphan retirement. Requires owner confirmation and should never be done on static evidence alone."},
+    {"step": 9, "finding": "F8", "why": "Status statements for the unresolved artifacts."},
+    {"step": 10, "finding": "F10", "why": "Resolve with whatever decision the legacy V1 path receives."}
+  ]
+}
