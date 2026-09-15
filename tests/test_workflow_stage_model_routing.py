@@ -112,7 +112,9 @@ def test_every_reachable_model_call_names_its_model(workflow, entry):
             if name not in LLM_CALLS:
                 continue
             calls += 1
-            if not any(keyword.arg == "model" for keyword in node.keywords):
+            model = next((k.value for k in node.keywords if k.arg == "model"), None)
+            # A literal None or "" is the global fallback under another name.
+            if model is None or (isinstance(model, ast.Constant) and not model.value):
                 unrouted.append(f"{path}:{node.lineno} {name}()")
 
     assert calls, f"{entry}: the reachability walk found no model calls at all"

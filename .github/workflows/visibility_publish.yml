@@ -56,7 +56,8 @@ jobs:
           # (model_article / model_social). Without the stage secrets they fell
           # back to NB_OPENAI_CHAT_MODEL, which the provider rejects with
           # HTTP 400 `invalid model ID` — every scheduled run since 2026-08-25.
-          # Same stage secrets as Wednesday and Daily Signal Research.
+          # Same stage secrets as the canonical streams (#213) and Daily
+          # Signal Research.
           NB_DISCOVERY_MODEL:              ${{ secrets.NB_DISCOVERY_MODEL }}
           NB_SCORING_MODEL:                ${{ secrets.NB_SCORING_MODEL }}
           NB_ENRICH_MODEL:                 ${{ secrets.NB_ENRICH_MODEL }}
