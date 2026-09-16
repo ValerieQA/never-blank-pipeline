@@ -2,11 +2,22 @@
 
 Issue #233. Audited 2026-09-15 against `orch/233` (base `58afe47`).
 
-Machine-readable companions, both under `reports/repository_audit/`:
+Machine-readable companions, all under `reports/repository_audit/`:
 
-- `inventory.json` — every tracked path, classified, with its consumer and the evidence.
+- `inventory.json` — the index: method, classification definitions, counts, the coverage
+  reconciliation against `git ls-files`, and the shard manifest.
+- `inventory/01_github_workflows.json` … `inventory/11c_reports_repository_audit.json` —
+  one object per tracked path, with its classification, purpose, consumer and evidence.
+- `inventory/12_test_output_packages.json` plus `inventory/12a_*.paths.txt` and
+  `inventory/12b_*.paths.txt` — the 7,796 run-scoped test-output files of F5, enumerated
+  one path per line, with the classification and evidence stated once because they are
+  identical file for file.
 - `findings.json` — the ranked findings and the repair order, structured so follow-up
   issues can be written from it without re-deriving anything.
+
+Every tracked path appears exactly once across the shards, as an explicit path and never as
+a glob or a group. Each shard can be checked on its own: extracting its `path` values and
+diffing them against `git ls-files <area>` must come back empty.
 
 This is a forensic record. **Nothing in the repository was repaired by this issue**, and
 discovery here does not authorize repair. Where a finding needs a product decision it says
@@ -39,7 +50,7 @@ What does not hold is the promise that a product-defining file controls the prod
   declaration is `strategy/current/business_strategy.json`. (F2)
 - **Friday has two scheduled publishers**, and the older of the two is the only publisher
   not in the `never-blank-publish` concurrency group. (F4)
-- **93% of the repository is test residue.** 7,796 of 8,380 tracked files are run
+- **93% of the repository is test residue.** 7,796 of 8,399 tracked files are run
   directories for two synthetic signal IDs that exist only in `tests/`. (F5)
 
 The common cause is not carelessness. It is that this repository has never had a rule
@@ -51,32 +62,61 @@ signal a reviewer would normally trust says it is fine.
 
 | Classification | Files | Notes |
 |---|---:|---|
-| ACTIVE RUNTIME | 251 | Reachable from a current production entrypoint |
+| ACTIVE RUNTIME | 255 | Reachable from a current production entrypoint |
 | ACTIVE SUPPORT | 151 | Tests, CI, fixtures, operational tooling |
 | AUTHORITATIVE PRODUCT CONFIG — WIRED | 17 | Full chain to a production model message proven |
 | **AUTHORITATIVE PRODUCT CONFIG — UNWIRED/PARTIAL** | **9** | **Section 2** |
-| HUMAN DOCUMENTATION | 56 | Intentionally for people |
-| LEGACY BUT INTENTIONAL | 53 | Retained deliberately, owner and reason identified |
-| DEAD / ORPHANED | 7,829 | 7,796 of these are one problem (F5) |
+| HUMAN DOCUMENTATION | 74 | Intentionally for people (includes this audit's 19 deliverables) |
+| LEGACY BUT INTENTIONAL | 47 | Retained deliberately, owner and reason identified |
+| DEAD / ORPHANED | 7,831 | 7,796 of these are one problem (F5) |
 | DUPLICATE / SUPERSEDED | 2 | Section 4 |
-| SUSPICIOUS / UNRESOLVED | 12 | Section 5 |
-| **Total** | **8,380** | `git ls-files` |
+| SUSPICIOUS / UNRESOLVED | 13 | Section 5 |
+| **Total** | **8,399** | `git ls-files` for the tree this PR produces |
+
+The total includes the 19 files this audit itself adds — `REPOSITORY_AUDIT.md` and the 18
+under `reports/repository_audit/` — all of which are inventoried like everything else, in
+`inventory/11c_reports_repository_audit.json`. An inventory that claims to cover every
+tracked file has to cover itself.
+
+These counts are mechanical: they are derived by counting `classification` fields across
+the shards, and they reconcile to `git ls-files` exactly. The first version of the inventory
+assessed some artifacts as a class and derived its per-class totals by hand over those
+groups; a few were off by one or two, so the figures above supersede rather than merely
+update them.
+
+Expanding the groupings also changed four classifications outright, each an error the
+grouping had produced:
+
+| Artifact | Was | Now | Why |
+|---|---|---|---|
+| `data/research/signals_archived_corporate_backlog.jsonl` | ACTIVE RUNTIME | LEGACY BUT INTENTIONAL | Grouped with `signals_active.jsonl`; on its own it has no consumer at all. `.gitignore:18` states the reason it is kept. |
+| `strategy/methodology/evaluation_rules.md` | UNWIRED | SUSPICIOUS | Grouped with its three siblings as a declared prompt rule reference. It is not declared. |
+| `docs/PLATFORM_AND_VISUAL_STRATEGY.md` | HUMAN DOCUMENTATION | UNWIRED | Grouped with five other `docs/` files. It *is* declared, at `business_strategy.json:337-341`, and nothing loads it. |
+| `reports/content_packages/vis_00{1..6}_generated.json` | LEGACY | ACTIVE RUNTIME | Grouped with the legacy flat artifacts by suffix. They are current Tue/Thu output, written by `generate_and_publish_visibility.py:426`. |
+
+The last two matter beyond bookkeeping. The third resolves a contradiction inside this
+audit: F3's table below already named `docs/PLATFORM_AND_VISUAL_STRATEGY.md` as a declared
+reference with no loader, while the inventory filed it as ordinary documentation. The
+fourth means one directory uses the `_generated.json` suffix for two unrelated things, and
+anything that sweeps that directory by suffix will get it wrong. `inventory.json` records
+all four under `corrections_from_v1`.
 
 ### Counts by area
 
 | Area | Files |
 |---|---:|
-| `reports/` | 7,954 |
+| `reports/` | 7,972 |
 | `src/` | 130 |
 | `tests/` | 116 |
 | `config/` | 43 |
+| `docs/` | 35 |
 | `scripts/` | 34 |
-| `docs/` | 34 |
 | `strategy/` | 26 |
 | `.github/workflows/` | 18 |
 | `data/` | 13 |
 | repository root | 9 |
 | `assets/` | 3 |
+| **Total** | **8,399** |
 
 ### What "reachable" meant here
 
@@ -191,10 +231,16 @@ prompt to anyone who opens it.
 
 ### F5 — 93% of tracked files are test residue (7,796 files)
 
-| Path | Files | Owner |
-|---|---:|---|
-| `reports/content_packages/sig-identity-test-001/**` | 3,094 | `tests/test_run_identity.py:63` |
-| `reports/content_packages/sig-test-001/**` | 4,702 | `tests/test_visual_contract.py:78`, `test_wednesday_supply.py:302`, `test_wednesday_live_fixes.py:401` |
+| Signal ID | Files | Run dirs | Owner | Explicit path list |
+|---|---:|---:|---|---|
+| `sig-identity-test-001` | 3,094 | 1,176 | `tests/test_run_identity.py:63` | `inventory/12b_sig_identity_test_001.paths.txt` |
+| `sig-test-001` | 4,702 | 1,583 | `tests/test_visual_contract.py:78`, `test_wednesday_supply.py:302`, `test_wednesday_live_fixes.py:401` | `inventory/12a_sig_test_001.paths.txt` |
+
+Every one of the 7,796 paths is listed in those two manifests; neither uses a glob. The
+files break down into six artifact kinds — `business_strategy.json` (2,422),
+`generated.json` (2,263), `editorial_acceptance.json` (1,343), `assignment.json` (1,263),
+`publication_results.json` (469) and `run_report.json` (36) — i.e. real run evidence, for
+runs that never happened, for signals that do not exist.
 
 Neither signal ID exists outside `tests/`. The root cause is two lines:
 
@@ -210,6 +256,11 @@ drives a run writes real run artifacts into the tracked repository path. The dai
 workflow is not the source: its commit step (`daily_signal_research.yml:106`) adds
 `reports/content_packages/*.json`, a flat glob that never matches the nested run
 directories. A local `git add -A` after a test run is.
+
+That flat glob is not a safeguard, though — it is a coincidence of naming. Two tracked
+files, `reports/content_packages/sig-test-001.json` and `sig-identity-test-001.json`, are
+test residue that *did* match it and so were committed by the daily workflow itself. Any
+fix has to cover both shapes.
 
 The consequence is reviewability. Every diff, every search and every file-by-file audit —
 including this one — is dominated by artifacts with no consumer, and a real content package
@@ -227,7 +278,8 @@ is harder to tell apart from residue.
 | `scripts/dry_run.py` | none — no workflow, no test |
 | `scripts/render_card_audit.py` + `reports/card_audit/*.png` (26) | none |
 
-All five configuration files carry `status: ready`, so nothing in-band signals disuse.
+The three prompt files carry `status: ready` at line 2, so nothing in-band signals disuse;
+`config/intelligence.yaml` and `config/content_matrix.yaml` carry no status field at all.
 `config/intelligence.yaml:1` reads `sources: []  # populated in Phase 7 (Intelligence Engine)`
 — an unimplemented phase.
 
@@ -266,11 +318,18 @@ reason. `tests/fixtures/wednesday_july/july_originals/*.py.txt` guards it agains
 |---|---|
 | `src/investigation/hypothesis_generator.py` (+ `__init__`) | No importer in `src/` or `scripts/`; only `tests/test_hypothesis_generator.py`. `docs/LERA_OPERATING_SYSTEM.md:5-7` says "Branch: feature/business-investigation-layer / Status: Under development. Not merged to main" — while both the document and the module are in `main`. Staged capability or abandoned branch? Unanswerable from the repository. |
 | `scripts/research/sync_from_sheets.py` | `docs/NEVER_BLANK_RESEARCH_PIPELINE.md:75` calls it "Stage 8"; `run_daily_research.py:25-32` imports nine sibling stages and not this one, and no workflow invokes it. Manual operator step, or a documented stage that does not run? |
-| `scripts/strategy/*.py` (5) and `src/strategy/{market_analyzer,content_planner,decision_engine,pattern_extractor}.py` (4) | No workflow executes them; `strategy_tests.yml:64-67` only `py_compile`s four scripts. `approve_strategy_recommendation.py` is the only path that archives a strategy after human approval. Nine files whose only automated guarantee is that they parse. |
-| `src/research/adapters/fake.py` | A test double under `src/`, easy to mistake for production code. Low risk, worth a note. |
+| `scripts/strategy/*.py` (5) and `src/strategy/{market_analyzer,content_planner,decision_engine,pattern_extractor}.py` (4) | No workflow executes them; `strategy_tests.yml:64-67` only `py_compile`s four scripts. `approve_strategy_recommendation.py` is the only path that archives a strategy after human approval. Nine files whose only automated guarantee is that they parse. `build_monthly_plan.py:33` reads `reports/signals/`, a directory that does not exist in this repository. |
+| `strategy/methodology/evaluation_rules.md` | Its three directory siblings are declared at `business_strategy.json:306-342` as prompt rule references; this one is not, and nothing loads it either. Its only mention anywhere is a July agent brief (`strategy/claude_code_prompt_strategy_engine_gpt_2026-07-22.md:378`). Neither wired, nor declared-and-unwired, nor clearly human-only. |
 
-None of these should be deleted. Each needs a status statement somewhere a reader will
-find it — a module docstring or an in-band marker — not a stale branch header.
+That is thirteen files. None of them should be deleted. Each needs a status statement
+somewhere a reader will find it — a module docstring or an in-band marker — not a stale
+branch header.
+
+One adjacent case is worth a note without being unresolved: `src/research/adapters/fake.py`
+is a test double that lives under `src/` and is re-exported by
+`src/research/adapters/__init__.py:4`, so it is importable from production code even though
+no production module constructs it. It is classified ACTIVE SUPPORT, not suspicious — but it
+is easy to mistake for production code.
 
 ---
 

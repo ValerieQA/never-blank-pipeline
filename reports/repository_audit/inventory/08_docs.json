@@ -1,0 +1,324 @@
+{
+  "shard": "08_docs",
+  "area": "docs",
+  "tracked_files": 35,
+  "enumeration": "git ls-files docs",
+  "method_note": "A document is HUMAN DOCUMENTATION only when it is not represented as executable configuration. One file in this directory fails that test: docs/PLATFORM_AND_VISUAL_STRATEGY.md is declared to strategy/current/business_strategy.json as a prompt rule reference and is never loaded, so it is classified with the other unwired product configuration.",
+  "entries": [
+    {
+      "path": "docs/BUSINESS_INVESTIGATION_LAYER.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Specification of the business investigation / curiosity engine.",
+      "consumer": "humans",
+      "evidence": "No loader. Its implementation, src/investigation/hypothesis_generator.py, has no production importer either.",
+      "lifecycle": "documentation",
+      "action": "See finding F8a - document and module are both in main while docs/LERA_OPERATING_SYSTEM.md:5-7 says the work is unmerged."
+    },
+    {
+      "path": "docs/BUSINESS_STRATEGY_CONFIGURATION.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Contract document for the Business Strategy Configuration.",
+      "consumer": "humans; paired with src/strategy/business_config.py and tests/strategy/test_never_blank_business_config.py",
+      "evidence": "The contract it describes is enforced by src/strategy/business_config.py, which is on the canonical path.",
+      "lifecycle": "documentation, currently paired",
+      "action": "none"
+    },
+    {
+      "path": "docs/DECISION_LENS_CONTRACT.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Decision Lens decision contract.",
+      "consumer": "humans; paired with src/editorial/decision_contract.py and tests/test_decision_lens_contract.py",
+      "evidence": "Implementing module is imported by scripts/generate_and_publish.py:192,:196.",
+      "lifecycle": "documentation, currently paired",
+      "action": "none"
+    },
+    {
+      "path": "docs/DECISION_LENS_EVALUATOR.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Decision Lens evaluator boundary.",
+      "consumer": "humans; paired with src/editorial/decision_lens_evaluator.py and tests/test_decision_lens_evaluator.py",
+      "evidence": "Implementing module is imported by scripts/generate_and_publish.py:192.",
+      "lifecycle": "documentation, currently paired",
+      "action": "none"
+    },
+    {
+      "path": "docs/DECISION_LIFECYCLE.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Decision Lens lifecycle and disposition gate.",
+      "consumer": "humans; paired with src/editorial/decision_lifecycle.py and tests/test_decision_lifecycle.py",
+      "evidence": "Implementing module is imported by scripts/generate_and_publish.py:196.",
+      "lifecycle": "documentation, currently paired",
+      "action": "none"
+    },
+    {
+      "path": "docs/EDITORIAL_ACCEPTANCE.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Editorial acceptance and one controlled revision.",
+      "consumer": "humans; paired with src/editorial/editorial_acceptance.py and tests/test_editorial_acceptance.py",
+      "evidence": "Implementing module is imported by scripts/generate_and_publish.py:212.",
+      "lifecycle": "documentation, currently paired",
+      "action": "none"
+    },
+    {
+      "path": "docs/EDITORIAL_ENGINE_V2.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Editorial engine specification, marked 'Status: Live'.",
+      "consumer": "humans; the implementation src/editorial/pipeline.py is on the canonical Monday/Friday path",
+      "evidence": "pipeline.py:23-33 imports the stage modules the document describes. The 'Live' claim holds for Monday and Friday; Wednesday runs src/never_blank/wednesday_july/pipeline.py instead (generate_and_publish.py:1878-1880).",
+      "lifecycle": "documentation, partially accurate",
+      "action": "Low. Record that 'Live' means Monday and Friday, not Wednesday."
+    },
+    {
+      "path": "docs/EVIDENCE_COLLECTOR_MVP.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Evidence collector MVP specification.",
+      "consumer": "humans",
+      "evidence": "No loader; no module or test carries the same name.",
+      "lifecycle": "documentation",
+      "action": "Low. Confirm whether the MVP it specifies is the shipped src/research/assessment.py or a separate unbuilt thing."
+    },
+    {
+      "path": "docs/GROWTH_STRATEGY.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Growth strategy narrative (Russian).",
+      "consumer": "humans",
+      "evidence": "No loader. Not declared at business_strategy.json:306-342.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "docs/LERA_OPERATING_SYSTEM.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Specification of the intellectual architecture.",
+      "consumer": "humans",
+      "evidence": ":5-7 states 'Branch: feature/business-investigation-layer / Status: Under development. Not merged to main' - the document is in main and describes src/investigation/hypothesis_generator.py, which is also in main.",
+      "lifecycle": "documentation, self-contradicting",
+      "action": "See finding F8a."
+    },
+    {
+      "path": "docs/LINKEDIN_COMPOSITION.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "LinkedIn composition mapping, traceability and acceptance.",
+      "consumer": "humans; paired with src/editorial/linkedin_composition.py and tests/test_linkedin_composition.py",
+      "evidence": "Implementing module is imported by scripts/generate_and_publish.py:203 and five other production modules.",
+      "lifecycle": "documentation, currently paired",
+      "action": "none"
+    },
+    {
+      "path": "docs/LINKEDIN_PUBLISHING.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "LinkedIn publishing via Zernio.",
+      "consumer": "humans; paired with src/publishing/linkedin.py and tests/test_linkedin_publisher.py",
+      "evidence": "Refers to the live test whose tracked evidence is reports/linkedin_live_test.{json,md}.",
+      "lifecycle": "documentation, currently paired",
+      "action": "none"
+    },
+    {
+      "path": "docs/NARRATIVE_SPINE.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Narrative spine specification, marked 'Status: Live'.",
+      "consumer": "humans; the implementation src/editorial/narrative_spine.py is on the canonical Monday/Friday path",
+      "evidence": "narrative_spine.py:127 calls chat(). As with EDITORIAL_ENGINE_V2.md the 'Live' claim covers Monday and Friday only; Wednesday runs src/never_blank/wednesday_july/narrative_spine.py.",
+      "lifecycle": "documentation, partially accurate",
+      "action": "Low. Record that 'Live' means Monday and Friday, not Wednesday."
+    },
+    {
+      "path": "docs/NEVER_BLANK_EDITORIAL_STYLE.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "The editorial style formula, audience and writing rules.",
+      "consumer": "None in code. docs/SYSTEM_MAP.md:4 presents it as the article formula.",
+      "evidence": "No loader anywhere. The article formula that actually executes is the set of module-level _SYSTEM_PROMPT constants in src/editorial/*.py and src/never_blank/wednesday_july/*.py.",
+      "lifecycle": "documentation asserting configuration authority",
+      "action": "See finding F3. It is a legitimate human document; the problem is that SYSTEM_MAP presents it as the formula the product runs on."
+    },
+    {
+      "path": "docs/NEVER_BLANK_EDITORIAL_WORLDVIEW.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "The editorial worldview.",
+      "consumer": "None in code.",
+      "evidence": ":3-5 states 'All other documents (prompts, scoring rubrics, CTA rules) follow from this file' - an authority claim with no mechanism behind it. No loader; not declared at business_strategy.json:306-342.",
+      "lifecycle": "documentation asserting configuration authority",
+      "action": "See finding F3. Either give the claim a mechanism or restate it as intent."
+    },
+    {
+      "path": "docs/NEVER_BLANK_GOLDEN_EDITORIAL_PATTERNS.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "The Wednesday Golden editorial pattern.",
+      "consumer": "None in code.",
+      "evidence": ":3 calls itself 'Release 1 product configuration for Issue #143' - the same contract that config/never_blank/wednesday_golden.yaml and strategy/current/business_strategy.json:398-446 also declare. Three declarations of one contract, one of which executes.",
+      "lifecycle": "documentation asserting configuration authority",
+      "action": "See findings F2 and F3."
+    },
+    {
+      "path": "docs/NEVER_BLANK_RESEARCH_PIPELINE.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Reference for the eleven-stage daily research pipeline.",
+      "consumer": "humans",
+      "evidence": ":75 lists scripts/research/sync_from_sheets.py as Stage 8, a stage scripts/research/run_daily_research.py:25-32 does not import.",
+      "lifecycle": "documentation, partially inaccurate",
+      "action": "See finding F8b."
+    },
+    {
+      "path": "docs/PLATFORM_AND_VISUAL_STRATEGY.md",
+      "classification": "PRODUCT_CONFIG_UNWIRED",
+      "purpose": "Platform and visual strategy, declared to the configuration as prompt rule reference 'platform-visual-strategy'.",
+      "consumer": "None. Declared at strategy/current/business_strategy.json:337-341; nothing opens the file.",
+      "evidence": "No loader in src/ or scripts/. The only assertion about it is the is_file() check at tests/strategy/test_never_blank_business_config.py:80-87. It is the one file under docs/ that the configuration claims as a rule the product runs on.",
+      "lifecycle": "declared-but-unconsumed",
+      "action": "See finding F3. Either load it into the prompt chain or stop declaring it as a prompt rule."
+    },
+    {
+      "path": "docs/RESEARCH_ARTIFACT_LIFECYCLE.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Canonical research artifact lifecycle.",
+      "consumer": "humans; paired with src/research/lifecycle.py and tests/test_research_artifact_lifecycle.py",
+      "evidence": "Implementing module is imported by scripts/generate_and_publish.py:148.",
+      "lifecycle": "documentation, currently paired",
+      "action": "none"
+    },
+    {
+      "path": "docs/RESEARCH_EVIDENCE_CONTRACT.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Normalized research evidence contract.",
+      "consumer": "humans; paired with src/research/evidence.py and tests/test_research_evidence_contract.py",
+      "evidence": "Implementing module is the most widely imported contract on the canonical path.",
+      "lifecycle": "documentation, currently paired",
+      "action": "none"
+    },
+    {
+      "path": "docs/RESEARCH_PROVIDER_ADAPTER.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Provider-neutral research adapter contract.",
+      "consumer": "humans; paired with src/research/provider.py and tests/test_research_provider_adapter.py",
+      "evidence": "Implementing module is imported by scripts/generate_and_publish.py:140.",
+      "lifecycle": "documentation, currently paired",
+      "action": "none"
+    },
+    {
+      "path": "docs/STORY10_ACCEPTANCE_GATE.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Story #10 acceptance gate description.",
+      "consumer": "humans; the executable form is the story10 pytest marker (pytest.ini:4) and tests/test_story10_gate.py",
+      "evidence": "The marked test does run in the full suite.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "docs/STORY11_ACCEPTANCE_GATE.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Story #11 acceptance gate description.",
+      "consumer": "humans; the story11 marker is declared at pytest.ini:5",
+      "evidence": "pytest.ini:5 declares the marker. Unlike stories 9, 10 and 12 there is no tests/test_story11_gate.py; the marker is applied in tests/test_research_artifact_lifecycle.py, tests/test_research_evidence_contract.py and tests/test_research_provider_adapter.py, all of which do run.",
+      "lifecycle": "historical record",
+      "action": "none - the gate is executable, it is just distributed across three files rather than one."
+    },
+    {
+      "path": "docs/STORY_12_ACCEPTANCE.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Story #12 acceptance - Decision Lens on the canonical path.",
+      "consumer": "humans; the executable form is the story12 marker (pytest.ini:6) and tests/test_story12_gate.py",
+      "evidence": "The marked test does run in the full suite.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "docs/STORY_16_EVIDENCE_MAP.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Story #16 evidence map - run-scoped artifacts and provenance.",
+      "consumer": "humans; the implementations are src/artifacts/ and tests/test_artifacts.py, tests/test_provenance_chain.py",
+      "evidence": "Both implementing modules are on the canonical path.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "docs/STORY_17_EVIDENCE_MAP.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Story #17 evidence map - publication package and preflight.",
+      "consumer": "humans; implementations are src/publishing/{package,preflight}.py",
+      "evidence": ":61 discusses scripts/research/sync_from_sheets.py as operating.",
+      "lifecycle": "historical record",
+      "action": "See finding F8b."
+    },
+    {
+      "path": "docs/STORY_18_EVIDENCE_MAP.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Story #18 evidence map - production Wix publishing.",
+      "consumer": "humans; implementation is src/publishing/wix.py with tests/test_wix_publisher.py and tests/test_wix_idempotency.py",
+      "evidence": "Implementing module is on the canonical path.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "docs/STORY_19_EVIDENCE_MAP.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Story #19 evidence map - production LinkedIn publishing.",
+      "consumer": "humans; implementation is src/publishing/linkedin.py with tests/test_linkedin_publisher.py and tests/test_linkedin_idempotency.py",
+      "evidence": "Implementing module is on the canonical path.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "docs/STORY_20_EVIDENCE_MAP.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Story #20 evidence map - the per-run validation report.",
+      "consumer": "humans; implementation is src/reporting/run_report.py with tests/test_run_report.py",
+      "evidence": "Implementing module is imported by scripts/generate_and_publish.py:291.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "docs/STORY_21_EVIDENCE_MAP.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Story #21 evidence map - one live acceptance run without code repair.",
+      "consumer": "humans; related tests are tests/test_story21_hosted_evidence.py and tests/test_code_identity.py",
+      "evidence": "src/run/code_identity.py implements the identity check the story depends on.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "docs/STORY_21_LIVE_ACCEPTANCE_RUNBOOK.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Runbook for the Story #21 live acceptance run.",
+      "consumer": "humans (operators)",
+      "evidence": "Describes a manual procedure over live_publish_test.yml and the canonical workflows.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "docs/SYSTEM_MAP.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "The repository's own index of what is authoritative.",
+      "consumer": "humans",
+      "evidence": "Lists as current: config/content_matrix.yaml (:28, no consumer anywhere), config/intelligence.yaml (:29, dry-run only), config/prompts/blog_post.yaml as 'Blog generation prompt' (:30), config/prompts/strategy_brief.yaml (:32) and config/prompts/image_hook.yaml (:45) - both of which carry status: not_needed - and the four observation/topic prompts (:55-58), three of which are orphaned. It also presents config/brand_voice.md (:5) and docs/NEVER_BLANK_EDITORIAL_STYLE.md (:4) as the live sources of voice and formula.",
+      "lifecycle": "documentation, stale",
+      "action": "See finding F6c - correct it, or it will keep re-authorizing dead artifacts. It is the single most load-bearing out-of-date document in the repository."
+    },
+    {
+      "path": "docs/VISUAL_CONTRACT.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Canonical visual contract and fail-closed channel gate.",
+      "consumer": "humans; paired with src/visual/contract.py and tests/test_visual_contract.py",
+      "evidence": "Implementing module is imported by scripts/generate_and_publish.py:207.",
+      "lifecycle": "documentation, currently paired",
+      "action": "none - but note tests/test_visual_contract.py:78 is one of the two sources of the run directories in shard 12 (F5)."
+    },
+    {
+      "path": "docs/product/wednesday_golden_contract.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "The Wednesday Golden product contract, in prose.",
+      "consumer": "humans",
+      "evidence": "No loader. A fourth statement of the contract already declared by config/never_blank/wednesday_golden.yaml, strategy/current/business_strategy.json:398-446 and docs/NEVER_BLANK_GOLDEN_EDITORIAL_PATTERNS.md.",
+      "lifecycle": "documentation",
+      "action": "See finding F2 - name the source of truth and mark the rest as derived."
+    },
+    {
+      "path": "docs/repository-audit/REPOSITORY_AUDIT.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "The human-readable report for this audit (Issue #233).",
+      "consumer": "humans",
+      "evidence": "Produced by this issue. Its machine-readable companions are reports/repository_audit/inventory.json, the shards under reports/repository_audit/inventory/ and reports/repository_audit/findings.json.",
+      "lifecycle": "documentation",
+      "action": "none - a forensic record. Nothing in the repository was repaired by this issue."
+    }
+  ]
+}

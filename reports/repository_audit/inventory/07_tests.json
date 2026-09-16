@@ -1,0 +1,1054 @@
+{
+  "shard": "07_tests",
+  "area": "tests",
+  "tracked_files": 116,
+  "enumeration": "git ls-files tests",
+  "method_note": "Every file here is ACTIVE SUPPORT: pr_tests.yml:42 runs `python3 -m pytest` from the repository root, and pr_tests.yml:54 makes any change in the failure set a red check, so each module has a demonstrated consumer. The audit question for this directory is not whether the tests run - it is what they prove. Entries whose action cites F9 run green while proving only file existence, parser behaviour or config shape.",
+  "shared_consumer": "pr_tests.yml:42 (full suite) -> pr_tests.yml:54 scripts/ci/check_test_baseline.py",
+  "entries": [
+    {
+      "path": "tests/accepted_full_suite_failures.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "The exact set of test failures CI accepts.",
+      "consumer": "scripts/ci/check_test_baseline.py <- pr_tests.yml:54",
+      "evidence": "Four entries, all in tests/test_editorial_pipeline.py::TestGeneratorTelegramStories - the legacy V1 generator's Telegram and Stories path.",
+      "lifecycle": "support",
+      "action": "See finding F10 - four permanently-failing tests on a path no scheduled workflow reaches."
+    },
+    {
+      "path": "tests/analytics/__init__.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Package marker for the analytics test package.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70 (which targets tests/analytics explicitly)",
+      "evidence": "Empty file; required for the package-scoped run in strategy_tests.yml.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/analytics/test_analytics_pipeline.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for src/analytics/ phases 4D.1-4D.4.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": "Exercises the analytics modules scripts/generate_and_publish.py:157-159 imports.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/analytics/test_base_and_blog.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Hardened tests for src/analytics/base.py and src/analytics/blog.py.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": "Both modules are on the canonical post-publication path.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/analytics/test_linkedin_collector.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for LinkedInCollector.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": "src/analytics/linkedin.py is imported by scripts/generate_and_publish.py:158.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/analytics/test_orchestrator_wiring.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "End-to-end orchestration wiring for BlogCollector and LinkedInCollector.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": "Proves the orchestrator receives both collectors - a wiring test of the kind the proposed guardrail generalizes.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/conftest.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Fail-closed API prohibition: strips OpenAI credentials unless both the per-test marker and the run-level opt-in are present (#172).",
+      "consumer": "pytest, every run",
+      "evidence": "conftest.py:70-90. This is what makes it safe for tests to import modules that would otherwise make paid calls.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/business_strategy_alternate.json",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "An alternate Business Strategy Configuration used to prove the configuration is replaceable.",
+      "consumer": "tests/strategy/* and tests/test_story10_gate.py",
+      "evidence": "Story #10 is about configuration replaceability; this fixture is the replacement.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/golden_wednesday/gm_v8.yaml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Golden Wednesday reference profile fixture.",
+      "consumer": "tests/test_wednesday_golden.py",
+      "evidence": "Loaded through src/never_blank/wednesday_golden.py load_golden_reference().",
+      "lifecycle": "support",
+      "action": "See finding F9c - these fixtures validate a profile loader production never calls (F2)."
+    },
+    {
+      "path": "tests/fixtures/golden_wednesday/invisalign_negative.yaml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Golden Wednesday negative reference fixture.",
+      "consumer": "tests/test_wednesday_golden.py",
+      "evidence": "Loaded through src/never_blank/wednesday_golden.py load_golden_reference().",
+      "lifecycle": "support",
+      "action": "See finding F9c."
+    },
+    {
+      "path": "tests/fixtures/golden_wednesday/versant_full_swing.yaml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Golden Wednesday positive reference fixture.",
+      "consumer": "tests/test_wednesday_golden.py",
+      "evidence": "Loaded through src/never_blank/wednesday_golden.py load_golden_reference().",
+      "lifecycle": "support",
+      "action": "See finding F9c."
+    },
+    {
+      "path": "tests/fixtures/nike_signal.json",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "A corporate signal used to prove the eligibility rules reject it.",
+      "consumer": "tests/test_wednesday_golden.py and the source-eligibility tests",
+      "evidence": "Exercises src/editorial/source_eligibility.py, which is on the Monday selection path.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/cnbc_business_2026-07-06.xml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Captured RSS feed sample for the Wednesday research path.",
+      "consumer": "tests/test_wednesday_july_research.py",
+      "evidence": "Lets the discovery stage be exercised without a network call.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/july_originals/decision_lens_lite.py.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "The July original of src/never_blank/wednesday_july/decision_lens_lite.py, kept as .py.txt so restoration drift is detectable.",
+      "consumer": "tests/test_wednesday_july_restoration.py",
+      "evidence": "The test compares the live module against this text. The .txt suffix keeps it out of import and collection.",
+      "lifecycle": "support",
+      "action": "none - a deliberate, working drift guard."
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/july_originals/discovery_builder.py.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "July original of src/never_blank/wednesday_july/discovery_builder.py.",
+      "consumer": "tests/test_wednesday_july_restoration.py",
+      "evidence": "Byte-comparison drift guard.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/july_originals/hook_engine.py.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "July original of src/never_blank/wednesday_july/hook_engine.py.",
+      "consumer": "tests/test_wednesday_july_restoration.py",
+      "evidence": "Byte-comparison drift guard.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/july_originals/narrative_spine.py.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "July original of src/never_blank/wednesday_july/narrative_spine.py.",
+      "consumer": "tests/test_wednesday_july_restoration.py",
+      "evidence": "Byte-comparison drift guard.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/july_originals/never_blank_voice.py.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "July original of src/never_blank/wednesday_july/never_blank_voice.py.",
+      "consumer": "tests/test_wednesday_july_restoration.py",
+      "evidence": "Byte-comparison drift guard. Because it pins the July text exactly, it is also what would have to change for the Wednesday role in F1 to be wired in.",
+      "lifecycle": "support",
+      "action": "Cross-reference for F1: this guard is the reason the Wednesday voice prompt has stayed configuration-free."
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/july_originals/platform_composer.py.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "July original of src/never_blank/wednesday_july/platform_composer.py.",
+      "consumer": "tests/test_wednesday_july_restoration.py",
+      "evidence": "Byte-comparison drift guard.",
+      "lifecycle": "support",
+      "action": "Cross-reference for F1."
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/july_originals/story_assembly.py.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "July original of src/never_blank/wednesday_july/story_assembly.py.",
+      "consumer": "tests/test_wednesday_july_restoration.py",
+      "evidence": "Byte-comparison drift guard.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/july_research_originals/angles.py.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "July original of src/never_blank/wednesday_july/research/angles.py.",
+      "consumer": "tests/test_wednesday_july_research.py",
+      "evidence": "Byte-comparison drift guard.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/july_research_originals/discover.py.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "July original of src/never_blank/wednesday_july/research/discover.py.",
+      "consumer": "tests/test_wednesday_july_research.py",
+      "evidence": "Byte-comparison drift guard; tests/test_wednesday_july_research.py:430 also asserts the SOURCES_CONFIG line does not point at config/research_sources.yaml.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/july_research_originals/enrich.py.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "July original of src/never_blank/wednesday_july/research/enrich.py.",
+      "consumer": "tests/test_wednesday_july_research.py",
+      "evidence": "Byte-comparison drift guard.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/july_research_originals/research_sources.yaml.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "July original of the Wednesday feed list.",
+      "consumer": "tests/test_wednesday_july_research.py",
+      "evidence": "Pins src/never_blank/wednesday_july/research/research_sources_july.yaml against its July source.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/july_research_originals/score.py.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "July original of src/never_blank/wednesday_july/research/score.py.",
+      "consumer": "tests/test_wednesday_july_research.py",
+      "evidence": "Byte-comparison drift guard.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/july_research_originals/scoring_weights.yaml.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "July original of the scoring weights.",
+      "consumer": "tests/test_wednesday_july_research.py:320-328",
+      "evidence": "The test asserts config/scoring_weights.yaml is byte-identical to this fixture because Wednesday reads the live file.",
+      "lifecycle": "support",
+      "action": "none - one of the few tests that ties a config file to a specific consumer."
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/versant_full_swing_july_output.json",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "The July article output kept as the restoration target.",
+      "consumer": "tests/test_wednesday_july_restoration.py",
+      "evidence": "Issue #207: 'Wednesday runs the July path, and Versant survives it'.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/fixtures/wednesday_july/versant_full_swing_signal.json",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "The input signal for the Versant restoration case.",
+      "consumer": "tests/test_wednesday_july_restoration.py",
+      "evidence": "Paired with versant_full_swing_july_output.json.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/strategy/__init__.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Package marker for the strategy test package.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70 (which targets tests/strategy explicitly)",
+      "evidence": "Empty file; required for the package-scoped run.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/strategy/test_business_config.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Unit tests for the Business Strategy Configuration loader and its error types.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": ":95 constructs a synthetic prompt_rule_references entry ('prompts/editorial.yaml'), so the loader's reference handling is exercised on a fixture rather than on the production declarations.",
+      "lifecycle": "support",
+      "action": "See finding F9a - reference handling is tested; reference consumption is not."
+    },
+    {
+      "path": "tests/strategy/test_configuration_hash_snapshot.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Task #42 deterministic identity, immutable snapshot and reuse gates.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": ":27 CONFIG_PATH = strategy/current/business_strategy.json - it hashes the production configuration, so any edit to it is a deliberate, visible change.",
+      "lifecycle": "support",
+      "action": "none - a genuine production-artifact gate."
+    },
+    {
+      "path": "tests/strategy/test_decision_engine.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for src/strategy/decision_engine.py (Phase 4A).",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": ":71 uses strategy/worldview.md as an opaque research_references string. Proves the engine's behaviour in isolation; nothing proves the engine runs.",
+      "lifecycle": "support",
+      "action": "See finding F8d."
+    },
+    {
+      "path": "tests/strategy/test_echo_memory.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for src/strategy/echo_memory.py (Phase 4C).",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": "echo_memory is reached from the canonical path through src/strategy/validators.py:203.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/strategy/test_history.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for src/strategy/history.py (Phase 4B).",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": ":50 and :83 use strategy/worldview.md and a strategy/reviews/monthly/ path as opaque fixture strings.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/strategy/test_never_blank_business_config.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Validates the production Business Strategy Configuration.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": ":9 PRODUCTION_CONFIG; :80-86 test_all_prompt_and_rule_references_resolve_inside_repository asserts each declared reference path is_file() - file existence only.",
+      "lifecycle": "support",
+      "action": "See finding F9a - this is the test that lets six unconsumed documents pass as wired product rules."
+    },
+    {
+      "path": "tests/strategy/test_pattern_extractor.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for src/strategy/pattern_extractor.py.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": "Exercises a module whose only production caller chain ends at scripts/strategy/build_monthly_plan.py, which no workflow runs.",
+      "lifecycle": "support",
+      "action": "See finding F8d."
+    },
+    {
+      "path": "tests/strategy/test_strategy_execution_context.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Task #41 typed strategy views and canonical R1 wiring tests.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": ":36 PRODUCTION_CONFIG = strategy/current/business_strategy.json; asserts the typed views the canonical path constructs.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/strategy/test_strategy_integration.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Integration tests for strategy context injection and CTA priority.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": ":60 uses strategy/worldview.md as an opaque fixture string.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/strategy/test_strategy_semantic_consumption.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Proves that declared configuration values appear in the actual prompt string handed to the model.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": ":23 CONFIG_PATH; :90-112 patches src.editorial.never_blank_voice.chat, reads chat.call_args.kwargs['user'] and asserts seven distinct configured values are present; :115-128 proves a CTA-mode change changes the prompt.",
+      "lifecycle": "support",
+      "action": "none - this is the existing pattern the proposed guardrail generalizes, and the only test in the repository that closes a file-to-model-message chain."
+    },
+    {
+      "path": "tests/strategy/test_strategy_version.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Focused tests for Strategy.strategy_version.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": ":44 uses strategy/worldview.md as an opaque fixture string. Backs the version pin at src/strategy/execution_context.py:296-315.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/strategy/test_validators.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for src/strategy/validators.py.",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": ":377-378 asserts strategy/current/strategy.json exists; :386-397 asserts strategy/current/strategy.md exists and is consistent with it - an existence assertion on a file no code reads.",
+      "lifecycle": "support",
+      "action": "See finding F9a for the existence-assertion pattern."
+    },
+    {
+      "path": "tests/strategy/test_visibility_quota.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Boundary cases for validate_visibility_quota().",
+      "consumer": "pr_tests.yml:42; strategy_tests.yml:70",
+      "evidence": "Covers the quota logic the Tue/Thu stream depends on (data/strategy/visibility_history.jsonl).",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_api_guard.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #172: ordinary tests cannot make billed OpenAI calls.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Tests the guard in tests/conftest.py:70-90 itself.",
+      "lifecycle": "support",
+      "action": "none - a guard that tests its own guard is the right shape."
+    },
+    {
+      "path": "tests/test_artifacts.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Task #28 behavioural tests for immutable run-scoped artifacts.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":148 reads strategy/current/business_strategy.json. Exercises src/artifacts/ - the module whose directory layout produces the run directories in shard 12.",
+      "lifecycle": "support",
+      "action": "Cross-reference for F5."
+    },
+    {
+      "path": "tests/test_audience_routing.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #121: the research label routes nothing it cannot uniquely name.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/intake/audience_routing.py, imported by scripts/generate_and_publish.py:124.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_canonical_publish_credentials.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Story #21: the canonical publish step must receive the credentials it needs.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Asserts against the workflow files' env blocks rather than against live secrets.",
+      "lifecycle": "support",
+      "action": "none - a workflow-shape test, which is the correct way to check this without secrets."
+    },
+    {
+      "path": "tests/test_canonical_social_lineage.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #196: one canonical article; social distributes it, never bypasses it.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises the composer/publisher boundary on the canonical path.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_canonical_url.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #200: the canonical URL comes from the published Wix object.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/publishing/canonical_url.py, imported by scripts/generate_and_publish.py:253.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_code_identity.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Code identity for Story #21 acceptance (Issue #114).",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/run/code_identity.py, whose _OUTPUT_ROOTS at :43 already acknowledges that runs write into tracked reports/.",
+      "lifecycle": "support",
+      "action": "Cross-reference for F5."
+    },
+    {
+      "path": "tests/test_config_loader.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #223: a missing config file says where it was looked for.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/utils/config_loader.py, the canonical prompt loader.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_content_assignment.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for the ContentAssignment intake contract (Task #24).",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/intake/content_assignment.py, reached from scripts/generate_and_publish.py:117.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_cross_platform_overlap_policy.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #221: pins the withdrawn cross-platform overlap rule.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":321 reads config/prompts/linkedin_post.yaml, :328 config/prompts/threads_post.yaml and :333 config/brand_voice.md, asserting the rule is absent from each. All three are files no production path loads.",
+      "lifecycle": "support",
+      "action": "See finding F9d - asserting on the text of files nothing loads makes those files look governed."
+    },
+    {
+      "path": "tests/test_decision_lens_contract.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Adversarial production-model tests for Issue #58.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Paired with docs/DECISION_LENS_CONTRACT.md and src/editorial/decision_contract.py.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_decision_lens_evaluator.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Deterministic tests for the production Decision Lens evaluator boundary (Issue #59).",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises the module that loads config/prompts/decision_lens/never_blank.yaml.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_decision_lifecycle.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #60: decision.json persistence and Decision Lens disposition gating.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "decision.json is one of the run-scoped artifacts enumerated in shard 12.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_editorial_acceptance.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #89 / Story #13: explicit editorial acceptance and one controlled revision.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/editorial/editorial_acceptance.py, which loads the rubric config and is imported by scripts/generate_and_publish.py:212.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_editorial_pipeline.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for src/editorial/* (Editorial Engine V2 wiring).",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Its TestGeneratorTelegramStories class holds all four entries in tests/accepted_full_suite_failures.txt - i.e. the accepted failures are in a legacy-generator test class inside the editorial pipeline test file.",
+      "lifecycle": "support",
+      "action": "See finding F10."
+    },
+    {
+      "path": "tests/test_editorial_review_content.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #134: a blocked run preserves what it produced, for human review only.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Covers the blocked-run artifact retention the fail-closed boundaries depend on.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_evidence_assessment.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #125: evidence assessment between retrieval and readiness.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/research/assessment.py, imported by scripts/generate_and_publish.py:147.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_from_package_retry.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #174: a late-stage retry republishes a package, it does not pay for one.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":275 asserts the workflow contains the grep against data/research/published_signal_ids.txt - a test that reads the workflow file to prove a runtime guarantee.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_generate_and_publish.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Focused tests for the canonical Release 1 entrypoint (Task #26).",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":45 and :311 read strategy/current/business_strategy.json. Importing the module under test triggers scripts/generate_and_publish.py:320-321 PACKAGES_DIR.mkdir().",
+      "lifecycle": "support",
+      "action": "Cross-reference for F5 - this is the import that creates tracked output directories during a test run."
+    },
+    {
+      "path": "tests/test_hashtags.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #176: hashtags are a deterministic formatting rule, not a model call.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Proves a negative about model calls - the shape of assertion the proposed guardrail needs.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_hypothesis_generator.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for src/investigation/hypothesis_generator.py.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "The only consumer of src/investigation/ anywhere in the repository. A green test on a module no production path constructs.",
+      "lifecycle": "support",
+      "action": "See finding F8a - this test is the reason the investigation layer looks alive."
+    },
+    {
+      "path": "tests/test_image_ordering.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #177: a blocked run has not already paid for its images.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Covers the ordering between the editorial gate and the image pipeline.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_intake_adapter.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Contract tests for the transport-neutral intake boundary (Task #29).",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/intake/adapter.py.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_linkedin_composition.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #93 / Story #14: LinkedIn composition traceability and acceptance.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Paired with docs/LINKEDIN_COMPOSITION.md and src/editorial/linkedin_composition.py.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_linkedin_idempotency.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #109 / Story #19: LinkedIn retry idempotency.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/publishing/idempotency.py on the LinkedIn path.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_linkedin_publisher.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #108 / Story #19: the LinkedIn adapter contract.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/publishing/linkedin.py, one of the two R1 auto-publish channels.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_model_routing.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #173: stage-specific model routing is wired, not just supported.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Asserts routing at the src/utils/llm_client.py boundary - a wiring proof, not a shape check.",
+      "lifecycle": "support",
+      "action": "none - together with test_strategy_semantic_consumption.py this is the pattern the guardrail should follow."
+    },
+    {
+      "path": "tests/test_monday_echo_contract.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #191: the Echo IS the Never Blank perspective, and Sources follow it.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":43 CONFIG = strategy/current/business_strategy.json; exercises src/strategy/echo_memory.py.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_monday_stream.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #142: the Monday editorial stream.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":45 CONFIG_PATH = strategy/current/business_strategy.json; :443 reads config/schedule.yaml.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_never_blank_text_format.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Release 1 text-product contract: one idea, a real hook, an earned close.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":34 CONFIG_PATH = strategy/current/business_strategy.json.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_no_mandatory_thesis.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Canonical semantic regressions for the Issue #157 product decision.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":210 and :301 read strategy/current/business_strategy.json; :296 loads the WednesdayGoldenProfile - one of the two test files that keep config/never_blank/wednesday_golden.yaml looking wired.",
+      "lifecycle": "support",
+      "action": "See findings F2 and F9c."
+    },
+    {
+      "path": "tests/test_output_guard.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Per-platform output contract validation.",
+      "consumer": "pr_tests.yml:42 and editorial_preflight.yml:27-32, which runs this file alone on every push touching the publishing path",
+      "evidence": "The only test file named individually by a second workflow.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_prepare_hook.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for prepare_photo_overlay_hook - semantic boundary preservation.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises the hook preparation inside src/publishing/image_pipeline.py.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_provenance_chain.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #98 / Story #16: intake assignment persistence and whole-run provenance.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/artifacts/provenance.py, which binds nine contract modules.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_publication_package.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #100 / Story #17: canonical Wix and LinkedIn publication packages.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/publishing/package.py.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_publication_preflight.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #101 / Story #17: fail-closed publication preflight.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/publishing/preflight.py, imported by scripts/generate_and_publish.py:236.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_publication_target_binding.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #100 follow-up: the package target IS the external target.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Proves a binding between a declared value and the value actually used - the same shape as the proposed guardrail.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_publish_packages.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Regression tests for publish_packages() - filesystem isolation and all-failure contracts.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":144 and :187 name strategy/published_content_index.jsonl explicitly to keep the test off the production index - the one place in the suite where output isolation from a tracked file is asserted.",
+      "lifecycle": "support",
+      "action": "Cross-reference for F5: this file shows the isolation discipline that the run-directory tests lack."
+    },
+    {
+      "path": "tests/test_publisher_formatting.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for src/publishing/formatting.py and src/publishing/hashtags.py.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Both modules are imported by scripts/generate_and_publish.py:222,:224.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_r1_publish_scope.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #227: only Release 1's own channels may auto-publish.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":47-50 enumerates every automatic path that owns a publisher list and asserts each is restricted through src/publishing/release_scope.py.",
+      "lifecycle": "support",
+      "action": "none - one of the two existing models for the proposed guardrail."
+    },
+    {
+      "path": "tests/test_r1_surface_reduction.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #175: R1 pays only for the surfaces it publishes.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":30-43 captures the composer's actual user prompt to identify the format - it asserts on the real model message, not on configuration shape.",
+      "lifecycle": "support",
+      "action": "none - the second existing model for the proposed guardrail."
+    },
+    {
+      "path": "tests/test_research_artifact_lifecycle.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #52: canonical research execution, persistence, gating and reuse.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":31 imports src/research/adapters/fake.py - the entry point through which the test double reaches the rest of the suite. Carries the story11 marker.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_research_audience_contract.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "The research to strategy audience boundary, exposed by live run 32197939633.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "A regression written from a real failed run.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_research_discovery_persistence.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Discovery results must survive a failure in optional Stage 11 publishing.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":192 asserts the canonical path names data/research/published_signal_ids.txt.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_research_evidence_contract.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Focused contract tests for Issue #50; intentionally no provider wiring.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "The docstring states the absence of provider wiring is deliberate, which is the right way to record a scope boundary. Carries the story11 marker.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_research_pipeline.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for the Never Blank Signal Research Pipeline.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":14 imports ALLOWED_FIELDS from scripts/research/sync_from_sheets.py - the only consumer that module has anywhere; :54 and :61 read config/scoring_weights.yaml.",
+      "lifecycle": "support",
+      "action": "See finding F8b - this import is why an unreachable stage still looks connected."
+    },
+    {
+      "path": "tests/test_research_prompts.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Characterization tests for the six research prompt YAML files (Stage 1A).",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":35-222 load each prompt and assert the system text is long enough and that no {placeholder} survives. No assertion that the loaded text reaches a model call.",
+      "lifecycle": "support",
+      "action": "See finding F9b. Those six prompts are in fact wired; the test simply would not have detected it if they were not."
+    },
+    {
+      "path": "tests/test_research_provider_adapter.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Adversarial production-boundary tests for Issue #51.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":66 CONFIG_PATH = strategy/current/business_strategy.json. Carries the story11 marker.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_run_call_budget.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #171: one run has a deterministic ceiling on paid text-model calls.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Asserts at the src/utils/llm_client.py boundary where src/run/call_budget.py is enforced.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_run_context.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for RunContext and the run-id factory (Task #25).",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "The run ids minted here are the directory names enumerated in shard 12.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_run_identity.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Task #27 run-identity propagation integration and contract tests.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":63 _SIGNAL_ID = 'sig-identity-test-001'. That one constant owns the 3,094 tracked files enumerated in reports/repository_audit/inventory/12b_sig_identity_test_001.paths.txt.",
+      "lifecycle": "support",
+      "action": "See finding F5 - the largest single source of tracked test residue."
+    },
+    {
+      "path": "tests/test_run_report.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #112 / Story #20: the authoritative per-run report.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "run_report.json is one of the six artifact kinds enumerated in shard 12.",
+      "lifecycle": "support",
+      "action": "Cross-reference for F5."
+    },
+    {
+      "path": "tests/test_scheduling_window.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #224: a late scheduled firing still publishes, for its own local day.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises scripts/streams/due_check.py and config/schedule.yaml - the shared window logic behind all three publishing days.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_selector_circuit_breaker.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #170: a provider-wide failure stops the eligibility sweep.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises scripts/streams/select_eligible_signal.py, invoked by monday_publish.yml:162.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_signal_lifecycle.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Stage 1.5 signal lifecycle contract tests.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":39 SIGNALS_ACTIVE = data/research/signals_active.jsonl - it names the production signal file.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_social_recomposition.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #197: after an editorial revision, the social derivative follows.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Covers the ordering between editorial acceptance and platform composition.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_story10_gate.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Story #10 acceptance gate: replaceable strategy meaning and run isolation.",
+      "consumer": "pr_tests.yml:42; runnable alone via the story10 marker (pytest.ini:4)",
+      "evidence": ":43 PRODUCTION_CONFIG = strategy/current/business_strategy.json; uses tests/fixtures/business_strategy_alternate.json as the replacement.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_story12_gate.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Story #12 acceptance gate (Issue #61): real Decision Lens on the canonical path.",
+      "consumer": "pr_tests.yml:42; story12 marker (pytest.ini:6)",
+      "evidence": "Asserts immutable decision.json and PROCEED-only continuation.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_story21_hosted_evidence.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "The hosted live path must preserve its own evidence (Story #21).",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":180 asserts the canonical workflow run names data/research/published_signal_ids.txt.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_story9_gate.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Story #9 acceptance gate - orchestration-level coverage (Issue #30).",
+      "consumer": "pr_tests.yml:42; story9 marker (pytest.ini:3)",
+      "evidence": "Covers contract, orchestration and overwrite protection.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_vi_end_to_end.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "End-to-end integration tests for the Visibility Intelligence pipeline.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "The only test coverage for src/editorial/vi_pipeline.py and the Tue/Thu stream, including the three dynamically-keyed visibility prompts.",
+      "lifecycle": "support",
+      "action": "none - this is what makes the f-string prompt lookup at vi_pipeline.py:80 safe to classify as WIRED."
+    },
+    {
+      "path": "tests/test_visual_contract.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #96 / Story #15: canonical visual contract and fail-closed channel gate.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":78 signal_id='sig-test-001'. That constant, shared with tests/test_wednesday_supply.py:302 and tests/test_wednesday_live_fixes.py:401, owns the 4,702 tracked files enumerated in reports/repository_audit/inventory/12a_sig_test_001.paths.txt.",
+      "lifecycle": "support",
+      "action": "See finding F5."
+    },
+    {
+      "path": "tests/test_wednesday_call_budget.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #217: finite Wednesday-only text-model call budget.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Asserts the budget at the llm_client boundary for the July Wednesday path.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_wednesday_diagnostics.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #215: what the second Wednesday CONTROLLED_LIVE run exposed.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":63 and :65 name both acceptance rubrics; :127 parses config/never_blank/wednesday_golden.yaml directly; :130 and :141 read strategy/current/business_strategy.json; :586 asserts the Wednesday discover module does not point at config/research_sources.yaml.",
+      "lifecycle": "support",
+      "action": "See finding F2 - it compares two declarations of the Wednesday contract without establishing which one production uses."
+    },
+    {
+      "path": "tests/test_wednesday_direct_retrieval.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #211: Wednesday retrieves its own source, without Exa.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/research/adapters/direct_url.py on the Wednesday path.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_wednesday_golden.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #143: the Never Blank Wednesday Golden stream.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":37-52 imports WednesdayGoldenProfile and PROFILE_PATH; :54 the rubric path; :57 the business configuration; :549-552 proves workflow ownership of Wednesday; :570 reads config/schedule.yaml; :633 and :693 assert the published-ids marker. The profile assertions validate an artifact production never loads (F2).",
+      "lifecycle": "support",
+      "action": "See finding F9c - the most substantial test file in the suite validating an unwired artifact."
+    },
+    {
+      "path": "tests/test_wednesday_july_research.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #211: Wednesday's research half, restored from July.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":290 quotes config/prompts/research/signal_selector.yaml verbatim; :320-328 asserts config/scoring_weights.yaml is byte-identical to the July fixture; :430 asserts the Wednesday SOURCES_CONFIG separation.",
+      "lifecycle": "support",
+      "action": "none - the byte-identity assertion at :327 is a real config-to-consumer binding."
+    },
+    {
+      "path": "tests/test_wednesday_july_restoration.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #207: Wednesday runs the July path, and Versant survives it.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Compares the seven live July modules against tests/fixtures/wednesday_july/july_originals/*.py.txt.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_wednesday_live_fixes.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #213: what the first Wednesday CONTROLLED_LIVE run exposed.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":401 uses signal_id 'sig-test-001'; :454 asserts the Wednesday SOURCES_CONFIG separation.",
+      "lifecycle": "support",
+      "action": "See finding F5 - one of the three sources of the sig-test-001 run directories."
+    },
+    {
+      "path": "tests/test_wednesday_source_attribution.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #219: Wednesday cites the source it actually retrieved.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":524 asserts the Wednesday SOURCES_CONFIG separation.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_wednesday_supply.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #211 (review round 2): Wednesday's supply is the restored July path.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":302 uses signal_id 'sig-test-001'. Exercises src/never_blank/wednesday_supply.py.",
+      "lifecycle": "support",
+      "action": "See finding F5 - one of the three sources of the sig-test-001 run directories."
+    },
+    {
+      "path": "tests/test_wednesday_wiring.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #209: Wednesday reaches publication through the restored July path.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": ":362 reads strategy/current/business_strategy.json. It proves Wednesday reaches publication; it does not assert that the declared Wednesday role reaches the generation prompt.",
+      "lifecycle": "support",
+      "action": "See finding F1 - the wiring test that would have caught F1 is the one test shape this file stops short of."
+    },
+    {
+      "path": "tests/test_wix_idempotency.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Issue #105 / Story #18: Wix retry idempotency and truthful URL provenance.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/publishing/idempotency.py on the Wix path.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "tests/test_wix_publisher.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Tests for the Wix image import pipeline and WixPublisher.",
+      "consumer": "pr_tests.yml:42",
+      "evidence": "Exercises src/publishing/wix.py and src/publishing/wix_media.py, both on the canonical path.",
+      "lifecycle": "support",
+      "action": "none"
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "shard": "12_test_output_packages",
+  "area": "reports/content_packages/<signal_id>/runs/<run_id>/ for the two synthetic test signal ids",
+  "tracked_files": 7796,
+  "enumeration": "Every path is listed explicitly, one per line, in the two companion manifests named below. Neither manifest contains a glob or an abbreviation; both are byte-for-byte the output of `git ls-files <dir>` and can be re-derived and diffed at any time.",
+  "path_manifests": [
+    {
+      "file": "reports/repository_audit/inventory/12a_sig_test_001.paths.txt",
+      "paths": 4702,
+      "reproduce": "git ls-files reports/content_packages/sig-test-001"
+    },
+    {
+      "file": "reports/repository_audit/inventory/12b_sig_identity_test_001.paths.txt",
+      "paths": 3094,
+      "reproduce": "git ls-files reports/content_packages/sig-identity-test-001"
+    }
+  ],
+  "classification_rule": "Every one of the 7,796 paths listed in the two manifests is classified DEAD_ORPHANED. The classification is stated once rather than repeated per path because the evidence is not merely similar for each file, it is identical: one writer, one root cause, one non-consumer. The per-artifact detail that does vary - which signal id, which run id, which of the six artifact kinds - is exactly what the manifest path itself records, and the per-artifact-kind evidence is given below.",
+  "shared": {
+    "classification": "DEAD_ORPHANED",
+    "purpose": "None. Run-scoped artifacts written into the tracked reports/ tree by pytest processes, for two signal ids that exist only in the test suite.",
+    "consumer": "None. No code, workflow, test or document reads any file under either directory.",
+    "evidence": "scripts/generate_and_publish.py:320-321 sets PACKAGES_DIR = Path('reports/content_packages') and calls .mkdir() at import time, so any test that imports the canonical entrypoint writes run artifacts under the tracked path relative to the current working directory. src/artifacts/__init__.py documents the resulting <packages_dir>/<signal_id>/runs/<run_id>/ layout. .gitignore ignores only reports/content_packages/images/ (:27), so nothing prevents these from being staged. src/run/code_identity.py:36 already records in a comment that the pipeline 'writes into tracked files under reports/'.",
+    "lifecycle": "accidental test output",
+    "action": "See finding F5 - the single largest integrity problem by file count: 7,796 of 8,399 tracked files, 92.8% of the repository."
+  },
+  "signals": [
+    {
+      "signal_id": "sig-test-001",
+      "manifest": "reports/repository_audit/inventory/12a_sig_test_001.paths.txt",
+      "tracked_files": 4702,
+      "run_directories": 1583,
+      "declared_only_in": [
+        "tests/test_visual_contract.py:78",
+        "tests/test_wednesday_supply.py:302",
+        "tests/test_wednesday_live_fixes.py:401"
+      ],
+      "evidence": "The id appears nowhere in src/, scripts/ or .github/. Three test modules share it, which is why this tree is larger than the other."
+    },
+    {
+      "signal_id": "sig-identity-test-001",
+      "manifest": "reports/repository_audit/inventory/12b_sig_identity_test_001.paths.txt",
+      "tracked_files": 3094,
+      "run_directories": 1176,
+      "declared_only_in": [
+        "tests/test_run_identity.py:63"
+      ],
+      "evidence": "tests/test_run_identity.py:63 _SIGNAL_ID = 'sig-identity-test-001'. One constant in one test file owns 3,094 tracked files."
+    }
+  ],
+  "artifact_kinds": [
+    {
+      "basename": "assignment.json",
+      "count_sig_test_001": 762,
+      "count_sig_identity_test_001": 501,
+      "written_by": "src/intake/assignment_record.py, committed through src/artifacts/",
+      "purpose_when_real": "Binds an assignment to a run, a role and a configuration identity."
+    },
+    {
+      "basename": "business_strategy.json",
+      "count_sig_test_001": 1412,
+      "count_sig_identity_test_001": 1010,
+      "written_by": "the run-scoped snapshot of strategy/current/business_strategy.json taken by src/strategy/execution_context.py through src/artifacts/",
+      "purpose_when_real": "The exact configuration a run executed against - the artifact tests/strategy/test_configuration_hash_snapshot.py exists to keep honest."
+    },
+    {
+      "basename": "editorial_acceptance.json",
+      "count_sig_test_001": 768,
+      "count_sig_identity_test_001": 575,
+      "written_by": "src/editorial/editorial_acceptance.py through src/artifacts/",
+      "purpose_when_real": "The acceptance outcome and any controlled revision."
+    },
+    {
+      "basename": "generated.json",
+      "count_sig_test_001": 1256,
+      "count_sig_identity_test_001": 1007,
+      "written_by": "scripts/generate_and_publish.py:281 write_generated_json / :267 write_generated_pre_acceptance_json",
+      "purpose_when_real": "The generated article and its derivatives for one run."
+    },
+    {
+      "basename": "publication_results.json",
+      "count_sig_test_001": 468,
+      "count_sig_identity_test_001": 1,
+      "written_by": "src/publishing/result.py through src/artifacts/",
+      "purpose_when_real": "Per-channel publication outcomes."
+    },
+    {
+      "basename": "run_report.json",
+      "count_sig_test_001": 36,
+      "count_sig_identity_test_001": 0,
+      "written_by": "src/reporting/run_report.py",
+      "purpose_when_real": "The authoritative per-run validation report (Story #20)."
+    }
+  ],
+  "counts_check": {
+    "sum_of_artifact_kinds_sig_test_001": 4702,
+    "sum_of_artifact_kinds_sig_identity_test_001": 3094,
+    "total": 7796,
+    "note": "Both sums equal the line counts of the corresponding manifests, and the two manifests together equal `git ls-files reports/content_packages/sig-test-001 reports/content_packages/sig-identity-test-001`."
+  },
+  "why_not_deleted_here": "Issue #233 is a forensic audit and explicitly does not authorize repair, so nothing was removed. Recording the exact extent is the deliverable; the removal, the .gitignore change and the test-isolation fix belong to the follow-up issue F5 names."
+}

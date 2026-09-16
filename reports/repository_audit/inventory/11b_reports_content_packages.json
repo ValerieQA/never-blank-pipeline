@@ -1,0 +1,576 @@
+{
+  "shard": "11b_reports_content_packages",
+  "area": "reports/content_packages (flat files only)",
+  "tracked_files": 63,
+  "enumeration": "git ls-files 'reports/content_packages/*' with the two run-directory trees excluded; those are enumerated in 12a/12b",
+  "method_note": "Three different writers put flat files in this directory and they have different lifecycles: scripts/research/prepare_content.py:14 writes <signal_id>.json, scripts/generate_and_publish_visibility.py:426 writes vis_*_generated.json, and the legacy flat artifact <signal_id>_generated.json is read only behind scripts/generate_and_publish.py --legacy-package. Two files here are neither: they carry the synthetic signal ids used by the test suite.",
+  "entries": [
+    {
+      "path": "reports/content_packages/.gitkeep",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Preserves the package directory.",
+      "consumer": "git",
+      "evidence": "scripts/generate_and_publish.py:320-321 PACKAGES_DIR.mkdir() at import time also creates it, so the marker is belt-and-braces.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/14312088307d8685.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package produced by the research pipeline.",
+      "consumer": "scripts/research/prepare_content.py:14 writes it; scripts/generate_and_publish.py:394 reads PACKAGES_DIR / f'{signal_id}.json'; committed by daily_signal_research.yml:106",
+      "evidence": "The daily workflow's commit step adds reports/content_packages/*.json - a flat glob, which is exactly why it never committed the nested run directories in 12a/12b.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/151ecdbaffab27e3.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/15ae00db53779619.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/2467acdd6a80b7b7.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/39aed0e621dca7c9.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/3fad7c6500612d8a.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/40bffc5a22c0e2d1.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR. Has a _generated.json twin in this directory.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/40bffc5a22c0e2d1_generated.json",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Flat legacy generated artifact for signal 40bffc5a22c0e2d1.",
+      "consumer": "scripts/generate_and_publish.py:1408-1410, reachable only behind the explicit --legacy-package flag.",
+      "evidence": "Module docstring :76-85: 'Requires explicit CLI flag; never falls back automatically. Never writes back to the legacy path.' The gate is at :865-866 (mutually exclusive with --from-package) and :1380.",
+      "lifecycle": "legacy, explicitly gated",
+      "action": "none - the explicit flag is the correct pattern for keeping a legacy read path safe."
+    },
+    {
+      "path": "reports/content_packages/422a53e0ae83e40a.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/5a7532f8d7ac4fcc.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/6cd9a1ef1a2af7f6.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/71ad7d0ea4393b48.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/7297b49ffe9773c8.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/78a4cae64364db20.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/78bd728cf4981c3b.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/7b7cf64b627ce0d3.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/80725c18fd4ed61c.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/8ccf0ed747c70414.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/913e16bd311edd6d.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/925b8d4842ecb439.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR. Has a _generated.json twin in this directory.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/925b8d4842ecb439_generated.json",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Flat legacy generated artifact for signal 925b8d4842ecb439.",
+      "consumer": "scripts/generate_and_publish.py:1408-1410 behind --legacy-package only.",
+      "evidence": "Docstring :76-85 and the flag gate at :865-866, :1380.",
+      "lifecycle": "legacy, explicitly gated",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/95c24927f143e382.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/9bd7d291a8622425.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/9cfe836ba02723cb.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/9d9bbaacdde4f7a9.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR. Has a _generated.json twin in this directory.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/9d9bbaacdde4f7a9_generated.json",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Flat legacy generated artifact for signal 9d9bbaacdde4f7a9.",
+      "consumer": "scripts/generate_and_publish.py:1408-1410 behind --legacy-package only.",
+      "evidence": "Docstring :76-85 and the flag gate at :865-866, :1380.",
+      "lifecycle": "legacy, explicitly gated",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/9dc7af7b02124e9d.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR. Has a _generated.json twin in this directory.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/9dc7af7b02124e9d_generated.json",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Flat legacy generated artifact for signal 9dc7af7b02124e9d.",
+      "consumer": "scripts/generate_and_publish.py:1408-1410 behind --legacy-package only.",
+      "evidence": "Docstring :76-85 and the flag gate at :865-866, :1380.",
+      "lifecycle": "legacy, explicitly gated",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/9edc711177c0fc6b.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/9f8233d5d6738e4e.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/a9f03de8476c256a.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR. Has a _generated.json twin in this directory.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/a9f03de8476c256a_generated.json",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Flat legacy generated artifact for signal a9f03de8476c256a.",
+      "consumer": "scripts/generate_and_publish.py:1408-1410 behind --legacy-package only.",
+      "evidence": "Docstring :76-85 and the flag gate at :865-866, :1380.",
+      "lifecycle": "legacy, explicitly gated",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/aa564245f2f53245.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/ad7dfd48ffb273e1.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/b1b47c3136be00e4.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/badee248346881c3.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/c3cfd6c82a6cc6f4.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/c573f94cdb7449b7.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR. Has a _generated.json twin in this directory.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/c573f94cdb7449b7_generated.json",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Flat legacy generated artifact for signal c573f94cdb7449b7.",
+      "consumer": "scripts/generate_and_publish.py:1408-1410 behind --legacy-package only.",
+      "evidence": "Docstring :76-85 and the flag gate at :865-866, :1380.",
+      "lifecycle": "legacy, explicitly gated",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/c6ca3c38a985dea9.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR. Has a _generated.json twin in this directory.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/c6ca3c38a985dea9_generated.json",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Flat legacy generated artifact for signal c6ca3c38a985dea9.",
+      "consumer": "scripts/generate_and_publish.py:1408-1410 behind --legacy-package only.",
+      "evidence": "Docstring :76-85 and the flag gate at :865-866, :1380.",
+      "lifecycle": "legacy, explicitly gated",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/c9e4081138032ab2.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/cf91d47f07e87c9d.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/d28e5cdad72f0346.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR. Has a _generated.json twin in this directory.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/d28e5cdad72f0346_generated.json",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Flat legacy generated artifact for signal d28e5cdad72f0346.",
+      "consumer": "scripts/generate_and_publish.py:1408-1410 behind --legacy-package only.",
+      "evidence": "Docstring :76-85 and the flag gate at :865-866, :1380.",
+      "lifecycle": "legacy, explicitly gated",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/d47caca7ba2af94b.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/e082ddf0f3106729.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/e54608b23609bdfe.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/e7466a1db1e2453a.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/ee22ba8ea360dec3.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/f4a973ac8df323af.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/f858bf36b66123f1.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/ff464a4c152a9245.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/ff539d8bbe68ce48.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-signal content package.",
+      "consumer": "scripts/research/prepare_content.py -> scripts/generate_and_publish.py:394; committed by daily_signal_research.yml:106",
+      "evidence": "Flat <signal_id>.json under PACKAGES_DIR.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "reports/content_packages/sig-identity-test-001.json",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "None. A flat content package for a synthetic signal id that exists only in the test suite.",
+      "consumer": "None. The id appears only at tests/test_run_identity.py:63.",
+      "evidence": "Same root cause as the 3,094 run files enumerated in 12b: scripts/generate_and_publish.py:320-321 sets PACKAGES_DIR under the tracked reports/ root and calls .mkdir() at import time, so a test that imports the module writes here relative to the CWD. Unlike the run directories this one matched daily_signal_research.yml:106's flat glob and was committed by the daily workflow.",
+      "lifecycle": "accidental test output",
+      "action": "See finding F5. This file is the proof that the flat glob at daily_signal_research.yml:106 will commit test residue when the name happens to match."
+    },
+    {
+      "path": "reports/content_packages/sig-test-001.json",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "None. A flat content package for a synthetic signal id that exists only in the test suite.",
+      "consumer": "None. The id appears only at tests/test_visual_contract.py:78, tests/test_wednesday_supply.py:302 and tests/test_wednesday_live_fixes.py:401.",
+      "evidence": "Same root cause as the 4,702 run files enumerated in 12a.",
+      "lifecycle": "accidental test output",
+      "action": "See finding F5."
+    },
+    {
+      "path": "reports/content_packages/vis_001_generated.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Generated Visibility Intelligence package for queue item vis_001.",
+      "consumer": "scripts/generate_and_publish_visibility.py:426 writes PACKAGES_DIR / f'{claimed.id}_generated.json' -> visibility_publish.yml:93",
+      "evidence": "Despite sharing the _generated.json suffix with the legacy flat artifacts above, these are current output of the Tue/Thu stream, written by a different script for a different purpose.",
+      "lifecycle": "canonical output of the Tue/Thu stream",
+      "action": "Recorded explicitly: the _generated.json suffix means two different things in this directory. See finding F4c for the stream itself."
+    },
+    {
+      "path": "reports/content_packages/vis_002_generated.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Generated Visibility Intelligence package for queue item vis_002.",
+      "consumer": "scripts/generate_and_publish_visibility.py:426 -> visibility_publish.yml:93",
+      "evidence": "Written from data/strategy/visibility_queue.jsonl.",
+      "lifecycle": "canonical output of the Tue/Thu stream",
+      "action": "See finding F4c."
+    },
+    {
+      "path": "reports/content_packages/vis_003_generated.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Generated Visibility Intelligence package for queue item vis_003.",
+      "consumer": "scripts/generate_and_publish_visibility.py:426 -> visibility_publish.yml:93",
+      "evidence": "Written from data/strategy/visibility_queue.jsonl.",
+      "lifecycle": "canonical output of the Tue/Thu stream",
+      "action": "See finding F4c."
+    },
+    {
+      "path": "reports/content_packages/vis_004_generated.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Generated Visibility Intelligence package for queue item vis_004.",
+      "consumer": "scripts/generate_and_publish_visibility.py:426 -> visibility_publish.yml:93",
+      "evidence": "Written from data/strategy/visibility_queue.jsonl.",
+      "lifecycle": "canonical output of the Tue/Thu stream",
+      "action": "See finding F4c."
+    },
+    {
+      "path": "reports/content_packages/vis_005_generated.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Generated Visibility Intelligence package for queue item vis_005.",
+      "consumer": "scripts/generate_and_publish_visibility.py:426 -> visibility_publish.yml:93",
+      "evidence": "Written from data/strategy/visibility_queue.jsonl.",
+      "lifecycle": "canonical output of the Tue/Thu stream",
+      "action": "See finding F4c."
+    },
+    {
+      "path": "reports/content_packages/vis_006_generated.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Generated Visibility Intelligence package for queue item vis_006.",
+      "consumer": "scripts/generate_and_publish_visibility.py:426 -> visibility_publish.yml:93",
+      "evidence": "Written from data/strategy/visibility_queue.jsonl.",
+      "lifecycle": "canonical output of the Tue/Thu stream",
+      "action": "See finding F4c."
+    }
+  ]
+}

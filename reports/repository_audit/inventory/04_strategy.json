@@ -1,0 +1,242 @@
+{
+  "shard": "04_strategy",
+  "area": "strategy",
+  "tracked_files": 26,
+  "enumeration": "git ls-files strategy",
+  "entries": [
+    {
+      "path": "strategy/claude_code_prompt_amendment_2026-07-21.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Dated one-off agent brief: amendment to the July strategy-engine work.",
+      "consumer": "None.",
+      "evidence": "No reference from any code, workflow, test or documentation index.",
+      "lifecycle": "historical record",
+      "action": "Low. Confirm it is kept as history; nothing depends on it."
+    },
+    {
+      "path": "strategy/claude_code_prompt_strategy_engine_2026-07-22.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Dated one-off agent brief: strategy engine, first draft.",
+      "consumer": "None.",
+      "evidence": "No reference from any code, workflow, test or documentation index.",
+      "lifecycle": "historical record",
+      "action": "Low. Superseded by the _FINAL_ variant in the same directory."
+    },
+    {
+      "path": "strategy/claude_code_prompt_strategy_engine_FINAL_2026-07-22.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Dated one-off agent brief: strategy engine, final draft.",
+      "consumer": "None.",
+      "evidence": "No reference from any code, workflow, test or documentation index.",
+      "lifecycle": "historical record",
+      "action": "Low. Confirm it is kept as history."
+    },
+    {
+      "path": "strategy/claude_code_prompt_strategy_engine_gpt_2026-07-22.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Dated one-off agent brief: GPT variant of the strategy-engine prompt.",
+      "consumer": "None.",
+      "evidence": "No reference from any code, workflow, test or documentation index. Its line 378 is the only place in the repository outside this audit that names strategy/methodology/evaluation_rules.md.",
+      "lifecycle": "historical record",
+      "action": "Low. Note the evaluation_rules.md reference before deciding that file's status."
+    },
+    {
+      "path": "strategy/claude_code_task_wix_url_investigation_2026-07-23.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Dated one-off agent brief: Wix URL investigation.",
+      "consumer": "None.",
+      "evidence": "No reference from any code, workflow, test or documentation index.",
+      "lifecycle": "historical record",
+      "action": "Low. The investigation's outcome lives in src/publishing/canonical_url.py and docs/STORY_18_EVIDENCE_MAP.md."
+    },
+    {
+      "path": "strategy/current/business_strategy.json",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "The authoritative Business Strategy Configuration: audiences, channels, CTAs, prompt rule references and editorial roles.",
+      "consumer": "src/strategy/business_config.py:26 -> scripts/generate_and_publish.py:298 -> src/editorial/editorial_role.py render_editorial_role_rules -> src/editorial/platform_composer.py -> chat()",
+      "evidence": "Full chain proven: business_config.py:26 DEFAULT_BUSINESS_STRATEGY_PATH; generate_and_publish.py:920-922 renders role rules per surface; platform_composer.py:492-495 appends them to the user prompt; :511 passes it to chat(). Regression proof at tests/strategy/test_strategy_semantic_consumption.py:90-112, which reads chat.call_args.kwargs['user'].",
+      "lifecycle": "canonical source of truth",
+      "action": "none for Monday/Friday. See finding F1 for Wednesday, and F3 for the seven prompt_rule_references it declares at :306-342."
+    },
+    {
+      "path": "strategy/current/strategy.json",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Active campaign strategy for the current cycle; declared as prompt rule reference 'active-campaign-strategy'.",
+      "consumer": "src/strategy/loader.py:19 -> scripts/generate_and_publish.py:928 load_active_strategy()",
+      "evidence": "loader.py:19 _STRATEGY_PATH; generate_and_publish.py:928-932 fails the run when absent. Declared at business_strategy.json:317-321 and, unlike the other six references there, actually loaded. Version pinned against business_strategy.json by src/strategy/execution_context.py:296-315.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "strategy/current/strategy.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Human-readable twin of strategy.json.",
+      "consumer": "humans. src/strategy/history.py:48 names it as CURRENT_STRATEGY_MD and archives it on a strategy change, but nothing reads its content.",
+      "evidence": "No loader. tests/strategy/test_validators.py:386-397 asserts the file exists and is consistent with the JSON, not that anything reads it.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "strategy/decision_log.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Human record of strategic decisions.",
+      "consumer": "humans. Not the machine log: src/strategy/history.py:52 writes strategy/history/decisions/decision_log.jsonl.",
+      "evidence": "history.py:52 DECISION_LOG points at the .jsonl under history/decisions/, a different artifact with a nearly identical name.",
+      "lifecycle": "documentation",
+      "action": "Low. Name collision with the machine-written decision_log.jsonl is a reading hazard."
+    },
+    {
+      "path": "strategy/gpt_report_utility_archetypes_2026-07-28.pdf",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Research input from the July 2026 strategy work.",
+      "consumer": "None.",
+      "evidence": "No reference from any code, workflow, test or documentation index.",
+      "lifecycle": "historical record",
+      "action": "Low. A binary artifact in source control with no consumer - confirm intent."
+    },
+    {
+      "path": "strategy/history/README.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Describes the strategy-history directory contract.",
+      "consumer": "humans",
+      "evidence": "No code reference. The contract it describes is implemented by src/strategy/history.py:49-52.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "strategy/history/decisions/.gitkeep",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Preserves the directory src/strategy/history.py writes decision_log.jsonl into.",
+      "consumer": "git; the directory is written by src/strategy/history.py:162 (DECISIONS_DIR.mkdir) on the canonical import path (scripts/generate_and_publish.py:297)",
+      "evidence": "history.py:51-52 DECISIONS_DIR and DECISION_LOG.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "strategy/history/reviews/.gitkeep",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Preserves the archived-reviews directory.",
+      "consumer": "git; named by src/strategy/history.py:50 HISTORY_REVIEWS_DIR",
+      "evidence": "history.py:50. The directory is declared on the canonical import path even though the review writers themselves are scripts/strategy/*.",
+      "lifecycle": "support",
+      "action": "Low. Its writer chain depends on the tooling in finding F8d."
+    },
+    {
+      "path": "strategy/history/strategies/.gitkeep",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Preserves the directory into which a superseded strategy.json/strategy.md pair is archived.",
+      "consumer": "git; src/strategy/history.py:80-88 archives into HISTORY_STRATEGIES_DIR",
+      "evidence": "history.py:49, :80-88 archive_current_strategy().",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "strategy/methodology/editorial_strategy.md",
+      "classification": "PRODUCT_CONFIG_UNWIRED",
+      "purpose": "Editorial methodology, declared to the configuration as prompt rule reference 'editorial-strategy' - i.e. as rules the product runs on.",
+      "consumer": "None. Declared at strategy/current/business_strategy.json:327-331; nothing opens the file.",
+      "evidence": "No read of any strategy/methodology path exists in src/ or scripts/. The only assertion about it, tests/strategy/test_never_blank_business_config.py:80-87, proves each declared reference path is_file().",
+      "lifecycle": "declared-but-unconsumed",
+      "action": "See finding F3. Either load it into the prompt chain or stop declaring it as a prompt rule."
+    },
+    {
+      "path": "strategy/methodology/evaluation_rules.md",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Unclear. It sits in a directory whose three siblings are declared prompt rule references, but it is not itself declared and not loaded.",
+      "consumer": "None. Unlike its three siblings it is absent from business_strategy.json:306-342.",
+      "evidence": "The only reference anywhere in the repository is strategy/claude_code_prompt_strategy_engine_gpt_2026-07-22.md:378, a July agent brief. No loader, no test, no configuration entry.",
+      "lifecycle": "unresolved",
+      "action": "Listed under SUSPICIOUS / UNRESOLVED in section 5 of the report, not under F3 - F3 covers the six artifacts that are declared and unloaded, and this one is not declared. Its neighbours make it look governed; nothing declares or loads it. Establish whether it is human methodology, an omission from prompt_rule_references, or a leftover - do not delete on static evidence alone."
+    },
+    {
+      "path": "strategy/methodology/platform_strategy.md",
+      "classification": "PRODUCT_CONFIG_UNWIRED",
+      "purpose": "Platform methodology, declared to the configuration as prompt rule reference 'platform-strategy'.",
+      "consumer": "None. Declared at strategy/current/business_strategy.json:332-336; nothing opens the file.",
+      "evidence": "Same as editorial_strategy.md: no loader in src/ or scripts/; the only assertion is the is_file() check at tests/strategy/test_never_blank_business_config.py:80-87.",
+      "lifecycle": "declared-but-unconsumed",
+      "action": "See finding F3."
+    },
+    {
+      "path": "strategy/methodology/strategy_methodology.md",
+      "classification": "PRODUCT_CONFIG_UNWIRED",
+      "purpose": "Strategy methodology, declared to the configuration as prompt rule reference 'strategy-methodology'.",
+      "consumer": "None. Declared at strategy/current/business_strategy.json:322-326; nothing opens the file.",
+      "evidence": "Same as editorial_strategy.md: no loader in src/ or scripts/; the only assertion is the is_file() check at tests/strategy/test_never_blank_business_config.py:80-87.",
+      "lifecycle": "declared-but-unconsumed",
+      "action": "See finding F3."
+    },
+    {
+      "path": "strategy/never_blank_campaign_1.xlsx",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Campaign planning spreadsheet from the July 2026 strategy work.",
+      "consumer": "None.",
+      "evidence": "No reference from any code, workflow, test or documentation index.",
+      "lifecycle": "historical record",
+      "action": "Low. A binary artifact in source control with no consumer - confirm intent."
+    },
+    {
+      "path": "strategy/published_content_index.jsonl",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Append-only index of everything published, across strategies.",
+      "consumer": "src/strategy/history.py:45 PUBLISHED_INDEX -> append_published_entry(), imported by scripts/generate_and_publish.py:297 and scripts/research/publish_packages.py:339",
+      "evidence": "history.py:195-197 appends after a publish; :220 reads it back; src/strategy/echo_memory.py reads the last N entries. scripts/generate_and_publish.py:331 names the same path as HISTORY_FILE.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "strategy/research_utility_signal_archetypes_2026-07-25.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Research notes on utility signal archetypes.",
+      "consumer": "None.",
+      "evidence": "No reference from any code, workflow, test or documentation index.",
+      "lifecycle": "historical record",
+      "action": "Low. Confirm it is kept as history."
+    },
+    {
+      "path": "strategy/reviews/monthly/.gitkeep",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Preserves the monthly-review output directory.",
+      "consumer": "git; named by src/strategy/history.py:54 MONTHLY_REVIEWS_DIR and written by scripts/strategy/run_monthly_review.py",
+      "evidence": "history.py:54; run_monthly_review.py writes the review JSON there.",
+      "lifecycle": "support",
+      "action": "Low. Its only writer is the operator tooling in finding F8d, which no workflow executes."
+    },
+    {
+      "path": "strategy/reviews/recommendations/.gitkeep",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Preserves the directory holding drafted strategy recommendations awaiting human approval.",
+      "consumer": "git; scripts/strategy/run_monthly_review.py:32,:113-114 writes here and scripts/strategy/approve_strategy_recommendation.py:52,:57 reads back",
+      "evidence": "run_monthly_review.py:113-114 RECOMMENDATIONS_DIR.mkdir then writes {recommendation_id}.json; approve_strategy_recommendation.py:80 documents the id as coming from this directory.",
+      "lifecycle": "support",
+      "action": "Low. Unlike its siblings this directory is named only by scripts/strategy/*, not by src/strategy/history.py - see finding F8d."
+    },
+    {
+      "path": "strategy/reviews/weekly/.gitkeep",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Preserves the weekly-review output directory.",
+      "consumer": "git; named by src/strategy/history.py:53 WEEKLY_REVIEWS_DIR and written by scripts/strategy/run_weekly_review.py",
+      "evidence": "history.py:53.",
+      "lifecycle": "support",
+      "action": "Low. Its only writer is the operator tooling in finding F8d, which no workflow executes."
+    },
+    {
+      "path": "strategy/stage2_reference_article_example.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "A reference article held up as a worked example.",
+      "consumer": "None.",
+      "evidence": "No reference from any code, workflow, test or documentation index. It is not loaded as a few-shot example by any prompt.",
+      "lifecycle": "historical record",
+      "action": "Low. A reference article that no prompt reads is a plausible thing to mistake for a wired example - confirm intent."
+    },
+    {
+      "path": "strategy/worldview.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Editorial worldview narrative.",
+      "consumer": "None in production. Used as a literal string in five strategy tests' research_references fixtures.",
+      "evidence": "tests/strategy/test_history.py:50, test_decision_engine.py:71, test_strategy_version.py:44, test_strategy_integration.py:60, test_validators.py:72 - all use the path as an opaque fixture value and never open the file. Not declared at business_strategy.json:306-342.",
+      "lifecycle": "documentation",
+      "action": "Low. Confirm it is human-only; unlike the methodology documents it is not currently represented as executable configuration."
+    }
+  ]
+}

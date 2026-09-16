@@ -1,0 +1,864 @@
+{
+  "shard": "11a_reports_outputs",
+  "area": "reports (loose outputs, card audit, daily research summaries)",
+  "tracked_files": 95,
+  "enumeration": "git ls-files reports, excluding reports/content_packages/** and reports/repository_audit/**",
+  "method_note": "reports/ is the one tracked tree with no .gitignore discipline (.gitignore:27 ignores only reports/content_packages/images/). Each entry below therefore had to be judged on whether a consumer reads the tracked copy, not merely whether some code writes a file of that name.",
+  "entries": [
+    {
+      "path": "reports/card_audit/grid_preview_after.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Grid mosaic render from the one-off card-layout audit, after state.",
+      "consumer": "None.",
+      "evidence": "Produced by scripts/render_card_audit.py:260, which no workflow or test runs. No reference to reports/card_audit outside that script.",
+      "lifecycle": "one-off evidence",
+      "action": "See the group action below; all 26 files in this directory stand or fall with scripts/render_card_audit.py."
+    },
+    {
+      "path": "reports/card_audit/grid_preview_before.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Grid mosaic render, before state.",
+      "consumer": "None.",
+      "evidence": "Same as above: scripts/render_card_audit.py:260, unreferenced by any workflow or test.",
+      "lifecycle": "one-off evidence",
+      "action": "Low. Confirm whether the card audit is kept as a design record."
+    },
+    {
+      "path": "reports/card_audit/legacy_sq_after.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Legacy square card render, after state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/legacy_sq_before.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Legacy square card render, before state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/legacy_sq_comparison.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Legacy square card before/after comparison.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/long_after.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Long-text card render, after state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/long_before.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Long-text card render, before state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/long_comparison.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Long-text card before/after comparison.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/long_word_after.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Long-single-word card render, after state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/long_word_before.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Long-single-word card render, before state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/long_word_comparison.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Long-single-word before/after comparison.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/medium_after.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Medium-text card render, after state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/medium_before.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Medium-text card render, before state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/medium_comparison.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Medium-text before/after comparison.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/photo_ovrl_after.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Photo-overlay card render, after state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/photo_ovrl_before.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Photo-overlay card render, before state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/photo_ovrl_comparison.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Photo-overlay before/after comparison.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/quote_card_after.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Quote card render, after state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/quote_card_before.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Quote card render, before state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/quote_card_comparison.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Quote card before/after comparison.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/short_after.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Short-text card render, after state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/short_before.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Short-text card render, before state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/short_comparison.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Short-text before/after comparison.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/very_long_after.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Very-long-text card render, after state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/very_long_before.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Very-long-text card render, before state.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py TEST_CASES output; no consumer.",
+      "lifecycle": "one-off evidence",
+      "action": "Low."
+    },
+    {
+      "path": "reports/card_audit/very_long_comparison.png",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Very-long-text before/after comparison.",
+      "consumer": "None.",
+      "evidence": "scripts/render_card_audit.py:265 prints the expected count for this directory; nothing reads the files.",
+      "lifecycle": "one-off evidence",
+      "action": "Low. Binary evidence with no consumer; decide together with scripts/render_card_audit.py."
+    },
+    {
+      "path": "reports/connectivity_audit.json",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Machine-readable output of the credential/connectivity audit, overwritten on each run.",
+      "consumer": "scripts/test_publishers.py:16 writes it; connectivity_audit.yml:77 uploads reports/ as an artifact.",
+      "evidence": "The tracked copy is from 2026-06-20 and shows most secrets missing - a stale local run, not a CI result. The workflow reads the file its own run just produced, not this one.",
+      "lifecycle": "support output",
+      "action": "Low. A tracked stale credential report is misleading on its face; it contains no secret values."
+    },
+    {
+      "path": "reports/connectivity_audit.md",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Human-readable twin of connectivity_audit.json.",
+      "consumer": "scripts/test_publishers.py:17 writes it; connectivity_audit.yml:84 cats it into the step summary.",
+      "evidence": "Its footer names scripts/test_publishers.py as its source. As above, the workflow consumes the freshly written file.",
+      "lifecycle": "support output",
+      "action": "Low. Same as connectivity_audit.json."
+    },
+    {
+      "path": "reports/linkedin_live_test.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Historical evidence from a LinkedIn live test.",
+      "consumer": "None. Nothing reads it.",
+      "evidence": "docs/LINKEDIN_PUBLISHING.md refers to the live test as evidence. No script writes this exact stem today; scripts/live_publish_test.py:15-16 writes live_publish_test.{json,md}.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "reports/linkedin_live_test.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Human-readable twin of linkedin_live_test.json.",
+      "consumer": "None.",
+      "evidence": "As above.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "reports/live_publish_test.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Historical evidence from the Phase 5D live publish test.",
+      "consumer": "None reads the tracked copy. scripts/live_publish_test.py:15 overwrites it when run; live_publish_test.yml:74 uploads the fresh copy.",
+      "evidence": "Paired with PHASE_5D_REPORT.md.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "reports/live_publish_test.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Human-readable twin of live_publish_test.json.",
+      "consumer": "None reads the tracked copy. live_publish_test.yml:83-84 cats the fresh copy into the step summary.",
+      "evidence": "As above.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "reports/sample_linkedin_articles_2026-07-21.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "A dated capture of sample LinkedIn articles.",
+      "consumer": "None.",
+      "evidence": "No code, workflow or test reference. Not loaded as a few-shot example by any prompt.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "reports/research_2026-06-22.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-06-22.",
+      "consumer": "scripts/research/run_daily_research.py:253 writes it; daily_signal_research.yml:99-107 gates its commit step on a summary existing and :140 reads sorted(glob('reports/research_*.json'))[-1] for the step summary.",
+      "evidence": "The workflow's own commit gate and step summary both depend on this tracked series existing.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low. See the retention note on the last entry of this series."
+    },
+    {
+      "path": "reports/research_2026-06-23.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-06-23.",
+      "consumer": "As above: scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series the daily workflow globs.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-06-24.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-06-24.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-06-25.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-06-25.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-06-26.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-06-26.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-06-27.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-06-27.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-06-28.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-06-28.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series. The gap between this date and 2026-07-01 is a real gap in the series, not a missing file.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-07-01.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-07-01.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-07-02.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-07-02.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-07-03.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-07-03.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-07-04.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-07-04.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-07-05.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-07-05.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-07-06.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-07-06.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series. Same date as the CNBC feed fixture tests/fixtures/wednesday_july/cnbc_business_2026-07-06.xml.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-07-07.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-07-07.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-07-08.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-07-08.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-07-10.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-07-10.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-07-22.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-07-22.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-07-23.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-07-23.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-07-24.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-07-24.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-07-25.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-07-25.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-04.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-04.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-05.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-05.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-06.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-06.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-07.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-07.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-08.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-08.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-09.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-09.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-10.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-10.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-11.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-11.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-13.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-13.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series. 2026-08-12 is absent - a day the daily workflow produced no summary.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-14.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-14.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-15.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-15.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-16.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-16.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-17.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-17.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-18.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-18.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-19.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-19.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-20.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-20.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series. Same date as the corporate-backlog archive recorded at .gitignore:18.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-21.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-21.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-22.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-22.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-23.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-23.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-24.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-24.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-25.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-25.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-26.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-26.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-27.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-27.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-28.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-28.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-29.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-29.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-30.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-30.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-08-31.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-08-31.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-01.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-01.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-02.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-02.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-03.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-03.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-04.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-04.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-05.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-05.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-06.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-06.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-07.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-07.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-08.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-08.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-09.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-09.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-10.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-10.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-11.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-11.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-12.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-12.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-13.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-13.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series.",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-14.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-14.",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Part of the tracked reports/research_*.json series. Committed by 'research: daily signal update 2026-09-14' (f275dec).",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low."
+    },
+    {
+      "path": "reports/research_2026-09-15.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research summary for 2026-09-15 - the most recent entry, and the one daily_signal_research.yml:140 currently reads as sorted(glob(...))[-1].",
+      "consumer": "scripts/research/run_daily_research.py:253 -> daily_signal_research.yml:106,:140.",
+      "evidence": "Committed by 'research: daily signal update 2026-09-15' (3e4059f).",
+      "lifecycle": "canonical output, deliberately tracked",
+      "action": "Low. This is an unbounded daily series in git - 62 files and growing by one per day. Consider a retention decision separately from this audit; it is deliberate, not accidental, and so is not DEAD."
+    }
+  ]
+}

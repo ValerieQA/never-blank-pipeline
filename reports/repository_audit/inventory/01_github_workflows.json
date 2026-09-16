@@ -1,0 +1,170 @@
+{
+  "shard": "01_github_workflows",
+  "area": ".github/workflows",
+  "tracked_files": 18,
+  "enumeration": "git ls-files .github",
+  "entries": [
+    {
+      "path": ".github/workflows/connectivity_audit.yml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Manual credential/connectivity audit across every publisher.",
+      "consumer": "workflow_dispatch -> scripts/test_publishers.py",
+      "evidence": "connectivity_audit.yml:67-69 invokes scripts/test_publishers.py; :77 uploads reports/ as an artifact; :84 cats reports/connectivity_audit.md into the step summary.",
+      "lifecycle": "operational",
+      "action": "none"
+    },
+    {
+      "path": ".github/workflows/daily_signal_research.yml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily signal discovery (stages 1-9), with optional legacy Stage 11 publishing.",
+      "consumer": "GitHub scheduler -> scripts/research/run_daily_research.py",
+      "evidence": "daily_signal_research.yml:5 daily cron; :85 invocation; :106 commits data/research/, data/memory/, reports/research_*.json and reports/content_packages/*.json; :140 and :228 read those globs back for the step summary. :82-83 an inline shell guard forces NB_RESEARCH_PUBLISH_ENABLED=false only on Wednesdays; on every other day publishing is decided by the secret's value, which is not visible in the repository.",
+      "lifecycle": "active",
+      "action": "See finding F4d - a scheduled path whose publish/no-publish behaviour is not answerable from the repository."
+    },
+    {
+      "path": ".github/workflows/editorial_preflight.yml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Compile + output-guard gate on pushes touching the publishing path.",
+      "consumer": "push to main -> py_compile of 4 modules, then pytest tests/test_output_guard.py",
+      "evidence": "editorial_preflight.yml:27-32.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": ".github/workflows/generate_and_publish.yml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Manual V1 generate + image + publish.",
+      "consumer": "workflow_dispatch -> scripts/generate.py, scripts/generate_image.py, scripts/publish.py",
+      "evidence": "generate_and_publish.yml:52 scripts/generate.py; :106-108 scripts/publish.py; :115-121 copies reports/publish_report.* to a named stem. Despite the filename it never calls scripts/generate_and_publish.py, which is the canonical entrypoint.",
+      "lifecycle": "legacy, manual only",
+      "action": "See finding F6b - the workflow name and the canonical script name collide."
+    },
+    {
+      "path": ".github/workflows/generate_content.yml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Manual V1 content generation.",
+      "consumer": "workflow_dispatch -> scripts/generate.py",
+      "evidence": "generate_content.yml:47. workflow_dispatch only; no cron in the file.",
+      "lifecycle": "legacy, manual only",
+      "action": "none - but see F6a for the prompt files this is the only route to."
+    },
+    {
+      "path": ".github/workflows/generate_image.yml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Manual image-pipeline run.",
+      "consumer": "workflow_dispatch -> scripts/generate_image.py",
+      "evidence": "generate_image.yml:35, :46.",
+      "lifecycle": "operational",
+      "action": "none"
+    },
+    {
+      "path": ".github/workflows/live_publish_test.yml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Manual Phase 5D live publish test - makes real posts.",
+      "consumer": "workflow_dispatch -> scripts/live_publish_test.py",
+      "evidence": "live_publish_test.yml:63-65 invocation; :74-75 uploads reports/live_publish_test.{json,md} produced by that run.",
+      "lifecycle": "operational, manual only",
+      "action": "none - manual dispatch is the intended authorization boundary."
+    },
+    {
+      "path": ".github/workflows/monday_publish.yml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Canonical Monday publisher, 04:17 America/New_York.",
+      "consumer": "GitHub scheduler -> scripts/streams/due_check.py -> scripts/streams/select_eligible_signal.py -> scripts/generate_and_publish.py",
+      "evidence": "monday_publish.yml:29-30 cron; :53 concurrency group never-blank-publish; :88 due_check with --decision-out; :162 selector with --audit-out; :271 canonical entrypoint; :285-286 appends and commits data/research/published_signal_ids.txt. Sole Monday owner asserted at tests/test_wednesday_golden.py:549-552.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": ".github/workflows/pr_tests.yml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Full pytest suite for every PR, compared against the accepted-failure baseline.",
+      "consumer": "pull_request -> pytest -> scripts/ci/check_test_baseline.py",
+      "evidence": "pr_tests.yml:32 pip install -r requirements.txt; :42 runs the complete suite; :54 baseline comparator against tests/accepted_full_suite_failures.txt.",
+      "lifecycle": "canonical CI gate",
+      "action": "none - this is the gate every tests/ entry in shard 07 names as its consumer."
+    },
+    {
+      "path": ".github/workflows/publish.yml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Manual V1 publish of an existing draft.",
+      "consumer": "workflow_dispatch -> scripts/create_fixture.py, scripts/generate_image.py, scripts/publish.py",
+      "evidence": "publish.yml:40, :51, :79-81; :89 uploads reports/publish_report.*.",
+      "lifecycle": "legacy, manual only",
+      "action": "none"
+    },
+    {
+      "path": ".github/workflows/research_generate_and_publish.yml",
+      "classification": "DUPLICATE_SUPERSEDED",
+      "purpose": "Manual full-cycle generate+publish; also carries a Friday+Sunday cron.",
+      "consumer": "GitHub scheduler and manual dispatch -> scripts/generate_and_publish.py",
+      "evidence": "research_generate_and_publish.yml:33 cron \"0 7 * * 5,0\"; the comment at :30-32 says only that Monday and Wednesday moved away, leaving Friday claimed here as well as in scheduled_publish.yml:23-24. :37 concurrency never-blank-publish; :170 entrypoint.",
+      "lifecycle": "duplicate",
+      "action": "See finding F4a. Owner decision: which workflow owns Friday, and whether the Sunday firing is still in scope."
+    },
+    {
+      "path": ".github/workflows/run_analytics.yml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Manual analytics-only run.",
+      "consumer": "workflow_dispatch -> scripts/run_analytics.py",
+      "evidence": "run_analytics.yml:25.",
+      "lifecycle": "operational",
+      "action": "none"
+    },
+    {
+      "path": ".github/workflows/scheduled_publish.yml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Friday publisher on the pre-#142 legacy path.",
+      "consumer": "GitHub scheduler -> scripts/scheduled_publish.py",
+      "evidence": "scheduled_publish.yml:23-24 cron Friday 04:17 ET; :84 writes reports/scheduling/friday_scheduling_decision.json; :86-93 invocation. Header states 'Friday remains on this legacy path until #144'. No concurrency: block anywhere in the file, unlike monday_publish.yml:53, wednesday_golden.yml:32 and research_generate_and_publish.yml:37.",
+      "lifecycle": "legacy-but-live",
+      "action": "See findings F4a (second Friday owner) and F4b (not serialized into the never-blank-publish group)."
+    },
+    {
+      "path": ".github/workflows/smoke_test_full_cycle.yml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Manual publish+analytics smoke test.",
+      "consumer": "workflow_dispatch -> scripts/smoke_test_publish_analytics.py, scripts/run_analytics.py",
+      "evidence": "smoke_test_full_cycle.yml:81, :118.",
+      "lifecycle": "operational",
+      "action": "none"
+    },
+    {
+      "path": ".github/workflows/smoke_test_wix_image.yml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Manual Wix cover-image smoke test.",
+      "consumer": "workflow_dispatch -> scripts/smoke_test_wix_image.py",
+      "evidence": "smoke_test_wix_image.yml:42.",
+      "lifecycle": "operational",
+      "action": "none"
+    },
+    {
+      "path": ".github/workflows/strategy_tests.yml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Strategy/analytics subset gate.",
+      "consumer": "push/pull_request -> py_compile of 16 modules, then pytest tests/strategy tests/analytics",
+      "evidence": "strategy_tests.yml:50-67 py_compile (including :52-58 the four src/strategy analysis modules and :64-67 four scripts/strategy operator tools); :70 pytest.",
+      "lifecycle": "support",
+      "action": "See finding F8d - scripts/strategy/*.py get syntax checking only, never execution."
+    },
+    {
+      "path": ".github/workflows/visibility_publish.yml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Visibility Intelligence stream, Tuesday and Thursday 07:00 UTC.",
+      "consumer": "GitHub scheduler -> scripts/generate_and_publish_visibility.py",
+      "evidence": "visibility_publish.yml:6-7 cron; :93 invocation.",
+      "lifecycle": "active, outside the Mon/Wed/Fri cadence",
+      "action": "See finding F4c - confirm Tue/Thu publishing is still intended under current R1 scope."
+    },
+    {
+      "path": ".github/workflows/wednesday_golden.yml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Canonical Wednesday publisher, 04:17 America/New_York.",
+      "consumer": "GitHub scheduler -> scripts/streams/due_check.py -> scripts/generate_and_publish.py (role never-blank-wednesday-golden)",
+      "evidence": "wednesday_golden.yml:11-12 cron; :32 concurrency never-blank-publish; :61 due_check with --decision-out; :211 canonical entrypoint; :245 uploads the run directory.",
+      "lifecycle": "canonical",
+      "action": "See finding F1 - the declared Wednesday role does not reach Wednesday's generation prompt."
+    }
+  ]
+}

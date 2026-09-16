@@ -127,7 +127,8 @@
       "severity": "high",
       "artifact": "reports/content_packages/sig-identity-test-001/** (3,094 files), reports/content_packages/sig-test-001/** (4,702 files)",
       "evidence": [
-        "7,796 of 8,380 tracked files are run directories under those two IDs; 1,176 run directories exist for sig-identity-test-001 alone.",
+        "7,796 of 8,399 tracked files are run artifacts under those two IDs: 1,583 run directories for sig-test-001 and 1,176 for sig-identity-test-001. Every path is enumerated in reports/repository_audit/inventory/12a_sig_test_001.paths.txt and 12b_sig_identity_test_001.paths.txt.",
+        "reports/content_packages/sig-test-001.json and sig-identity-test-001.json are the same residue in flat form, and those two did match daily_signal_research.yml:106's flat glob and were committed by the daily workflow itself.",
         "Neither ID exists outside tests: tests/test_run_identity.py:63, tests/test_visual_contract.py:78, tests/test_wednesday_supply.py:302, tests/test_wednesday_live_fixes.py:401.",
         "Root cause: scripts/generate_and_publish.py:320-321 — `PACKAGES_DIR = Path(\"reports/content_packages\")` followed by `PACKAGES_DIR.mkdir(parents=True, exist_ok=True)` at module import. The path is relative to the process CWD, so importing the module from a test writes into the tracked repository path.",
         "The daily workflow's commit step (daily_signal_research.yml:106) adds `reports/content_packages/*.json` — a flat glob — so it is not the source of the nested directories; a developer `git add -A` after a local test run is."

@@ -1,0 +1,171 @@
+{
+  "shard": "11c_reports_repository_audit",
+  "area": "reports/repository_audit (this audit's own deliverables)",
+  "tracked_files": 18,
+  "enumeration": "git ls-files reports/repository_audit",
+  "method_note": "The audit's deliverables are themselves tracked artifacts and are classified on the same terms as everything else. None of them is loaded by code; none is represented as executable configuration; all exist to be read by people and by whoever writes the follow-up issues. That makes them HUMAN DOCUMENTATION, and saying so here is what keeps this inventory's coverage claim literally complete.",
+  "entries": [
+    {
+      "path": "reports/repository_audit/findings.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "The ranked findings and repair order, structured so follow-up issues can be written from it without re-deriving anything.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Index for the file-by-file inventory: method, classification definitions, counts, the coverage reconciliation against git ls-files, and the shard manifest.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/01_github_workflows.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Per-file inventory entries for the 18 tracked files under .github/workflows.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/02_repository_root.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Per-file inventory entries for the 9 tracked files at the repository root.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/03_config.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Per-file inventory entries for the 43 tracked files under config/.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/04_strategy.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Per-file inventory entries for the 26 tracked files under strategy/.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/05_src.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Per-file inventory entries for the 130 tracked files under src/.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/06_scripts.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Per-file inventory entries for the 34 tracked files under scripts/.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/07_tests.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Per-file inventory entries for the 116 tracked files under tests/.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/08_docs.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Per-file inventory entries for the 35 tracked files under docs/.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/09_data.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Per-file inventory entries for the 13 tracked files under data/.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/10_assets.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Per-file inventory entries for the 3 tracked files under assets/.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/11a_reports_outputs.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Per-file inventory entries for the 95 tracked files under reports/ outside content_packages/ and repository_audit/.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/11b_reports_content_packages.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Per-file inventory entries for the 63 flat tracked files under reports/content_packages/.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/11c_reports_repository_audit.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Per-file inventory entries for this audit's own 18 tracked deliverables, this file included.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader. Self-referential by design: an inventory that claims to cover every tracked file has to cover itself.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/12_test_output_packages.json",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Classification record and evidence for the 7,796 run-scoped test-output files enumerated in 12a and 12b.",
+      "consumer": "humans",
+      "evidence": "Produced by Issue #233. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "reports/repository_audit/inventory/12a_sig_test_001.paths.txt",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Exhaustive newline-delimited list of the 4,702 tracked paths under reports/content_packages/sig-test-001/.",
+      "consumer": "humans; reproducible by `git ls-files reports/content_packages/sig-test-001`",
+      "evidence": "Produced by Issue #233 from git ls-files, so it can be re-verified against the index at any time. No loader.",
+      "lifecycle": "documentation",
+      "action": "none - it exists so the inventory's coverage claim can be checked path by path rather than taken on trust."
+    },
+    {
+      "path": "reports/repository_audit/inventory/12b_sig_identity_test_001.paths.txt",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Exhaustive newline-delimited list of the 3,094 tracked paths under reports/content_packages/sig-identity-test-001/.",
+      "consumer": "humans; reproducible by `git ls-files reports/content_packages/sig-identity-test-001`",
+      "evidence": "Produced by Issue #233 from git ls-files. No loader.",
+      "lifecycle": "documentation",
+      "action": "none"
+    }
+  ]
+}

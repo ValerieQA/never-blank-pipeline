@@ -1,0 +1,126 @@
+{
+  "shard": "09_data",
+  "area": "data",
+  "tracked_files": 13,
+  "enumeration": "git ls-files data",
+  "method_note": ".gitignore:3-25 ignores data/* and then whitelists each tracked file by name. Every entry below is therefore a deliberate repository contract, not an accident - which is the opposite of the situation under reports/ in shard 12.",
+  "entries": [
+    {
+      "path": "data/drafts/.gitkeep",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Preserves the draft output directory.",
+      "consumer": "git; the directory is written by src/publishing/base.py and read by scripts/publish.py",
+      "evidence": ".gitignore:9-10 ignores data/drafts/* except this marker. src/publishing/image_pipeline.py:13 writes data/drafts/latest/image_url.txt.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "data/images/.gitkeep",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Preserves the local image output directory.",
+      "consumer": "git; IMAGES_DIR in src/publishing/image_pipeline.py",
+      "evidence": ".gitignore:11-12. scripts/generate_image.py:31 imports IMAGES_DIR.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "data/memory/visual_registry.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Visual rotation memory - which visual family each published post used.",
+      "consumer": "src/publishing/image_pipeline.py:41 REGISTRY_PATH -> :251-259 read and write -> scripts/research/prepare_content.py, scripts/generate_and_publish_visibility.py, scripts/generate_image.py",
+      "evidence": "image_pipeline.py:251-259 loads and rewrites it on every image run; :1531 logs the update. It is the one file under data/memory/ that .gitignore:13-14 whitelists - the six other memory files scripts/dry_run.py:277-282 names belong to the legacy V1 store and are not tracked.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "data/research/.gitkeep",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Preserves the research data directory.",
+      "consumer": "git",
+      "evidence": ".gitignore:15-16.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "data/research/archive/.gitkeep",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Preserves the monthly signal-archive directory.",
+      "consumer": "git; scripts/research/archive.py:19 ARCHIVE_DIR writes signals_{month}.jsonl here",
+      "evidence": ".gitignore:24-25 ignores the archive contents, so the monthly files archive.py:82-83 writes are deliberately untracked.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "data/research/image_library.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Cloudinary image library keyed by SIGNAL_ID, with the design version each image was made at.",
+      "consumer": "scripts/research/prepare_content.py:36 IMAGE_LIBRARY -> :85-91 load/save, :370 and :402",
+      "evidence": "prepare_content.py:16 documents the keying; :119 logs a regeneration when a stored entry's design_version is behind CURRENT_DESIGN_VERSION.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "data/research/published_signal_ids.txt",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Consumption marker: which signals have already been published.",
+      "consumer": "src/never_blank/wednesday_supply.py:60, scripts/streams/select_eligible_signal.py:102, monday_publish.yml:150 and :285-286",
+      "evidence": "monday_publish.yml:150 greps it before a from-package retry (pinned by tests/test_from_package_retry.py:275) and :285-286 appends and commits after a publish. Four tests assert the canonical path names it.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "data/research/seen_index.json",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Discovery deduplication index.",
+      "consumer": "scripts/research/discover.py:237 and scripts/research/run_daily_research.py:39; also src/never_blank/wednesday_july/research/discover.py:272",
+      "evidence": "Both research streams read and update it, so it is shared state between the daily pipeline and Wednesday.",
+      "lifecycle": "canonical data",
+      "action": "Low. Shared mutable state between two otherwise deliberately separated research paths - record it so the separation in F-notes is not read as complete."
+    },
+    {
+      "path": "data/research/selected_signals.jsonl",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Signals selected for content production.",
+      "consumer": "scripts/generate_and_publish.py:323, scripts/research/prepare_content.py:34, scripts/research/archive.py:18, scripts/research/run_daily_research.py:38",
+      "evidence": "generate_and_publish.py:94 documents --signal-id as coming from this file or signals_active.jsonl. Whitelisted at .gitignore:20.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "data/research/signals_active.jsonl",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "The active signal supply - the source of truth for what may be published.",
+      "consumer": "scripts/generate_and_publish.py:324, scripts/streams/select_eligible_signal.py:101, scripts/research/{run_daily_research.py:37,archive.py:17,sync_to_sheets.py:16,sync_from_sheets.py:17}",
+      "evidence": "Whitelisted at .gitignore:17. tests/test_signal_lifecycle.py:39 pins the path.",
+      "lifecycle": "canonical data",
+      "action": "none"
+    },
+    {
+      "path": "data/research/signals_archived_corporate_backlog.jsonl",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Audit record of the 2026-08-20 corporate-backlog archive.",
+      "consumer": "None. No code, workflow or test opens this file.",
+      "evidence": ".gitignore:18-19 whitelists it under the comment 'Audit record of the 2026-08-20 corporate-backlog archive (Issue #142)' - the reason is stated in-band, which is what separates it from an orphan. The automatic archive writes elsewhere (scripts/research/archive.py:82-83, into the untracked data/research/archive/).",
+      "lifecycle": "retained deliberately, reason recorded in .gitignore",
+      "action": "none - this is the repository's one example of a consumer-less tracked data file that says in-band why it is kept. It is the pattern the orphans in shard 03 should adopt."
+    },
+    {
+      "path": "data/strategy/visibility_history.jsonl",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "History of published Visibility Intelligence items.",
+      "consumer": "scripts/generate_and_publish_visibility.py:61 HISTORY_FILE -> visibility_publish.yml:93",
+      "evidence": "Named as a module-level constant by the Tue/Thu entrypoint; quota logic pinned by tests/strategy/test_visibility_quota.py.",
+      "lifecycle": "canonical data",
+      "action": "See finding F4c - its lifecycle follows whatever is decided about the Tue/Thu stream."
+    },
+    {
+      "path": "data/strategy/visibility_queue.jsonl",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "The Visibility Intelligence work queue.",
+      "consumer": "scripts/generate_and_publish_visibility.py:60 QUEUE_FILE -> src/editorial/vi_pipeline.py -> visibility_publish.yml:93",
+      "evidence": "src/strategy/models.py:292 documents the entry shape; :295-300 notes that content_format is an open string so new formats are added in this file without a code change - a deliberate dynamic-configuration path that static search would not reveal.",
+      "lifecycle": "canonical data",
+      "action": "none - recorded explicitly because this file can change product behaviour without any code change."
+    }
+  ]
+}

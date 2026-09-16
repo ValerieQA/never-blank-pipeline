@@ -1,0 +1,35 @@
+{
+  "shard": "10_assets",
+  "area": "assets",
+  "tracked_files": 3,
+  "enumeration": "git ls-files assets",
+  "entries": [
+    {
+      "path": "assets/fonts/Inter-Variable.ttf",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "The bundled typeface used for every generated card and cover image.",
+      "consumer": "src/publishing/image_pipeline.py:616-617 -> the research, visibility and manual image paths",
+      "evidence": "image_pipeline.py loads the bundled Inter rather than a system font so output is deterministic across runners.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "assets/fonts/OFL.txt",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "The SIL Open Font License covering Inter-Variable.ttf.",
+      "consumer": "No code. It is the licence obligation that accompanies the tracked font.",
+      "evidence": "Distributing the font requires distributing this licence. .gitignore:28 records that the logo and fonts must not be ignored.",
+      "lifecycle": "canonical",
+      "action": "none - a licence file with no code consumer is not an orphan. Recorded explicitly so a future dead-artifact sweep does not remove it."
+    },
+    {
+      "path": "assets/logo/never-blank-logo.png",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "The brand logo overlaid on generated images.",
+      "consumer": "src/publishing/image_pipeline.py:39 LOGO_PATH -> :908-911 and :1010-1014",
+      "evidence": "image_pipeline.py:1309 records that the logo is overlaid from LOGO_PATH and never drawn by the image model. scripts/test_publishers.py:1050 checks it exists before a Cloudinary upload.",
+      "lifecycle": "canonical",
+      "action": "none"
+    }
+  ]
+}

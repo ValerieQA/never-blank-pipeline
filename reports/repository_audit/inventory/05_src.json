@@ -1,0 +1,1179 @@
+{
+  "shard": "05_src",
+  "area": "src",
+  "tracked_files": 130,
+  "enumeration": "git ls-files src",
+  "method_note": "Reachability was established from a complete import census: every 'from src.<module>' and 'import src.<module>' occurrence in src/ and scripts/. A module is ACTIVE RUNTIME only when that census connects it to a script a .github/workflows job step actually invokes.",
+  "entries": [
+    {
+      "path": "src/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Package marker for the src package (empty file).",
+      "consumer": "Every 'from src.*' import in scripts/ and tests/, including scripts/generate_and_publish.py:117.",
+      "evidence": "0 lines. Required for the regular-package imports the canonical entrypoint uses.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/models.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Shared Pydantic content models (ContentBrief, ContentMatrix, ContentPackage and siblings).",
+      "consumer": "src/strategy/models.py:24 on the canonical path; also src/content/*, src/quality/*, src/internal/* on the legacy path.",
+      "evidence": "src/strategy/models.py:24 imports it, and src/strategy/models is imported by scripts/generate_and_publish.py:313.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/analytics/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Package marker (empty file).",
+      "consumer": "scripts/generate_and_publish.py:157-159 imports src.analytics.blog/linkedin/orchestrator.",
+      "evidence": "0 lines; required for the submodule imports above.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/analytics/base.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Shared collector base for post-publication analytics.",
+      "consumer": "src/analytics/blog.py:34, src/analytics/linkedin.py:52, src/analytics/orchestrator.py:34 -> scripts/generate_and_publish.py:157-159",
+      "evidence": "Import census; also scripts/run_analytics.py:33-35 and scripts/smoke_test_publish_analytics.py:39-41.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/analytics/blog.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Blog (Wix) analytics collector.",
+      "consumer": "scripts/generate_and_publish.py:157, scripts/run_analytics.py:33, scripts/smoke_test_publish_analytics.py:39",
+      "evidence": "Direct import by the canonical entrypoint.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/analytics/collector_protocol.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Typed protocol every analytics collector satisfies.",
+      "consumer": "src/analytics/orchestrator.py:35 -> scripts/generate_and_publish.py:159",
+      "evidence": "orchestrator.py:35 import.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/analytics/linkedin.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "LinkedIn analytics collector.",
+      "consumer": "scripts/generate_and_publish.py:158, scripts/run_analytics.py:34, scripts/smoke_test_publish_analytics.py:40",
+      "evidence": "Direct import by the canonical entrypoint.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/analytics/orchestrator.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Runs the analytics pipeline over the collectors after publication.",
+      "consumer": "scripts/generate_and_publish.py:159 and :3129 run_analytics_pipeline(); scripts/run_analytics.py:35",
+      "evidence": "Called on the canonical path after publication completes.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/analytics/scorer.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Scores collected analytics against the strategy models.",
+      "consumer": "src/analytics/orchestrator.py:36 -> scripts/generate_and_publish.py:159",
+      "evidence": "orchestrator.py:36 import.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/artifacts/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Run-scoped artifact addressing and the create-once write contract.",
+      "consumer": "scripts/generate_and_publish.py:265; also src/research/lifecycle.py:9, src/editorial/decision_lifecycle.py:38, src/publishing/idempotency.py:44",
+      "evidence": "Its docstring documents the <packages_dir>/<signal_id>/runs/<run_id>/ layout that produces the run directories audited in shard 12.",
+      "lifecycle": "canonical",
+      "action": "See finding F5 - this layout is correct; what is wrong is that tests write it under the tracked reports/ root."
+    },
+    {
+      "path": "src/artifacts/provenance.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Whole-run provenance record binding intake, decision, research, strategy and visual identity.",
+      "consumer": "src/reporting/run_report.py:618, src/publishing/preflight.py:47, src/publishing/idempotency.py:169 -> scripts/generate_and_publish.py:265,:291",
+      "evidence": "provenance.py:28-44 imports nine contract modules; reached from the canonical entrypoint through run_report and preflight.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/content/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Package marker (empty file).",
+      "consumer": "src/editorial/platform_composer.py:12 and src/editorial/linkedin_composition.py:36 import src.content.output_guard.",
+      "evidence": "0 lines; required for the canonical output_guard import. The package marker is canonical even though three of its four siblings are legacy.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/content/differentiation.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 cross-platform differentiation checks.",
+      "consumer": "scripts/generate.py:39 (manual dispatch only).",
+      "evidence": "Import census: no importer outside scripts/generate.py and tests.",
+      "lifecycle": "legacy V1, manual only",
+      "action": "See finding F6a."
+    },
+    {
+      "path": "src/content/generator.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 per-platform generation; the sole loader of eight config/prompts/*.yaml files.",
+      "consumer": "scripts/generate.py:38, src/quality/rewrite.py:23 (manual dispatch only).",
+      "evidence": "generator.py:126,:134,:142,:151,:158,:170,:176 load blog_post, linkedin_post, instagram_caption, facebook_post, threads_post, telegram_post and stories_post. No scheduled workflow reaches it.",
+      "lifecycle": "legacy V1, manual only",
+      "action": "See finding F6a. This module is why seven prompt files still appear to have consumers."
+    },
+    {
+      "path": "src/content/matrix.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 content matrix construction.",
+      "consumer": "scripts/generate.py:37 (manual dispatch only).",
+      "evidence": "matrix.py:88 load_prompt(\"content_matrix\"); no importer on a scheduled path.",
+      "lifecycle": "legacy V1, manual only",
+      "action": "none"
+    },
+    {
+      "path": "src/content/output_guard.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Per-platform output contract validation.",
+      "consumer": "src/editorial/platform_composer.py:12 and src/editorial/linkedin_composition.py:36 (canonical), scripts/research/publish_packages.py:17, src/strategy/validators.py:259",
+      "evidence": "Also gated on every push by editorial_preflight.yml:27-32, which runs tests/test_output_guard.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Re-exports the LinkedIn composition and editorial acceptance contracts.",
+      "consumer": "Package marker for every src.editorial.* import on the canonical path.",
+      "evidence": "__init__.py:3-21 re-exports from .linkedin_composition and .editorial_acceptance, both canonical.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/decision_contract.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Typed Decision Lens decision contract.",
+      "consumer": "src/editorial/decision_lifecycle.py:39, src/editorial/decision_lens_evaluator.py:42, src/artifacts/provenance.py:29 -> scripts/generate_and_publish.py:192,:196",
+      "evidence": "Import census; paired with docs/DECISION_LENS_CONTRACT.md and tests/test_decision_lens_contract.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/decision_lens_evaluator.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Production Decision Lens evaluation boundary; loads the Decision Lens instruction artifact.",
+      "consumer": "scripts/generate_and_publish.py:192; src/editorial/decision_lifecycle.py:45",
+      "evidence": "decision_lens_evaluator.py:57-61 resolves config/prompts/decision_lens/never_blank.yaml; :672 imports chat and issues the call.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/decision_lens_lite.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Lightweight decision-lens stage inside the Monday/Friday editorial pipeline.",
+      "consumer": "src/editorial/pipeline.py:24 -> scripts/generate_and_publish.py:187",
+      "evidence": "pipeline.py:24 import; decision_lens_lite.py:25 imports chat.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/decision_lifecycle.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "decision.json persistence and Decision Lens disposition gating.",
+      "consumer": "scripts/generate_and_publish.py:196",
+      "evidence": "Direct import by the canonical entrypoint; paired with docs/DECISION_LIFECYCLE.md.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/discovery_builder.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Builds the discovery section of a Monday/Friday article.",
+      "consumer": "src/editorial/pipeline.py:28 -> scripts/generate_and_publish.py:187",
+      "evidence": "pipeline.py:28 import; discovery_builder.py:9 imports chat.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/editorial_acceptance.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Explicit editorial acceptance and one controlled revision; loads the acceptance rubric.",
+      "consumer": "scripts/generate_and_publish.py:212",
+      "evidence": "editorial_acceptance.py:47 DEFAULT_RUBRIC_PATH, :114 load(), :381 and :390 chat(). This is the canonical path's quality boundary - src/quality/gate.py is not.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/editorial_role.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Renders the declared editorial role from business_strategy.json into prompt rules.",
+      "consumer": "scripts/generate_and_publish.py:160, scripts/streams/select_eligible_signal.py:47, src/intake/assignment_record.py:21",
+      "evidence": "editorial_role.py:23 imports src.strategy.business_config; :81 render_editorial_role_rules is the function whose output reaches platform_composer.py:492-495.",
+      "lifecycle": "canonical",
+      "action": "See finding F1 - on Wednesday its output is computed and then discarded."
+    },
+    {
+      "path": "src/editorial/hook_engine.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Hook generation stage for Monday/Friday.",
+      "consumer": "src/editorial/pipeline.py:26 -> scripts/generate_and_publish.py:187",
+      "evidence": "pipeline.py:26 import; hook_engine.py:14 imports chat and calls it with a module-level _SYSTEM_PROMPT constant.",
+      "lifecycle": "canonical",
+      "action": "Note for F3/F6: this stage's system prompt is a Python constant, not configuration."
+    },
+    {
+      "path": "src/editorial/linkedin_composition.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Canonical article -> LinkedIn mapping, traceability and acceptance.",
+      "consumer": "scripts/generate_and_publish.py:203; src/visual/contract.py:37, src/artifacts/provenance.py:34, src/publishing/idempotency.py:45,:356, src/publishing/package.py:42",
+      "evidence": "Six production importers; paired with docs/LINKEDIN_COMPOSITION.md and tests/test_linkedin_composition.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/narrative_spine.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Narrative spine stage for Monday/Friday.",
+      "consumer": "src/editorial/pipeline.py:25 -> scripts/generate_and_publish.py:187",
+      "evidence": "pipeline.py:25 import; narrative_spine.py:15 imports chat and :127 calls it.",
+      "lifecycle": "canonical for Monday/Friday",
+      "action": "Note: Wednesday runs src/never_blank/wednesday_july/narrative_spine.py instead - docs/NARRATIVE_SPINE.md says 'Live' without that qualification."
+    },
+    {
+      "path": "src/editorial/never_blank_voice.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Voice stage; the point at which business_strategy.json values enter the user prompt.",
+      "consumer": "src/editorial/pipeline.py:30 -> scripts/generate_and_publish.py:187",
+      "evidence": "never_blank_voice.py:21-22 import business_config and execution_context; :24 imports chat. tests/strategy/test_strategy_semantic_consumption.py:90-112 patches this module's chat and asserts seven configured values appear in the user string.",
+      "lifecycle": "canonical",
+      "action": "none - this is the one proven file-to-model-message chain in the repository."
+    },
+    {
+      "path": "src/editorial/pattern_extractor.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "First stage of the Monday/Friday editorial pipeline.",
+      "consumer": "src/editorial/pipeline.py:23 -> scripts/generate_and_publish.py:187",
+      "evidence": "pipeline.py:23 import; pattern_extractor.py:17 imports chat.",
+      "lifecycle": "canonical",
+      "action": "Low. Name collision with src/strategy/pattern_extractor.py, a different and unexecuted module - see F8d."
+    },
+    {
+      "path": "src/editorial/pipeline.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Orchestrates the Monday/Friday editorial stages.",
+      "consumer": "scripts/generate_and_publish.py:187; scripts/research/publish_packages.py:23",
+      "evidence": "pipeline.py:23-33 imports the nine stage modules and the call budget; paired with docs/EDITORIAL_ENGINE_V2.md.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/platform_composer.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Composes the per-surface derivatives and appends the rendered editorial role rules to the user prompt.",
+      "consumer": "src/editorial/pipeline.py:32, src/editorial/linkedin_composition.py:37 -> scripts/generate_and_publish.py:187,:203",
+      "evidence": "platform_composer.py:492-495 appends the role rules; :511 passes the assembled user string to chat(). This is the production model-message construction the audit's WIRED test refers to.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/reader_context.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Reader-context stage; shared by both editorial engines.",
+      "consumer": "src/editorial/pipeline.py:27 and src/never_blank/wednesday_july/pipeline.py:43",
+      "evidence": "The only src/editorial stage module the Wednesday July pipeline reuses.",
+      "lifecycle": "canonical for Monday, Friday and Wednesday",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/source_eligibility.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Judges whether a candidate source may be used for a given editorial role.",
+      "consumer": "scripts/streams/select_eligible_signal.py:48 -> monday_publish.yml:162",
+      "evidence": "source_eligibility.py:31 imports business_config; :274 imports chat. select_eligible_signal.py:148 judges each candidate against it.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/source_transparency.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Source transparency block appended to published articles.",
+      "consumer": "scripts/generate_and_publish.py:169",
+      "evidence": "Direct import by the canonical entrypoint; source_transparency.py:45 imports the research evidence contract.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/sources_of_record.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Sources-of-record block construction.",
+      "consumer": "scripts/generate_and_publish.py:165; src/editorial/pipeline.py:33",
+      "evidence": "Import census.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/story_assembly.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Assembles the article body for Monday/Friday.",
+      "consumer": "src/editorial/pipeline.py:29 -> scripts/generate_and_publish.py:187",
+      "evidence": "pipeline.py:29 import; story_assembly.py:18 imports chat.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/editorial/vi_pipeline.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Visibility Intelligence generation pipeline for the Tuesday/Thursday stream.",
+      "consumer": "scripts/generate_and_publish_visibility.py:37 -> visibility_publish.yml:93",
+      "evidence": "vi_pipeline.py:67 loads the format-modifier table, :80-83 loads the category prompt by f-string key, :195 calls chat().",
+      "lifecycle": "active",
+      "action": "See finding F4c."
+    },
+    {
+      "path": "src/intake/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Exports the transport-neutral ContentAssignment contract and its JSONL adapter.",
+      "consumer": "scripts/generate_and_publish.py:117; src/research/lifecycle.py:10",
+      "evidence": "__init__.py:7-12 re-exports from content_assignment and adapter.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/intake/adapter.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "JSONL intake adapter and the unsupported-transport guard.",
+      "consumer": "src/intake/__init__.py:12 -> scripts/generate_and_publish.py:117",
+      "evidence": "Import census; paired with tests/test_intake_adapter.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/intake/assignment_record.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Persisted record binding an assignment to a run, a role and a configuration identity.",
+      "consumer": "scripts/generate_and_publish.py:123; src/artifacts/provenance.py:35, src/reporting/run_report.py:524",
+      "evidence": "assignment_record.py:21-24 imports editorial_role, content_assignment, code_identity and execution_context.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/intake/audience_routing.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Routes a research label to an audience it can uniquely name.",
+      "consumer": "scripts/generate_and_publish.py:124",
+      "evidence": "audience_routing.py:29 imports execution_context; pinned by tests/test_audience_routing.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/intake/content_assignment.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "The ContentAssignment contract and JSONL signal conversion.",
+      "consumer": "src/intake/__init__.py:7, src/intake/adapter.py:8, src/intake/assignment_record.py:22, src/run/run_context.py:75",
+      "evidence": "Four production importers; reached from scripts/generate_and_publish.py:117.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/internal/__init__.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Package marker (empty file) for the V1 memory/strategy subtree.",
+      "consumer": "scripts/generate.py:34-36 and scripts/dry_run.py:28,:36 (manual dispatch only).",
+      "evidence": "0 lines; no importer on a scheduled path.",
+      "lifecycle": "legacy V1, manual only",
+      "action": "See finding F6a."
+    },
+    {
+      "path": "src/internal/memory.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 memory: published records, embeddings, observation/theme registries, portfolio counters.",
+      "consumer": "scripts/generate.py:36, scripts/dry_run.py:28, src/quality/duplication.py:12 (manual dispatch only).",
+      "evidence": "memory.py:202,:273,:305,:569 load config values; the data files it names (data/memory/published.json, embeddings.json and four more, listed at scripts/dry_run.py:277-282) are not tracked - only data/memory/visual_registry.json is, and a different module writes that.",
+      "lifecycle": "legacy V1, manual only",
+      "action": "See finding F6a."
+    },
+    {
+      "path": "src/internal/strategy.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 strategy resolution from config/strategy.yaml, brand.yaml and platforms.yaml.",
+      "consumer": "scripts/generate.py:35 (manual dispatch only).",
+      "evidence": "strategy.py:16 imports config_loader; :73 the load_brand/load_strategy calls. Not related to src/strategy/, which is the canonical strategy package.",
+      "lifecycle": "legacy V1, manual only",
+      "action": "Low. The src/internal/strategy.py vs src/strategy/ name collision is a reading hazard."
+    },
+    {
+      "path": "src/internal/topic_prioritizer.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 topic queue prioritization; the sole consumer of topics_manual.csv.",
+      "consumer": "scripts/generate.py:34, scripts/dry_run.py:36 (manual dispatch only).",
+      "evidence": "topic_prioritizer.py:10 MANUAL_QUEUE = topics_manual.csv; :16 and :23 read and rewrite it.",
+      "lifecycle": "legacy V1, manual only",
+      "action": "none"
+    },
+    {
+      "path": "src/investigation/__init__.py",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Package marker (empty file) for the business investigation layer.",
+      "consumer": "None in src/ or scripts/. Only tests/test_hypothesis_generator.py.",
+      "evidence": "0 lines; no production importer.",
+      "lifecycle": "unresolved",
+      "action": "See finding F8a."
+    },
+    {
+      "path": "src/investigation/hypothesis_generator.py",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Business investigation layer - hypothesis generation.",
+      "consumer": "None in src/ or scripts/. Only tests/test_hypothesis_generator.py.",
+      "evidence": "hypothesis_generator.py:14 imports chat, so it can issue a paid call, but no production path constructs it. docs/BUSINESS_INVESTIGATION_LAYER.md describes the layer; docs/LERA_OPERATING_SYSTEM.md:5-7 records 'Branch: feature/business-investigation-layer, Status: Under development. Not merged to main' - while both the document and this module are in main.",
+      "lifecycle": "unresolved",
+      "action": "See finding F8a. Do not delete: it may be a staged capability. Its status has to be stated somewhere that is not a stale branch header."
+    },
+    {
+      "path": "src/lifecycle/signal_lifecycle.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Signal lifecycle state transitions.",
+      "consumer": "scripts/generate_and_publish.py:139, scripts/research/run_daily_research.py:24, scripts/research/publish_packages.py:24",
+      "evidence": "Three production importers across both streams. Note src/lifecycle/ has no __init__.py - it is imported as a namespace package.",
+      "lifecycle": "canonical",
+      "action": "Low. The missing __init__.py is the only such case under src/; record it so it is not read as an omission."
+    },
+    {
+      "path": "src/never_blank/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Never Blank product-specific package; re-exports the Wednesday Golden profile types.",
+      "consumer": "scripts/generate_and_publish.py:175-186 imports src.never_blank.wednesday_july, wednesday_routing and wednesday_supply.",
+      "evidence": "__init__.py:7-12 imports from .wednesday_golden, which is why that superseded module is loaded at runtime even though none of its functions is called.",
+      "lifecycle": "canonical",
+      "action": "See finding F2 - this re-export is the only thing keeping wednesday_golden.py in the runtime import graph."
+    },
+    {
+      "path": "src/never_blank/wednesday_golden.py",
+      "classification": "DUPLICATE_SUPERSEDED",
+      "purpose": "Typed Wednesday Golden product contract with generation_rules() and source_eligibility_rules() renderers.",
+      "consumer": "Imported at runtime only as a side effect of src/never_blank/__init__.py:7. No function in it is called from src/ or scripts/.",
+      "evidence": "Its own docstring :197-201 says the canonical entrypoint carries the declared role through the generic renderer instead, and that this renderer 'remains useful for strict profile tests'. The production equivalent is strategy/current/business_strategy.json:398-446 rendered by src/editorial/editorial_role.py:81. Callers of :167 load() and :186 generation_rules() are tests only.",
+      "lifecycle": "superseded",
+      "action": "See finding F2."
+    },
+    {
+      "path": "src/never_blank/wednesday_july/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Exports the restored July Wednesday pipeline.",
+      "consumer": "scripts/generate_and_publish.py:175; src/never_blank/wednesday_routing.py:33",
+      "evidence": "__init__.py:16 imports .pipeline.",
+      "lifecycle": "canonical for Wednesday",
+      "action": "none"
+    },
+    {
+      "path": "src/never_blank/wednesday_july/decision_lens_lite.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday decision-lens stage (July original, deliberately parallel to src/editorial/decision_lens_lite.py).",
+      "consumer": "src/never_blank/wednesday_july/pipeline.py:44",
+      "evidence": ":34 imports chat. Pinned against tests/fixtures/wednesday_july/july_originals/decision_lens_lite.py.txt by tests/test_wednesday_july_restoration.py.",
+      "lifecycle": "canonical for Wednesday; intentional duplicate",
+      "action": "none - the duplication is documented and owned."
+    },
+    {
+      "path": "src/never_blank/wednesday_july/discovery_builder.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday discovery stage (July original).",
+      "consumer": "src/never_blank/wednesday_july/pipeline.py:45",
+      "evidence": ":37 imports chat. Drift-guarded by tests/fixtures/wednesday_july/july_originals/discovery_builder.py.txt.",
+      "lifecycle": "canonical for Wednesday; intentional duplicate",
+      "action": "none"
+    },
+    {
+      "path": "src/never_blank/wednesday_july/hook_engine.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday hook stage (July original).",
+      "consumer": "src/never_blank/wednesday_july/pipeline.py:46",
+      "evidence": ":29 imports chat. Drift-guarded by tests/fixtures/wednesday_july/july_originals/hook_engine.py.txt.",
+      "lifecycle": "canonical for Wednesday; intentional duplicate",
+      "action": "none"
+    },
+    {
+      "path": "src/never_blank/wednesday_july/narrative_spine.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday narrative spine (July original).",
+      "consumer": "src/never_blank/wednesday_july/pipeline.py:47",
+      "evidence": ":29 imports chat. Drift-guarded by tests/fixtures/wednesday_july/july_originals/narrative_spine.py.txt.",
+      "lifecycle": "canonical for Wednesday; intentional duplicate",
+      "action": "Low. docs/NARRATIVE_SPINE.md describes the src/editorial module as 'Live' without recording that Wednesday runs this one."
+    },
+    {
+      "path": "src/never_blank/wednesday_july/never_blank_voice.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday voice stage (July original).",
+      "consumer": "src/never_blank/wednesday_july/pipeline.py:48",
+      "evidence": ":35 imports chat and calls it with a module-level _SYSTEM_PROMPT. Unlike src/editorial/never_blank_voice.py:21-22, it imports neither business_config nor execution_context - no configured value reaches this prompt.",
+      "lifecycle": "canonical for Wednesday; intentional duplicate",
+      "action": "See finding F1 - this is where the Wednesday role would have to arrive and does not."
+    },
+    {
+      "path": "src/never_blank/wednesday_july/pipeline.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Orchestrates the Wednesday editorial stages.",
+      "consumer": "src/never_blank/wednesday_july/__init__.py:16 -> scripts/generate_and_publish.py:175",
+      "evidence": "pipeline.py:43-51 imports one src/editorial stage (reader_context) and seven July stages.",
+      "lifecycle": "canonical for Wednesday",
+      "action": "none"
+    },
+    {
+      "path": "src/never_blank/wednesday_july/platform_composer.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday per-surface composition (July original).",
+      "consumer": "src/never_blank/wednesday_july/pipeline.py:49",
+      "evidence": ":41 imports chat. Drift-guarded by tests/fixtures/wednesday_july/july_originals/platform_composer.py.txt.",
+      "lifecycle": "canonical for Wednesday; intentional duplicate",
+      "action": "See finding F1 - unlike src/editorial/platform_composer.py:492-495 it appends no editorial role rules."
+    },
+    {
+      "path": "src/never_blank/wednesday_july/research/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Exports the Wednesday research pipeline.",
+      "consumer": "src/never_blank/wednesday_supply.py:46",
+      "evidence": "__init__.py:12 imports .pipeline.",
+      "lifecycle": "canonical for Wednesday",
+      "action": "none"
+    },
+    {
+      "path": "src/never_blank/wednesday_july/research/angles.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday angle generation (July original).",
+      "consumer": "src/never_blank/wednesday_july/research/pipeline.py:39",
+      "evidence": ":31 imports chat. Drift-guarded by tests/fixtures/wednesday_july/july_research_originals/angles.py.txt.",
+      "lifecycle": "canonical for Wednesday; intentional duplicate",
+      "action": "none"
+    },
+    {
+      "path": "src/never_blank/wednesday_july/research/discover.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday feed discovery; reads its own feed list, not the shared one.",
+      "consumer": "src/never_blank/wednesday_july/research/pipeline.py:40",
+      "evidence": ":45-46 an in-code comment states that pointing at config/research_sources.yaml would hand Wednesday the wrong feeds; :272 reads data/research/seen_index.json. Three tests assert the separation (test_wednesday_diagnostics.py:586, test_wednesday_live_fixes.py:454, test_wednesday_source_attribution.py:524).",
+      "lifecycle": "canonical for Wednesday; intentional duplicate",
+      "action": "none - this is a dynamic-looking divergence that is deliberate and guarded."
+    },
+    {
+      "path": "src/never_blank/wednesday_july/research/enrich.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday enrichment (July original).",
+      "consumer": "src/never_blank/wednesday_july/research/pipeline.py:44",
+      "evidence": ":31 imports chat. Drift-guarded by tests/fixtures/wednesday_july/july_research_originals/enrich.py.txt.",
+      "lifecycle": "canonical for Wednesday; intentional duplicate",
+      "action": "none"
+    },
+    {
+      "path": "src/never_blank/wednesday_july/research/pipeline.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Orchestrates the Wednesday research stages.",
+      "consumer": "src/never_blank/wednesday_july/research/__init__.py:12 -> src/never_blank/wednesday_supply.py:46",
+      "evidence": "pipeline.py:39-46 imports the four July research stages; :63 names config/research_sources.yaml as the current small-business feed set it is deliberately not using.",
+      "lifecycle": "canonical for Wednesday",
+      "action": "none"
+    },
+    {
+      "path": "src/never_blank/wednesday_july/research/research_sources_july.yaml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday's own feed list, kept separate from config/research_sources.yaml.",
+      "consumer": "src/never_blank/wednesday_july/research/discover.py",
+      "evidence": "discover.py:45-46 documents why this file exists rather than reusing the shared config. A configuration artifact that lives under src/ - deliberately, so it moves with the restored July code.",
+      "lifecycle": "canonical for Wednesday",
+      "action": "Low. A YAML config under src/ is easy to miss in a config audit; recorded here so it is not."
+    },
+    {
+      "path": "src/never_blank/wednesday_july/research/score.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday signal scoring (July original).",
+      "consumer": "src/never_blank/wednesday_july/research/pipeline.py:45",
+      "evidence": ":33 imports chat; :37 WEIGHTS_CONFIG = config/scoring_weights.yaml - the one config file Wednesday does share with the daily stream. tests/test_wednesday_july_research.py:320-328 pins that file byte-for-byte for this reason.",
+      "lifecycle": "canonical for Wednesday; intentional duplicate",
+      "action": "none"
+    },
+    {
+      "path": "src/never_blank/wednesday_july/story_assembly.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday story assembly (July original).",
+      "consumer": "src/never_blank/wednesday_july/pipeline.py:50",
+      "evidence": ":31 imports chat. Drift-guarded by tests/fixtures/wednesday_july/july_originals/story_assembly.py.txt.",
+      "lifecycle": "canonical for Wednesday; intentional duplicate",
+      "action": "none"
+    },
+    {
+      "path": "src/never_blank/wednesday_routing.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Routes a Wednesday run into the restored July path.",
+      "consumer": "scripts/generate_and_publish.py:176",
+      "evidence": "generate_and_publish.py:1878-1880 branches on is_wednesday_role() and calls generate_for_wednesday(). wednesday_routing.py:33 imports the July pipeline; :76 generate_wednesday_article().",
+      "lifecycle": "canonical for Wednesday",
+      "action": "See finding F1 - wednesday_routing.py:57 takes only the signal dict, so the rendered role cannot be passed through."
+    },
+    {
+      "path": "src/never_blank/wednesday_supply.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday's signal supply.",
+      "consumer": "scripts/generate_and_publish.py:181",
+      "evidence": "wednesday_supply.py:46 imports the July research pipeline; :54 names data/research/wednesday_july_signals.jsonl (not tracked - generated at runtime); :60 reads data/research/published_signal_ids.txt (tracked).",
+      "lifecycle": "canonical for Wednesday",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Package marker (empty file).",
+      "consumer": "scripts/generate_and_publish.py:221 'from src.publishing import formatting'; scripts/research/publish_packages.py:25; src/publishing/package.py:465.",
+      "evidence": "0 lines; required for the submodule imports above.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/base.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Publisher base class and shared draft-directory handling.",
+      "consumer": "src/publishing/{wix,linkedin,facebook,instagram,threads,telegram,wix_media}.py; scripts/generate_and_publish_visibility.py:38, scripts/research/publish_packages.py:26, scripts/publish.py:39, scripts/live_publish_test.py:35, scripts/smoke_test_*.py",
+      "evidence": ":16 imports result, :19 and :121 execution_context. Writes the data/drafts/ tree preserved by data/drafts/.gitkeep.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/canonical_url.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Derives the canonical URL from the published Wix object rather than predicting it.",
+      "consumer": "scripts/generate_and_publish.py:253",
+      "evidence": ":34 imports result; pinned by tests/test_canonical_url.py (Issue #200).",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/facebook.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Facebook publisher implementation.",
+      "consumer": "Imported by scripts/generate_and_publish.py:225 but filtered out by restrict_to_release_scope(); reachable for real publication only from scripts/publish.py:43, scripts/live_publish_test.py:39 and scripts/generate_and_publish_visibility.py:40.",
+      "evidence": "src/publishing/release_scope.py:35-40 lists it as generated-and-packaged, never auto-published, and explains why the class stays importable. tests/test_r1_publish_scope.py pins that no automatic path reaches it.",
+      "lifecycle": "retained deliberately, proven non-automatic",
+      "action": "none - this is the repository's best existing example of the guardrail this audit proposes."
+    },
+    {
+      "path": "src/publishing/formatting.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Body formatting and the source line.",
+      "consumer": "scripts/generate_and_publish.py:221-222",
+      "evidence": "Direct import by the canonical entrypoint; pinned by tests/test_publisher_formatting.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/hashtags.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Deterministic hashtag generation - a formatting rule, not a model call.",
+      "consumer": "scripts/generate_and_publish.py:224; scripts/research/publish_packages.py:28",
+      "evidence": ":20 imports only the logger. tests/test_hashtags.py (Issue #176) pins that it makes no model call.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/idempotency.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Retry idempotency for Wix and LinkedIn.",
+      "consumer": "scripts/generate_and_publish.py:230",
+      "evidence": ":44-46 and :262-268 import the artifact, package, execution-context and visual-contract modules; pinned by tests/test_wix_idempotency.py and tests/test_linkedin_idempotency.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/image_pipeline.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Image generation, composition and Cloudinary upload; the sole consumer of config/visual_system.yaml, config/prompts/image_generation.yaml, assets/ and data/memory/visual_registry.json.",
+      "consumer": "scripts/research/prepare_content.py:106,:131,:286,:336; scripts/generate_and_publish_visibility.py:39; scripts/generate_image.py:30,:100; src/visual/contract.py:38; scripts/render_card_audit.py:27",
+      "evidence": ":39 LOGO_PATH, :41 REGISTRY_PATH, :42 VISUAL_SYSTEM, :43 IMG_GEN_PROMPT; :474 and :1247 chat(). scripts/generate_and_publish.py:223 imports only CURRENT_DESIGN_VERSION from it, so the Mon/Wed/Fri path does not run the pipeline itself.",
+      "lifecycle": "canonical for the research, visibility and manual image paths",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/instagram.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Instagram publisher implementation.",
+      "consumer": "Imported by scripts/generate_and_publish.py:226 but filtered out by restrict_to_release_scope().",
+      "evidence": "src/publishing/release_scope.py:35-40; tests/test_r1_publish_scope.py.",
+      "lifecycle": "retained deliberately, proven non-automatic",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/linkedin.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "LinkedIn publisher - one of the two R1 auto-publish channels.",
+      "consumer": "scripts/generate_and_publish.py:227",
+      "evidence": "src/publishing/release_scope.py:32 R1_PUBLISH_CHANNELS = (\"wix\", \"linkedin\"). :33-38 imports base, result, package and execution_context.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/package.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Deterministic Wix and LinkedIn publication packages.",
+      "consumer": "scripts/generate_and_publish.py:243; src/publishing/{preflight,linkedin,wix,idempotency}.py",
+      "evidence": ":42-48 imports linkedin_composition, execution_context and the visual contract; paired with docs/STORY_17_EVIDENCE_MAP.md.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/preflight.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Fail-closed publication preflight.",
+      "consumer": "scripts/generate_and_publish.py:236; src/publishing/idempotency.py:199, src/reporting/run_report.py:559",
+      "evidence": ":47-55 imports provenance, package and execution_context; pinned by tests/test_publication_preflight.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/release_scope.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "The authorization boundary naming which channels an automatic run may publish to.",
+      "consumer": "scripts/generate_and_publish.py:258; scripts/generate_and_publish_visibility.py:43; scripts/research/publish_packages.py:31",
+      "evidence": ":32 R1_PUBLISH_CHANNELS, :35-40 NON_R1_PUBLISH_CHANNELS. Its docstring states that adding a channel is a change to this file and nowhere else, and that keeping it implementation-free is what lets a publisher stay importable without becoming reachable.",
+      "lifecycle": "canonical",
+      "action": "none - together with tests/test_r1_publish_scope.py this is the model the proposed guardrail generalizes."
+    },
+    {
+      "path": "src/publishing/result.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Typed publication result.",
+      "consumer": "scripts/generate_and_publish.py:257; every publisher module; src/reporting/run_report.py:284",
+      "evidence": "Import census: ten production importers.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/telegram.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Telegram publisher implementation.",
+      "consumer": "Imported by scripts/generate_and_publish.py:262 but filtered out by restrict_to_release_scope().",
+      "evidence": "src/publishing/release_scope.py:35-40; tests/test_r1_publish_scope.py.",
+      "lifecycle": "retained deliberately, proven non-automatic",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/threads.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Threads publisher implementation.",
+      "consumer": "Imported by scripts/generate_and_publish.py:263 but filtered out by restrict_to_release_scope().",
+      "evidence": "src/publishing/release_scope.py:35-40; tests/test_r1_publish_scope.py.",
+      "lifecycle": "retained deliberately, proven non-automatic",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/wix.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wix publisher - one of the two R1 auto-publish channels.",
+      "consumer": "scripts/generate_and_publish.py:264; scripts/publish.py:41, scripts/live_publish_test.py:37, scripts/smoke_test_wix_image.py:31, scripts/smoke_test_publish_analytics.py:43",
+      "evidence": ":46-53 imports base, result, wix_media, package and execution_context.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/publishing/wix_media.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wix media import for cover images.",
+      "consumer": "src/publishing/wix.py:48 -> scripts/generate_and_publish.py:264",
+      "evidence": "wix.py:48 import; exercised by tests/test_wix_publisher.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/quality/__init__.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Re-exports run_qc and run_checks from the V1 quality gate.",
+      "consumer": "scripts/generate.py:353 (manual dispatch only).",
+      "evidence": "__init__.py:1 imports src.quality.gate, so importing the package pulls in the whole legacy gate.",
+      "lifecycle": "legacy V1, manual only",
+      "action": "See finding F6a."
+    },
+    {
+      "path": "src/quality/duplication.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 duplication check against the memory store.",
+      "consumer": "src/quality/gate.py:30 -> scripts/generate.py --qc (manual dispatch only).",
+      "evidence": ":12 imports src.internal.memory - the link that keeps the V1 memory subtree importable.",
+      "lifecycle": "legacy V1, manual only",
+      "action": "none"
+    },
+    {
+      "path": "src/quality/factuality.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 factuality check; loads config/prompts/qc_factuality.yaml.",
+      "consumer": "src/quality/gate.py:31 -> scripts/generate.py --qc (manual dispatch only).",
+      "evidence": ":68 imports chat, :70 load_prompt(\"qc_factuality\").",
+      "lifecycle": "legacy V1, manual only",
+      "action": "none"
+    },
+    {
+      "path": "src/quality/gate.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 quality gate orchestrating duplication, factuality, voice and rewrite.",
+      "consumer": "scripts/generate.py:353 (manual dispatch only).",
+      "evidence": ":30-33 imports the four checks; :94 loads config/quality.yaml. The canonical path's quality boundary is src/editorial/editorial_acceptance.py instead.",
+      "lifecycle": "legacy V1, manual only",
+      "action": "See finding F6a."
+    },
+    {
+      "path": "src/quality/rewrite.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 rewrite-with-feedback; loads config/brand.yaml and config/prompts/rewrite_with_feedback.yaml.",
+      "consumer": "src/quality/gate.py:33 -> scripts/generate.py --qc (manual dispatch only).",
+      "evidence": ":56 load_brand(), :58 load_prompt(\"rewrite_with_feedback\"), :23 imports the V1 generator.",
+      "lifecycle": "legacy V1, manual only",
+      "action": "none"
+    },
+    {
+      "path": "src/quality/voice.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 voice check; loads config/brand.yaml and config/prompts/qc_voice.yaml.",
+      "consumer": "src/quality/gate.py:32 -> scripts/generate.py --qc (manual dispatch only).",
+      "evidence": ":157 imports chat, :159 load_brand(), :161 load_prompt(\"qc_voice\"). This is the only code path that reads config/brand.yaml for voice purposes, and no scheduled workflow reaches it.",
+      "lifecycle": "legacy V1, manual only",
+      "action": "See finding F3 - the brand voice the product actually uses is not loaded from a file at all."
+    },
+    {
+      "path": "src/reporting/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "R1RunReport contract shape.",
+      "consumer": "scripts/generate_and_publish.py:290",
+      "evidence": "Docstring states it is the typed record for one complete canonical run and that storage is deferred to Issue #16.",
+      "lifecycle": "canonical",
+      "action": "Low. The docstring calls itself a Task #27 stub while src/reporting/run_report.py implements the real report - verify which statement is current."
+    },
+    {
+      "path": "src/reporting/run_report.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "The authoritative per-run validation report.",
+      "consumer": "scripts/generate_and_publish.py:291",
+      "evidence": ":42-43 and :284-618 import code_identity, execution_context, result, idempotency, assignment_record, preflight, artifacts and provenance. Paired with docs/STORY_20_EVIDENCE_MAP.md and tests/test_run_report.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/research/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Provider-neutral research contracts; re-exports the normalized evidence types.",
+      "consumer": "Package marker for src.research.* imports at scripts/generate_and_publish.py:140-148.",
+      "evidence": "__init__.py:3 re-exports from .evidence.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/research/adapters/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Research-provider adapter exports.",
+      "consumer": "scripts/generate_and_publish.py:145-146",
+      "evidence": "__init__.py:3-4 re-exports the Exa adapter and the deterministic fake.",
+      "lifecycle": "canonical",
+      "action": "Low. This re-export is why the test double in fake.py is importable from production code - see that entry."
+    },
+    {
+      "path": "src/research/adapters/direct_url.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Direct-URL research adapter (Wednesday retrieves its own source without Exa).",
+      "consumer": "scripts/generate_and_publish.py:146",
+      "evidence": ":48-82 imports evidence, provider, url_safety and the logger. Pinned by tests/test_wednesday_direct_retrieval.py (Issue #211).",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/research/adapters/exa.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Exa research provider adapter.",
+      "consumer": "scripts/generate_and_publish.py:145",
+      "evidence": ":18-48 imports evidence, provider and url_safety; paired with docs/RESEARCH_PROVIDER_ADAPTER.md.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/research/adapters/fake.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Deterministic research provider double.",
+      "consumer": "tests/test_research_artifact_lifecycle.py:31 and, through it, tests/test_wednesday_golden.py and tests/test_r1_surface_reduction.py",
+      "evidence": "No production construction. It is re-exported by src/research/adapters/__init__.py:4, so it is importable from production code, but no production module references DeterministicFakeResearchProvider.",
+      "lifecycle": "support",
+      "action": "Low. A test double under src/ that the package re-exports is easy to mistake for production code; note it, do not move it in this issue."
+    },
+    {
+      "path": "src/research/assessment.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Evidence assessment - the step between retrieval and readiness.",
+      "consumer": "scripts/generate_and_publish.py:147; src/research/lifecycle.py:12",
+      "evidence": ":35 imports evidence, :291 imports chat. Pinned by tests/test_evidence_assessment.py (Issue #125).",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/research/evidence.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Normalized research evidence contract.",
+      "consumer": "src/research/{provider,lifecycle,assessment}.py, both adapters, src/editorial/{decision_lens_lite,decision_contract,decision_lens_evaluator,decision_lifecycle,source_transparency,sources_of_record,editorial_acceptance,pipeline}.py",
+      "evidence": "Import census: the most widely imported contract module on the canonical path. Paired with docs/RESEARCH_EVIDENCE_CONTRACT.md.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/research/lifecycle.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Canonical research execution, persistence, gating and reuse.",
+      "consumer": "scripts/generate_and_publish.py:148",
+      "evidence": ":9-36 imports artifacts, intake, evidence, assessment, provider, run and execution_context. Paired with docs/RESEARCH_ARTIFACT_LIFECYCLE.md.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/research/provider.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Provider-neutral research interface.",
+      "consumer": "scripts/generate_and_publish.py:140; both adapters; src/research/lifecycle.py:18; src/artifacts/provenance.py:41",
+      "evidence": ":20-22 imports evidence, execution_context and url_safety.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/research/url_safety.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "URL safety checks applied before a source is retrieved.",
+      "consumer": "src/research/provider.py:22, src/research/evidence.py:26, src/research/adapters/exa.py:48, src/research/adapters/direct_url.py:76",
+      "evidence": "Four production importers on the canonical research path.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/run/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Exports RunContext, ExecutionMode and create_run_id.",
+      "consumer": "scripts/generate_and_publish.py:156; src/research/lifecycle.py:35",
+      "evidence": "__init__.py:7 imports from src.run.run_context.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/run/call_budget.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Deterministic ceiling on paid text-model calls per run.",
+      "consumer": "scripts/generate_and_publish.py:126; src/utils/llm_client.py:6; src/editorial/pipeline.py:31",
+      "evidence": "llm_client.py:6 imports it, so the budget is enforced at the single chat() boundary. Pinned by tests/test_run_call_budget.py and tests/test_wednesday_call_budget.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/run/code_identity.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Records which code produced a run, for Story #21 acceptance.",
+      "consumer": "scripts/generate_and_publish.py:125; src/intake/assignment_record.py:23; src/reporting/run_report.py:42",
+      "evidence": ":43 _OUTPUT_ROOTS = (\"reports/\", \"data/\") and the comment at :36 records that the pipeline writes into tracked files under reports/ - the same fact that finding F5 is about, already known to this module.",
+      "lifecycle": "canonical",
+      "action": "Cross-reference for F5: the repository already acknowledges in code that runs write into tracked reports/."
+    },
+    {
+      "path": "src/run/decision_policy.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Run-level decision policy.",
+      "consumer": "scripts/generate_and_publish.py:134; src/artifacts/provenance.py:36",
+      "evidence": ":23 imports execution_context.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/run/run_context.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "RunContext, ExecutionMode and the run-id factory.",
+      "consumer": "src/run/__init__.py:7 -> scripts/generate_and_publish.py:156",
+      "evidence": ":75-76 imports content_assignment and execution_context. The run ids it mints are the directory names enumerated in shard 12.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/strategy/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Strategy domain contract exports.",
+      "consumer": "Package marker for src.strategy.* imports at scripts/generate_and_publish.py:297-314.",
+      "evidence": "__init__.py:3-12 re-exports business_config and execution_context.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/strategy/business_config.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Loads and validates the Business Strategy Configuration.",
+      "consumer": "scripts/generate_and_publish.py:298; scripts/streams/select_eligible_signal.py:53; src/editorial/{editorial_role,never_blank_voice,source_eligibility}.py; src/artifacts/provenance.py:42",
+      "evidence": ":26 DEFAULT_BUSINESS_STRATEGY_PATH = strategy/current/business_strategy.json.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/strategy/content_planner.py",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Monthly content planning; writes strategy/current/content_plan.json and .md.",
+      "consumer": "Only scripts/strategy/build_monthly_plan.py:28, which no workflow executes.",
+      "evidence": "strategy_tests.yml:52-58 py_compiles it; tests/strategy/ exercises it in isolation. Its declared outputs (content_planner.py:15-17) are not tracked files, so nothing shows whether it has ever run.",
+      "lifecycle": "unresolved",
+      "action": "See finding F8d."
+    },
+    {
+      "path": "src/strategy/decision_engine.py",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Drafts strategy-change recommendations for human approval.",
+      "consumer": "Only scripts/strategy/run_weekly_review.py:30 and run_monthly_review.py:23, which no workflow executes.",
+      "evidence": ":32 imports chat, so it can issue a paid call. strategy_tests.yml:52-58 py_compiles it; tests/strategy/test_decision_engine.py exercises it in isolation, proving behaviour but not that anything runs it.",
+      "lifecycle": "unresolved",
+      "action": "See finding F8d."
+    },
+    {
+      "path": "src/strategy/echo_memory.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Reads the last N published entries so the Echo does not repeat itself.",
+      "consumer": "src/strategy/validators.py:203 (lazy import) and src/strategy/content_planner.py:166 -> scripts/generate_and_publish.py:314",
+      "evidence": ":30 imports history; reached from the canonical entrypoint through validators. Pinned by tests/test_monday_echo_contract.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/strategy/execution_context.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Typed strategy views carried through a run; pins the strategy version against the configuration.",
+      "consumer": "scripts/generate_and_publish.py:303; twenty-one production importers across src/",
+      "evidence": ":18 imports business_config; :296-315 pins strategy.json's version against business_strategy.json. The most widely imported module on the canonical path after the logger.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/strategy/history.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Published-content index, strategy archival and the machine decision log.",
+      "consumer": "scripts/generate_and_publish.py:297; scripts/research/publish_packages.py:339; src/analytics/orchestrator.py:37; src/strategy/echo_memory.py:30; scripts/strategy/approve_strategy_recommendation.py:39",
+      "evidence": ":45-54 defines every strategy/ output path, including the six directories preserved by .gitkeep files in shard 04.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/strategy/loader.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Loads strategy/current/strategy.json as the active cycle's source of truth.",
+      "consumer": "scripts/generate_and_publish.py:312; scripts/generate_and_publish_visibility.py:50; scripts/research/publish_packages.py:22; scripts/smoke_test_publish_analytics.py:47; all three scripts/strategy tools",
+      "evidence": ":19 _STRATEGY_PATH.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/strategy/market_analyzer.py",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Monthly market analysis over enriched signals.",
+      "consumer": "Only scripts/strategy/build_monthly_plan.py:27, which no workflow executes.",
+      "evidence": ":24 imports src.strategy.pattern_extractor. strategy_tests.yml:52-58 py_compiles it. Its input directory (reports/signals/, scripts/strategy/build_monthly_plan.py:33) does not exist in the repository.",
+      "lifecycle": "unresolved",
+      "action": "See finding F8d. The missing reports/signals/ input is the strongest single indication this path has not run."
+    },
+    {
+      "path": "src/strategy/models.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Strategy, analytics and visibility-queue models, including ProductCategory.",
+      "consumer": "scripts/generate_and_publish.py:313; scripts/generate_and_publish_visibility.py:51; src/analytics/*; src/strategy/*",
+      "evidence": ":24 imports src.models; :69-72 ProductCategory supplies the three keys src/editorial/vi_pipeline.py:80 builds its prompt path from; :292 documents the visibility_queue.jsonl entry shape.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/strategy/pattern_extractor.py",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Extracts patterns from published-content history for the strategy cycle.",
+      "consumer": "Only src/strategy/market_analyzer.py:24 -> scripts/strategy/build_monthly_plan.py, which no workflow executes.",
+      "evidence": ":31 imports chat, so it can issue a paid call. strategy_tests.yml:52-58 py_compiles it; tests/strategy/test_pattern_extractor.py exercises it in isolation.",
+      "lifecycle": "unresolved",
+      "action": "See finding F8d. Not to be confused with src/editorial/pattern_extractor.py, which is canonical."
+    },
+    {
+      "path": "src/strategy/validators.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Strategy validation, including the visibility quota and the output-guard bridge.",
+      "consumer": "scripts/generate_and_publish.py:314; scripts/generate_and_publish_visibility.py:55; scripts/research/publish_packages.py:21",
+      "evidence": ":203 lazily imports echo_memory; :259 imports src.content.output_guard.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/utils/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Package marker (empty file).",
+      "consumer": "Every src.utils.* import; scripts/generate_and_publish.py:315.",
+      "evidence": "0 lines.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/utils/config_loader.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "load_yaml/load_prompt plus the five V1 named loaders.",
+      "consumer": "src/editorial/vi_pipeline.py:36 (canonical for Tue/Thu), scripts/research/{discover,score,enrich,angles,prepare_content}.py (canonical for the research stream); the V1 loaders are reached only from scripts/generate.py and scripts/dry_run.py",
+      "evidence": ":38-53 load_prompt with the status: not_needed guard; :73-90 load_brand/load_strategy/load_quality/load_platforms/load_intelligence, none of which has a caller on a scheduled path.",
+      "lifecycle": "canonical, with five legacy entry points",
+      "action": "Recorded for F6a/F7: one module is both the canonical prompt loader and the only reason five legacy config files appear to have consumers."
+    },
+    {
+      "path": "src/utils/env_validator.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Validates required NB_* environment variables.",
+      "consumer": "scripts/generate.py:33, scripts/dry_run.py:23",
+      "evidence": "Mirrors the variables documented in .env.example.",
+      "lifecycle": "canonical",
+      "action": "Low. Despite being the environment gate, it is imported only by the two manual entrypoints - confirm the canonical path's own validation is intentional."
+    },
+    {
+      "path": "src/utils/google_sheets.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Google Sheets client.",
+      "consumer": "scripts/generate.py:398; used by scripts/research/sync_to_sheets.py, which run_daily_research.py:31 imports",
+      "evidence": "Reached on the daily research path through sync_to_sheets.",
+      "lifecycle": "canonical for the research stream",
+      "action": "See finding F8b for the unreached inbound half (sync_from_sheets.py)."
+    },
+    {
+      "path": "src/utils/llm_client.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "The single paid text-model boundary; chat() is the function this audit treats as 'the production model message'.",
+      "consumer": "46 importers across src/ and scripts/, including every editorial stage on every stream.",
+      "evidence": ":6 imports the call budget, so every paid call is metered at one place. This is the boundary tests/strategy/test_strategy_semantic_consumption.py patches to prove semantic consumption.",
+      "lifecycle": "canonical",
+      "action": "none - the proposed guardrail should assert at this boundary."
+    },
+    {
+      "path": "src/utils/logger.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Shared logger factory.",
+      "consumer": "81 importers across src/ and scripts/.",
+      "evidence": "Import census.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "src/visual/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "VisualArtifactRequest - the typed visual-artifact boundary carrying run_id.",
+      "consumer": "scripts/generate_and_publish.py:316",
+      "evidence": ":18 and :55 import execution_context. Its docstring states that in Release 1 this boundary always returns a blocked result and the canonical path calls the image pipeline directly.",
+      "lifecycle": "canonical",
+      "action": "Low. A boundary that always blocks is easy to misread as broken; the docstring is the only thing that says it is intentional."
+    },
+    {
+      "path": "src/visual/contract.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Canonical visual contract and fail-closed channel gate.",
+      "consumer": "scripts/generate_and_publish.py:207; src/artifacts/provenance.py:44, src/publishing/idempotency.py:268, src/publishing/package.py:48",
+      "evidence": ":37-38 imports linkedin_composition and image_pipeline. Paired with docs/VISUAL_CONTRACT.md and tests/test_visual_contract.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    }
+  ]
+}

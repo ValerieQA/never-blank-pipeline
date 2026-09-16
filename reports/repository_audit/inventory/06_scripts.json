@@ -1,0 +1,315 @@
+{
+  "shard": "06_scripts",
+  "area": "scripts",
+  "tracked_files": 34,
+  "enumeration": "git ls-files scripts",
+  "method_note": "A script is ACTIVE only when a .github/workflows job step invokes it, or a script that one does imports it. py_compile in a CI job is not execution.",
+  "entries": [
+    {
+      "path": "scripts/ci/check_test_baseline.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Fail-closed comparator between a pytest run and the accepted-failure baseline.",
+      "consumer": "pr_tests.yml:54",
+      "evidence": "Docstring :1-42 documents the fail-closed guarantees; it rejects unparseable pytest output and fails on both new and resolved failures. Reads tests/accepted_full_suite_failures.txt.",
+      "lifecycle": "canonical CI gate",
+      "action": "none - this is the existing model for a durable repository guardrail."
+    },
+    {
+      "path": "scripts/create_fixture.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Builds a draft fixture for the manual publish workflow.",
+      "consumer": "publish.yml:40",
+      "evidence": "publish.yml:40 invokes it before the image and publish steps.",
+      "lifecycle": "operational",
+      "action": "none"
+    },
+    {
+      "path": "scripts/dry_run.py",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Phase 0/1/2 foundation validator.",
+      "consumer": "None. No workflow runs it; no test imports it.",
+      "evidence": "It is the sole loader of config/intelligence.yaml (:82) and of the three otherwise-orphaned prompts (:95-105), which is why those four artifacts still appear to have a consumer. :299 prints 'config/prompts/ (9 prompts) - real content, status=ready' , a count that no longer matches the directory.",
+      "lifecycle": "orphaned developer tool",
+      "action": "See finding F7. Its status decides three prompt files and one config file. Do not delete on static evidence alone."
+    },
+    {
+      "path": "scripts/generate.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 content generation entrypoint (topic -> matrix -> platform outputs -> optional QC).",
+      "consumer": "generate_content.yml:47, generate_and_publish.yml:52 - workflow_dispatch only.",
+      "evidence": ":32-40 imports the entire legacy subtree (src/internal/*, src/content/*, src/models); :353 imports src.quality.gate; :398 imports src.utils.google_sheets. No cron reaches either workflow.",
+      "lifecycle": "legacy, manual only",
+      "action": "See finding F6a."
+    },
+    {
+      "path": "scripts/generate_and_publish.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "The canonical Release 1 entrypoint - the single authorized controlled execution path.",
+      "consumer": "monday_publish.yml:271, wednesday_golden.yml:211, research_generate_and_publish.yml:170",
+      "evidence": "Module docstring :1-100 states the canonical call flow; :117-316 imports 60 modules across src/; :320-321 PACKAGES_DIR = reports/content_packages with .mkdir() at import time; :323-324 names the two tracked signal files; :331 HISTORY_FILE.",
+      "lifecycle": "canonical",
+      "action": "See findings F1 (Wednesday role discarded) and F5 (the import-time mkdir under a tracked path)."
+    },
+    {
+      "path": "scripts/generate_and_publish_visibility.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Visibility Intelligence generate + publish for the Tuesday/Thursday stream.",
+      "consumer": "visibility_publish.yml:93",
+      "evidence": ":37 imports src.editorial.vi_pipeline; :60-61 reads data/strategy/visibility_queue.jsonl and writes visibility_history.jsonl; :62-63 PACKAGES_DIR with mkdir; :426 writes reports/content_packages/{id}_generated.json.",
+      "lifecycle": "active",
+      "action": "See finding F4c."
+    },
+    {
+      "path": "scripts/generate_image.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Manual image-pipeline run and self-check.",
+      "consumer": "generate_image.yml:35,:46; publish.yml:51; generate_and_publish.yml",
+      "evidence": ":30 and :100 import src.publishing.image_pipeline; :102-116 prints each required input (config/visual_system.yaml, config/prompts/image_generation.yaml, data/memory/visual_registry.json) as a checked precondition.",
+      "lifecycle": "operational",
+      "action": "none"
+    },
+    {
+      "path": "scripts/live_publish_test.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Phase 5D live publish test - makes real posts to every channel.",
+      "consumer": "live_publish_test.yml:63-65 (workflow_dispatch only)",
+      "evidence": ":15-17 names reports/live_publish_test.{json,md} and reports/raw/ as its outputs; :35-42 imports every publisher including the four non-R1 ones.",
+      "lifecycle": "operational, manual only",
+      "action": "none - manual dispatch is the intended authorization boundary. It bypasses release_scope by design."
+    },
+    {
+      "path": "scripts/publish.py",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 multi-channel publisher from data/drafts/latest.",
+      "consumer": "generate_and_publish.yml:106-108, publish.yml:79-81 - workflow_dispatch only.",
+      "evidence": ":39-46 imports all six publishers without consulting src/publishing/release_scope.py; :24-25 names reports/publish_report.{json,md}. Not serialized in the never-blank-publish concurrency group.",
+      "lifecycle": "legacy, manual only",
+      "action": "Confirm it should remain dispatchable; it can publish live to channels an automatic run may not reach."
+    },
+    {
+      "path": "scripts/render_card_audit.py",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "One-off renderer that produced the 26 PNGs in reports/card_audit/.",
+      "consumer": "None. No workflow, no test.",
+      "evidence": "Docstring :5-8 gives a manual invocation and names reports/card_audit/ as the output; :27 and :233 import src.publishing.image_pipeline; :265 prints the expected file count.",
+      "lifecycle": "one-off tool",
+      "action": "Low. Confirm it is kept for reproducing the card audit; it and its 26 outputs stand or fall together."
+    },
+    {
+      "path": "scripts/research/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Package marker for the daily research stages.",
+      "consumer": "scripts/research/run_daily_research.py:25-32 imports the stages as scripts.research.*",
+      "evidence": "Required for the package-qualified imports the runner uses.",
+      "lifecycle": "canonical for the research stream",
+      "action": "none"
+    },
+    {
+      "path": "scripts/research/angles.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Stage 4 - angle generation.",
+      "consumer": "scripts/research/run_daily_research.py:28 -> daily_signal_research.yml:85",
+      "evidence": ":36 load_prompt(\"research/angles\"); :12 imports chat.",
+      "lifecycle": "canonical for the research stream",
+      "action": "none"
+    },
+    {
+      "path": "scripts/research/archive.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Stage 9 - moves signals older than 60 days into data/research/archive/.",
+      "consumer": "scripts/research/run_daily_research.py:32 -> daily_signal_research.yml:85",
+      "evidence": ":17-19 ACTIVE_FILE, SELECTED_FILE and ARCHIVE_DIR; :82-83 appends to data/research/archive/signals_{month}.jsonl. Those monthly archives are untracked (.gitignore:24-25 keeps only the .gitkeep), which is why they do not appear in this inventory.",
+      "lifecycle": "canonical for the research stream",
+      "action": "Cross-reference: this is the automatic archive, not data/research/signals_archived_corporate_backlog.jsonl, which is a one-off audit record."
+    },
+    {
+      "path": "scripts/research/discover.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Stage 1 - feed discovery, signal selection and enrichment.",
+      "consumer": "scripts/research/run_daily_research.py:25 -> daily_signal_research.yml:85",
+      "evidence": ":26 SOURCES_CONFIG = config/research_sources.yaml; :99 load_prompt(\"research/signal_selector\"); :130 load_prompt(\"research/signal_enrichment\"); :237 reads data/research/seen_index.json.",
+      "lifecycle": "canonical for the research stream",
+      "action": "none"
+    },
+    {
+      "path": "scripts/research/enrich.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Stage 3 - signal enrichment.",
+      "consumer": "scripts/research/run_daily_research.py:27 -> daily_signal_research.yml:85",
+      "evidence": ":76 load_prompt(\"research/enrich\"); :12 imports chat.",
+      "lifecycle": "canonical for the research stream",
+      "action": "none"
+    },
+    {
+      "path": "scripts/research/prepare_content.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Stage 10 - builds the per-signal content package and its platform images.",
+      "consumer": "scripts/research/run_daily_research.py:29 -> daily_signal_research.yml:85; also scripts/generate_and_publish.py:2425",
+      "evidence": ":14-16 names reports/content_packages/{SIGNAL_ID}.json as its output; :34-36 reads selected_signals.jsonl and image_library.json; :63 load_prompt(\"research/content_package\"); :106,:131,:286,:336 import the image pipeline.",
+      "lifecycle": "canonical for the research stream",
+      "action": "none - this is the writer of the 46 tracked flat content packages in shard 11."
+    },
+    {
+      "path": "scripts/research/publish_packages.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Stage 11 - optional publication of prepared packages.",
+      "consumer": "scripts/research/run_daily_research.py:30 -> daily_signal_research.yml:85, gated by NB_RESEARCH_PUBLISH_ENABLED",
+      "evidence": ":17-42 imports the output guard, validators, editorial pipeline, every publisher and release_scope; :42 PACKAGES_DIR; :339-340 appends to strategy/published_content_index.jsonl.",
+      "lifecycle": "canonical for the research stream",
+      "action": "See finding F4d - whether this stage publishes on a given day is decided by a secret, not by anything in the repository."
+    },
+    {
+      "path": "scripts/research/run_daily_research.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Runs research stages 1-11 in order.",
+      "consumer": "daily_signal_research.yml:85",
+      "evidence": ":25-32 imports nine sibling stages - every scripts/research module except sync_from_sheets.py; :37-39 names the three tracked data/research files; :253 writes reports/research_{date}.json.",
+      "lifecycle": "canonical for the research stream",
+      "action": "none"
+    },
+    {
+      "path": "scripts/research/score.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Stage 2 - signal scoring.",
+      "consumer": "scripts/research/run_daily_research.py:26 -> daily_signal_research.yml:85",
+      "evidence": ":19 WEIGHTS_CONFIG = config/scoring_weights.yaml; :40 load_prompt(\"research/score\"); :14 imports chat.",
+      "lifecycle": "canonical for the research stream",
+      "action": "none"
+    },
+    {
+      "path": "scripts/research/sync_from_sheets.py",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Documented as 'Stage 8: Pull edits from Sheets' by docs/NEVER_BLANK_RESEARCH_PIPELINE.md:75.",
+      "consumer": "None that executes. run_daily_research.py:31 imports sync_to_sheets but not sync_from_sheets; no workflow invokes it directly.",
+      "evidence": ":17 ACTIVE_FILE = data/research/signals_active.jsonl, so it can rewrite the signal source of truth. Its only repository consumer is tests/test_research_pipeline.py:14, which imports ALLOWED_FIELDS. docs/STORY_17_EVIDENCE_MAP.md:61 discusses it as if operating.",
+      "lifecycle": "unresolved",
+      "action": "See finding F8b. Either it is a manual operator step (say so) or the documented Stage 8 does not run."
+    },
+    {
+      "path": "scripts/research/sync_to_sheets.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Stage 7 - push signals to the operator's sheet.",
+      "consumer": "scripts/research/run_daily_research.py:31 -> daily_signal_research.yml:85",
+      "evidence": ":16 ACTIVE_FILE = data/research/signals_active.jsonl; reached through src/utils/google_sheets.py.",
+      "lifecycle": "canonical for the research stream",
+      "action": "none - note only the outbound half of the Sheets round trip runs (F8b)."
+    },
+    {
+      "path": "scripts/run_analytics.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Manual analytics-only run.",
+      "consumer": "run_analytics.yml:25; smoke_test_full_cycle.yml:118",
+      "evidence": ":33-35 imports the three analytics modules; :35 calls run_analytics_pipeline().",
+      "lifecycle": "operational",
+      "action": "none"
+    },
+    {
+      "path": "scripts/scheduled_publish.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Legacy Friday publisher.",
+      "consumer": "scheduled_publish.yml:86-93",
+      "evidence": ":4 documents that it checks config/schedule.yaml before running; :25 imports scripts.streams.due_check, so it shares the authoritative timezone check with Monday and Wednesday.",
+      "lifecycle": "legacy-but-live",
+      "action": "See findings F4a and F4b."
+    },
+    {
+      "path": "scripts/smoke_test_publish_analytics.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Manual publish + analytics smoke test.",
+      "consumer": "smoke_test_full_cycle.yml:81",
+      "evidence": ":39-49 imports analytics, publishing and strategy modules; :55 PACKAGES_DIR; :56 HISTORY_FILE = strategy/published_content_index.jsonl.",
+      "lifecycle": "operational",
+      "action": "Low. It appends to the production published-content index; confirm that is intended for a smoke test."
+    },
+    {
+      "path": "scripts/smoke_test_wix_image.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Manual Wix cover-image smoke test.",
+      "consumer": "smoke_test_wix_image.yml:42",
+      "evidence": ":13 and :36 name reports/content_packages/wix_coverimage_test_generated.json as its fixture - a file that is not tracked, so the workflow must create it.",
+      "lifecycle": "operational",
+      "action": "Low. Its declared fixture does not exist in the repository; confirm the workflow generates it."
+    },
+    {
+      "path": "scripts/strategy/__init__.py",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Package marker for the strategy operator tooling.",
+      "consumer": "No workflow executes any module in this package.",
+      "evidence": "strategy_tests.yml:64-67 py_compiles four of the five modules here; no test imports them.",
+      "lifecycle": "operator tooling, compile-only coverage",
+      "action": "See finding F8d."
+    },
+    {
+      "path": "scripts/strategy/approve_strategy_recommendation.py",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Human approval of a drafted strategy change - the gate that makes a new strategy.json active.",
+      "consumer": "No workflow executes it. No test imports it.",
+      "evidence": ":39-48 imports history, loader and models; :52-57 reads strategy/reviews/recommendations/{id}.json; :162 writes through src/strategy/history.py. This is the only code path that can promote a recommendation to the active strategy.",
+      "lifecycle": "operator tooling, compile-only coverage",
+      "action": "See finding F8d. An approval gate with no proven execution path is the highest-consequence member of this group."
+    },
+    {
+      "path": "scripts/strategy/build_monthly_plan.py",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Builds the monthly content plan from enriched research signals.",
+      "consumer": "No workflow executes it.",
+      "evidence": ":26-29 imports loader, market_analyzer and content_planner - it is the sole production consumer of two of the four unexecuted src/strategy modules. :33 _SIGNALS_DIR = reports/signals/, a directory that does not exist in the repository.",
+      "lifecycle": "operator tooling, compile-only coverage",
+      "action": "See finding F8d. Its declared input directory is absent, which suggests it has never run in this checkout."
+    },
+    {
+      "path": "scripts/strategy/run_monthly_review.py",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Monthly strategy review; drafts a recommendation into strategy/reviews/recommendations/.",
+      "consumer": "No workflow executes it.",
+      "evidence": ":23-26 imports decision_engine, loader and models; :32,:113-114 writes the recommendation JSON. Covered only by strategy_tests.yml:64-67 py_compile.",
+      "lifecycle": "operator tooling, compile-only coverage",
+      "action": "See finding F8d."
+    },
+    {
+      "path": "scripts/strategy/run_weekly_review.py",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Weekly strategy review.",
+      "consumer": "No workflow executes it.",
+      "evidence": ":30-32 imports decision_engine and loader; writes into strategy/reviews/weekly/. Covered only by strategy_tests.yml:64-67 py_compile.",
+      "lifecycle": "operator tooling, compile-only coverage",
+      "action": "See finding F8d."
+    },
+    {
+      "path": "scripts/streams/__init__.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Package marker for the scheduling/selection stream tools.",
+      "consumer": "scripts/scheduled_publish.py:25 imports scripts.streams.due_check; monday_publish.yml and wednesday_golden.yml invoke the modules directly.",
+      "evidence": "Required for the package-qualified import at scheduled_publish.py:25.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "scripts/streams/due_check.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "The authoritative scheduling-window decision, shared by all three publishing days.",
+      "consumer": "monday_publish.yml:88, wednesday_golden.yml:61, scheduled_publish.yml (via scripts/scheduled_publish.py:25)",
+      "evidence": "Each caller passes --decision-out, so a JSON decision record is written under reports/scheduling/ on every path including skips. Those records are untracked.",
+      "lifecycle": "canonical",
+      "action": "none - one module owning the window for all three days is the correct shape; the duplication in F4a is at the workflow level, not here."
+    },
+    {
+      "path": "scripts/streams/select_eligible_signal.py",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Role-eligibility signal selection for the Monday stream.",
+      "consumer": "monday_publish.yml:162",
+      "evidence": ":47-53 imports editorial_role, source_eligibility and business_config; :101-102 defaults to data/research/signals_active.jsonl and published_signal_ids.txt; :148 judges each candidate. Circuit breaker pinned by tests/test_selector_circuit_breaker.py.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "scripts/test_publishers.py",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Credential and connectivity audit across every publisher.",
+      "consumer": "connectivity_audit.yml:67-69",
+      "evidence": ":16-17 names reports/connectivity_audit.{json,md} as its outputs; :1050 checks assets/logo/never-blank-logo.png exists before a Cloudinary upload.",
+      "lifecycle": "operational",
+      "action": "Low. pytest.ini declares no testpaths and pr_tests.yml:42 runs `python3 -m pytest` from the repository root, so default collection does match this file's test_*.py name and imports it; it defines no test_* function, so nothing is collected from it. The test_ prefix on an operational script that touches live credentials is a naming hazard worth removing."
+    }
+  ]
+}

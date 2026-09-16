@@ -1,0 +1,89 @@
+{
+  "shard": "02_repository_root",
+  "area": "repository root",
+  "tracked_files": 9,
+  "enumeration": "git ls-files with every tracked subdirectory excluded",
+  "entries": [
+    {
+      "path": ".env.example",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Documents every NB_* variable for local setup.",
+      "consumer": "humans; the variable set is mirrored by src/utils/env_validator.py",
+      "evidence": ".env.example:1-5. No code reads this file; env_validator.py validates the live environment, not the example.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": ".gitignore",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Declares which generated data is tracked; the tracked exceptions under data/ are a deliberate repository contract.",
+      "consumer": "git",
+      "evidence": ".gitignore:3-25 ignores data/* and then whitelists eight specific files by name, each with a reason (:18 names Issue #142 for the corporate-backlog archive); :27 ignores reports/content_packages/images/; :28 records that the logo and fonts must not be ignored.",
+      "lifecycle": "support",
+      "action": "See finding F5 - it does not protect reports/content_packages/<signal_id>/runs/ from test output."
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Architecture overview.",
+      "consumer": "humans; indexed by docs/SYSTEM_MAP.md:77",
+      "evidence": "No code or workflow reference.",
+      "lifecycle": "documentation",
+      "action": "none"
+    },
+    {
+      "path": "IMPLEMENTATION_PLAN.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Implementation log.",
+      "consumer": "humans; indexed by docs/SYSTEM_MAP.md:78",
+      "evidence": "No code or workflow reference.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "PHASE_5D_REPORT.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Phase 5D live-publish record.",
+      "consumer": "humans",
+      "evidence": "No code or workflow reference.",
+      "lifecycle": "historical record",
+      "action": "none"
+    },
+    {
+      "path": "PHASE_6_SCHEDULING.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Phase 6 scheduling record.",
+      "consumer": "humans",
+      "evidence": "No code or workflow reference. Describes a scheduling arrangement that #224, #226 and #232 have since replaced.",
+      "lifecycle": "historical record",
+      "action": "Superseded in substance by the #224/#226/#232 scheduling work; verify before citing."
+    },
+    {
+      "path": "pytest.ini",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Declares the story9/10/11/12 acceptance-gate markers.",
+      "consumer": "pytest, every CI job",
+      "evidence": "pytest.ini:2-7 marker declarations; the markers are used by tests/test_story9_gate.py, test_story10_gate.py, test_story12_gate.py and siblings.",
+      "lifecycle": "support",
+      "action": "none"
+    },
+    {
+      "path": "requirements.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Runtime dependency set.",
+      "consumer": "monday_publish.yml, wednesday_golden.yml, research_generate_and_publish.yml, run_analytics.yml, pr_tests.yml (pip install -r requirements.txt)",
+      "evidence": "monday_publish.yml:106; pr_tests.yml:32.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "topics_manual.csv",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Manual topic queue for the V1 generator.",
+      "consumer": "src/internal/topic_prioritizer.py -> scripts/generate.py:34 -> generate_content.yml / generate_and_publish.yml (workflow_dispatch only)",
+      "evidence": "src/internal/topic_prioritizer.py declares the manual queue; no scheduled workflow reaches scripts/generate.py.",
+      "lifecycle": "legacy",
+      "action": "none"
+    }
+  ]
+}

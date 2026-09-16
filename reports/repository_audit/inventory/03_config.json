@@ -1,0 +1,395 @@
+{
+  "shard": "03_config",
+  "area": "config",
+  "tracked_files": 43,
+  "enumeration": "git ls-files config",
+  "entries": [
+    {
+      "path": "config/brand.yaml",
+      "classification": "PRODUCT_CONFIG_UNWIRED",
+      "purpose": "Brand identity (palette, fonts, logo) and voice fields; declared to the configuration as prompt rule reference 'brand-identity'.",
+      "consumer": "Legacy only: src/utils/config_loader.py:73-74 load_brand() <- src/quality/voice.py:159, src/quality/rewrite.py:56, src/internal/strategy.py:73 - all reachable only from scripts/generate.py and scripts/dry_run.py.",
+      "evidence": "Declared at strategy/current/business_strategy.json:307-311 as a rule the product runs on, but no canonical entrypoint reaches load_brand(). scripts/generate.py is invoked only by generate_content.yml:47 and generate_and_publish.yml:52, both workflow_dispatch-only.",
+      "lifecycle": "declared-but-unconsumed on every scheduled path",
+      "action": "See finding F3."
+    },
+    {
+      "path": "config/brand_voice.md",
+      "classification": "PRODUCT_CONFIG_UNWIRED",
+      "purpose": "Brand voice: tone, forbidden phrases, hook rules, platform differences. Declared to the configuration as prompt rule reference 'brand-voice'.",
+      "consumer": "None. No production or legacy code opens this file.",
+      "evidence": "Declared at strategy/current/business_strategy.json:312-316. The only reader in the repository is tests/test_cross_platform_overlap_policy.py:333, which reads its text to assert a rule was removed - making the file look governed when nothing loads it. docs/SYSTEM_MAP.md:5 presents it as the brand voice source.",
+      "lifecycle": "declared-but-unconsumed",
+      "action": "See finding F3 - highest-value single artifact in this class."
+    },
+    {
+      "path": "config/content_matrix.yaml",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Presented as the content-matrix configuration by docs/SYSTEM_MAP.md:28.",
+      "consumer": "None. No code path opens it - not even the V1 generator, which uses config/prompts/content_matrix.yaml instead.",
+      "evidence": "The only occurrence of the string 'config/content_matrix.yaml' in the repository is docs/SYSTEM_MAP.md:28. src/utils/config_loader.py declares no loader for it.",
+      "lifecycle": "orphaned",
+      "action": "See finding F7. Do not delete on static evidence alone; confirm with the owner."
+    },
+    {
+      "path": "config/intelligence.yaml",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Intelligence-engine sources and scoring weights.",
+      "consumer": "None that executes. load_intelligence() (src/utils/config_loader.py:89-90) is called only by scripts/dry_run.py:82, which no workflow runs.",
+      "evidence": "config/intelligence.yaml:1 reads 'sources: []  # populated in Phase 7 (Intelligence Engine)' - an unimplemented phase. Listed as current by docs/SYSTEM_MAP.md:29.",
+      "lifecycle": "orphaned",
+      "action": "See finding F7."
+    },
+    {
+      "path": "config/never_blank/wednesday_golden.yaml",
+      "classification": "PRODUCT_CONFIG_UNWIRED",
+      "purpose": "Strict Wednesday Golden product profile: reasoning movement, prohibitions, title contract, text shape, source policy.",
+      "consumer": "None in production. WednesdayGoldenProfile.load() has no caller in src/ or scripts/.",
+      "evidence": "src/never_blank/wednesday_golden.py:167 load() and :186 generation_rules() are called only from tests/test_wednesday_golden.py (PROFILE_PATH at :52) and tests/test_no_mandatory_thesis.py:296, plus tests/test_wednesday_diagnostics.py:127 which parses the YAML directly. The module's own docstring at :199-203 states the canonical entrypoint uses the generic renderer instead. The production Wednesday role is strategy/current/business_strategy.json:398-446.",
+      "lifecycle": "superseded by business_strategy.json",
+      "action": "See finding F2 - two declarations of one product contract; name the source of truth."
+    },
+    {
+      "path": "config/platforms.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 per-channel strategy and limits.",
+      "consumer": "src/utils/config_loader.py:85-86 load_platforms() -> src/internal/strategy.py, src/internal/memory.py -> scripts/generate.py, scripts/dry_run.py (manual dispatch only).",
+      "evidence": "load_platforms() has no caller on any scheduled path. The R1 channel rule that actually executes is src/publishing/release_scope.py:32.",
+      "lifecycle": "legacy V1",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/blog_post.yaml",
+      "classification": "PRODUCT_CONFIG_UNWIRED",
+      "purpose": "The article-generation prompt named by docs/SYSTEM_MAP.md:30 as 'Blog generation prompt'.",
+      "consumer": "src/content/generator.py:126 _call_validated(\"blog_post\", ...) -> scripts/generate.py -> generate_content.yml / generate_and_publish.yml, both workflow_dispatch-only.",
+      "evidence": "No scheduled workflow reaches scripts/generate.py. The articles the product actually publishes on Mon/Wed/Fri are built from hardcoded _SYSTEM_PROMPT constants in src/editorial/*.py and src/never_blank/wednesday_july/*.py plus the business_strategy.json role rules. Its own header says status: ready (line 2), so nothing about the file signals disuse.",
+      "lifecycle": "legacy V1, unreachable from any scheduled run",
+      "action": "See finding F6a - the file that looks like the product's article prompt is not the product's article prompt."
+    },
+    {
+      "path": "config/prompts/content_matrix.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 content-matrix prompt.",
+      "consumer": "src/content/matrix.py:88 load_prompt(\"content_matrix\") -> scripts/generate.py (manual dispatch only).",
+      "evidence": "matrix.py:88. Not in the prompt list scripts/dry_run.py:95-100 validates, so even the dry-run harness does not cover it.",
+      "lifecycle": "legacy V1",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/decision_lens/never_blank.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Decision Lens instruction artifact.",
+      "consumer": "src/editorial/decision_lens_evaluator.py:57-61 -> scripts/generate_and_publish.py:192 -> decision_lens_evaluator.py:672 chat()",
+      "evidence": "decision_lens_evaluator.py:21 documents the artifact location; :57-61 resolves config/prompts/decision_lens/never_blank.yaml; :672 imports chat and issues the evaluation call.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/editorial_acceptance/never_blank.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Release 1 editorial acceptance rubric (default / Monday).",
+      "consumer": "src/editorial/editorial_acceptance.py DEFAULT_RUBRIC_PATH -> EditorialAcceptanceRubric.load() -> run_editorial_acceptance() from scripts/generate_and_publish.py:212",
+      "evidence": "editorial_acceptance.py:381 and :390 import chat; the rubric's instructions become the reviewer model's instruction string. tests/test_wednesday_diagnostics.py:65 names it MONDAY_RUBRIC.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/editorial_acceptance/never_blank_golden_wednesday.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Wednesday Golden acceptance rubric.",
+      "consumer": "strategy/current/business_strategy.json:442 acceptance_rubric_path -> scripts/generate_and_publish.py:924 _editorial_acceptance_path -> EditorialAcceptanceRubric.load()",
+      "evidence": "business_strategy.json:442-443 names path and identity; generate_and_publish.py:924-925 carries both. tests/test_wednesday_golden.py:54 pins the path.",
+      "lifecycle": "canonical",
+      "action": "none - acceptance is wired even though Wednesday generation is not (F1)."
+    },
+    {
+      "path": "config/prompts/facebook_post.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 Facebook post prompt.",
+      "consumer": "src/content/generator.py:151 -> scripts/generate.py (manual dispatch only).",
+      "evidence": "Facebook is excluded from automatic publication by src/publishing/release_scope.py:32-40 and pinned by tests/test_r1_publish_scope.py.",
+      "lifecycle": "legacy, deliberately non-R1",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/image_generation.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Image-generation instruction text and style suffix.",
+      "consumer": "src/publishing/image_pipeline.py:43 IMG_GEN_PROMPT -> :166 open() -> :474 and :1247 chat() -> reachable from scripts/research/prepare_content.py:106,:131, scripts/generate_and_publish_visibility.py:39 and scripts/generate_image.py:30",
+      "evidence": "image_pipeline.py:43 resolves the path and :166 opens it; scripts/generate_image.py:107 prints it as a checked input. Reached on the daily research, Tue/Thu visibility and manual image paths.",
+      "lifecycle": "wired on the research, visibility and manual image paths",
+      "action": "none. Not reached from scripts/generate_and_publish.py, which imports only CURRENT_DESIGN_VERSION from image_pipeline (generate_and_publish.py:223)."
+    },
+    {
+      "path": "config/prompts/image_hook.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Explicitly retired prompt.",
+      "consumer": "None by design. src/utils/config_loader.py:49-53 raises ValueError for status: not_needed.",
+      "evidence": "Line 2 carries status: not_needed; scripts/dry_run.py:101 lists it among the not_needed set and :114-121 asserts load_prompt() raises for it.",
+      "lifecycle": "retired, self-declaring",
+      "action": "none - this in-band retirement marker is the pattern the orphans in this directory should adopt."
+    },
+    {
+      "path": "config/prompts/instagram_caption.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 Instagram caption prompt.",
+      "consumer": "src/content/generator.py:142 -> scripts/generate.py (manual dispatch only).",
+      "evidence": "Instagram is excluded from automatic publication by src/publishing/release_scope.py:32-40.",
+      "lifecycle": "legacy, deliberately non-R1",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/linkedin_post.yaml",
+      "classification": "PRODUCT_CONFIG_UNWIRED",
+      "purpose": "LinkedIn post prompt per docs/SYSTEM_MAP.md:35.",
+      "consumer": "src/content/generator.py:134 -> scripts/generate.py (manual dispatch only).",
+      "evidence": "The published LinkedIn derivative comes from src/editorial/platform_composer.py:511 via src/editorial/linkedin_composition.py, which never loads this file. tests/test_cross_platform_overlap_policy.py:313-321 reads its text to assert a withdrawn rule is absent - an assertion on a file production does not load.",
+      "lifecycle": "legacy V1",
+      "action": "See findings F6a and F9d."
+    },
+    {
+      "path": "config/prompts/observation_discovery.yaml",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Observation-discovery prompt; listed as current under docs/SYSTEM_MAP.md:55-58.",
+      "consumer": "None that executes. The only loader is scripts/dry_run.py:95-105, which no workflow runs.",
+      "evidence": "No load_prompt(\"observation_discovery\") call exists outside scripts/dry_run.py:95. Its status is ready (line 2), so nothing about the file signals disuse.",
+      "lifecycle": "orphaned",
+      "action": "See finding F7. Do not delete on static evidence alone; confirm with the owner, then either mark status accordingly or remove with the dry-run harness."
+    },
+    {
+      "path": "config/prompts/observation_score.yaml",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Observation-scoring prompt; listed as current under docs/SYSTEM_MAP.md:55-58.",
+      "consumer": "None that executes. The only loader is scripts/dry_run.py:95-105.",
+      "evidence": "Same as observation_discovery.yaml: no load_prompt call outside the dry-run harness; status: ready at line 2.",
+      "lifecycle": "orphaned",
+      "action": "See finding F7."
+    },
+    {
+      "path": "config/prompts/qc_factuality.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 factuality quality-gate prompt.",
+      "consumer": "src/quality/factuality.py:70 load_prompt(\"qc_factuality\") -> src/quality/gate.py:31 -> scripts/generate.py --qc (manual dispatch only).",
+      "evidence": "The canonical path's quality boundary is src/editorial/editorial_acceptance.py, not src/quality/gate.py.",
+      "lifecycle": "legacy V1",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/qc_voice.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 voice quality-gate prompt.",
+      "consumer": "src/quality/voice.py:161 load_prompt(\"qc_voice\") -> src/quality/gate.py:32 -> scripts/generate.py --qc (manual dispatch only).",
+      "evidence": "src/quality/voice.py:157 imports chat, but gate.py is unreachable from any scheduled workflow.",
+      "lifecycle": "legacy V1",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/research/angles.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Stage 4 angle-generation prompt for the daily research pipeline.",
+      "consumer": "scripts/research/angles.py:36 load_prompt(\"research/angles\") -> angles.py:12 chat() -> scripts/research/run_daily_research.py:28 -> daily_signal_research.yml:85",
+      "evidence": "angles.py:36 loads it and :12 imports chat from src.utils.llm_client; run_daily_research.py:28 imports the stage.",
+      "lifecycle": "canonical for the research stream",
+      "action": "none. Note tests/test_research_prompts.py proves file shape only - see F9b."
+    },
+    {
+      "path": "config/prompts/research/content_package.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Stage 10 content-package prompt.",
+      "consumer": "scripts/research/prepare_content.py:63 load_prompt(\"research/content_package\") -> prepare_content.py:28 chat() -> run_daily_research.py:29 -> daily_signal_research.yml:85",
+      "evidence": "prepare_content.py:63 and :28. Also reached from scripts/generate_and_publish.py:2425, which imports prepare_content.",
+      "lifecycle": "canonical for the research stream",
+      "action": "none. See F9b."
+    },
+    {
+      "path": "config/prompts/research/enrich.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Stage 3 enrichment prompt.",
+      "consumer": "scripts/research/enrich.py:76 load_prompt(\"research/enrich\") -> enrich.py:12 chat() -> run_daily_research.py:27 -> daily_signal_research.yml:85",
+      "evidence": "enrich.py:76 and :12.",
+      "lifecycle": "canonical for the research stream",
+      "action": "none. See F9b."
+    },
+    {
+      "path": "config/prompts/research/score.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Stage 2 scoring prompt.",
+      "consumer": "scripts/research/score.py:40 load_prompt(\"research/score\", ...) -> score.py:14 chat() -> run_daily_research.py:26 -> daily_signal_research.yml:85",
+      "evidence": "score.py:40 and :14. The numeric weights it scores against are config/scoring_weights.yaml (score.py:19).",
+      "lifecycle": "canonical for the research stream",
+      "action": "none. See F9b."
+    },
+    {
+      "path": "config/prompts/research/signal_enrichment.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Stage 1B signal-enrichment prompt.",
+      "consumer": "scripts/research/discover.py:130 load_prompt(\"research/signal_enrichment\") -> discover.py:21 chat() -> run_daily_research.py:25 -> daily_signal_research.yml:85",
+      "evidence": "discover.py:130 and :21.",
+      "lifecycle": "canonical for the research stream",
+      "action": "none. See F9b."
+    },
+    {
+      "path": "config/prompts/research/signal_selector.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Stage 1A signal-selection prompt.",
+      "consumer": "scripts/research/discover.py:99 load_prompt(\"research/signal_selector\") -> discover.py:21 chat() -> run_daily_research.py:25 -> daily_signal_research.yml:85",
+      "evidence": "discover.py:99 and :21. tests/test_wednesday_july_research.py:290 quotes its second criterion verbatim as a drift guard.",
+      "lifecycle": "canonical for the research stream",
+      "action": "none. See F9b."
+    },
+    {
+      "path": "config/prompts/rewrite_with_feedback.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 rewrite-with-feedback prompt.",
+      "consumer": "src/quality/rewrite.py:58 load_prompt(\"rewrite_with_feedback\") -> src/quality/gate.py:33 -> scripts/generate.py --qc (manual dispatch only).",
+      "evidence": "The canonical path's single controlled revision is src/editorial/editorial_acceptance.py, not src/quality/rewrite.py.",
+      "lifecycle": "legacy V1",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/stories_post.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 four-frame Stories prompt.",
+      "consumer": "src/content/generator.py:176 _call(\"stories_post\", ctx) -> scripts/generate.py (manual dispatch only).",
+      "evidence": "generator.py:174-186 validates a fixed four-frame order. Stories is not an R1 auto-publish channel (src/publishing/release_scope.py:32).",
+      "lifecycle": "legacy, deliberately non-R1",
+      "action": "none - but note the four permanently-accepted CI failures in tests/accepted_full_suite_failures.txt are on this generator path (F10)."
+    },
+    {
+      "path": "config/prompts/strategy_brief.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Explicitly retired prompt.",
+      "consumer": "None by design. src/utils/config_loader.py:49-53 raises ValueError for status: not_needed.",
+      "evidence": "Line 2 carries status: not_needed; scripts/dry_run.py:101 lists it and :114-121 asserts load_prompt() raises for it.",
+      "lifecycle": "retired, self-declaring",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/telegram_post.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 Telegram post prompt.",
+      "consumer": "src/content/generator.py:170 -> scripts/generate.py (manual dispatch only).",
+      "evidence": "Telegram is excluded from automatic publication by src/publishing/release_scope.py:32-40.",
+      "lifecycle": "legacy, deliberately non-R1",
+      "action": "none - see F10 for the accepted failures on this path."
+    },
+    {
+      "path": "config/prompts/threads_post.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 Threads sequence prompt.",
+      "consumer": "src/content/generator.py:158 _call(\"threads_post\", ctx) -> scripts/generate.py (manual dispatch only).",
+      "evidence": "generator.py:156-165 validates a 3-5 post sequence. tests/test_cross_platform_overlap_policy.py:328 reads its text to assert a withdrawn rule is absent.",
+      "lifecycle": "legacy, deliberately non-R1",
+      "action": "none. See F9d for the assertion-on-an-unloaded-file pattern."
+    },
+    {
+      "path": "config/prompts/topic_extract.yaml",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Topic-extraction prompt; listed as current under docs/SYSTEM_MAP.md:55-58.",
+      "consumer": "None that executes. The only loader is scripts/dry_run.py:95-105.",
+      "evidence": "No load_prompt(\"topic_extract\") call exists outside scripts/dry_run.py:95; status: ready at line 2.",
+      "lifecycle": "orphaned",
+      "action": "See finding F7."
+    },
+    {
+      "path": "config/prompts/topic_score.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Explicitly retired prompt.",
+      "consumer": "None by design. src/utils/config_loader.py:49-53 raises ValueError for status: not_needed.",
+      "evidence": "Line 2 carries status: not_needed; scripts/dry_run.py:101 lists it and :114-121 asserts load_prompt() raises for it.",
+      "lifecycle": "retired, self-declaring",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/visibility/_format_modifiers.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Shared per-content-format modifier table for the Visibility Intelligence prompts.",
+      "consumer": "src/editorial/vi_pipeline.py:67 load_yaml(\"prompts/visibility/_format_modifiers.yaml\") -> _build_prompt() -> vi_pipeline.py:195 chat() -> scripts/generate_and_publish_visibility.py:37 -> visibility_publish.yml:93",
+      "evidence": "vi_pipeline.py:65-71 reads data['modifiers'][content_format] and :89 substitutes it into the prompt as format_instructions.",
+      "lifecycle": "canonical for the Tue/Thu stream",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/visibility/presence_check.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Visibility Intelligence category prompt for ProductCategory.PRESENCE_CHECK.",
+      "consumer": "src/editorial/vi_pipeline.py:80-83 -> vi_pipeline.py:195 chat() -> scripts/generate_and_publish_visibility.py -> visibility_publish.yml:93",
+      "evidence": "vi_pipeline.py:80 builds the key as f\"visibility/{queue_item.product_category.value}\"; src/strategy/models.py:70 defines PRESENCE_CHECK = \"presence_check\". Deliberately recorded: this file has no literal path reference and would be misread as dead by static search.",
+      "lifecycle": "canonical for the Tue/Thu stream",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/visibility/presence_script.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Visibility Intelligence category prompt for ProductCategory.PRESENCE_SCRIPT.",
+      "consumer": "src/editorial/vi_pipeline.py:80-83 -> vi_pipeline.py:195 chat() -> scripts/generate_and_publish_visibility.py -> visibility_publish.yml:93",
+      "evidence": "vi_pipeline.py:80 f-string key; src/strategy/models.py:71 PRESENCE_SCRIPT = \"presence_script\". No literal path reference anywhere.",
+      "lifecycle": "canonical for the Tue/Thu stream",
+      "action": "none"
+    },
+    {
+      "path": "config/prompts/visibility/visibility_framework.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Visibility Intelligence category prompt for ProductCategory.VISIBILITY_FRAMEWORK.",
+      "consumer": "src/editorial/vi_pipeline.py:80-83 -> vi_pipeline.py:195 chat() -> scripts/generate_and_publish_visibility.py -> visibility_publish.yml:93",
+      "evidence": "vi_pipeline.py:80 f-string key; src/strategy/models.py:72 VISIBILITY_FRAMEWORK = \"visibility_framework\". No literal path reference anywhere.",
+      "lifecycle": "canonical for the Tue/Thu stream",
+      "action": "none"
+    },
+    {
+      "path": "config/quality.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 quality-gate thresholds.",
+      "consumer": "src/utils/config_loader.py:81-82 load_quality() -> src/quality/gate.py:94 -> scripts/generate.py --qc, scripts/dry_run.py (manual dispatch only).",
+      "evidence": "load_quality() has no caller on any scheduled path.",
+      "lifecycle": "legacy V1",
+      "action": "none"
+    },
+    {
+      "path": "config/research_sources.yaml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "RSS/source feed list for daily discovery.",
+      "consumer": "scripts/research/discover.py:26 SOURCES_CONFIG -> run_daily_research.py:25 -> daily_signal_research.yml:85",
+      "evidence": "discover.py:26 Path(\"config/research_sources.yaml\"). src/never_blank/wednesday_july/research/pipeline.py:63 names it as the current small-business feed set; wednesday_july/research/discover.py:45-46 explains why Wednesday deliberately does NOT point here. Three tests (test_wednesday_diagnostics.py:586, test_wednesday_live_fixes.py:454, test_wednesday_source_attribution.py:524) assert that separation holds.",
+      "lifecycle": "canonical",
+      "action": "none"
+    },
+    {
+      "path": "config/schedule.yaml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Publish-window configuration for the legacy Friday scheduler.",
+      "consumer": "scripts/scheduled_publish.py (documented at :4) -> scheduled_publish.yml:86-93",
+      "evidence": "scheduled_publish.py:4 states it checks whether a publish is due per config/schedule.yaml. Asserted by tests/test_scheduling_window.py, tests/test_monday_stream.py:443 and tests/test_wednesday_golden.py:570.",
+      "lifecycle": "legacy-but-live",
+      "action": "Revisit together with F4a - it configures only the Friday path, while Monday and Wednesday carry their windows in the workflow files."
+    },
+    {
+      "path": "config/scoring_weights.yaml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Signal scoring weights.",
+      "consumer": "scripts/research/score.py:19 WEIGHTS_CONFIG -> daily_signal_research.yml:85; and src/never_blank/wednesday_july/research/score.py:37, the Wednesday research path",
+      "evidence": "Both modules name Path(\"config/scoring_weights.yaml\") literally. tests/test_wednesday_july_research.py:320-328 asserts the file is byte-identical to the July original because Wednesday reads it.",
+      "lifecycle": "canonical, shared by two streams",
+      "action": "none - but note it is the one config file both the daily and the Wednesday research paths read, so a change moves both."
+    },
+    {
+      "path": "config/strategy.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "V1 content strategy.",
+      "consumer": "src/utils/config_loader.py:77-78 load_strategy() -> src/internal/strategy.py:73, src/internal/topic_prioritizer.py -> scripts/generate.py, scripts/dry_run.py (manual dispatch only).",
+      "evidence": "load_strategy() has no caller on any scheduled path. The strategy the product actually runs on is strategy/current/strategy.json, a different artifact.",
+      "lifecycle": "legacy V1",
+      "action": "Low. The name collision with strategy/current/strategy.json is a reading hazard."
+    },
+    {
+      "path": "config/visual_system.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Visual families and palette.",
+      "consumer": "src/publishing/image_pipeline.py:42 VISUAL_SYSTEM -> :161 open() -> the same paths as config/prompts/image_generation.yaml (research, visibility, manual image)",
+      "evidence": "image_pipeline.py:42 resolves the path and :161 opens it; scripts/generate_image.py:100 imports VISUAL_SYSTEM and :102 prints it as a checked input.",
+      "lifecycle": "wired",
+      "action": "none"
+    }
+  ]
+}
