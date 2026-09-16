@@ -24,10 +24,14 @@ What makes it safe to run:
 * **No Wix, no LinkedIn, no consumption.** Only the three publishers above are
   imported. Nothing writes ``published_signal_ids.txt`` or any other repository
   state; the only output is the result record given by ``--result-out``.
-* **Never twice.** A live run reads the results of every earlier live run
-  (``--ledger-dir``) and refuses any channel that was published, partially
-  published, or started without a recorded outcome. Each channel is recorded as
-  ATTEMPTING before its publish call, so an interrupted run blocks a replay.
+* **Single-shot.** A live run requires ``--prior-live-checked``, which the
+  workflow passes only after ``check_prior_live_runs.py`` proved from GitHub's
+  own run records that no earlier live run ever reached its publish step, and
+  only on the first attempt of the run. There are no retries: a lost response
+  can hide a created post, so no earlier attempt is ever considered safe.
+* **Honest records.** Each channel is written as ATTEMPTING before its publish
+  call and replaced atomically after it; an escaped exception is recorded as
+  UNKNOWN_OUTCOME.
 * **No false success.** ``ThreadsPublisher`` returns PUBLISHED after a failed
   reply; this script counts the posts actually published and reports PARTIAL.
 * **Dry run by default.** ``--mode live`` is required to publish.
@@ -204,25 +208,6 @@ def publish_threads_counted(publisher_cls, draft: DraftPackage, mode: str) -> di
     return record
 
 
-#: A prior live outcome that means a post may already exist.
-_BLOCKING_PRIOR = {"PUBLISHED", "PARTIAL", "ATTEMPTING", "UNKNOWN_OUTCOME"}
-
-
-def prior_live_outcomes(ledger_dir: Path) -> dict[str, set[str]]:
-    """Every channel status recorded by earlier live recovery runs.
-
-    Fail closed: any unreadable or unrecognisable record raises.
-    """
-    outcomes: dict[str, set[str]] = {}
-    for path in sorted(ledger_dir.rglob("*.json")):
-        record = json.loads(path.read_text(encoding="utf-8"))
-        if record.get("recovery_issue") != 247 or record.get("mode") != "live":
-            raise RecoveryIdentityError(f"unrecognised ledger record: {path}")
-        for channel, result in record["results"].items():
-            outcomes.setdefault(channel, set()).add(result["status"])
-    return outcomes
-
-
 def _write(out: Path, record: dict) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix(out.suffix + ".tmp")
@@ -237,9 +222,9 @@ def main(argv: list[str] | None = None, *, publishers: dict | None = None,
                         help="Directory the run-evidence artifact was downloaded into")
     parser.add_argument("--mode", choices=("dry_run", "live"), default="dry_run")
     parser.add_argument("--channels", default=",".join(PUBLISHABLE),
-                        help="Subset of facebook,instagram,threads (for a partial retry)")
-    parser.add_argument("--ledger-dir", default="",
-                        help="Result records of earlier live recovery runs (required for live)")
+                        help="Subset of facebook,instagram,threads")
+    parser.add_argument("--prior-live-checked", action="store_true",
+                        help="Set by the workflow once no earlier live run reached publication")
     parser.add_argument("--result-out", required=True)
     args = parser.parse_args(argv)
 
@@ -261,20 +246,9 @@ def main(argv: list[str] | None = None, *, publishers: dict | None = None,
         print(f"ERROR: {loaded} loaded; this recovery must make no model calls")
         return 4
 
-    if args.mode == "live":
-        if not args.ledger_dir or not Path(args.ledger_dir).is_dir():
-            print("ERROR: live mode requires --ledger-dir with the earlier live results")
-            return 5
-        try:
-            prior = prior_live_outcomes(Path(args.ledger_dir))
-        except (RecoveryIdentityError, ValueError, KeyError, TypeError) as exc:
-            print(f"ERROR: cannot read the recovery ledger — nothing published: {exc}")
-            return 5
-        blocked = {c: sorted(prior[c] & _BLOCKING_PRIOR) for c in channels
-                   if prior.get(c, set()) & _BLOCKING_PRIOR}
-        if blocked:
-            print(f"ERROR: already published or possibly published by an earlier run: {blocked}")
-            return 5
+    if args.mode == "live" and not args.prior_live_checked:
+        print("ERROR: live mode requires --prior-live-checked (single-shot guard)")
+        return 5
 
     draft = build_draft(generated, wix_asset_url)
     registry = publishers or PUBLISHERS

@@ -1,4 +1,7 @@
 name: Recovery — Wednesday 2026-09-16 Meta payloads (#247)
+# The run name carries the mode: check_prior_live_runs.py classifies earlier
+# runs by it. Do not change this format.
+run-name: "Recovery #247 (${{ inputs.mode }})"
 
 # One-off, manual-only recovery. Publishes the SAVED Facebook, Instagram and
 # Threads payloads of Wednesday run 35102307491 and nothing else: no
@@ -9,6 +12,9 @@ name: Recovery — Wednesday 2026-09-16 Meta payloads (#247)
 # - no schedule, no push/PR trigger — workflow_dispatch only;
 # - mode defaults to dry_run, and live additionally requires the exact
 #   workflow run id typed into `confirm`;
+# - single-shot: live refuses a re-run attempt, and refuses to run at all if
+#   any earlier live run ever reached its publish step (GitHub run records,
+#   not artifacts). There are no retries;
 # - read-only token: nothing can be committed or pushed;
 # - only the Meta-family secrets are passed — no OpenAI, Wix or Zernio
 #   credential exists in this job, so those calls cannot happen at all.
@@ -23,7 +29,7 @@ on:
         type: choice
         options: [dry_run, live]
       channels:
-        description: "Subset of facebook,instagram,threads (partial retry only)"
+        description: "Subset of facebook,instagram,threads"
         required: true
         default: facebook,instagram,threads
         type: string
@@ -47,10 +53,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Refuse an unconfirmed live run
-        if: inputs.mode == 'live' && inputs.confirm != '35102307491'
+      - name: Refuse an unconfirmed or repeated live run
+        if: inputs.mode == 'live' && (inputs.confirm != '35102307491' || github.run_attempt != '1')
         run: |
-          echo "ERROR: live mode requires confirm=35102307491"
+          echo "ERROR: live mode requires confirm=35102307491 and a first run attempt"
           exit 1
 
       - uses: actions/checkout@v4
@@ -69,32 +75,15 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: recovery-evidence
 
-      # Replay guard: every earlier LIVE run of this workflow left a result
-      # record. The script refuses any channel those records show as published,
-      # partial, or started without an outcome. Any API failure stops the job.
-      - name: Collect earlier live recovery results
+      # Single-shot guard, from GitHub's own run and job records.
+      - name: Refuse if an earlier live recovery reached publication
         if: inputs.mode == 'live'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          THIS_RUN: ${{ github.run_id }}
         run: |
-          set -euo pipefail
-          mkdir -p recovery-ledger
-          gh api --paginate "repos/$REPO/actions/workflows/recovery_wednesday_meta_247.yml/runs?per_page=100" \
-            --jq '.workflow_runs[].id' > runs.txt
-          while read -r run; do
-            [ "$run" = "$THIS_RUN" ] && continue
-            gh api --paginate "repos/$REPO/actions/runs/$run/artifacts?per_page=100" \
-              --jq '.artifacts[] | select(.name == "recovery-wednesday-meta-247-live") | .id' > ids.txt
-            while read -r art; do
-              mkdir -p "recovery-ledger/$run-$art"
-              gh api "repos/$REPO/actions/artifacts/$art/zip" > "recovery-ledger/$run-$art.zip"
-              unzip -q -o "recovery-ledger/$run-$art.zip" -d "recovery-ledger/$run-$art"
-              rm "recovery-ledger/$run-$art.zip"
-            done < ids.txt
-          done < runs.txt
-          echo "earlier live records: $(find recovery-ledger -name '*.json' | wc -l)"
+          python scripts/recovery/check_prior_live_runs.py \
+            --repo "${{ github.repository }}" \
+            --current-run-id "${{ github.run_id }}"
 
       - name: Publish saved payloads
         env:
@@ -109,7 +98,7 @@ jobs:
             --evidence-dir recovery-evidence \
             --mode "$MODE" \
             --channels "$CHANNELS" \
-            --ledger-dir recovery-ledger \
+            $([ "$MODE" = live ] && echo --prior-live-checked) \
             --result-out reports/recovery/wednesday_meta_247.json
 
       - name: Preserve recovery result

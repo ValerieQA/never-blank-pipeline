@@ -58,12 +58,10 @@ def _fake_registry(calls: list, status=PublishStatus.PUBLISHED):
     return {name: make(name) for name in recovery.PUBLISHABLE}
 
 
-def _run(tmp_path, *extra, publishers=None, evidence=FIXTURE_ROOT, ledger="empty"):
+def _run(tmp_path, *extra, publishers=None, evidence=FIXTURE_ROOT, checked=True):
     out = tmp_path / "result.json"
-    if "live" in extra and ledger is not None:
-        ledger_dir = tmp_path / "ledger" if ledger == "empty" else ledger
-        ledger_dir.mkdir(parents=True, exist_ok=True)
-        extra = (*extra, "--ledger-dir", str(ledger_dir))
+    if "live" in extra and checked:
+        extra = (*extra, "--prior-live-checked")
     # The pytest process has usually loaded the model client through other
     # modules; real isolation is proven in a clean subprocess below.
     code = recovery.main(
@@ -261,13 +259,6 @@ def test_the_workflow_cannot_write_to_the_repository():
     assert "git push" not in text and "git commit" not in text
 
 
-def test_live_requires_the_exact_source_run_id():
-    guard = _workflow()["jobs"]["recover"]["steps"][0]
-
-    assert guard["if"] == "inputs.mode == 'live' && inputs.confirm != '35102307491'"
-    assert "exit 1" in guard["run"]
-
-
 def test_the_workflow_downloads_the_bound_artifact():
     steps = _workflow()["jobs"]["recover"]["steps"]
     download = next(s for s in steps if str(s.get("uses", "")).startswith("actions/download-artifact"))
@@ -357,64 +348,13 @@ def test_the_counting_wrapper_is_removed_after_the_call(tmp_path, monkeypatch):
     assert threads_module._publish_container is before
 
 
-def _ledger(tmp_path, results: dict, mode="live") -> Path:
-    ledger = tmp_path / "prior"
-    (ledger / "run-1").mkdir(parents=True)
-    (ledger / "run-1" / "wednesday_meta_247.json").write_text(json.dumps({
-        "recovery_issue": 247, "mode": mode,
-        "results": {c: {"status": s} for c, s in results.items()},
-    }))
-    return ledger
-
-
-@pytest.mark.parametrize("prior", ["PUBLISHED", "PARTIAL", "ATTEMPTING", "UNKNOWN_OUTCOME"])
-def test_a_channel_an_earlier_run_may_have_posted_is_never_republished(tmp_path, prior):
+def test_live_without_the_single_shot_check_is_refused(tmp_path):
     calls: list = []
-    code, record = _run(tmp_path, "--mode", "live", "--channels", "facebook",
-                        publishers=_fake_registry(calls),
-                        ledger=_ledger(tmp_path, {"facebook": prior}))
+    code, record = _run(tmp_path, "--mode", "live", publishers=_fake_registry(calls), checked=False)
 
     assert code == 5
     assert calls == []
     assert record is None
-
-
-def test_a_channel_that_definitively_failed_before_may_be_retried(tmp_path):
-    calls: list = []
-    code, _ = _run(tmp_path, "--mode", "live", "--channels", "instagram",
-                   publishers=_fake_registry(calls),
-                   ledger=_ledger(tmp_path, {"instagram": "FAILED", "facebook": "PUBLISHED"}))
-
-    assert code == 0
-    assert [c for c, _, _ in calls] == ["instagram"]
-
-
-def test_an_unreadable_ledger_blocks_everything(tmp_path):
-    ledger = tmp_path / "prior"
-    ledger.mkdir()
-    (ledger / "junk.json").write_text("{not json")
-    calls: list = []
-    code, _ = _run(tmp_path, "--mode", "live", publishers=_fake_registry(calls), ledger=ledger)
-
-    assert code == 5
-    assert calls == []
-
-
-def test_a_foreign_record_in_the_ledger_blocks_everything(tmp_path):
-    calls: list = []
-    code, _ = _run(tmp_path, "--mode", "live", publishers=_fake_registry(calls),
-                   ledger=_ledger(tmp_path, {"facebook": "FAILED"}, mode="dry_run"))
-
-    assert code == 5
-    assert calls == []
-
-
-def test_live_without_a_ledger_is_refused(tmp_path):
-    calls: list = []
-    code, _ = _run(tmp_path, "--mode", "live", publishers=_fake_registry(calls), ledger=None)
-
-    assert code == 5
-    assert calls == []
 
 
 def test_an_interrupted_call_is_recorded_as_an_unknown_outcome(tmp_path):
@@ -459,7 +399,7 @@ def test_a_full_run_changes_no_consumption_state(tmp_path):
 
     assert code == 0
     assert (marker.read_bytes(), index.read_bytes()) == before
-    assert sorted(p.name for p in tmp_path.iterdir()) == ["ledger", "result.json"]
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["result.json"]
 
 
 def test_a_real_dry_run_never_loads_the_model_client(tmp_path):
@@ -485,17 +425,149 @@ def test_a_real_dry_run_never_loads_the_model_client(tmp_path):
     assert json.loads((tmp_path / "r.json").read_text())["mode"] == "dry_run"
 
 
-def test_the_workflow_collects_the_ledger_before_publishing():
-    steps = _workflow()["jobs"]["recover"]["steps"]
+def test_the_workflow_checks_history_before_publishing():
+    workflow = _workflow()
+    steps = workflow["jobs"]["recover"]["steps"]
     names = [s.get("name") for s in steps]
-    ledger = steps[names.index("Collect earlier live recovery results")]
+    check = steps[names.index("Refuse if an earlier live recovery reached publication")]
     publish = steps[names.index("Publish saved payloads")]
 
-    assert names.index("Collect earlier live recovery results") < names.index("Publish saved payloads")
-    assert ledger["if"] == "inputs.mode == 'live'"
-    assert "set -euo pipefail" in ledger["run"]
-    assert 'select(.name == "recovery-wednesday-meta-247-live")' in ledger["run"]
-    assert "--ledger-dir recovery-ledger" in publish["run"]
+    assert workflow["run-name"] == "Recovery #247 (${{ inputs.mode }})"
+    assert names.index(check["name"]) < names.index("Publish saved payloads")
+    assert check["if"] == "inputs.mode == 'live'"
+    assert "scripts/recovery/check_prior_live_runs.py" in check["run"]
+    assert '--current-run-id "${{ github.run_id }}"' in check["run"]
+    assert '$([ "$MODE" = live ] && echo --prior-live-checked)' in publish["run"]
+    assert "ledger" not in WORKFLOW.read_text(encoding="utf-8")
     upload = next(s for s in steps if s.get("name") == "Preserve recovery result")
-    assert upload["with"]["name"] == "recovery-wednesday-meta-247-${{ inputs.mode }}"
     assert upload["if"] == "always()"
+
+
+def test_a_rerun_attempt_can_never_go_live():
+    guard = _workflow()["jobs"]["recover"]["steps"][0]
+
+    assert "github.run_attempt != '1'" in guard["if"]
+    assert "inputs.confirm != '35102307491'" in guard["if"]
+    assert guard["if"].startswith("inputs.mode == 'live' && (")
+    assert "exit 1" in guard["run"]
+
+
+# ── the single-shot history check ───────────────────────────────────────────
+
+from scripts.recovery import check_prior_live_runs as history  # noqa: E402
+
+REPO = "ValerieQA/never-blank-pipeline"
+CURRENT = "900"
+
+
+def _api(runs: list[dict], jobs: dict[str, list[dict]], fail: set[str] = frozenset()):
+    """A fake `gh api --paginate --slurp`: a list of pages per path."""
+    def fetch(path: str):
+        if any(marker in path for marker in fail):
+            raise history.LedgerError(f"HTTP 502 for {path}")
+        if "/workflows/" in path:
+            return [{"total_count": len(runs), "workflow_runs": runs}]
+        run_id = path.split("/runs/")[1].split("/")[0]
+        return [{"total_count": 1, "jobs": jobs.get(run_id, [])}]
+    return fetch
+
+
+def _run_row(run_id, mode):
+    return {"id": int(run_id), "display_title": f"Recovery #247 ({mode})"}
+
+
+def _job(publish_status, publish_conclusion):
+    return [{"steps": [
+        {"name": "Refuse an unconfirmed or repeated live run", "status": "completed", "conclusion": "skipped"},
+        {"name": "Publish saved payloads", "status": publish_status, "conclusion": publish_conclusion},
+    ]}]
+
+
+def _check(fetch):
+    return history.main(["--repo", REPO, "--current-run-id", CURRENT], fetch=fetch)
+
+
+def test_no_earlier_runs_allows_the_first_live_run():
+    assert _check(_api([_run_row(CURRENT, "live")], {})) == 0
+
+
+def test_dry_runs_never_block():
+    runs = [_run_row("1", "dry_run"), _run_row(CURRENT, "live")]
+    assert _check(_api(runs, {"1": _job("completed", "success")})) == 0
+
+
+@pytest.mark.parametrize("status, conclusion", [
+    ("completed", "success"), ("completed", "failure"), ("completed", "cancelled"),
+    ("in_progress", None), ("queued", None),
+])
+def test_an_earlier_live_publish_step_that_was_not_skipped_blocks(status, conclusion):
+    runs = [_run_row("1", "live"), _run_row(CURRENT, "live")]
+    assert _check(_api(runs, {"1": _job(status, conclusion)})) == 1
+
+
+def test_an_earlier_live_run_stopped_before_publishing_does_not_block():
+    runs = [_run_row("1", "live"), _run_row(CURRENT, "live")]
+    assert _check(_api(runs, {"1": _job("completed", "skipped")})) == 0
+
+
+def test_an_earlier_live_run_that_never_got_a_job_does_not_block():
+    runs = [_run_row("1", "live"), _run_row(CURRENT, "live")]
+    assert _check(_api(runs, {"1": []})) == 0
+
+
+def test_the_current_run_is_not_its_own_blocker():
+    runs = [_run_row(CURRENT, "live")]
+    assert _check(_api(runs, {CURRENT: _job("in_progress", None)})) == 0
+
+
+def test_an_unclassifiable_run_blocks():
+    runs = [{"id": 1, "display_title": "Recovery — Wednesday"}, _run_row(CURRENT, "live")]
+    assert _check(_api(runs, {})) == 1
+
+
+@pytest.mark.parametrize("broken", ["/workflows/", "/runs/1/"])
+def test_an_api_failure_refuses_to_publish(broken):
+    runs = [_run_row("1", "live"), _run_row(CURRENT, "live")]
+    assert _check(_api(runs, {"1": _job("completed", "skipped")}, fail={broken})) == 2
+
+
+@pytest.mark.parametrize("payload", [{}, [{"unexpected": []}], "nonsense", [[]]])
+def test_an_unexpected_response_shape_refuses_to_publish(payload):
+    assert _check(lambda path: payload) == 2
+
+
+def test_a_job_without_readable_steps_refuses_to_publish():
+    runs = [_run_row("1", "live"), _run_row(CURRENT, "live")]
+    assert _check(_api(runs, {"1": [{"name": "recover"}]})) == 2
+
+
+def test_every_page_of_runs_is_read():
+    pages = [
+        {"workflow_runs": [_run_row(CURRENT, "live")]},
+        {"workflow_runs": [_run_row("1", "live")]},
+    ]
+
+    def fetch(path):
+        if "/workflows/" in path:
+            return pages
+        return [{"jobs": _job("completed", "success")}]
+
+    assert _check(fetch) == 1
+
+
+def test_the_real_fetcher_asks_github_for_every_page(monkeypatch):
+    seen = {}
+
+    class Done:
+        returncode = 0
+        stdout = "[]"
+        stderr = ""
+
+    def fake_run(cmd, **kwargs):
+        seen["cmd"] = cmd
+        return Done()
+
+    monkeypatch.setattr(history.subprocess, "run", fake_run)
+    history.gh_api("repos/x/y")
+
+    assert seen["cmd"] == ["gh", "api", "--paginate", "--slurp", "repos/x/y"]
