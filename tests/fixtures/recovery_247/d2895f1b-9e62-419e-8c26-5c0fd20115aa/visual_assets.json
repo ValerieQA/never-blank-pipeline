@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "run_id": "d2895f1b-9e62-419e-8c26-5c0fd20115aa",
+  "origin_run_id": "d2895f1b-9e62-419e-8c26-5c0fd20115aa",
+  "reused": false,
+  "signal_id": "f9c2f40f85d82da3",
+  "source_article_digest": "sha256:4db7639f4304b8f7c3492cf4c2f14ba929df3123831e4711c1e64af132dca10d",
+  "provider": "cloudinary",
+  "method": "quote_card",
+  "created_at": "2026-09-16T13:33:05.804071Z",
+  "design_version": "3",
+  "status": "valid",
+  "linkedin_visual": "valid",
+  "master_asset_url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789565583/never-blank/posts/research/f9c2f40f85d82da3/blog/1789565583.png",
+  "derivatives": [
+    {
+      "channel": "wix",
+      "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789565583/never-blank/posts/research/f9c2f40f85d82da3/blog/1789565583.png",
+      "width": 1920,
+      "height": 1080,
+      "format": "png",
+      "status": "valid"
+    },
+    {
+      "channel": "linkedin",
+      "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789565585/never-blank/posts/research/f9c2f40f85d82da3/linkedin/1789565584.png",
+      "width": 1200,
+      "height": 628,
+      "format": "png",
+      "status": "valid"
+    }
+  ]
+}

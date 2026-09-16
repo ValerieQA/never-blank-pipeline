@@ -1,0 +1,265 @@
+"""Issue #247: the one-off Wednesday Meta recovery is bound, inert and narrow.
+
+No network, no model, no provider: publishers are replaced by fakes, and the
+evidence fixtures are the exact files run 35102307491 uploaded.
+"""
+
+from __future__ import annotations
+
+import ast
+import json
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+import yaml
+
+from scripts.recovery import publish_saved_wednesday_meta as recovery
+from src.publishing.result import PublishResult, PublishStatus
+
+FIXTURE_ROOT = Path("tests/fixtures/recovery_247")
+RUN_DIR = FIXTURE_ROOT / recovery.RUN_ID
+WORKFLOW = Path(".github/workflows/recovery_wednesday_meta_247.yml")
+SCRIPT = Path("scripts/recovery/publish_saved_wednesday_meta.py")
+
+
+def _saved() -> dict:
+    return json.loads((RUN_DIR / "generated.json").read_text(encoding="utf-8"))
+
+
+def _fake_registry(calls: list, status=PublishStatus.PUBLISHED):
+    def make(channel):
+        class Fake:
+            def publish(self, draft, mode):
+                calls.append((channel, draft, mode))
+                return PublishResult(platform=channel, status=status,
+                                     external_id=f"{channel}-id", url=f"https://x/{channel}")
+        return Fake
+    return {name: make(name) for name in recovery.PUBLISHABLE}
+
+
+def _run(tmp_path, *extra, publishers=None, evidence=FIXTURE_ROOT):
+    out = tmp_path / "result.json"
+    # The pytest process has usually loaded the model client through other
+    # modules; real isolation is proven in a clean subprocess below.
+    code = recovery.main(
+        ["--evidence-dir", str(evidence), "--result-out", str(out), *extra],
+        publishers=publishers, forbidden_modules=(),
+    )
+    return code, (json.loads(out.read_text()) if out.exists() else None)
+
+
+# ── evidence binding ────────────────────────────────────────────────────────
+
+
+def test_the_exact_saved_evidence_verifies():
+    generated, asset = recovery.load_verified_evidence(RUN_DIR)
+
+    assert generated["run_id"] == recovery.RUN_ID
+    assert generated["signal_id"] == recovery.SIGNAL_ID
+    assert asset == recovery.EXPECTED_WIX_ASSET
+
+
+def test_a_changed_payload_fails_closed_before_any_publisher(tmp_path):
+    copy = tmp_path / "evidence" / recovery.RUN_ID
+    shutil.copytree(RUN_DIR, copy)
+    saved = _saved()
+    saved["facebook_post"] += " edited"
+    (copy / "generated.json").write_text(json.dumps(saved), encoding="utf-8")
+    calls: list = []
+
+    code, record = _run(tmp_path, "--mode", "live",
+                        publishers=_fake_registry(calls), evidence=tmp_path / "evidence")
+
+    assert code == 3
+    assert calls == []
+    assert record is None
+
+
+def test_missing_evidence_fails_closed(tmp_path):
+    calls: list = []
+    code, _ = _run(tmp_path, "--mode", "live",
+                   publishers=_fake_registry(calls), evidence=tmp_path / "nothing")
+
+    assert code == 3
+    assert calls == []
+
+
+# ── payloads are passed through untouched ───────────────────────────────────
+
+
+def test_the_draft_carries_the_saved_text_byte_for_byte():
+    generated, asset = recovery.load_verified_evidence(RUN_DIR)
+    draft = recovery.build_draft(generated, asset)
+    saved = _saved()
+
+    assert draft.facebook_text == saved["facebook_post"]
+    assert draft.instagram_text == saved["instagram_caption"]
+    assert draft.threads_sequence == saved["threads_sequence"]
+
+
+def test_only_instagram_receives_an_image_and_it_is_the_runs_wix_asset():
+    generated, asset = recovery.load_verified_evidence(RUN_DIR)
+    draft = recovery.build_draft(generated, asset)
+
+    assert draft.image_for("instagram") == recovery.EXPECTED_WIX_ASSET
+    assert draft.image_for("facebook") is None
+    assert draft.image_for("threads") is None
+
+
+def test_no_wix_linkedin_or_telegram_payload_reaches_the_draft():
+    generated, asset = recovery.load_verified_evidence(RUN_DIR)
+    draft = recovery.build_draft(generated, asset)
+
+    assert draft.blog_body == draft.linkedin_text == draft.telegram_text == ""
+
+
+# ── channel scope ───────────────────────────────────────────────────────────
+
+
+def test_live_publishes_exactly_the_three_channels_in_order(tmp_path):
+    calls: list = []
+    code, record = _run(tmp_path, "--mode", "live", publishers=_fake_registry(calls))
+
+    assert code == 0
+    assert [c for c, _, _ in calls] == ["facebook", "instagram", "threads"]
+    assert {mode for _, _, mode in calls} == {"live"}
+    assert record["results"]["telegram"]["status"] == "SKIPPED"
+    assert "truncated" in record["results"]["telegram"]["error_message"]
+    assert record["results"]["wix"]["status"] == "NOT_ATTEMPTED"
+    assert record["results"]["linkedin"]["status"] == "NOT_ATTEMPTED"
+    assert record["model_calls"] == 0
+    assert record["signal_consumption_changed"] is False
+
+
+def test_dry_run_is_the_default(tmp_path):
+    calls: list = []
+    code, record = _run(tmp_path, publishers=_fake_registry(calls, PublishStatus.SKIPPED))
+
+    assert code == 0
+    assert {mode for _, _, mode in calls} == {"dry_run"}
+    assert record["mode"] == "dry_run"
+
+
+def test_a_partial_retry_touches_only_the_named_channel(tmp_path):
+    calls: list = []
+    code, _ = _run(tmp_path, "--mode", "live", "--channels", "threads",
+                   publishers=_fake_registry(calls))
+
+    assert code == 0
+    assert [c for c, _, _ in calls] == ["threads"]
+
+
+@pytest.mark.parametrize("channels", ["telegram", "wix", "linkedin",
+                                      "facebook,facebook", "", "facebook,wix"])
+def test_any_channel_outside_the_recovery_is_refused(tmp_path, channels):
+    calls: list = []
+    code, _ = _run(tmp_path, "--mode", "live", "--channels", channels,
+                   publishers=_fake_registry(calls))
+
+    assert code == 2
+    assert calls == []
+
+
+def test_a_failed_live_channel_fails_the_run_without_stopping_the_others(tmp_path):
+    calls: list = []
+    code, record = _run(tmp_path, "--mode", "live",
+                        publishers=_fake_registry(calls, PublishStatus.FAILED))
+
+    assert code == 1
+    assert len(calls) == 3
+    assert record["results"]["facebook"]["status"] == "FAILED"
+
+
+# ── no model, no consumption ────────────────────────────────────────────────
+
+
+def test_loading_the_recovery_never_loads_the_model_client():
+    probe = (
+        "import sys, runpy; sys.argv=['x','--help']\n"
+        "try:\n"
+        f"    runpy.run_path({str(SCRIPT)!r}, run_name='__main__')\n"
+        "except SystemExit:\n"
+        "    pass\n"
+        "print('src.utils.llm_client' in sys.modules, 'openai' in sys.modules)\n"
+    )
+    out = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, check=True)
+
+    assert out.stdout.strip().splitlines()[-1] == "False False"
+
+
+def test_the_script_never_touches_consumption_or_other_publishers():
+    tree = ast.parse(SCRIPT.read_text(encoding="utf-8"))
+    imported = {
+        (node.module or "") + "." + alias.name
+        for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)
+        for alias in node.names
+    } | {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import)
+         for alias in node.names}
+    docstring = ast.get_docstring(tree, clean=False)
+    strings = {
+        node.value for node in ast.walk(tree)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        and node.value != docstring
+    }
+
+    assert {name for name in imported if name.startswith("src.")} == {
+        "src.publishing.base.DraftPackage",
+        "src.publishing.facebook.FacebookPublisher",
+        "src.publishing.instagram.InstagramPublisher",
+        "src.publishing.result.PublishStatus",
+        "src.publishing.threads.ThreadsPublisher",
+    }
+    assert not any("published_signal_ids" in s for s in strings)
+    assert not any(name.startswith("scripts.") for name in imported)
+
+
+# ── the workflow ────────────────────────────────────────────────────────────
+
+
+def _workflow() -> dict:
+    return yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+
+
+def test_the_workflow_is_manual_only():
+    triggers = _workflow()[True]  # PyYAML reads the `on:` key as True
+
+    assert set(triggers) == {"workflow_dispatch"}
+    assert triggers["workflow_dispatch"]["inputs"]["mode"]["default"] == "dry_run"
+
+
+def test_the_workflow_cannot_write_to_the_repository():
+    workflow = _workflow()
+    text = WORKFLOW.read_text(encoding="utf-8")
+
+    assert workflow["permissions"] == {"contents": "read", "actions": "read"}
+    assert "git push" not in text and "git commit" not in text
+
+
+def test_live_requires_the_exact_source_run_id():
+    guard = _workflow()["jobs"]["recover"]["steps"][0]
+
+    assert guard["if"] == "inputs.mode == 'live' && inputs.confirm != '35102307491'"
+    assert "exit 1" in guard["run"]
+
+
+def test_the_workflow_downloads_the_bound_artifact():
+    steps = _workflow()["jobs"]["recover"]["steps"]
+    download = next(s for s in steps if str(s.get("uses", "")).startswith("actions/download-artifact"))
+
+    assert download["with"]["run-id"] == 35102307491
+    assert download["with"]["name"] == "wednesday-run-evidence-f9c2f40f85d82da3"
+
+
+def test_only_meta_credentials_exist_in_the_publish_step():
+    steps = _workflow()["jobs"]["recover"]["steps"]
+    publish = next(s for s in steps if s.get("name") == "Publish saved payloads")
+    secrets = {k for k, v in publish["env"].items() if "secrets." in str(v)}
+
+    assert secrets == {"NB_META_FB_PAGE_ID", "NB_META_FB_PAGE_TOKEN",
+                       "NB_META_IG_USER_ID", "NB_THREADS_ACCESS_TOKEN"}
+    text = WORKFLOW.read_text(encoding="utf-8")
+    for absent in ("NB_OPENAI", "NB_WIX", "NB_ZERNIO", "NB_TELEGRAM"):
+        assert absent not in text, absent
