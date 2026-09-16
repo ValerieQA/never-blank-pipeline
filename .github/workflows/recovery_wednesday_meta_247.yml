@@ -1,0 +1,111 @@
+name: Recovery — Wednesday 2026-09-16 Meta payloads (#247)
+# The run name carries the mode: check_prior_live_runs.py classifies earlier
+# runs by it. Do not change this format.
+run-name: "Recovery #247 (${{ inputs.mode }})"
+
+# One-off, manual-only recovery. Publishes the SAVED Facebook, Instagram and
+# Threads payloads of Wednesday run 35102307491 and nothing else: no
+# generation, no model call, no Wix, no LinkedIn, no Telegram, no signal
+# consumption. Remove this workflow after the recovery (#247 cleanup PR).
+#
+# Safe by construction:
+# - no schedule, no push/PR trigger — workflow_dispatch only;
+# - mode defaults to dry_run, and live additionally requires the exact
+#   workflow run id typed into `confirm`;
+# - single-shot: live refuses a re-run attempt, and refuses to run at all if
+#   any earlier live run ever reached its publish step (GitHub run records,
+#   not artifacts). There are no retries;
+# - read-only token: nothing can be committed or pushed;
+# - only the Meta-family secrets are passed — no OpenAI, Wix or Zernio
+#   credential exists in this job, so those calls cannot happen at all.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry_run validates everything and publishes nothing; live publishes"
+        required: true
+        default: dry_run
+        type: choice
+        options: [dry_run, live]
+      channels:
+        description: "Subset of facebook,instagram,threads"
+        required: true
+        default: facebook,instagram,threads
+        type: string
+      confirm:
+        description: "For live: type the source workflow run id 35102307491"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: recovery-wednesday-meta-247
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    name: Publish saved Meta payloads
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Refuse an unconfirmed or repeated live run
+        if: inputs.mode == 'live' && (inputs.confirm != '35102307491' || github.run_attempt != '1')
+        run: |
+          echo "ERROR: live mode requires confirm=35102307491 and a first run attempt"
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install --quiet -r requirements.txt
+
+      - name: Retrieve the saved run evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: wednesday-run-evidence-f9c2f40f85d82da3
+          run-id: 35102307491
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: recovery-evidence
+
+      # Single-shot guard, from GitHub's own run and job records.
+      - name: Refuse if an earlier live recovery reached publication
+        if: inputs.mode == 'live'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/recovery/check_prior_live_runs.py \
+            --repo "${{ github.repository }}" \
+            --current-run-id "${{ github.run_id }}"
+
+      - name: Publish saved payloads
+        env:
+          NB_META_FB_PAGE_ID:      ${{ secrets.NB_META_FB_PAGE_ID }}
+          NB_META_FB_PAGE_TOKEN:   ${{ secrets.NB_META_FB_PAGE_TOKEN }}
+          NB_META_IG_USER_ID:      ${{ secrets.NB_META_IG_USER_ID }}
+          NB_THREADS_ACCESS_TOKEN: ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
+          MODE: ${{ inputs.mode }}
+          CHANNELS: ${{ inputs.channels }}
+        run: |
+          python scripts/recovery/publish_saved_wednesday_meta.py \
+            --evidence-dir recovery-evidence \
+            --mode "$MODE" \
+            --channels "$CHANNELS" \
+            $([ "$MODE" = live ] && echo --prior-live-checked) \
+            --result-out reports/recovery/wednesday_meta_247.json
+
+      - name: Preserve recovery result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovery-wednesday-meta-247-${{ inputs.mode }}
+          path: reports/recovery/wednesday_meta_247.json
+          if-no-files-found: warn
+          retention-days: 90
