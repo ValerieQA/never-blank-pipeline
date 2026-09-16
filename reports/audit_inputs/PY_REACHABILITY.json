@@ -1,0 +1,38 @@
+{
+  "entrypoints": [
+    "scripts/ci/check_test_baseline.py",
+    "scripts/create_fixture.py",
+    "scripts/generate.py",
+    "scripts/generate_and_publish.py",
+    "scripts/generate_and_publish_visibility.py",
+    "scripts/generate_image.py",
+    "scripts/live_publish_test.py",
+    "scripts/publish.py",
+    "scripts/research/run_daily_research.py",
+    "scripts/run_analytics.py",
+    "scripts/scheduled_publish.py",
+    "scripts/smoke_test_publish_analytics.py",
+    "scripts/smoke_test_wix_image.py",
+    "scripts/streams/due_check.py",
+    "scripts/streams/select_eligible_signal.py",
+    "scripts/test_publishers.py"
+  ],
+  "non_test_py": 163,
+  "reachable": 134,
+  "unreachable": [
+    "scripts/dry_run.py",
+    "scripts/render_card_audit.py",
+    "scripts/research/sync_from_sheets.py",
+    "scripts/strategy/approve_strategy_recommendation.py",
+    "scripts/strategy/build_monthly_plan.py",
+    "scripts/strategy/run_monthly_review.py",
+    "scripts/strategy/run_weekly_review.py",
+    "src/investigation/hypothesis_generator.py",
+    "src/never_blank/wednesday_golden.py",
+    "src/research/adapters/fake.py",
+    "src/strategy/content_planner.py",
+    "src/strategy/decision_engine.py",
+    "src/strategy/market_analyzer.py",
+    "src/strategy/pattern_extractor.py"
+  ]
+}
