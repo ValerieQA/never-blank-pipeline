@@ -17,7 +17,7 @@
     {
       "path": "reports/repository_audit/inventory.json",
       "classification": "HUMAN_DOCUMENTATION",
-      "purpose": "Index for the file-by-file inventory: method, classification definitions, counts, the coverage reconciliation against git ls-files, and the shard manifest.",
+      "purpose": "Index for the file-by-file inventory: method, classification definitions, counts, the coverage reconciliation against git ls-files, the shard manifest with each shard's classification breakdown, and the review guide.",
       "consumer": "humans",
       "evidence": "Produced by Issue #233. No loader.",
       "lifecycle": "documentation",

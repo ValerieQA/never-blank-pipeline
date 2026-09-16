@@ -1,11 +1,12 @@
 {
-  "schema_version": "2",
+  "schema_version": "3",
   "issue": 233,
   "title": "Full repository reachability and dead-artifact audit",
   "audited_at": "2026-09-15",
   "audited_ref": "orch/233 (base 58afe47)",
   "document_role": "Index. The per-file entries live in the shards listed under `shards` below; this file holds the method, the classification definitions, the counts and the coverage reconciliation. Every tracked path in the repository appears exactly once across the shards - as an explicit path, never as a glob or a group.",
   "schema_version_2_change": "Version 1 of this file assessed some artifacts as a class, with a `covers` count and grouped path expressions such as `tests/** (remaining test modules)`. Review rejected that: a class assessment cannot establish complete coverage, and grouping hid real differences. Version 2 drops `covers` entirely - one entry per tracked path - and splits the result into shards so each is reviewable in full rather than truncated. Expanding the groups changed four classifications; they are listed under `corrections_from_v1`.",
+  "schema_version_3_change": "Review rejected version 2 on two counts. First, strategy/current/business_strategy.json was classified PRODUCT_CONFIG_WIRED on the strength of its Monday/Friday chain while this same audit records two of its required chains as incomplete; version 3 reclassifies it PRODUCT_CONFIG_UNWIRED and restates the totals it moves. It is listed under `corrections_from_v2`. Second, the shards were referenced here but not reviewable from the diff, which truncates long before them; version 3 adds `review_guide` and a per-shard `classifications` breakdown on every shard entry, so complete coverage and every classification can be checked from this index alone and each shard can then be verified independently with one command.",
   "method": {
     "reachability_definition": "An artifact is ACTIVE only when a path exists from a current production entrypoint (a .github/workflows job step) to the code that opens or imports it. A mention in documentation, a test that reads the file, or the file's own claim about itself is never treated as a consumer. py_compile in a CI job is not execution.",
     "model_message_definition": "A product/config artifact counts as WIRED only when its content can be traced to the system/user strings handed to src.utils.llm_client.chat (or an injected transport of the same shape) on a path a production entrypoint reaches.",
@@ -25,21 +26,46 @@
     "DUPLICATE_SUPERSEDED": "Another artifact is authoritative; both are named.",
     "SUSPICIOUS_UNRESOLVED": "Purpose or reachability could not be established safely."
   },
+  "review_guide": {
+    "why_this_block_exists": "Review rejected version 2 because the shards are referenced from this index but absent from the diff: the diff is 14,395 lines and 1.2 MB, and it truncates part-way through the fourth shard. Nothing can make 603 per-file evidence records fit a truncated diff, so this index is built to be sufficient on its own for the two judgements that do not need the prose - complete file coverage, and every classification - and to make each shard independently checkable in one command for the judgement that does.",
+    "read_in_this_order": [
+      "1. `counts_by_classification` and `counts_by_area` below: the whole result in two tables that reconcile to 8399.",
+      "2. `shards[].classifications` below: the same totals broken down per shard. Every shard's breakdown sums to its `entries`, and the shard breakdowns sum to `counts_by_classification`. An error anywhere in the shards that changed a classification would break one of those two sums.",
+      "3. `coverage.how_to_verify_the_counts` and `coverage.how_to_verify_a_shard`: one command each, run against the shard files rather than the diff.",
+      "4. The shards themselves, one at a time, for purpose/consumer/evidence. They are separate files precisely so that a reviewer can open one without paging the other thirteen."
+    ],
+    "what_cannot_be_judged_from_the_diff": "The per-file evidence prose. It is 603 records plus 7,796 manifest lines; the issue asks for `path | classification | purpose | consumer | evidence` for every tracked artifact, and that deliverable is larger than any single diff window. It is judged by opening the shard files, which is what `how_to_verify_a_shard` and the per-shard breakdown are for.",
+    "size_of_each_file": "docs/repository-audit/REPOSITORY_AUDIT.md 526 lines; findings.json 306; inventory.json (this file); the thirteen per-path shards 35-1179 lines each; 12_test_output_packages.json 102; the two path manifests 4702 and 3094 lines, which are byte-for-byte `git ls-files` output and carry 67% of the diff's bytes."
+  },
   "shards": [
-    { "file": "inventory/01_github_workflows.json", "area": ".github/workflows", "entries": 18, "form": "one object per tracked path" },
-    { "file": "inventory/02_repository_root.json", "area": "repository root", "entries": 9, "form": "one object per tracked path" },
-    { "file": "inventory/03_config.json", "area": "config", "entries": 43, "form": "one object per tracked path" },
-    { "file": "inventory/04_strategy.json", "area": "strategy", "entries": 26, "form": "one object per tracked path" },
-    { "file": "inventory/05_src.json", "area": "src", "entries": 130, "form": "one object per tracked path" },
-    { "file": "inventory/06_scripts.json", "area": "scripts", "entries": 34, "form": "one object per tracked path" },
-    { "file": "inventory/07_tests.json", "area": "tests", "entries": 116, "form": "one object per tracked path" },
-    { "file": "inventory/08_docs.json", "area": "docs", "entries": 35, "form": "one object per tracked path" },
-    { "file": "inventory/09_data.json", "area": "data", "entries": 13, "form": "one object per tracked path" },
-    { "file": "inventory/10_assets.json", "area": "assets", "entries": 3, "form": "one object per tracked path" },
-    { "file": "inventory/11a_reports_outputs.json", "area": "reports, excluding content_packages/ and repository_audit/", "entries": 95, "form": "one object per tracked path" },
-    { "file": "inventory/11b_reports_content_packages.json", "area": "reports/content_packages, flat files only", "entries": 63, "form": "one object per tracked path" },
-    { "file": "inventory/11c_reports_repository_audit.json", "area": "reports/repository_audit", "entries": 18, "form": "one object per tracked path" },
-    { "file": "inventory/12_test_output_packages.json", "area": "reports/content_packages/{sig-test-001,sig-identity-test-001}/runs/**", "entries": 7796, "form": "classification record plus two exhaustive path manifests", "path_manifests": ["inventory/12a_sig_test_001.paths.txt", "inventory/12b_sig_identity_test_001.paths.txt"] }
+    { "file": "inventory/01_github_workflows.json", "area": ".github/workflows", "entries": 18, "form": "one object per tracked path",
+      "classifications": { "ACTIVE_RUNTIME": 5, "ACTIVE_SUPPORT": 9, "LEGACY_INTENTIONAL": 3, "DUPLICATE_SUPERSEDED": 1 } },
+    { "file": "inventory/02_repository_root.json", "area": "repository root", "entries": 9, "form": "one object per tracked path",
+      "classifications": { "ACTIVE_SUPPORT": 4, "HUMAN_DOCUMENTATION": 4, "LEGACY_INTENTIONAL": 1 } },
+    { "file": "inventory/03_config.json", "area": "config", "entries": 43, "form": "one object per tracked path",
+      "classifications": { "ACTIVE_RUNTIME": 3, "PRODUCT_CONFIG_WIRED": 15, "PRODUCT_CONFIG_UNWIRED": 5, "LEGACY_INTENTIONAL": 15, "DEAD_ORPHANED": 5 } },
+    { "file": "inventory/04_strategy.json", "area": "strategy", "entries": 26, "form": "one object per tracked path",
+      "classifications": { "ACTIVE_RUNTIME": 1, "ACTIVE_SUPPORT": 6, "PRODUCT_CONFIG_WIRED": 1, "PRODUCT_CONFIG_UNWIRED": 4, "HUMAN_DOCUMENTATION": 13, "SUSPICIOUS_UNRESOLVED": 1 } },
+    { "file": "inventory/05_src.json", "area": "src", "entries": 130, "form": "one object per tracked path",
+      "classifications": { "ACTIVE_RUNTIME": 105, "ACTIVE_SUPPORT": 1, "LEGACY_INTENTIONAL": 17, "DUPLICATE_SUPERSEDED": 1, "SUSPICIOUS_UNRESOLVED": 6 } },
+    { "file": "inventory/06_scripts.json", "area": "scripts", "entries": 34, "form": "one object per tracked path",
+      "classifications": { "ACTIVE_RUNTIME": 16, "ACTIVE_SUPPORT": 8, "LEGACY_INTENTIONAL": 2, "DEAD_ORPHANED": 2, "SUSPICIOUS_UNRESOLVED": 6 } },
+    { "file": "inventory/07_tests.json", "area": "tests", "entries": 116, "form": "one object per tracked path",
+      "classifications": { "ACTIVE_SUPPORT": 116 } },
+    { "file": "inventory/08_docs.json", "area": "docs", "entries": 35, "form": "one object per tracked path",
+      "classifications": { "PRODUCT_CONFIG_UNWIRED": 1, "HUMAN_DOCUMENTATION": 34 } },
+    { "file": "inventory/09_data.json", "area": "data", "entries": 13, "form": "one object per tracked path",
+      "classifications": { "ACTIVE_RUNTIME": 8, "ACTIVE_SUPPORT": 4, "LEGACY_INTENTIONAL": 1 } },
+    { "file": "inventory/10_assets.json", "area": "assets", "entries": 3, "form": "one object per tracked path",
+      "classifications": { "ACTIVE_RUNTIME": 3 } },
+    { "file": "inventory/11a_reports_outputs.json", "area": "reports, excluding content_packages/ and repository_audit/", "entries": 95, "form": "one object per tracked path",
+      "classifications": { "ACTIVE_RUNTIME": 62, "ACTIVE_SUPPORT": 2, "HUMAN_DOCUMENTATION": 5, "DEAD_ORPHANED": 26 } },
+    { "file": "inventory/11b_reports_content_packages.json", "area": "reports/content_packages, flat files only", "entries": 63, "form": "one object per tracked path",
+      "classifications": { "ACTIVE_RUNTIME": 52, "ACTIVE_SUPPORT": 1, "LEGACY_INTENTIONAL": 8, "DEAD_ORPHANED": 2 } },
+    { "file": "inventory/11c_reports_repository_audit.json", "area": "reports/repository_audit", "entries": 18, "form": "one object per tracked path",
+      "classifications": { "HUMAN_DOCUMENTATION": 18 } },
+    { "file": "inventory/12_test_output_packages.json", "area": "reports/content_packages/{sig-test-001,sig-identity-test-001}/runs/**", "entries": 7796, "form": "classification record plus two exhaustive path manifests", "path_manifests": ["inventory/12a_sig_test_001.paths.txt", "inventory/12b_sig_identity_test_001.paths.txt"],
+      "classifications": { "DEAD_ORPHANED": 7796 } }
   ],
   "coverage": {
     "tracked_files_total": 8399,
@@ -49,14 +75,15 @@
     "reconciliation": "8399 is `git ls-files | wc -l` for the tree this PR produces: 8383 at commit 19bac01 plus the 16 new files this PR adds under reports/repository_audit/, all 16 of which are themselves inventoried in shard 11c.",
     "if_the_count_drifts": "If a later `git ls-files` returns more than 8399 and the extra paths are under reports/content_packages/<signal_id>/runs/, that is finding F5 reproducing itself - a test run wrote into the tracked tree and the additions were staged. Regenerate the 12a/12b manifests with the commands above rather than adjusting the totals by hand.",
     "how_to_verify_a_shard": "For any shard, `grep -oh '\"path\": \"<area>/[^\"]*\"' <shard> | cut -d'\"' -f4 | sort` diffed against `git ls-files <area> | sort` must be empty. Every shard in this manifest was checked that way.",
+    "how_to_verify_the_counts": "`grep -c '\"classification\": \"<NAME>\"' reports/repository_audit/inventory/*.json` reproduces `shards[].classifications` per file and `counts_by_classification` in total, for each of the nine names. Two adjustments, both mechanical: 12_test_output_packages.json states DEAD_ORPHANED once for the 7,796 paths its manifests enumerate, so its grep count is 1 and its entry count is 7796; and `grep -h '\"path\":' reports/repository_audit/inventory/*.json | wc -l` returns 603, the number of paths carrying their own object. 603 + 7796 = 8399.",
     "how_to_verify_shard_12": "`wc -l` on each manifest must equal 4702 and 3094, and the manifests must equal `git ls-files reports/content_packages/sig-test-001` and `git ls-files reports/content_packages/sig-identity-test-001`.",
     "no_grouping_claim": "No entry in any shard stands for more than one path: the v1 `covers` field is gone and no shard entry has one. The only place a classification is stated once for many paths is shard 12, where the paths are still enumerated one per line and the evidence is identical for each - the writer, the root cause and the absence of a consumer are the same file-for-file."
   },
   "counts_by_classification": {
     "ACTIVE_RUNTIME": 255,
     "ACTIVE_SUPPORT": 151,
-    "PRODUCT_CONFIG_WIRED": 17,
-    "PRODUCT_CONFIG_UNWIRED": 9,
+    "PRODUCT_CONFIG_WIRED": 16,
+    "PRODUCT_CONFIG_UNWIRED": 10,
     "HUMAN_DOCUMENTATION": 74,
     "LEGACY_INTENTIONAL": 47,
     "DEAD_ORPHANED": 7831,
@@ -82,7 +109,7 @@
     ".github/workflows": { "ACTIVE_RUNTIME": 5, "ACTIVE_SUPPORT": 9, "LEGACY_INTENTIONAL": 3, "DUPLICATE_SUPERSEDED": 1 },
     "repository root": { "ACTIVE_SUPPORT": 4, "HUMAN_DOCUMENTATION": 4, "LEGACY_INTENTIONAL": 1 },
     "config": { "ACTIVE_RUNTIME": 3, "PRODUCT_CONFIG_WIRED": 15, "PRODUCT_CONFIG_UNWIRED": 5, "LEGACY_INTENTIONAL": 15, "DEAD_ORPHANED": 5 },
-    "strategy": { "ACTIVE_RUNTIME": 1, "ACTIVE_SUPPORT": 6, "PRODUCT_CONFIG_WIRED": 2, "PRODUCT_CONFIG_UNWIRED": 3, "HUMAN_DOCUMENTATION": 13, "SUSPICIOUS_UNRESOLVED": 1 },
+    "strategy": { "ACTIVE_RUNTIME": 1, "ACTIVE_SUPPORT": 6, "PRODUCT_CONFIG_WIRED": 1, "PRODUCT_CONFIG_UNWIRED": 4, "HUMAN_DOCUMENTATION": 13, "SUSPICIOUS_UNRESOLVED": 1 },
     "src": { "ACTIVE_RUNTIME": 105, "ACTIVE_SUPPORT": 1, "LEGACY_INTENTIONAL": 17, "SUSPICIOUS_UNRESOLVED": 6, "DUPLICATE_SUPERSEDED": 1 },
     "scripts": { "ACTIVE_RUNTIME": 16, "ACTIVE_SUPPORT": 8, "LEGACY_INTENTIONAL": 2, "DEAD_ORPHANED": 2, "SUSPICIOUS_UNRESOLVED": 6 },
     "tests": { "ACTIVE_SUPPORT": 116 },
@@ -117,8 +144,17 @@
       "why": "All fourteen *_generated.json files were grouped as legacy flat artifacts. Six of them are not: scripts/generate_and_publish_visibility.py:426 writes the vis_* ones as current output of the Tuesday/Thursday stream. The suffix means two different things in one directory."
     }
   ],
+  "corrections_from_v2": [
+    {
+      "path": "strategy/current/business_strategy.json",
+      "was": "PRODUCT_CONFIG_WIRED",
+      "now": "PRODUCT_CONFIG_UNWIRED",
+      "why": "Version 2 classified it on its strongest chain. The Monday/Friday role chain is genuinely proven to chat(), but findings F1 and F3 - both raised by this same audit against this same file - record two required chains that are not: the Wednesday role's rendered rules are never passed to generate_for_wednesday(), and six of the seven prompt_rule_references at :306-342 never reach a production model message. UNWIRED/PARTIAL is the classification whenever a required production chain is incomplete, so a file that is wired on one surface and unwired on two is PARTIAL, not WIRED. The entry now names which chain holds and which does not, so the correction does not cost the reader the proven part.",
+      "totals_moved": "PRODUCT_CONFIG_WIRED 17 -> 16 and PRODUCT_CONFIG_UNWIRED 9 -> 10, in `counts_by_classification` and in the `strategy` row of `counts_by_area_and_classification`. Section 1 of docs/repository-audit/REPOSITORY_AUDIT.md carries the same two numbers and is updated with them; section 2 now states the file-level classification in its own words. No other count moves: the file is one file and it stays in the strategy area."
+    }
+  ],
   "notes": [
-    "The four corrections above are the direct value of the expansion: each is a real error that a grouped assessment produced and a per-file assessment caught. Aggregate counts are unchanged for PRODUCT_CONFIG_UNWIRED (9), PRODUCT_CONFIG_WIRED (17) and DUPLICATE_SUPERSEDED (2).",
+    "The four corrections under `corrections_from_v1` are the direct value of the expansion: each is a real error that a grouped assessment produced and a per-file assessment caught. Aggregate counts were unchanged by the expansion for PRODUCT_CONFIG_UNWIRED, PRODUCT_CONFIG_WIRED and DUPLICATE_SUPERSEDED; the first two then moved by one in version 3, for the reason under `corrections_from_v2`.",
     "reports/ now holds 7,972 of 8,399 tracked files, and 7,824 of those are DEAD_ORPHANED. Finding F5 owns that; nothing was deleted by this issue.",
     "Companion documents: reports/repository_audit/findings.json (ranked findings and repair order) and docs/repository-audit/REPOSITORY_AUDIT.md (the human report)."
   ]

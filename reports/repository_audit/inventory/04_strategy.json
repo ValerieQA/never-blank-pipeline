@@ -51,12 +51,12 @@
     },
     {
       "path": "strategy/current/business_strategy.json",
-      "classification": "PRODUCT_CONFIG_WIRED",
+      "classification": "PRODUCT_CONFIG_UNWIRED",
       "purpose": "The authoritative Business Strategy Configuration: audiences, channels, CTAs, prompt rule references and editorial roles.",
-      "consumer": "src/strategy/business_config.py:26 -> scripts/generate_and_publish.py:298 -> src/editorial/editorial_role.py render_editorial_role_rules -> src/editorial/platform_composer.py -> chat()",
-      "evidence": "Full chain proven: business_config.py:26 DEFAULT_BUSINESS_STRATEGY_PATH; generate_and_publish.py:920-922 renders role rules per surface; platform_composer.py:492-495 appends them to the user prompt; :511 passes it to chat(). Regression proof at tests/strategy/test_strategy_semantic_consumption.py:90-112, which reads chat.call_args.kwargs['user'].",
-      "lifecycle": "canonical source of truth",
-      "action": "none for Monday/Friday. See finding F1 for Wednesday, and F3 for the seven prompt_rule_references it declares at :306-342."
+      "consumer": "Partial. Monday/Friday roles: src/strategy/business_config.py:26 -> scripts/generate_and_publish.py:298 -> src/editorial/editorial_role.py render_editorial_role_rules -> src/editorial/platform_composer.py -> chat(). Wednesday generation: none. Six of the seven prompt_rule_references it declares at :306-342: none a schedule reaches.",
+      "evidence": "One chain is proven and two required chains are not, which is UNWIRED/PARTIAL: the classification asks whether every required production chain is complete, not whether any is. Proven: business_config.py:26 DEFAULT_BUSINESS_STRATEGY_PATH; generate_and_publish.py:920-922 renders role rules per surface; platform_composer.py:492-495 appends them to the user prompt; :511 passes it to chat(); regression proof at tests/strategy/test_strategy_semantic_consumption.py:90-112, which reads chat.call_args.kwargs['user']. Incomplete (a): generate_and_publish.py:1878-1880 calls generate_for_wednesday(signal) and src/never_blank/wednesday_routing.py:57 takes one argument, so the rendered rules of role never-blank-wednesday-golden (:398-446) are discarded on a normal Wednesday run - finding F1. Incomplete (b): of the seven prompt_rule_references at :306-342 only 'active-campaign-strategy' is consumed, and only as the version equality check at src/strategy/execution_context.py:296-315. Of the other six, five have no loader anywhere and config/brand.yaml has one only on the workflow_dispatch-only legacy path (src/quality/voice.py:159); none reaches a production model message - finding F3.",
+      "lifecycle": "canonical source of truth, partially consumed",
+      "action": "See findings F1 (Wednesday generation) and F3 (the declared prompt rule references). Both need an owner decision; neither is repaired here. The Monday/Friday role chain needs nothing."
     },
     {
       "path": "strategy/current/strategy.json",

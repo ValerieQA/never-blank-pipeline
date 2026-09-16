@@ -5,7 +5,9 @@ Issue #233. Audited 2026-09-15 against `orch/233` (base `58afe47`).
 Machine-readable companions, all under `reports/repository_audit/`:
 
 - `inventory.json` — the index: method, classification definitions, counts, the coverage
-  reconciliation against `git ls-files`, and the shard manifest.
+  reconciliation against `git ls-files`, the shard manifest with each shard's own
+  classification breakdown, and a `review_guide` block giving the reading order and the
+  two commands that verify coverage and counts against the shard files.
 - `inventory/01_github_workflows.json` … `inventory/11c_reports_repository_audit.json` —
   one object per tracked path, with its classification, purpose, consumer and evidence.
 - `inventory/12_test_output_packages.json` plus `inventory/12a_*.paths.txt` and
@@ -64,8 +66,8 @@ signal a reviewer would normally trust says it is fine.
 |---|---:|---|
 | ACTIVE RUNTIME | 255 | Reachable from a current production entrypoint |
 | ACTIVE SUPPORT | 151 | Tests, CI, fixtures, operational tooling |
-| AUTHORITATIVE PRODUCT CONFIG — WIRED | 17 | Full chain to a production model message proven |
-| **AUTHORITATIVE PRODUCT CONFIG — UNWIRED/PARTIAL** | **9** | **Section 2** |
+| AUTHORITATIVE PRODUCT CONFIG — WIRED | 16 | Every required chain to a production model message proven |
+| **AUTHORITATIVE PRODUCT CONFIG — UNWIRED/PARTIAL** | **10** | **Section 2** |
 | HUMAN DOCUMENTATION | 74 | Intentionally for people (includes this audit's 19 deliverables) |
 | LEGACY BUT INTENTIONAL | 47 | Retained deliberately, owner and reason identified |
 | DEAD / ORPHANED | 7,831 | 7,796 of these are one problem (F5) |
@@ -100,6 +102,22 @@ reference with no loader, while the inventory filed it as ordinary documentation
 fourth means one directory uses the `_generated.json` suffix for two unrelated things, and
 anything that sweeps that directory by suffix will get it wrong. `inventory.json` records
 all four under `corrections_from_v1`.
+
+One further classification changed after review, and it is the most consequential single
+entry in the inventory:
+
+| Artifact | Was | Now | Why |
+|---|---|---|---|
+| `strategy/current/business_strategy.json` | WIRED | **UNWIRED/PARTIAL** | Classified on its strongest chain. Monday/Friday role rules are genuinely proven to `chat()`; Wednesday generation (F1) and six of its seven `prompt_rule_references` (F3) are not. |
+
+UNWIRED/**PARTIAL** is the classification whenever *any* required production chain is
+incomplete, not only when all of them are. Filing the repository's most authoritative
+product file as WIRED, while two of this audit's three highest-ranked findings are about
+chains that file does not complete, was the same mistake the audit exists to find: judging
+an artifact by the part of it that works. The inventory entry now names which chain holds
+and which does not, so nothing proven was given up to make the correction. The two counts
+it moves — WIRED 17 → 16, UNWIRED/PARTIAL 9 → 10 — are already applied in *Counts by
+classification* above; `inventory.json` records it under `corrections_from_v2`.
 
 ### Counts by area
 
@@ -141,6 +159,12 @@ tracked file.
 
 These come first because for Never Blank they are the failure that matters: a file that
 looks like it defines the product and does not reach the product.
+
+`strategy/current/business_strategy.json` is classified **UNWIRED/PARTIAL** and is the
+subject of both F1 and F3 below. It is the repository's authoritative product
+configuration and part of it is properly wired — the Monday and Friday editorial roles
+reach the generation prompt, with a regression test that proves it. It is filed here
+anyway, because PARTIAL means *a* required chain is incomplete, and two of this file's are.
 
 ### F1 — Wednesday's declared editorial role never reaches Wednesday's generation prompt
 
