@@ -1,11 +1,18 @@
 # Monday — target architecture (Issue #240, deliverables 7–12)
 
 Design only. Nothing here is implemented, and nothing here should be
-implemented before owner review and before the #233 audit deliverables exist.
+implemented before owner review and before #233 merges.
 
 Evidence for every claim about current behaviour is in
 `reports/monday-architecture/monday_current_state_trace.md`; section numbers
 below refer to it as *(trace §n)*.
+
+The audit inputs the issue requires — #233's repository-wide findings and the
+available editorial-wiring evidence — are incorporated in **trace §0**, and
+this document is reconciled against them. Where an audit finding changed a
+proposal rather than merely supporting it, the section says so in place:
+§8.3 (F1/F2), §9 (F9d, F6c, F8d), §10 steps 0/5/6 (F5, #237), §11 (audit
+§9.1–9.3, F9a), and §12 D1/D9/D12/D13 (#237, F4d).
 
 The intended shape, from the issue:
 
@@ -159,10 +166,25 @@ Stage(
 The **schema** stays in code — it is a machine contract between stages, the
 kind of derived machine representation the owner contract permits. The
 **instruction** never does. So `article_protagonist must be "owner"` stops
-being a Python assertion (`pattern_extractor.py:146`) and becomes a declared
-constraint whose value comes from `monday/editorial.md`. Wednesday can then
-declare a different protagonist without forking the engine — which is exactly
-the fork that exists today in `src/never_blank/wednesday_july/`.
+being a Python assertion (`pattern_extractor.py:146` — the `src/editorial/`
+module, not the unrelated `src/strategy/pattern_extractor.py` of #233's F8d)
+and becomes a declared constraint whose value comes from `monday/editorial.md`.
+
+**Bounded by #233's F1 and F2.** The sentence this section used to end on —
+that Wednesday could then declare a different protagonist "without forking the
+engine, which is exactly the fork that exists today" — claimed more than the
+evidence supports. F1 shows Wednesday's declared role is rendered and then
+**discarded** before generation: `generate_for_wednesday(signal)` takes one
+argument, so no role rules, CTA mode or closing contract reach the Wednesday
+generation prompt at all, and F2 shows its Golden profile has no production
+caller. Wednesday's divergence is therefore an entire unwired declaration plus
+a parallel package, not one assertion in a shared stage.
+
+The design property still holds and is worth stating precisely: a generic
+`Stage` removes the *engine-level* reason a stream must fork to change its
+protagonist. It does not by itself repair Wednesday, and this task must not be
+read as proposing that — Wednesday is paused (§8.6), and F1 is #237's question,
+not this one's.
 
 Which stages run, and in what order, is part of the resolved strategy, not a
 hard-coded chain in `pipeline.py`. A stream that needs no `reader_context`
@@ -273,7 +295,8 @@ not move in the same step.
 | `decision_lens_lite` legacy keys | `delivery_vs_presence_conflict`, `customer_memory_consequence` |
 | `pattern_extractor` field name `visibility_pattern` | retained only as a downstream contract; retire with the stage |
 | `config/research_sources.yaml.signal_categories` / `avoid_categories` | presence-shaped supply filter → `monday/signals.md` |
-| `docs/NEVER_BLANK_EDITORIAL_STYLE.md`, `docs/NEVER_BLANK_EDITORIAL_WORLDVIEW.md`, `docs/NEVER_BLANK_GOLDEN_EDITORIAL_PATTERNS.md`, `strategy/worldview.md`, `strategy/methodology/*.md`, `strategy/stage2_reference_article_example.md` | **content migrates** into the new structure; the files retire as separate authorities. `docs/SYSTEM_MAP.md` updates to point at the new structure |
+| `docs/NEVER_BLANK_EDITORIAL_STYLE.md`, `docs/NEVER_BLANK_EDITORIAL_WORLDVIEW.md`, `docs/NEVER_BLANK_GOLDEN_EDITORIAL_PATTERNS.md`, `strategy/worldview.md`, `strategy/methodology/*.md`, `strategy/stage2_reference_article_example.md` | **content migrates** into the new structure; the files retire as separate authorities. `docs/SYSTEM_MAP.md` updates to point at the new structure — specifically `:28-30` and `:55-58`, the lines #233's F6c identifies as re-authorizing dead artifacts |
+| `config/brand_voice.md` | **content migrates** into `never-blank/{identity,audience,article-shape,prohibited}.md`. Named as a declared prompt rule and read by nothing (trace §5a, #233 F3). Retiring it is **not** file-only: #233's F9d records that `tests/test_cross_platform_overlap_policy.py:326-333` asserts on this file's text, so that assertion has to move to whichever authoring file inherits the rule, in the same change. Otherwise a withdrawn-rule guarantee from #221 is silently dropped |
 | `config/prompts/decision_lens/never_blank.yaml` | **decide, do not delete** — Monday does not consult it (trace §5c). Owner decision D3 |
 
 Explicitly **not** retired by this task: `business_strategy.json` itself (the
@@ -289,8 +312,32 @@ Markdown, which would satisfy every structural test and change nothing.
 
 Each step names the thing that must be *seen to change*.
 
-**Step 0 — gate.** #233's deliverables exist and its Monday-relevant findings
-are incorporated. No production change before this.
+**Step 0 — gate.** #233's Monday-relevant findings **are incorporated** — trace
+§0a, and reconciled through this document — so the analytical half of the gate
+is discharged rather than deferred. What remains is procedural and one
+mechanical prerequisite:
+
+- **#233 merges.** Its deliverables are on `orch/233`, not on `main`. No
+  production change here before that lands, so that the repair order the audit
+  sets and the migration order below are sequenced against one tree.
+- **#233's F5 mechanism fix lands first** — the injectable artifact root of
+  audit §9.4, so that `scripts/generate_and_publish.py:320-321` stops creating
+  `reports/content_packages/` at import against the process CWD. This is a
+  hard prerequisite for step 3 onward, not housekeeping: the §11 tests drive
+  real runs, and under the current mechanism every one of them writes run
+  artifacts into the tracked repository path. Building T3 before F5 is fixed
+  means the test that proves this migration is also the test that regenerates
+  the 7,796-file residue F5 describes.
+- **F3 is not repaired separately on the Monday path.** #233 ranks F3 third in
+  its own repair order, with the option of "load the declared references" into
+  the prompt chain. Taking that option for `config/brand_voice.md` or
+  `strategy/methodology/*.md` would create a second editorial authority that
+  step 1 then has to unpick, which is the exact duplication §7.1 exists to
+  prevent. **The durable repair of F3 for Monday is steps 1–3 of this
+  migration**; the other #233 option — narrow `prompt_rule_references` to what
+  is consumed — is compatible with it and is what step 7 does. This is a
+  sequencing claim about the Monday path only, and does not bind #233's
+  treatment of F3 for any other consumer.
 
 **Step 1 — author the Markdown from the owner, not from the code.**
 Write `strategy/never-blank/**` and `strategy/monday/**` from owner-approved
@@ -337,8 +384,29 @@ decoupled from the editorial contract it currently defends (trace §7b). The
 supply-side presence filter in `config/research_sources.yaml` moves to
 `monday/signals.md` in the same step, because widening the role while leaving
 the supply narrow produces an empty queue.
+
+**Revised by #237 (trace §7d).** As originally written this step was not
+sufficient, and the reason is a defect in the selector that is independent of
+the criteria. The queue is ordered oldest-first, rejections are never
+persisted, and the bound is a fixed window over the head of that queue — so the
+same 15 candidates are re-judged every Monday and positions 15–99 are
+unreachable. Today that means the 73 September signals cannot be evaluated at
+all. Three consequences bind this step:
+
+- Re-declaring `MAX_CANDIDATES` as a pure cost control **inherits head-of-line
+  blocking unchanged**. The bound has a second dependency the trace's original
+  §7b did not list: the "rejections are only skipped" contract.
+- A widened contract authored in Markdown would be evaluated against the oldest
+  15 rows in the queue and nothing else. *Must change* below cannot be
+  satisfied by a strategy edit alone, because the candidate set the edit is
+  judged against does not move.
+- Selection order and rejection persistence are **owner decision D12**
+  (#237 option A), not a choice this migration may make on its own. Step 6 is
+  blocked on D12 in the same way it is blocked on D1.
+
 *Must change:* the selection audit shows different dispositions for the same
-queue.
+queue, **and** a queue whose head is entirely ineligible no longer produces the
+same 15 dispositions the following week.
 
 **Step 7 — reduce `business_strategy.json` to generated machine data.**
 Only now, with every consumer reading resolved strategy, does the file shrink
@@ -350,10 +418,15 @@ longer changes an article.
 **Step 8 — retire the dead artifacts** listed in §9, and update
 `docs/SYSTEM_MAP.md` to point at the real authority.
 
-Ordering constraints that must not be relaxed: 1 before 2; 3 and 4 before 5;
-5 before 6 (a widened contract with the old engine still asserting `owner`
-would fail closed on exactly the signals it newly admits); 6 before 7; 7 before
-8.
+Ordering constraints that must not be relaxed: 0 before everything, including
+its F5 prerequisite before step 3 (the §11 tests drive real runs); 1 before 2;
+3 and 4 before 5; 5 before 6 (a widened contract with the old engine still
+asserting `owner` would fail closed on exactly the signals it newly admits);
+6 before 7; 7 before 8.
+
+Step 8 also inherits the `config/brand_voice.md` retirement dependency in §9:
+the assertion in `tests/test_cross_platform_overlap_policy.py:326-333` moves
+with the content, in the same change, or a #221 guarantee is dropped silently.
 
 ## 11. Tests that prove behaviour, not file existence
 
@@ -369,6 +442,34 @@ entrypoint suites mock `generate_article` wholesale
 The required chain is `human Markdown → runtime → actual model prompt or
 control decision → output`. Five test classes, each written so that it fails if
 the migration is cosmetic.
+
+**Relation to #233's proposed guardrail.** #233 §9 proposes a repository-wide
+mechanism for the same problem: a manifest (`config/product_config_manifest.yaml`)
+declaring every artifact that claims to govern the product with a `status`, one
+parametrized test that makes `status: wired` cost something, and one
+reachability test that refuses unclassified artifacts. These are not competing
+designs, and this task should not build a second mechanism:
+
+- **T1 is the Monday instance of audit §9.2.** #233's version parametrizes over
+  manifest entries and asserts a distinctive value reaches
+  `chat.call_args.kwargs["user"]`; T1 parametrizes over the authoring files of
+  §7.2 and asserts a *mutation* propagates. The mutation form is the stronger
+  of the two and should be the one adopted where both apply — a value that is
+  present in both the file and the prompt can be a coincidence of vocabulary; a
+  value that appears only after the file is edited cannot.
+- **T4 subsumes audit §9.3 for the migrated surface.** Once editorial rules
+  live in `strategy/**.md`, "unclassified artifact" and "rule duplicated
+  between Markdown and Python" are the same failure.
+- **The manifest still has a job after this migration**, for the artifacts this
+  task does not touch: `config/visual_system.yaml`, the research prompts,
+  `config/schedule.yaml`, and everything on the Wednesday and Friday paths.
+  §7.2's files should be manifest entries too, so one list answers "what claims
+  to govern the product".
+- **F9a is the anti-pattern these replace.** `test_never_blank_business_config.py:80-86`
+  asserts `resolved.is_file()` over the declared references; it belongs in the
+  "must not be accepted as proof" list below, and #233 reaches that conclusion
+  independently. If this migration lands without deleting or replacing that
+  assertion, the existence check outlives the thing it was checking.
 
 ### T1 — Markdown edit changes the prompt (mutation, not assertion)
 
@@ -407,6 +508,13 @@ given. Assert the published Wix body and LinkedIn artifact reflect the edited
 rule. This is the test the current suite has no equivalent of, because it mocks
 the generator.
 
+**Prerequisite, from #233's F5.** T3 drives the canonical entrypoint, and
+importing it is today enough to create `reports/content_packages/` in the
+tracked tree (`scripts/generate_and_publish.py:320-321`); a run then writes real
+run directories there. T3 must not be written until the artifact root is
+injectable (audit §9.4, §10 step 0), or the test that proves this migration
+becomes a new source of the residue F5 measured at 7,796 files.
+
 ### T4 — no product semantics survive in code
 
 Extend `test_no_engine_module_knows_what_monday_means` to the migrated stages,
@@ -439,6 +547,12 @@ The narrow "documented small-business case" contract is superseded (issue §7).
 Nothing in the repository states what Monday may now start from. Step 6 cannot
 proceed without an owner answer. *Owner must state:* what source/signal
 categories Monday may operate on, and what makes a case ineligible.
+*Sharpened by #237:* the current criteria are not failing by accident — 12 of
+15 rejections on 2026-09-14 were "no specific company" and 3 were "currently
+large company", both consistent with the criteria as written, and the criteria
+are byte-identical to their #142 text under which Monday published on
+2026-08-24. D1 is therefore a decision about what Monday is *for*, not a repair
+of a regression.
 
 **D2 — Compound Presence: lens, or nothing.**
 `strategy.json.compound_presence_role` requires it; `validators` requires the
@@ -484,6 +598,11 @@ thesis. *Owner must state:* keep, change, or make them article-specific.
 Monday will ever see. They are shaped by the superseded presence thesis and are
 shared with other consumers. *Owner must state:* does Monday get its own
 declared supply intent, or is the shared supply re-approved.
+*This is #237's option C (role-aware supply, #202),* and #237 quantifies the
+mismatch: 82 of the 100 unused signals carry `"REAL_COMPANY_EXAMPLE": null`,
+and most of the 18 that name a company name a large one. #237 also warns that
+field is a weak proxy and must not be read as an eligibility count — the
+2026-08-24 winner is itself one of the 82.
 
 **D10 — The queue divergence.**
 The selector judges from `signals_active.jsonl`; the run loads from
@@ -495,8 +614,36 @@ truth for the Monday queue.
 itself the file all others derive from. *Owner must state:* which language the
 authoring files are in, and whether that content is authoritative.
 
+**D12 — Selection order and rejection persistence.**
+New, from #237 (trace §7d). Monday's selector re-judges the same 15-candidate
+head every week because the queue is oldest-first and rejections are only
+skipped, never recorded. The 73 September signals sit at positions 27–99 and no
+Monday can reach them. This is a defect in the *mechanism*, so unlike D1 it
+does not resolve itself when the strategy moves to Markdown — and it blocks
+step 6 just as hard. #237's option A is "walk newest first, or persist per-role
+rejections"; it notes that either relaxes the current "rejections are only
+skipped" contract and changes selection semantics. *Owner must state:* whether
+the window advances by order, by persisted rejections, or not at all — and if
+not at all, that Monday's reachable supply is the oldest 15 unpublished
+signals, permanently. #237's option B (dispatch an explicit `signal_id` to
+unblock one Monday) is a live run and is **out of scope here**: this task's
+authorization is `controlled_live: false`.
+
+**D13 — Whether Monday's strategy governs Monday's output.**
+New, from #233's F4d (trace §1a). `daily_signal_research.yml` runs every day and
+force-disables publishing only on Wednesday; on a Monday its Stage 11 publish
+decision is the value of a secret not visible in the repository, and that path
+published live to Facebook, Instagram and Telegram on 2026-09-06/07 (#159
+forensics, `src/publishing/release_scope.py:12-18`). Everything this document
+proposes governs `monday_publish.yml`. *Owner must state:* whether the daily
+path may publish on a Monday at all, and if so, whether it is in scope for the
+Markdown strategy or is explicitly declared a separate, non-editorial surface.
+Until that is answered, "Monday output" in §8.1 means the canonical run's Wix
+article and LinkedIn artifact, and nothing else.
+
 ---
 
 **STOP.** Per the issue: architecture and design only. No production change is
 proposed for execution before owner review of this document and the decisions
-in §12, and no implementation step may begin before #233's deliverables exist.
+in §12, and no implementation step may begin before #233 merges and its F5
+mechanism fix lands (§10 step 0).

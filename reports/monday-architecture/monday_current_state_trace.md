@@ -7,24 +7,81 @@ at `orch/240`. Nothing here proposes a change; the proposal is in
 Every claim below is anchored to a path, and where a line number is given it
 was read from the file rather than inferred.
 
-## 0. Gate status (#233 / #234)
+## 0. Incorporated audit inputs (#233, #237, #234)
 
 The issue makes this task depend on the repository-wide findings from #233 and
-names #234 as evidence about current editorial wiring. **Neither deliverable
-exists in this repository.** `docs/` and `reports/` contain no #233 or #234
-artifact, and no commit in the current history references either issue.
+names #234 as evidence about current editorial wiring.
 
-Consequence, stated plainly rather than worked around:
+### 0a. #233 — present, and incorporated here
 
-- This task's own deliverable is an architecture report, and producing it is
-  not a production change, so the gate does not block it.
-- The trace below is therefore *first-hand* — it was derived by reading the
-  code, not by incorporating a prior audit. Where #233 would have contributed
-  repository-wide reachability findings, this document states reachability only
-  for the Monday path it traced itself and says so.
-- The migration order in the target document keeps the gate intact: no
-  production change is proposed for execution before owner review, and the
-  first implementation step is explicitly conditioned on #233 landing.
+**#233's deliverables exist in this repository.** They are on branch
+`orch/233` (also pushed, `origin/orch/233`), commits `19bac01` and `e0d00e0`,
+and they are not yet merged to `main` — which is why a search of the
+working tree alone does not find them:
+
+- `docs/repository-audit/REPOSITORY_AUDIT.md` — the human report.
+- `reports/repository_audit/findings.json` — ten ranked findings plus a repair
+  order.
+- `reports/repository_audit/inventory.json` and `inventory/**` — every one of
+  the 8,399 tracked paths classified exactly once.
+
+#233 audited base `58afe47`, which is the commit this branch descends from, so
+its reachability claims and this trace's are statements about the same tree and
+can be compared directly rather than reconciled across versions.
+
+The gate is therefore **merge, not existence**. The findings below are
+incorporated into this trace and reconciled in the target document now; no
+production change is proposed before #233 lands and before owner review.
+
+| #233 finding | What it establishes | Relation to this trace |
+|---|---|---|
+| F3 | `prompt_rule_references` declares seven documents as rules the run follows; one is consumed, and only as a version equality check. `config/brand_voice.md` has no reader anywhere in `src/` or `scripts/`. | **Confirms §5a** independently and repository-wide. #233 also reclassifies `docs/PLATFORM_AND_VISUAL_STRATEGY.md` from documentation to declared-but-unwired (declared at `business_strategy.json:337-341`) — the same row §5a reaches from the Monday side. |
+| F9a | The only test over those references asserts `resolved.is_file()` (`tests/strategy/test_never_blank_business_config.py:80-86`) and would pass if every one of them were empty. | **Adds.** §2's "tests proving runtime behaviour" column has no entry for the reference block; F9a is *why* it reads as wired. |
+| F9d | `tests/test_cross_platform_overlap_policy.py:326-333` asserts on the **text** of `config/brand_voice.md`. | **Adds a migration dependency §5b did not have.** A test outside the Monday path pins the content of a file the target retires; retiring the file breaks it. |
+| F5 + audit §9.4 | `scripts/generate_and_publish.py:320-321` sets `PACKAGES_DIR = Path("reports/content_packages")` and calls `mkdir` at **import** time, against the process CWD. 7,796 of 8,399 tracked files are test residue this produced. | **Adds an ordering constraint** on the target's end-to-end tests (target §11 T3, §10). |
+| F6a, F6c | `config/prompts/{blog_post,linkedin_post}.yaml` are reachable only from `scripts/generate.py`; `docs/SYSTEM_MAP.md:28-30` and `:55-58` present dead or legacy artifacts as current. | **Confirms §5c**, and supplies the exact `SYSTEM_MAP.md` lines the target's retirement step has to correct. |
+| F1, F2 | Wednesday's declared role is rendered and then discarded before generation (`generate_for_wednesday(signal)` takes one argument); `config/never_blank/wednesday_golden.yaml` has no production caller. | **Bounds a claim in the target.** Out of Monday scope, but it shows the Wednesday fork is wider than the one assertion the target cites. See target §8.3. |
+| F4d | `daily_signal_research.yml` runs every day; its publish decision is the value of a secret, not repository state, and that path published live to unauthorized channels on 2026-09-06/07. | **Adds.** §1a calls Stage 11 "a second, non-canonical publisher"; #233 establishes that whether it publishes on a Monday is **not answerable from source**, and that it has. Monday's strategy does not govern it. |
+| F8d | `src/strategy/pattern_extractor.py` exists, has compile-only coverage, and is a **different module** from `src/editorial/pattern_extractor.py`. | **Disambiguation.** Every reference to `pattern_extractor` in §3.1 and in the target's REPLACE list means the `src/editorial/` one. |
+| Audit §9.1–9.3 | The proposed permanent guardrail: one manifest of artifacts claiming to govern the product, one parametrized test that makes `status: wired` cost something, one reachability test that refuses unclassified artifacts. | **The target's §11 is the Monday instance of this**, not a competing mechanism. Reconciled in target §11. |
+| F4a/b/c, F7, F8a–c, F10 | Friday's duplicate publisher and missing concurrency group; dry-run-only configuration; unresolved artifacts; four accepted legacy failures. | No Monday-path dependency. Out of scope for #240 and not restated here. |
+
+Two of #233's conclusions are worth quoting because the target rests on them. On why unwired product config survives review: the repository
+"has never had a rule saying *an artifact is not finished until something
+proves it is consumed*". And on the Monday path specifically, F3's consequence:
+"A brand-voice change has no effect on any published article, and a green test
+suite says the references are fine."
+
+### 0b. #237 — the landed editorial-wiring forensic
+
+`docs/MONDAY_SELECTION_HEAD_OF_LINE.md`, on branch `orch/237` (also
+`origin/orch/237`), commit `ce1633f`. #233's own `findings.json` names #237 as
+the editorial-wiring forensic and defers the Monday/Wednesday prompt-wiring
+question to it rather than deciding it.
+
+It is directly load-bearing for deliverable 6 and is incorporated in §7d below.
+Its central finding — that Monday's selection window never advances — is a
+**correction** to a claim this trace made in §7b, not merely supporting
+evidence.
+
+### 0c. #234 — not present in this repository
+
+No #234 artifact exists in the working tree, in any local or remote-tracked
+branch, or in any commit message. Searched: every ref under
+`refs/heads/**` and `refs/remotes/**`; every commit subject reachable from
+`--all`; every path ever added under `docs/**` and `reports/**`. There is no
+`orch/234` branch, where every other orchestrated issue in this series (`232`,
+`233`, `237`, `240`) has one. GitHub is not reachable from this worktree, so
+whether #234 exists as an issue with findings recorded only in its thread
+cannot be determined here.
+
+What this means for the deliverable, stated rather than worked around: the
+editorial-wiring evidence incorporated below is #233's F1/F3/F6/F9 and #237's
+forensic, plus this trace's own first-hand reading of the Monday path. If #234
+holds editorial-wiring findings not covered by those, they are not in this
+report and it should be re-reconciled against them when they are available.
+That is a bounded gap in the inputs, and it is recorded as such rather than
+being allowed to look like completeness.
 
 ## 1. Current Monday end-to-end execution
 
@@ -51,6 +108,16 @@ Two independent processes. They share only files in `data/research/`.
 — NOT a Release 1 canonical run". It creates no `RunContext`, and its optional
 Stage 11 publishing is disabled for Wednesday by the workflow but is otherwise
 a second, non-canonical publisher.
+
+#233's F4d sharpens that last clause into something the target architecture has
+to account for: the inline guard at `daily_signal_research.yml:82-83` forces
+`NB_RESEARCH_PUBLISH_ENABLED=false` **only** on Wednesday, so on a Monday the
+publish decision is the value of a secret that is not in the repository.
+Whether a second article publishes on Monday is therefore not answerable from
+source, and the #159 forensics in `src/publishing/release_scope.py:12-18`
+record that this path did publish live — to Facebook, Instagram and Telegram —
+on 2026-09-06 and 2026-09-07. **A Monday strategy authored in Markdown governs
+`monday_publish.yml` and nothing else.**
 
 ### 1b. Publication (Monday)
 
@@ -229,6 +296,12 @@ reference (`active-campaign-strategy`) and compares only its `version` string
 against the campaign. **No reference's `path` is ever opened.** The block is a
 manifest of files the system does not read.
 
+#233 reaches the same conclusion repository-wide as F3, and its F9a supplies
+the part this trace could not see from the Monday path alone: the reason the
+block survives review is `tests/strategy/test_never_blank_business_config.py:80-86`,
+which asserts `resolved.is_file()` and would pass unchanged if every referenced
+document were empty.
+
 | Referenced path | Status |
 |---|---|
 | `config/brand.yaml` | Loaded only by `src/quality/*` and `src/internal/strategy.py`, reachable solely from the legacy `scripts/generate.py`. Not on Monday's path. |
@@ -349,20 +422,31 @@ and the strategy half is duplicated against Python in six places.
 
 **What the number actually is:** a cost bound on a per-candidate paid model
 call, not an editorial rule. It exists because each candidate costs one call
-and the sweep runs outside the run budget.
+and the sweep runs outside the run budget. #237 traces it to its origin: a hard
+Release 1 cost bound from #171 (`ae96c07`), refused rather than clamped because
+the selector is the largest pre-run call multiplier.
 
 **What is entangled with it:** only the narrow criteria make the sweep
 expensive, because a narrow contract rejects most of a queue that was itself
 filtered for a different (presence-shaped) purpose by
 `config/research_sources.yaml` and `config/prompts/research/signal_selector.yaml`.
-Widening the contract without changing the supply reduces sweep depth
-naturally; keeping the supply's presence bias while widening the role would
-produce eligible-but-unusable candidates.
+Keeping the supply's presence bias while widening the role would produce
+eligible-but-unusable candidates.
+
+**Correction, from #237.** An earlier version of this section also said that
+widening the contract "reduces sweep depth naturally". That is wrong, and §7d
+is why: the bound is not a depth the sweep chooses, it is a fixed window over a
+queue ordered oldest-first, and no widening moves the window. Widening changes
+which of the same 15 head candidates are judged eligible; it cannot make
+candidate 16 reachable.
 
 The issue directs that the narrow contract is superseded and that the
 15-candidate mechanism must not be preserved *around* it. §10 of the target
 document treats the bound as what it is — a cost control belonging to the
-runtime — and removes the editorial contract it currently defends.
+runtime — and removes the editorial contract it currently defends. §7d adds a
+second requirement that this trace did not originally carry: removing the
+editorial contract is **not sufficient**, because the bound also blocks the
+queue independently of what the criteria say.
 
 ### 7c. An inconsistency found while tracing (not part of the brief, recorded because a migration would inherit it)
 
@@ -373,3 +457,47 @@ The selector reads candidates **only** from `data/research/signals_active.jsonl`
 both files with different content, Monday judges eligibility on one record and
 publishes from another. No test covers the divergence. Flagged for the owner;
 no change made.
+
+### 7d. The window never advances (#237)
+
+`docs/MONDAY_SELECTION_HEAD_OF_LINE.md` on `orch/237` establishes that the
+15-candidate bound is not only a cost control — combined with two other
+properties it is a standstill. All three are re-derivable from tracked files;
+#237 marks them `VERIFIED-IN-REPO`.
+
+1. **Queue order is append order, oldest first.** `_load_candidates` walks
+   `signals_active.jsonl` in file order, so `DATE_FOUND` is non-decreasing down
+   the file — line 1 is `2026-06-22`, line 105 is `2026-09-15`.
+2. **Rejections are never recorded.** A rejected candidate is skipped, not
+   persisted. Consumption is written only after a successful publication, so no
+   file remembers that a candidate was judged ineligible.
+3. **Therefore the same prefix is re-judged every week.** Of 105 signals, 5 are
+   published, leaving 100 unused. Positions 0–14 — the exact window one Monday
+   can afford — are file lines 5 and 7–20. **The 73 September signals occupy
+   positions 27–99 and no Monday can reach them.**
+
+Monday 2026-09-14 (run `34868092082`) ended at exit 5 with all 15 judgments
+completed and no provider failure. #237's conclusion is that this is "the
+expected weekly outcome, not an incident".
+
+Three consequences for this task:
+
+- **The bound has a second dependency §7b did not list**: the "rejections are
+  only skipped" contract. Any migration that re-declares `MAX_CANDIDATES` as a
+  pure cost control inherits head-of-line blocking unchanged.
+- **Freshness is inversely correlated with reachability.** The newest signals
+  are the least reachable ones. A widened eligibility contract authored in
+  Markdown would be evaluated against the oldest 15 rows in the queue and
+  nothing else.
+- **The eligibility logic did not regress.** #237 checks this three ways: the
+  two rules that produced all 15 rejections are byte-identical to their text at
+  `3fc0eff` (#142); Monday published successfully under them on 2026-08-24; and
+  `pattern_extractor`'s "protagonist always owner" is **not** on the selection
+  path — `select_eligible_signal.py` calls `judge_source_eligibility` and
+  nothing else. The defect is supply and order, not judgment.
+
+#237 records three owner options and explicitly takes none: **A** change
+selection order or persist per-role rejections; **B** operator unblock for one
+Monday by dispatching an explicit `signal_id` (a live run, needing
+authorization); **C** role-aware supply (#202). The target document reconciles
+these against its own decisions rather than re-deciding them.
