@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "f5eddf1f8c2478da",
+  "HEADLINE": "United CEO Bans Marathon Meetings and Spends 3 Hours a Day Devoted to This Old-School Habit",
+  "prepared_at": "2026-09-16 13:17 UTC",
+  "content": {
+    "blog": {
+      "headline": "United CEO’s Meeting Ban Reveals What Leaders Really Avoid",
+      "angle": "United’s CEO bans marathon meetings → exposes how companies hide behind inefficient rituals → shifts to direct communication → lesson: cutting meetings uncovers and forces closure of communication gaps."
+    },
+    "linkedin": {
+      "headline": "Most companies treat meetings like a necessary evil—United’s CEO just called their bluff.",
+      "angle": "When leaders slash meeting time, they reveal hidden communication failures that drag down productivity."
+    },
+    "facebook": {
+      "headline": "United Airlines’ CEO banned marathon meetings and ditched slide reading—what happened next might surprise you.",
+      "angle": "United’s bold move to cut meeting bloat shows how much time businesses waste on miscommunication—are you ready to face your own meeting truth?"
+    },
+    "instagram": {
+      "headline": "Cut Meetings, Find Real Communication",
+      "angle": "United’s CEO proves that less meeting time can expose the communication gaps that really slow your business."
+    },
+    "threads": {
+      "thread_hook": "When you ban marathon meetings, what do you really find? Spoiler: It’s not what you expect.",
+      "angle": "This thread breaks down how United’s CEO’s meeting ban exposes hidden communication failures and why fixing those is the real productivity win."
+    },
+    "stories": {
+      "story_question": "What if your meetings are hiding bigger problems?",
+      "angle": "Exploring how cutting meeting time can reveal communication breakdowns that cost your business productivity."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789564631/never-blank/posts/research/f5eddf1f8c2478da/blog/1789564630.png",
+        "path": "reports/content_packages/images/f5eddf1f8c2478da_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789564632/never-blank/posts/research/f5eddf1f8c2478da/linkedin/1789564632.png",
+        "path": "reports/content_packages/images/f5eddf1f8c2478da_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789564632/never-blank/posts/research/f5eddf1f8c2478da/facebook/1789564632.png",
+        "path": "reports/content_packages/images/f5eddf1f8c2478da_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789564633/never-blank/posts/research/f5eddf1f8c2478da/instagram/1789564633.png",
+        "path": "reports/content_packages/images/f5eddf1f8c2478da_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789564635/never-blank/posts/research/f5eddf1f8c2478da/threads/1789564635.png",
+        "path": "reports/content_packages/images/f5eddf1f8c2478da_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789564636/never-blank/posts/research/f5eddf1f8c2478da/stories/1789564636.png",
+        "path": "reports/content_packages/images/f5eddf1f8c2478da_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "sand_pause_card",
+    "hook_text": "Most companies treat meetings like a necessary evil—United’s CEO just called their bluff."
+  }
+}
