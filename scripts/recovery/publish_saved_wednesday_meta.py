@@ -24,6 +24,12 @@ What makes it safe to run:
 * **No Wix, no LinkedIn, no consumption.** Only the three publishers above are
   imported. Nothing writes ``published_signal_ids.txt`` or any other repository
   state; the only output is the result record given by ``--result-out``.
+* **Never twice.** A live run reads the results of every earlier live run
+  (``--ledger-dir``) and refuses any channel that was published, partially
+  published, or started without a recorded outcome. Each channel is recorded as
+  ATTEMPTING before its publish call, so an interrupted run blocks a replay.
+* **No false success.** ``ThreadsPublisher`` returns PUBLISHED after a failed
+  reply; this script counts the posts actually published and reports PARTIAL.
 * **Dry run by default.** ``--mode live`` is required to publish.
 
 Remove this script and its workflow after the recovery (separate cleanup PR).
@@ -160,6 +166,70 @@ def _result_record(result) -> dict:
     }
 
 
+def publish_threads_counted(publisher_cls, draft: DraftPackage, mode: str) -> dict:
+    """Publish Threads and report what was really posted.
+
+    ``ThreadsPublisher`` stops at the first failed reply and still returns
+    PUBLISHED. The recovery must not call a partial thread complete, so it
+    counts the posts the provider actually published — by wrapping the module's
+    own publish call for the duration of this one call — and reports PARTIAL
+    when fewer than the saved sequence went out. The shared publisher is not
+    modified.
+    """
+    import src.publishing.threads as threads_module
+
+    posted: list[str] = []
+    original = threads_module._publish_container
+
+    def counting(token, user_id, container_id):
+        media_id, err = original(token, user_id, container_id)
+        if not err and media_id:
+            posted.append(media_id)
+        return media_id, err
+
+    threads_module._publish_container = counting
+    try:
+        record = _result_record(publisher_cls().publish(draft, mode))
+    finally:
+        threads_module._publish_container = original
+
+    record["posted_ids"] = list(posted)
+    record["expected_posts"] = len(draft.threads_sequence)
+    if mode == "live" and record["status"] == "PUBLISHED" and len(posted) != len(draft.threads_sequence):
+        record["status"] = "PARTIAL"
+        record["error_message"] = (
+            f"only {len(posted)} of {len(draft.threads_sequence)} posts were published; "
+            "never retried automatically"
+        )
+    return record
+
+
+#: A prior live outcome that means a post may already exist.
+_BLOCKING_PRIOR = {"PUBLISHED", "PARTIAL", "ATTEMPTING", "UNKNOWN_OUTCOME"}
+
+
+def prior_live_outcomes(ledger_dir: Path) -> dict[str, set[str]]:
+    """Every channel status recorded by earlier live recovery runs.
+
+    Fail closed: any unreadable or unrecognisable record raises.
+    """
+    outcomes: dict[str, set[str]] = {}
+    for path in sorted(ledger_dir.rglob("*.json")):
+        record = json.loads(path.read_text(encoding="utf-8"))
+        if record.get("recovery_issue") != 247 or record.get("mode") != "live":
+            raise RecoveryIdentityError(f"unrecognised ledger record: {path}")
+        for channel, result in record["results"].items():
+            outcomes.setdefault(channel, set()).add(result["status"])
+    return outcomes
+
+
+def _write(out: Path, record: dict) -> None:
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out.with_suffix(out.suffix + ".tmp")
+    tmp.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp.replace(out)
+
+
 def main(argv: list[str] | None = None, *, publishers: dict | None = None,
          forbidden_modules: tuple[str, ...] = (MODEL_CLIENT_MODULE,)) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -168,6 +238,8 @@ def main(argv: list[str] | None = None, *, publishers: dict | None = None,
     parser.add_argument("--mode", choices=("dry_run", "live"), default="dry_run")
     parser.add_argument("--channels", default=",".join(PUBLISHABLE),
                         help="Subset of facebook,instagram,threads (for a partial retry)")
+    parser.add_argument("--ledger-dir", default="",
+                        help="Result records of earlier live recovery runs (required for live)")
     parser.add_argument("--result-out", required=True)
     args = parser.parse_args(argv)
 
@@ -189,27 +261,24 @@ def main(argv: list[str] | None = None, *, publishers: dict | None = None,
         print(f"ERROR: {loaded} loaded; this recovery must make no model calls")
         return 4
 
+    if args.mode == "live":
+        if not args.ledger_dir or not Path(args.ledger_dir).is_dir():
+            print("ERROR: live mode requires --ledger-dir with the earlier live results")
+            return 5
+        try:
+            prior = prior_live_outcomes(Path(args.ledger_dir))
+        except (RecoveryIdentityError, ValueError, KeyError, TypeError) as exc:
+            print(f"ERROR: cannot read the recovery ledger — nothing published: {exc}")
+            return 5
+        blocked = {c: sorted(prior[c] & _BLOCKING_PRIOR) for c in channels
+                   if prior.get(c, set()) & _BLOCKING_PRIOR}
+        if blocked:
+            print(f"ERROR: already published or possibly published by an earlier run: {blocked}")
+            return 5
+
     draft = build_draft(generated, wix_asset_url)
     registry = publishers or PUBLISHERS
-    results: dict[str, dict] = {}
-    for channel in channels:
-        result = registry[channel]().publish(draft, args.mode)
-        results[channel] = _result_record(result)
-        print(f"  {channel:<10} {results[channel]['status']}"
-              f"  id={results[channel]['external_id']}  url={results[channel]['url']}"
-              + (f"  error={results[channel]['error_message']}"
-                 if results[channel]["error_message"] else ""))
-
-    results["telegram"] = {
-        "platform": "telegram", "status": "SKIPPED", "external_id": None,
-        "url": None, "error_message": TELEGRAM_SKIP_REASON,
-    }
-    for untouched in ("wix", "linkedin"):
-        results[untouched] = {
-            "platform": untouched, "status": "NOT_ATTEMPTED", "external_id": None,
-            "url": None, "error_message": "outside this recovery: already published by the run",
-        }
-
+    out = Path(args.result_out)
     record = {
         "recovery_issue": 247,
         "workflow_run_id": WORKFLOW_RUN_ID,
@@ -221,15 +290,48 @@ def main(argv: list[str] | None = None, *, publishers: dict | None = None,
         "model_calls": 0,
         "signal_consumption_changed": False,
         "recorded_at": datetime.now(timezone.utc).isoformat(),
-        "results": results,
+        "results": {
+            "telegram": {
+                "platform": "telegram", "status": "SKIPPED", "external_id": None,
+                "url": None, "error_message": TELEGRAM_SKIP_REASON,
+            },
+            **{
+                untouched: {
+                    "platform": untouched, "status": "NOT_ATTEMPTED", "external_id": None,
+                    "url": None,
+                    "error_message": "outside this recovery: already published by the run",
+                }
+                for untouched in ("wix", "linkedin")
+            },
+        },
     }
-    out = Path(args.result_out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"  record: {out}")
 
+    for channel in channels:
+        # Write-ahead: an interrupted call must never read as "not attempted".
+        record["results"][channel] = {
+            "platform": channel, "status": "ATTEMPTING", "external_id": None,
+            "url": None, "error_message": "publish call started; outcome not yet known",
+        }
+        _write(out, record)
+        try:
+            if channel == "threads":
+                result = publish_threads_counted(registry[channel], draft, args.mode)
+            else:
+                result = _result_record(registry[channel]().publish(draft, args.mode))
+        except Exception as exc:  # noqa: BLE001 - the outcome is unknown, record it
+            result = {
+                "platform": channel, "status": "UNKNOWN_OUTCOME", "external_id": None,
+                "url": None, "error_message": f"{type(exc).__name__}: {exc}"[:500],
+            }
+        record["results"][channel] = result
+        _write(out, record)
+        print(f"  {channel:<10} {result['status']}"
+              f"  id={result['external_id']}  url={result['url']}"
+              + (f"  error={result['error_message']}" if result["error_message"] else ""))
+
+    print(f"  record: {out}")
     success = {"PUBLISHED"} if args.mode == "live" else {"PUBLISHED", "SKIPPED", "DRAFT_CREATED"}
-    failed = [c for c in channels if results[c]["status"] not in success]
+    failed = [c for c in channels if record["results"][c]["status"] not in success]
     return 1 if failed else 0
 
 

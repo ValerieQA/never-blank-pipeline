@@ -69,6 +69,33 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: recovery-evidence
 
+      # Replay guard: every earlier LIVE run of this workflow left a result
+      # record. The script refuses any channel those records show as published,
+      # partial, or started without an outcome. Any API failure stops the job.
+      - name: Collect earlier live recovery results
+        if: inputs.mode == 'live'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          THIS_RUN: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p recovery-ledger
+          gh api --paginate "repos/$REPO/actions/workflows/recovery_wednesday_meta_247.yml/runs?per_page=100" \
+            --jq '.workflow_runs[].id' > runs.txt
+          while read -r run; do
+            [ "$run" = "$THIS_RUN" ] && continue
+            gh api --paginate "repos/$REPO/actions/runs/$run/artifacts?per_page=100" \
+              --jq '.artifacts[] | select(.name == "recovery-wednesday-meta-247-live") | .id' > ids.txt
+            while read -r art; do
+              mkdir -p "recovery-ledger/$run-$art"
+              gh api "repos/$REPO/actions/artifacts/$art/zip" > "recovery-ledger/$run-$art.zip"
+              unzip -q -o "recovery-ledger/$run-$art.zip" -d "recovery-ledger/$run-$art"
+              rm "recovery-ledger/$run-$art.zip"
+            done < ids.txt
+          done < runs.txt
+          echo "earlier live records: $(find recovery-ledger -name '*.json' | wc -l)"
+
       - name: Publish saved payloads
         env:
           NB_META_FB_PAGE_ID:      ${{ secrets.NB_META_FB_PAGE_ID }}
@@ -82,6 +109,7 @@ jobs:
             --evidence-dir recovery-evidence \
             --mode "$MODE" \
             --channels "$CHANNELS" \
+            --ledger-dir recovery-ledger \
             --result-out reports/recovery/wednesday_meta_247.json
 
       - name: Preserve recovery result

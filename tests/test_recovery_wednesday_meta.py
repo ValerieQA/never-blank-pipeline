@@ -17,7 +17,11 @@ import pytest
 import yaml
 
 from scripts.recovery import publish_saved_wednesday_meta as recovery
+from src.publishing import threads as _threads_module
 from src.publishing.result import PublishResult, PublishStatus
+
+#: The genuine provider call, captured before any fixture replaces it.
+_REAL_PUBLISH_CONTAINER = _threads_module._publish_container
 
 FIXTURE_ROOT = Path("tests/fixtures/recovery_247")
 RUN_DIR = FIXTURE_ROOT / recovery.RUN_ID
@@ -29,19 +33,37 @@ def _saved() -> dict:
     return json.loads((RUN_DIR / "generated.json").read_text(encoding="utf-8"))
 
 
+@pytest.fixture(autouse=True)
+def _no_threads_network(monkeypatch):
+    """Fake Threads publishes go through the module's publish call, like the
+    real publisher does, so the recovery's post counter sees them."""
+    import src.publishing.threads as threads_module
+    counter = iter(range(1, 1000))
+    monkeypatch.setattr(threads_module, "_publish_container",
+                        lambda token, user_id, container_id: (f"m-{next(counter)}", ""))
+
+
 def _fake_registry(calls: list, status=PublishStatus.PUBLISHED):
     def make(channel):
         class Fake:
             def publish(self, draft, mode):
                 calls.append((channel, draft, mode))
+                if channel == "threads" and status is PublishStatus.PUBLISHED:
+                    import src.publishing.threads as threads_module
+                    for _ in draft.threads_sequence:
+                        threads_module._publish_container("tok", "user", "container")
                 return PublishResult(platform=channel, status=status,
                                      external_id=f"{channel}-id", url=f"https://x/{channel}")
         return Fake
     return {name: make(name) for name in recovery.PUBLISHABLE}
 
 
-def _run(tmp_path, *extra, publishers=None, evidence=FIXTURE_ROOT):
+def _run(tmp_path, *extra, publishers=None, evidence=FIXTURE_ROOT, ledger="empty"):
     out = tmp_path / "result.json"
+    if "live" in extra and ledger is not None:
+        ledger_dir = tmp_path / "ledger" if ledger == "empty" else ledger
+        ledger_dir.mkdir(parents=True, exist_ok=True)
+        extra = (*extra, "--ledger-dir", str(ledger_dir))
     # The pytest process has usually loaded the model client through other
     # modules; real isolation is proven in a clean subprocess below.
     code = recovery.main(
@@ -211,6 +233,7 @@ def test_the_script_never_touches_consumption_or_other_publishers():
         "src.publishing.instagram.InstagramPublisher",
         "src.publishing.result.PublishStatus",
         "src.publishing.threads.ThreadsPublisher",
+        "src.publishing.threads",  # the counting wrapper around its publish call
     }
     assert not any("published_signal_ids" in s for s in strings)
     assert not any(name.startswith("scripts.") for name in imported)
@@ -263,3 +286,216 @@ def test_only_meta_credentials_exist_in_the_publish_step():
     text = WORKFLOW.read_text(encoding="utf-8")
     for absent in ("NB_OPENAI", "NB_WIX", "NB_ZERNIO", "NB_TELEGRAM"):
         assert absent not in text, absent
+
+
+# ── review findings (#249): partial Threads, replay, interruption ───────────
+
+
+class _ThreadsHTTP:
+    """Stand-in for the Threads Graph API, driven through the real publisher."""
+
+    def __init__(self, fail_publish_at: int | None = None):
+        self.fail_publish_at = fail_publish_at
+        self.published: list[str] = []
+        self.containers = 0
+
+    def fetch(self, url, method="GET", headers=None, body=None):
+        if url.endswith("/me?fields=id&access_token=tok") or "/me?" in url:
+            return 200, {"id": "user-1"}, b""
+        if url.endswith("/threads"):
+            self.containers += 1
+            return 200, {"id": f"container-{self.containers}"}, b""
+        if url.endswith("/threads_publish"):
+            index = len(self.published)
+            if self.fail_publish_at is not None and index == self.fail_publish_at:
+                return 500, {"error": {"message": "boom"}}, b""
+            media = f"media-{index + 1}"
+            self.published.append(media)
+            return 200, {"id": media}, b""
+        raise AssertionError(f"unexpected request {url}")
+
+
+def _real_threads(monkeypatch, http: _ThreadsHTTP):
+    import src.publishing.threads as threads_module
+    monkeypatch.setattr(threads_module, "_publish_container", _REAL_PUBLISH_CONTAINER)
+    monkeypatch.setattr(threads_module, "_fetch", http.fetch)
+    monkeypatch.setattr(threads_module.time, "sleep", lambda _s: None)
+    monkeypatch.setenv("NB_THREADS_ACCESS_TOKEN", "tok")
+    return {"threads": threads_module.ThreadsPublisher}
+
+
+def test_a_partial_real_thread_is_reported_partial_not_published(tmp_path, monkeypatch):
+    http = _ThreadsHTTP(fail_publish_at=1)
+    code, record = _run(tmp_path, "--mode", "live", "--channels", "threads",
+                        publishers=_real_threads(monkeypatch, http))
+
+    threads = record["results"]["threads"]
+    assert http.published == ["media-1"]
+    assert threads["status"] == "PARTIAL"
+    assert threads["posted_ids"] == ["media-1"]
+    assert threads["expected_posts"] == 4
+    assert code == 1
+
+
+def test_a_complete_real_thread_is_published_with_every_post(tmp_path, monkeypatch):
+    http = _ThreadsHTTP()
+    code, record = _run(tmp_path, "--mode", "live", "--channels", "threads",
+                        publishers=_real_threads(monkeypatch, http))
+
+    threads = record["results"]["threads"]
+    assert code == 0
+    assert threads["status"] == "PUBLISHED"
+    assert threads["posted_ids"] == ["media-1", "media-2", "media-3", "media-4"]
+
+
+def test_the_counting_wrapper_is_removed_after_the_call(tmp_path, monkeypatch):
+    import src.publishing.threads as threads_module
+    publishers = _real_threads(monkeypatch, _ThreadsHTTP())
+    before = threads_module._publish_container
+    _run(tmp_path, "--mode", "live", "--channels", "threads", publishers=publishers)
+
+    assert threads_module._publish_container is before
+
+
+def _ledger(tmp_path, results: dict, mode="live") -> Path:
+    ledger = tmp_path / "prior"
+    (ledger / "run-1").mkdir(parents=True)
+    (ledger / "run-1" / "wednesday_meta_247.json").write_text(json.dumps({
+        "recovery_issue": 247, "mode": mode,
+        "results": {c: {"status": s} for c, s in results.items()},
+    }))
+    return ledger
+
+
+@pytest.mark.parametrize("prior", ["PUBLISHED", "PARTIAL", "ATTEMPTING", "UNKNOWN_OUTCOME"])
+def test_a_channel_an_earlier_run_may_have_posted_is_never_republished(tmp_path, prior):
+    calls: list = []
+    code, record = _run(tmp_path, "--mode", "live", "--channels", "facebook",
+                        publishers=_fake_registry(calls),
+                        ledger=_ledger(tmp_path, {"facebook": prior}))
+
+    assert code == 5
+    assert calls == []
+    assert record is None
+
+
+def test_a_channel_that_definitively_failed_before_may_be_retried(tmp_path):
+    calls: list = []
+    code, _ = _run(tmp_path, "--mode", "live", "--channels", "instagram",
+                   publishers=_fake_registry(calls),
+                   ledger=_ledger(tmp_path, {"instagram": "FAILED", "facebook": "PUBLISHED"}))
+
+    assert code == 0
+    assert [c for c, _, _ in calls] == ["instagram"]
+
+
+def test_an_unreadable_ledger_blocks_everything(tmp_path):
+    ledger = tmp_path / "prior"
+    ledger.mkdir()
+    (ledger / "junk.json").write_text("{not json")
+    calls: list = []
+    code, _ = _run(tmp_path, "--mode", "live", publishers=_fake_registry(calls), ledger=ledger)
+
+    assert code == 5
+    assert calls == []
+
+
+def test_a_foreign_record_in_the_ledger_blocks_everything(tmp_path):
+    calls: list = []
+    code, _ = _run(tmp_path, "--mode", "live", publishers=_fake_registry(calls),
+                   ledger=_ledger(tmp_path, {"facebook": "FAILED"}, mode="dry_run"))
+
+    assert code == 5
+    assert calls == []
+
+
+def test_live_without_a_ledger_is_refused(tmp_path):
+    calls: list = []
+    code, _ = _run(tmp_path, "--mode", "live", publishers=_fake_registry(calls), ledger=None)
+
+    assert code == 5
+    assert calls == []
+
+
+def test_an_interrupted_call_is_recorded_as_an_unknown_outcome(tmp_path):
+    calls: list = []
+
+    class Exploding:
+        def publish(self, draft, mode):
+            calls.append("instagram")
+            raise TimeoutError("socket timed out after the request was sent")
+
+    registry = _fake_registry(calls)
+    registry["instagram"] = Exploding
+    code, record = _run(tmp_path, "--mode", "live", publishers=registry)
+
+    assert code == 1
+    assert record["results"]["instagram"]["status"] == "UNKNOWN_OUTCOME"
+    assert record["results"]["facebook"]["status"] == "PUBLISHED"
+
+
+def test_the_record_says_attempting_while_a_call_is_in_flight(tmp_path):
+    seen: list = []
+    out = tmp_path / "result.json"
+
+    class Watching:
+        def publish(self, draft, mode):
+            seen.append(json.loads(out.read_text())["results"]["facebook"]["status"])
+            return PublishResult(platform="facebook", status=PublishStatus.PUBLISHED)
+
+    registry = _fake_registry([])
+    registry["facebook"] = Watching
+    _run(tmp_path, "--mode", "live", "--channels", "facebook", publishers=registry)
+
+    assert seen == ["ATTEMPTING"]
+
+
+def test_a_full_run_changes_no_consumption_state(tmp_path):
+    marker = Path("data/research/published_signal_ids.txt")
+    index = Path("strategy/published_content_index.jsonl")
+    before = (marker.read_bytes(), index.read_bytes())
+
+    code, _ = _run(tmp_path, "--mode", "live", publishers=_fake_registry([]))
+
+    assert code == 0
+    assert (marker.read_bytes(), index.read_bytes()) == before
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["ledger", "result.json"]
+
+
+def test_a_real_dry_run_never_loads_the_model_client(tmp_path):
+    probe = (
+        "import sys, runpy\n"
+        f"sys.argv=['x','--evidence-dir',{str(FIXTURE_ROOT)!r},'--mode','dry_run',"
+        f"'--result-out',{str(tmp_path / 'r.json')!r}]\n"
+        "try:\n"
+        f"    runpy.run_path({str(SCRIPT)!r}, run_name='__main__')\n"
+        "except SystemExit as exc:\n"
+        "    code = exc.code\n"
+        "print('CODE', code, 'src.utils.llm_client' in sys.modules, 'openai' in sys.modules)\n"
+    )
+    env = {k: v for k, v in __import__("os").environ.items() if not k.startswith("NB_")}
+    out = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True,
+                         check=True, env=env)
+    last = out.stdout.strip().splitlines()[-1].split()
+
+    # No credentials here, so the publishers report missing env and the run
+    # exits 1 — but the guard ran for real and nothing loaded a model client.
+    assert last[0] == "CODE" and last[1] in {"0", "1"}
+    assert last[2:] == ["False", "False"]
+    assert json.loads((tmp_path / "r.json").read_text())["mode"] == "dry_run"
+
+
+def test_the_workflow_collects_the_ledger_before_publishing():
+    steps = _workflow()["jobs"]["recover"]["steps"]
+    names = [s.get("name") for s in steps]
+    ledger = steps[names.index("Collect earlier live recovery results")]
+    publish = steps[names.index("Publish saved payloads")]
+
+    assert names.index("Collect earlier live recovery results") < names.index("Publish saved payloads")
+    assert ledger["if"] == "inputs.mode == 'live'"
+    assert "set -euo pipefail" in ledger["run"]
+    assert 'select(.name == "recovery-wednesday-meta-247-live")' in ledger["run"]
+    assert "--ledger-dir recovery-ledger" in publish["run"]
+    upload = next(s for s in steps if s.get("name") == "Preserve recovery result")
+    assert upload["with"]["name"] == "recovery-wednesday-meta-247-${{ inputs.mode }}"
+    assert upload["if"] == "always()"
