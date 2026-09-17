@@ -1,0 +1,88 @@
+{
+  "shard": "root",
+  "commit": "4a121b2b63983d91581bf241234f9a02647124ce",
+  "scope": "tracked files at the repository root",
+  "entries": [
+    {
+      "path": ".env.example",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Template of every NB_* environment variable the pipeline reads, with per-variable notes; the operator's reference for configuring a local run or a GitHub secret.",
+      "consumer": "Humans and operators. No code reads it; `src/utils/env_validator.py` validates os.environ, not this file.",
+      "evidence": "`grep -rn 'env.example' src scripts .github` returns nothing. `src/utils/env_validator.py:1-2` imports os and reads the process environment.",
+      "canonical": "canonical",
+      "action_required": "none"
+    },
+    {
+      "path": ".gitignore",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Decides what run output is tracked. It deliberately un-ignores a small set of data/ state files that the pipeline treats as repository state (signals_active.jsonl, seen_index.json, published_signal_ids.txt, image_library.json, visual_registry.json).",
+      "consumer": "git, and every workflow step that runs `git add`: daily_signal_research.yml:106, monday_publish.yml:286-289, wednesday_golden.yml:231-232, research_generate_and_publish.yml:183-186, visibility_publish.yml:100-102.",
+      "evidence": "`.gitignore:2-25` — the `data/*` block plus the explicit `!` re-inclusions; `.gitignore:27` `reports/content_packages/images/` is the only reports/ exclusion.",
+      "canonical": "canonical",
+      "action_required": "Add the test-run namespaces under reports/content_packages/ (see findings F-02). Today nothing under reports/ except the image directory is ignored, which is how 7,796 test-run records became tracked."
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Long-form architecture narrative of the pipeline (44 KB).",
+      "consumer": "Humans. No loader reads it; it is not declared as a prompt or strategy reference.",
+      "evidence": "Not present in `strategy/current/business_strategy.json` prompt_rule_references (:306-342) nor in `strategy/current/strategy.json` research_references (:57-61); no `.md` is opened by src/ or scripts/ except as a file being written.",
+      "canonical": "canonical narrative",
+      "action_required": "none for reachability; it predates the Monday/Wednesday/Visibility streams and should be checked for accuracy separately."
+    },
+    {
+      "path": "IMPLEMENTATION_PLAN.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Historical implementation log of the build phases.",
+      "consumer": "Humans. Named as an implementation log by docs/SYSTEM_MAP.md:77.",
+      "evidence": "docs/SYSTEM_MAP.md:77 lists it under 'Architecture & History'. No code reference.",
+      "canonical": "historical record",
+      "action_required": "none"
+    },
+    {
+      "path": "PHASE_5D_REPORT.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Closure report for build Phase 5D (LinkedIn live publish).",
+      "consumer": "Humans. docs/SYSTEM_MAP.md:77.",
+      "evidence": "docs/SYSTEM_MAP.md:77; commit d88ef0d 'Phase 5D: LinkedIn live publish complete'.",
+      "canonical": "historical record",
+      "action_required": "none"
+    },
+    {
+      "path": "PHASE_6_SCHEDULING.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "Closure report for build Phase 6 (scheduling).",
+      "consumer": "Humans. docs/SYSTEM_MAP.md:77.",
+      "evidence": "docs/SYSTEM_MAP.md:77. Superseded in substance by the #232 cron contract now documented inside monday_publish.yml:14-30 and scheduled_publish.yml:13-24.",
+      "canonical": "historical record; the live scheduling contract lives in the workflow files",
+      "action_required": "none"
+    },
+    {
+      "path": "pytest.ini",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "pytest configuration; registers the story9/story10/story11/story12 acceptance-gate markers.",
+      "consumer": "pytest, invoked by .github/workflows/pr_tests.yml:42 and by the acceptance gates documented in docs/STORY10_ACCEPTANCE_GATE.md, STORY11_ACCEPTANCE_GATE.md, STORY_12_ACCEPTANCE.md.",
+      "evidence": "pytest.ini:1-9; pr_tests.yml:42 `python3 -m pytest -q -rfE --tb=no -p no:cacheprovider`.",
+      "canonical": "canonical",
+      "action_required": "none"
+    },
+    {
+      "path": "requirements.txt",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Runtime dependency pin set.",
+      "consumer": "research_generate_and_publish.yml:52 `pip install --quiet -r requirements.txt`, and the equivalent install step in monday_publish.yml / wednesday_golden.yml.",
+      "evidence": "research_generate_and_publish.yml:52. Note daily_signal_research.yml:34 installs an explicit package list instead of this file — see findings F-11.",
+      "canonical": "canonical, but not used by every workflow",
+      "action_required": "Reconcile with daily_signal_research.yml's hand-written install list (F-11)."
+    },
+    {
+      "path": "topics_manual.csv",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Manual topic queue for the pre-research V1 generator: rows with status=pending are pulled one at a time.",
+      "consumer": "`src/internal/topic_prioritizer.py:10` MANUAL_QUEUE -> `get_next_topic` <- `scripts/generate.py:34,296` <- `scripts/scheduled_publish.py:226` (Friday). Reachable from the live Friday cron, but Friday is owner-paused (#234 comment 2026-09-15).",
+      "evidence": "src/internal/topic_prioritizer.py:10; scripts/generate.py:296 'No topic available. Add rows to topics_manual.csv with status=pending.'; scheduled_publish.yml:23-24 crons.",
+      "canonical": "legacy V1 supply; the canonical streams take signals from data/research/*.jsonl",
+      "action_required": "Keep until the Friday decision is taken (#234). It is the input of a path that is scheduled but declared paused."
+    }
+  ]
+}

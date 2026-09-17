@@ -1,0 +1,179 @@
+{
+  "shard": "github-workflows",
+  "commit": "4a121b2b63983d91581bf241234f9a02647124ce",
+  "scope": ".github/workflows/**",
+  "note": "Six workflows can fire on a schedule today: daily_signal_research (daily), monday_publish (Mon), wednesday_golden (Wed), scheduled_publish (Fri), research_generate_and_publish (Fri+Sun), visibility_publish (Tue+Thu). Only monday_publish, wednesday_golden and research_generate_and_publish share the `never-blank-publish` concurrency group.",
+  "entries": [
+    {
+      "path": ".github/workflows/daily_signal_research.yml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Daily research pipeline: discovery, scoring, enrichment, angles, image preparation, archive, sheet sync, and (behind a secret) Stage 11 publication. Commits the resulting signal state back to main.",
+      "consumer": "GitHub Actions cron `0 8 * * *` (:5) and workflow_dispatch (:6). Entry script `scripts/research/run_daily_research.py` (:85).",
+      "evidence": "daily_signal_research.yml:5, :85, :106 (`git add data/research/ data/memory/ reports/research_*.json reports/content_packages/*.json`). Recent executions are visible as commits 'research: daily signal update 2026-09-16' (265d658) and its predecessors.",
+      "canonical": "canonical research stream",
+      "action_required": "No concurrency group (F-06); installs an ad-hoc package list rather than requirements.txt (F-11)."
+    },
+    {
+      "path": ".github/workflows/monday_publish.yml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Monday stream: due check, role-bounded eligible-signal selection, then the canonical entrypoint with `--editorial-role never-blank-monday-documented-case`. Publishes Wix + LinkedIn and commits the consumed signal id.",
+      "consumer": "cron `17 8 * * 1` and `17 9 * * 1` (:29-30, the #232 America/New_York 04:17 contract), workflow_dispatch (:32). Scripts: scripts/streams/due_check.py (:84), scripts/streams/select_eligible_signal.py (:159), scripts/generate_and_publish.py (:271).",
+      "evidence": "monday_publish.yml:19-32, :84, :159, :271, :286-289; concurrency group `never-blank-publish` at :53-55.",
+      "canonical": "canonical Monday stream",
+      "action_required": "None from this audit. Monday is blocked on supply (#237), which is out of scope here."
+    },
+    {
+      "path": ".github/workflows/wednesday_golden.yml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Wednesday Golden stream: due check, then the canonical entrypoint with `--editorial-role never-blank-wednesday-golden`, routed to the restored July pipeline.",
+      "consumer": "cron `17 8 * * 3` / `17 9 * * 3` (:11-12), workflow_dispatch (:13); scripts/streams/due_check.py (:57), scripts/generate_and_publish.py (:211).",
+      "evidence": "wednesday_golden.yml:6-13, :57, :211, :231-232; concurrency `never-blank-publish` (:32-34). The 2026-09-16 firing published run f9c2f40f85d82da3 (commit 14e4886).",
+      "canonical": "canonical Wednesday stream",
+      "action_required": "None here. Wednesday's architecture is owner-paused while the schedule keeps running (#234 comment 2026-09-16); the configured Golden contract does not reach generation — see 02_config.json for config/never_blank/wednesday_golden.yaml."
+    },
+    {
+      "path": ".github/workflows/scheduled_publish.yml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Friday stream. Checks the config/schedule.yaml window, then runs scripts/scheduled_publish.py, which shells out to the legacy generator and the legacy six-channel publisher.",
+      "consumer": "cron `17 8 * * 5` / `17 9 * * 5` (:23-24), workflow_dispatch (:26); scripts/scheduled_publish.py (:86-91).",
+      "evidence": "scheduled_publish.yml:13-26, :86-91; scripts/scheduled_publish.py:226-240 subprocesses `generate.py --qc`, `generate_image.py --upload`, `publish.py --live --channels ...` for wix, linkedin, facebook, instagram, threads and telegram.",
+      "canonical": "legacy publisher, still scheduled",
+      "action_required": "HIGH. This is a live cron in front of a path that release_scope does not cover and that the owner declared paused (#234, 2026-09-15). It has no concurrency group and shares Friday with research_generate_and_publish.yml. See findings F-01 and F-05."
+    },
+    {
+      "path": ".github/workflows/research_generate_and_publish.yml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Research Full LLM cycle on Friday and Sunday: auto-selects a signal from signals_active.jsonl and runs the canonical entrypoint with no editorial role.",
+      "consumer": "cron `0 7 * * 5,0` (:34), workflow_dispatch (:4); scripts/generate_and_publish.py (:170).",
+      "evidence": "research_generate_and_publish.yml:28-34, :57-85 (auto-select), :170; concurrency `never-blank-publish` (:37-39). Because it passes no `--editorial-role`, no Never Blank role rules and no role-bounded decision policy apply to its output (scripts/generate_and_publish.py:1286 requires `_role.decision_policy == 'role_bounded_r1'`).",
+      "canonical": "second Friday publisher; ownership undecided",
+      "action_required": "HIGH. Publication ownership of this Fri/Sun path is the open question the issue asks about; see findings F-05. Its 'Check publish secrets' step is skipped on scheduled runs because `if: inputs.dry_run == 'false'` (:100) and `inputs` is empty on a cron."
+    },
+    {
+      "path": ".github/workflows/visibility_publish.yml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Visibility Intelligence stream on Tuesday and Thursday: drains data/strategy/visibility_queue.jsonl through the VI pipeline and publishes inside the R1 scope.",
+      "consumer": "cron `0 7 * * 2` and `0 7 * * 4` (:6-7), workflow_dispatch (:8); scripts/generate_and_publish_visibility.py (:93).",
+      "evidence": "visibility_publish.yml:4-8, :93, :100-102 (`git add reports/content_packages/ || true`).",
+      "canonical": "canonical visibility stream",
+      "action_required": "Its `git add reports/content_packages/` (:102) is unbounded and will commit whatever a run left in that directory — the mechanism behind F-02. It also has no concurrency group (F-06)."
+    },
+    {
+      "path": ".github/workflows/pr_tests.yml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "The repository's only full-suite gate: runs all of pytest on every PR to main and compares the failed node-id set against tests/accepted_full_suite_failures.txt.",
+      "consumer": "pull_request to main (:14) and workflow_dispatch (:16); scripts/ci/check_test_baseline.py (:54).",
+      "evidence": "pr_tests.yml:1-10 (the rule), :42, :54.",
+      "canonical": "canonical CI gate",
+      "action_required": "This gate is where the guardrail of F-10 belongs."
+    },
+    {
+      "path": ".github/workflows/strategy_tests.yml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Path-filtered strategy/analytics gate: py_compile of 17 named modules plus the tests/strategy and tests/analytics suites.",
+      "consumer": "push to main and pull_request on the listed paths (:4-29), workflow_dispatch (:30).",
+      "evidence": "strategy_tests.yml:4-29, :50-67.",
+      "canonical": "supplementary to pr_tests.yml",
+      "action_required": "Its py_compile list names four scripts (build_monthly_plan, run_weekly_review, run_monthly_review, approve_strategy_recommendation) that no workflow executes — compilation is not a consumer. See 04_scripts.json."
+    },
+    {
+      "path": ".github/workflows/editorial_preflight.yml",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Path-filtered guard on the research publishing path: py_compile of four modules plus tests/test_output_guard.py.",
+      "consumer": "push to main on scripts/research/**, src/editorial/**, src/content/output_guard.py, tests/test_output_guard.py (:4-11); workflow_dispatch (:12).",
+      "evidence": "editorial_preflight.yml:4-12, :27-32.",
+      "canonical": "supplementary to pr_tests.yml",
+      "action_required": "none"
+    },
+    {
+      "path": ".github/workflows/generate_and_publish.yml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Manual legacy generate-then-publish: scripts/generate.py --qc, scripts/generate_image.py --upload, scripts/publish.py.",
+      "consumer": "workflow_dispatch only (:4). Scripts at :49, :66, :106-108.",
+      "evidence": "generate_and_publish.yml:3-4, :49, :106-108. Not the canonical entrypoint: the canonical one is scripts/generate_and_publish.py, a different file with a confusingly similar name.",
+      "canonical": "legacy; superseded by monday_publish.yml / wednesday_golden.yml for real publication",
+      "action_required": "Name collision with scripts/generate_and_publish.py is a live foot-gun (F-09). Retained for manual recovery."
+    },
+    {
+      "path": ".github/workflows/generate_content.yml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Manual legacy content generation only (no publish).",
+      "consumer": "workflow_dispatch only (:4); scripts/generate.py (:47).",
+      "evidence": "generate_content.yml:3-4, :47.",
+      "canonical": "legacy",
+      "action_required": "none"
+    },
+    {
+      "path": ".github/workflows/generate_image.yml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Manual image-pipeline run, optionally against a synthetic fixture.",
+      "consumer": "workflow_dispatch only (:4); scripts/create_fixture.py (:35), scripts/generate_image.py (:44).",
+      "evidence": "generate_image.yml:3-4, :35, :44.",
+      "canonical": "legacy/manual",
+      "action_required": "none"
+    },
+    {
+      "path": ".github/workflows/publish.yml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Manual publish of an existing draft through the legacy six-channel publisher.",
+      "consumer": "workflow_dispatch only (:4); scripts/publish.py (:79-81).",
+      "evidence": "publish.yml:3-4, :79-81. scripts/publish.py:50-58 maps all six channels and does not import src/publishing/release_scope.py.",
+      "canonical": "legacy manual publisher",
+      "action_required": "Manual use of a non-scope-gated publisher is accepted (tests/test_r1_publish_scope.py:217 'manual publishers may still reach every channel'); the defect is that scheduled_publish.yml reaches the same script on a cron (F-01)."
+    },
+    {
+      "path": ".github/workflows/live_publish_test.yml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Manual live publication smoke test across the channel matrix; writes reports/live_publish_test.{json,md}.",
+      "consumer": "workflow_dispatch only (:4); scripts/create_fixture.py (:31), scripts/generate_image.py (:39), scripts/live_publish_test.py (:63-65).",
+      "evidence": "live_publish_test.yml:3-4, :63-65; scripts/live_publish_test.py:15-17 declares its outputs.",
+      "canonical": "manual operational tool",
+      "action_required": "none"
+    },
+    {
+      "path": ".github/workflows/smoke_test_full_cycle.yml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Manual publish-then-analytics smoke test for one signal.",
+      "consumer": "workflow_dispatch only (:4); scripts/smoke_test_publish_analytics.py (:81), scripts/run_analytics.py (:118).",
+      "evidence": "smoke_test_full_cycle.yml:3-4, :81, :118.",
+      "canonical": "manual operational tool",
+      "action_required": "none"
+    },
+    {
+      "path": ".github/workflows/smoke_test_wix_image.yml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Manual Wix cover-image smoke test.",
+      "consumer": "workflow_dispatch only (:4); scripts/smoke_test_wix_image.py (:42).",
+      "evidence": "smoke_test_wix_image.yml:3-4, :42. The script reads reports/content_packages/wix_coverimage_test_generated.json (smoke_test_wix_image.py:36), which is not tracked — the tool therefore cannot run from a clean checkout without that file being produced first.",
+      "canonical": "manual operational tool",
+      "action_required": "Low: document or generate its input fixture."
+    },
+    {
+      "path": ".github/workflows/connectivity_audit.yml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Manual credential/connectivity audit for every publisher; writes reports/connectivity_audit.{json,md}.",
+      "consumer": "workflow_dispatch only (:4); scripts/test_publishers.py (:67-69).",
+      "evidence": "connectivity_audit.yml:3-4, :67-69; scripts/test_publishers.py:16-17 declares its outputs.",
+      "canonical": "manual operational tool",
+      "action_required": "none"
+    },
+    {
+      "path": ".github/workflows/run_analytics.yml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Manual analytics collection across Wix and LinkedIn.",
+      "consumer": "workflow_dispatch only (:4); scripts/run_analytics.py (:25). The same collectors also run inside the canonical entrypoint (scripts/generate_and_publish.py:3129).",
+      "evidence": "run_analytics.yml:3-4, :25; scripts/generate_and_publish.py:3129 `[BlogCollector(), LinkedInCollector()]`.",
+      "canonical": "canonical analytics entry",
+      "action_required": "none"
+    },
+    {
+      "path": ".github/workflows/recovery_wednesday_meta_247.yml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "One-off, manual-only recovery that publishes the saved Facebook/Instagram/Threads payloads of Wednesday run 35102307491 and nothing else.",
+      "consumer": "workflow_dispatch only (:23); scripts/recovery/check_prior_live_runs.py (:84) then scripts/recovery/publish_saved_wednesday_meta.py (:97).",
+      "evidence": "recovery_wednesday_meta_247.yml:6-20 states the containment (no schedule, dry_run default, typed run-id confirmation, read-only token, Meta-family secrets only, single-shot guard). Merged as 4a121b2.",
+      "canonical": "one-shot recovery, declared temporary",
+      "action_required": "Its own header (:9) and the script docstring (publish_saved_wednesday_meta.py:39) both ask for removal after the recovery. It is still dispatchable and is the one workflow that can publish to non-R1 channels by design. Track the cleanup PR (F-08)."
+    }
+  ]
+}
