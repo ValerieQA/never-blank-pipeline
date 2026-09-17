@@ -173,41 +173,74 @@
       "groups": [
         {
           "name": "The Strategy Engine monthly loop (9 paths)",
-          "paths": ["src/strategy/market_analyzer.py", "src/strategy/content_planner.py", "src/strategy/decision_engine.py", "src/strategy/pattern_extractor.py", "scripts/strategy/__init__.py", "scripts/strategy/build_monthly_plan.py", "scripts/strategy/run_weekly_review.py", "scripts/strategy/run_monthly_review.py", "scripts/strategy/approve_strategy_recommendation.py"],
+          "paths": [
+            "src/strategy/market_analyzer.py",
+            "src/strategy/content_planner.py",
+            "src/strategy/decision_engine.py",
+            "src/strategy/pattern_extractor.py",
+            "scripts/strategy/__init__.py",
+            "scripts/strategy/build_monthly_plan.py",
+            "scripts/strategy/run_weekly_review.py",
+            "scripts/strategy/run_monthly_review.py",
+            "scripts/strategy/approve_strategy_recommendation.py"
+          ],
           "evidence": "No workflow executes any of the four scripts; strategy_tests.yml:64-67 only py_compiles them, and compiling is not a consumer. build_monthly_plan.py:33 reads reports/signals/, which does not exist; content_planner.py writes strategy/current/content_plan.*, which does not exist; strategy/reviews/{weekly,monthly,recommendations}/ contain only .gitkeep. Built to the spec in strategy/claude_code_prompt_strategy_engine_FINAL_2026-07-22.md and never wired."
         },
         {
           "name": "Directory markers for the above (3 paths)",
-          "paths": ["strategy/reviews/weekly/.gitkeep", "strategy/reviews/monthly/.gitkeep", "strategy/reviews/recommendations/.gitkeep"],
+          "paths": [
+            "strategy/reviews/weekly/.gitkeep",
+            "strategy/reviews/monthly/.gitkeep",
+            "strategy/reviews/recommendations/.gitkeep"
+          ],
           "evidence": "Their only writers are the orphaned review scripts."
         },
         {
           "name": "The investigation layer (2 paths)",
-          "paths": ["src/investigation/__init__.py", "src/investigation/hypothesis_generator.py"],
+          "paths": [
+            "src/investigation/__init__.py",
+            "src/investigation/hypothesis_generator.py"
+          ],
           "evidence": "No production importer. Its only consumer is tests/test_hypothesis_generator.py — a test is not a justified consumer for a module that presents itself as production code. docs/BUSINESS_INVESTIGATION_LAYER.md is its specification."
         },
         {
           "name": "Orphaned scripts (1 path)",
-          "paths": ["scripts/research/sync_from_sheets.py"],
+          "paths": [
+            "scripts/research/sync_from_sheets.py"
+          ],
           "evidence": "It is not invoked by a workflow and not imported: run_daily_research.py:31 imports only sync_to_sheets. What makes it dead rather than manual is that it declares itself 'Stage 8' of the research pipeline (:1-4) and docs/SYSTEM_MAP.md:17 and docs/NEVER_BLANK_RESEARCH_PIPELINE.md repeat that claim — a declared position in a pipeline that never calls it, not a tool an operator is told to run."
         },
         {
           "name": "Orphaned configuration and prompts (5 paths)",
-          "paths": ["config/content_matrix.yaml", "config/intelligence.yaml", "config/prompts/observation_discovery.yaml", "config/prompts/observation_score.yaml", "config/prompts/topic_extract.yaml"],
+          "paths": [
+            "config/content_matrix.yaml",
+            "config/intelligence.yaml",
+            "config/prompts/observation_discovery.yaml",
+            "config/prompts/observation_score.yaml",
+            "config/prompts/topic_extract.yaml"
+          ],
           "evidence": "config/content_matrix.yaml is shadowed by config/prompts/content_matrix.yaml and loaded by nothing. config/intelligence.yaml is loaded only from scripts/dry_run.py:82. The three observation/topic prompts are named only in scripts/dry_run.py:96-97 and all three carry status: ready, i.e. they present themselves as usable and are not. docs/SYSTEM_MAP.md:28,55-57 nevertheless presents them as live."
         },
         {
           "name": "Explicitly NOT in this finding, after a review of the method (5 paths)",
-          "paths": ["config/prompts/image_hook.yaml", "config/prompts/strategy_brief.yaml", "config/prompts/topic_score.yaml", "scripts/dry_run.py", "scripts/render_card_audit.py"],
-          "evidence": "An earlier revision of this audit counted these as DEAD_ORPHANED and proposed them for deletion. That was wrong twice over, and the reasoning is recorded here so the same error is not repeated. The three prompts carry `status: not_needed`, and each says in its own text that it is kept to document an architectural decision and where the deterministic implementation lives instead (image_hook.yaml:3-7,9-17 is the clearest). Their loader's refusal — src/utils/config_loader.py:49-53 raises a ValueError quoting the file's own `decision` field — is what guarantees they cannot become an accidental active path; a disabled execution path deliberately kept disabled is the definition of LEGACY_INTENTIONAL, not of DEAD. The two scripts document their own manual invocation (dry_run.py:1-9, render_card_audit.py:1-17); no workflow is not the same as no consumer, and this audit already classifies the dispatch-only smoke tests as LEGACY_INTENTIONAL on exactly that basis. All five are reclassified LEGACY_INTENTIONAL, which is why the count here is 20 and not 25."
+          "paths": [
+            "config/prompts/image_hook.yaml",
+            "config/prompts/strategy_brief.yaml",
+            "config/prompts/topic_score.yaml",
+            "scripts/dry_run.py",
+            "scripts/render_card_audit.py"
+          ],
+          "evidence": "An earlier revision of this audit counted these as DEAD_ORPHANED and proposed them for deletion. That was wrong twice over, and the reasoning is recorded here so the same error is not repeated. The three prompts carry `status: not_needed`, and each says in its own text that it is kept to document an architectural decision and where the deterministic implementation lives instead (image_hook.yaml:3-7,9-17 is the clearest). Their loader's refusal — src/utils/config_loader.py:49-53 raises a ValueError quoting the file's own `decision` field — is what guarantees they cannot become an accidental active path; a disabled execution path deliberately kept disabled is the definition of LEGACY_INTENTIONAL, not of DEAD. The two scripts document their own manual invocation (dry_run.py:1-9, render_card_audit.py:1-17); no workflow is not the same as no consumer, and this audit already classifies the dispatch-only smoke tests as LEGACY_INTENTIONAL on exactly that basis. All five are reclassified LEGACY_INTENTIONAL, which is why the count here is 20 and not 25. Correction after review: reclassifying them is right, but the reason stated here — that each names where its deterministic implementation lives — is false for two of the three and stale for the third. See F-16; it changes no classification and no count."
         },
         {
           "name": "The index that keeps them looking alive (1 path, classified SUSPICIOUS_UNRESOLVED, not counted in the 20)",
-          "paths": ["docs/SYSTEM_MAP.md"],
+          "paths": [
+            "docs/SYSTEM_MAP.md"
+          ],
           "evidence": "Classified SUSPICIOUS_UNRESOLVED in 06_docs.json. It describes only the V1 system: Monday, Wednesday, Visibility, the canonical entrypoint and release_scope are absent, seven of its entries name files that no code loads — including the three retained decision records at :32,:46,:58, which it presents as live prompts although their own text says they are deliberately not used — and :73 names reports/full_live_matrix_test.{json,md}, which no script writes."
         }
       ],
-      "follow_up": "Three separate small issues, in this order: (1) rewrite or retire docs/SYSTEM_MAP.md — it is cheap and it stops the wrong picture spreading; (2) one owner decision on the Strategy Engine monthly loop, then retire or wire all twelve paths together; (3) one decision each on the investigation layer and on scripts/research/sync_from_sheets.py, since both correspond to a documented capability the product may still want.",
+      "follow_up": "Three separate small issues, in this order: (1) rewrite or retire docs/SYSTEM_MAP.md — it is cheap and it stops the wrong picture spreading; (2) one owner decision on the Strategy Engine monthly loop, then retire or wire all twelve paths together; (3) one decision each on the investigation layer and on scripts/research/sync_from_sheets.py, since both correspond to a documented capability the product may still want. A fourth, smaller than the others: the three decision records themselves point at modules that do not exist or mechanisms that were replaced (F-16).",
       "do_not_do": "Do not delete any of these on static-search evidence alone. Each group corresponds to a documented intention, and the issue forbids deletion on the strength of a missing import. Do not delete the five paths of the fourth group at all: their purpose is to be readable."
     },
     {
@@ -217,7 +250,10 @@
       "classification_of_subject": "ACTIVE_RUNTIME / LEGACY_INTENTIONAL",
       "what": ".github/workflows/recovery_wednesday_meta_247.yml plus scripts/recovery/{__init__,check_prior_live_runs,publish_saved_wednesday_meta}.py, tests/test_recovery_wednesday_meta.py and tests/fixtures/recovery_247/**. The workflow header (:9) and the script docstring (:39) both say to remove them after the recovery, in a separate cleanup PR. The recovery merged as 4a121b2.",
       "why_it_is_low": "It is the best-contained thing in the repository: workflow_dispatch only, dry_run by default, live requires typing the source run id, read-only token, only Meta-family secrets, digest-bound to one run's evidence, and single-shot via check_prior_live_runs.py. It is also the only path that can publish to non-R1 channels by design, so it should not outlive its purpose by accident.",
-      "evidence": [".github/workflows/recovery_wednesday_meta_247.yml:6-20, :23", "scripts/recovery/publish_saved_wednesday_meta.py:1-39, :218-223"],
+      "evidence": [
+        ".github/workflows/recovery_wednesday_meta_247.yml:6-20, :23",
+        "scripts/recovery/publish_saved_wednesday_meta.py:1-39, :218-223"
+      ],
       "follow_up": "Track the cleanup PR the two files already ask for. Nothing to decide."
     },
     {
@@ -231,7 +267,12 @@
         "src/editorial/pattern_extractor.py (live, Monday) vs src/strategy/pattern_extractor.py (DEAD_ORPHANED). Same module name in two packages, one live and one dead.",
         "Two schedule authorities: Monday and Wednesday decide whether to run via crons plus scripts/streams/due_check.py; Friday decides via config/schedule.yaml plus scripts/scheduled_publish.py:180. tests/test_scheduling_window.py covers only the first."
       ],
-      "evidence": ["scripts/generate_and_publish.py:45-49 vs .github/workflows/generate_and_publish.yml:49,106-108", "src/utils/config_loader.py:77 vs src/strategy/loader.py:19", "src/editorial/pattern_extractor.py:85-87 vs src/strategy/pattern_extractor.py:14", "scripts/streams/due_check.py:1-16 vs scripts/scheduled_publish.py:32,180"],
+      "evidence": [
+        "scripts/generate_and_publish.py:45-49 vs .github/workflows/generate_and_publish.yml:49,106-108",
+        "src/utils/config_loader.py:77 vs src/strategy/loader.py:19",
+        "src/editorial/pattern_extractor.py:85-87 vs src/strategy/pattern_extractor.py:14",
+        "scripts/streams/due_check.py:1-16 vs scripts/scheduled_publish.py:32,180"
+      ],
       "follow_up": "No code change required. A short ORIENTATION section in the rewritten docs/SYSTEM_MAP.md (F-07) naming the canonical entrypoint and the legacy one is the whole fix."
     },
     {
@@ -262,7 +303,10 @@
         }
       ],
       "the_general_shape": "Each proves the weakest thing that is easy to assert — existence, a call signature, a constructor in isolation, the absence of a symbol — and each was true when written. Production moved underneath three of them and nothing noticed, because no test in the repository spans entrypoint to model messages. That is hard to write naively for a real reason: every stage binds chat by name (from src.utils.llm_client import chat), so patching src.utils.llm_client.chat intercepts nothing; the patch must go into each stage module's own namespace.",
-      "evidence": ["the four test node ids above", "src/utils/llm_client.py, and the by-name binding in each stage module — src/editorial/decision_lens_lite.py:25, hook_engine.py:14, narrative_spine.py:15, story_assembly.py:18 all do `from src.utils.llm_client import chat` and then call the bare name at :184, :134, :127, :135"],
+      "evidence": [
+        "the four test node ids above",
+        "src/utils/llm_client.py, and the by-name binding in each stage module — src/editorial/decision_lens_lite.py:25, hook_engine.py:14, narrative_spine.py:15, story_assembly.py:18 all do `from src.utils.llm_client import chat` and then call the bare name at :184, :134, :127, :135"
+      ],
       "follow_up": "Guardrail G-2 below. Retargeting tests/test_wednesday_golden.py:397 can be done immediately and independently of any product decision, because it only changes what CI reports, not what Wednesday does."
     },
     {
@@ -272,7 +316,11 @@
       "classification_of_subject": "ACTIVE_RUNTIME",
       "what": "daily_signal_research.yml:34 runs `pip install --quiet openai PyYAML requests google-auth google-api-python-client Pillow cloudinary`. requirements.txt also pins python-dotenv, gspread, feedparser and numpy, and carries version floors.",
       "why_it_matters": "The daily stream is the one that runs most often, and it runs against a different dependency set from every other workflow. feedparser in particular is an RSS library, and discovery is an RSS stage.",
-      "evidence": ["daily_signal_research.yml:34", "requirements.txt", "research_generate_and_publish.yml:52 (`pip install -r requirements.txt`)"],
+      "evidence": [
+        "daily_signal_research.yml:34",
+        "requirements.txt",
+        "research_generate_and_publish.yml:52 (`pip install -r requirements.txt`)"
+      ],
       "follow_up": "Fold into whichever workflow-touching issue lands first. Not worth its own PR."
     },
     {
@@ -282,7 +330,12 @@
       "classification_of_subject": "HUMAN_DOCUMENTATION mismatch",
       "what": "docs/DECISION_LENS_CONTRACT.md, docs/DECISION_LENS_EVALUATOR.md, docs/DECISION_LIFECYCLE.md and docs/STORY_12_ACCEPTANCE.md describe the Decision Lens as the business gate between research and all downstream work. Both editorial roles declare decision_policy: role_bounded_r1 (business_strategy.json:393, :444), and scripts/generate_and_publish.py:1286-1336 takes the bypass branch for them, writing decision_policy.json instead of decision.json. In practice the Lens runs only on the role-less Fri/Sun research path.",
       "why_it_is_not_a_bug": "The bypass is deliberate, typed, recorded in an artifact and verified by src/artifacts/provenance.py:261-309. What is missing is the sentence in the four documents saying so.",
-      "evidence": ["strategy/current/business_strategy.json:393, :444", "scripts/generate_and_publish.py:1280-1336", "src/artifacts/provenance.py:261-309", "src/strategy/business_config.py:127"],
+      "evidence": [
+        "strategy/current/business_strategy.json:393, :444",
+        "scripts/generate_and_publish.py:1280-1336",
+        "src/artifacts/provenance.py:261-309",
+        "src/strategy/business_config.py:127"
+      ],
       "follow_up": "A documentation-only change: record the role_bounded_r1 bypass in the four documents. Independent of every product decision."
     },
     {
@@ -292,7 +345,10 @@
       "classification_of_subject": "ACTIVE_RUNTIME",
       "what": "src/publishing/release_scope.py:1-25 states that adding a channel is 'a change to this file and nowhere else'. It is not. Independent Wix/LinkedIn-only lists exist at, among others: scripts/generate_and_publish.py:508 (_R1_COMPOSER_FORMATS), :509 (_R1_IMAGE_PLATFORMS), :2768 (_r1_cls), :2582-2632, :2821-2825, :2314, :3129; src/publishing/preflight.py:62-65, :226, :280, :484-492; src/visual/contract.py:44-47, :146-150, :291-309; src/reporting/run_report.py:131-136, :336, :446; src/publishing/idempotency.py:227-231, :278-305; src/strategy/business_config.py:182-184; src/strategy/execution_context.py:190-253; src/editorial/editorial_role.py:104-106; src/publishing/package.py:174-265 (no package model for any other channel).",
       "why_it_matters": "Two opposite risks from one false docstring. Someone adding a channel by editing release_scope.py alone gets a run that passes the allowlist and then fails deep in preflight or packaging. Someone reading the docstring believes the allowlist is the whole control, which is how F-01 stayed invisible.",
-      "evidence": ["src/publishing/release_scope.py:1-25", "the file:line list above, each checked at the audited commit"],
+      "evidence": [
+        "src/publishing/release_scope.py:1-25",
+        "the file:line list above, each checked at the audited commit"
+      ],
       "follow_up": "Correct the docstring. That is the whole fix; consolidating the lists is a separate design question that #248 owns."
     },
     {
@@ -303,24 +359,41 @@
       "conflicts": [
         {
           "subject": "The Wednesday Golden contract",
-          "copies": ["config/never_blank/wednesday_golden.yaml (machine)", "docs/NEVER_BLANK_GOLDEN_EDITORIAL_PATTERNS.md (2026-08-20, self-declared 'Release 1 product configuration for Issue #143')", "docs/product/wednesday_golden_contract.md (2026-09-05)"],
+          "copies": [
+            "config/never_blank/wednesday_golden.yaml (machine)",
+            "docs/NEVER_BLANK_GOLDEN_EDITORIAL_PATTERNS.md (2026-08-20, self-declared 'Release 1 product configuration for Issue #143')",
+            "docs/product/wednesday_golden_contract.md (2026-09-05)"
+          ],
           "state": "This conflict is UNRESOLVED, not superseded, and the distinction was got wrong in an earlier revision of this audit. The 2026-08-20 document is not a stale copy: it names its own machine artifacts at :19-22 (the profile and the acceptance rubric), which is one more declared relationship than either of the others carries. The 2026-09-05 document names nothing and is named by nothing. Newer is not more authoritative, and no artifact in the repository claims authority over another. Neither prose copy is read by production; the rubric path is additionally duplicated into strategy/current/business_strategy.json:442-443, which is the only copy the runtime honours.",
           "provisional_source_of_truth": "business_strategy.json for the rubric path. For the contract prose, NONE — and this audit deliberately does not nominate one, because choosing between the 2026-08-20 and 2026-09-05 documents is the Wednesday product decision of #234, not an editorial-hygiene call. See F-04."
         },
         {
           "subject": "The Never Blank worldview",
-          "copies": ["strategy/worldview.md (Russian, registered at strategy.json:59)", "docs/NEVER_BLANK_EDITORIAL_WORLDVIEW.md (English, registered nowhere)"],
+          "copies": [
+            "strategy/worldview.md (Russian, registered at strategy.json:59)",
+            "docs/NEVER_BLANK_EDITORIAL_WORLDVIEW.md (English, registered nowhere)"
+          ],
           "state": "Both claim to be the identity document from which topics and structure follow; neither references the other; neither is read.",
           "provisional_source_of_truth": "strategy/worldview.md, on the strength of being the one that is at least declared."
         },
         {
           "subject": "The active strategy",
-          "copies": ["strategy/current/strategy.json (executed)", "strategy/current/strategy.md (human, hand-maintained)"],
+          "copies": [
+            "strategy/current/strategy.json (executed)",
+            "strategy/current/strategy.md (human, hand-maintained)"
+          ],
           "state": "Maintained by hand in both formats — the exact duplication the owner's 2026-09-15 ruling forbids. src/strategy/history.py:46-48 archives them together but reads only the JSON.",
           "provisional_source_of_truth": "strategy.json today; per the ruling it should become the derived artifact."
         }
       ],
-      "evidence": ["docs/NEVER_BLANK_GOLDEN_EDITORIAL_PATTERNS.md:19-22 (the one existing cross-reference)", "docs/product/wednesday_golden_contract.md (no outbound reference anywhere in the file)", "c5dff81 vs 0e6f82e/d3562ce/92eb292", "strategy/current/strategy.json:59", "src/strategy/history.py:46-48", "the #234 owner comment of 2026-09-15"],
+      "evidence": [
+        "docs/NEVER_BLANK_GOLDEN_EDITORIAL_PATTERNS.md:19-22 (the one existing cross-reference)",
+        "docs/product/wednesday_golden_contract.md (no outbound reference anywhere in the file)",
+        "c5dff81 vs 0e6f82e/d3562ce/92eb292",
+        "strategy/current/strategy.json:59",
+        "src/strategy/history.py:46-48",
+        "the #234 owner comment of 2026-09-15"
+      ],
       "follow_up": "Name one source of truth per conflict, in-band, in a one-line header in each losing file — following the pattern strategy/claude_code_prompt_strategy_engine_FINAL_2026-07-22.md:3-6 already uses, which is the only demonstrated supersession in the repository. This is documentation-only and unblocks nothing else, but it is what stops a fourth copy being written. For the Wednesday row the naming is an owner decision, not a cleanup.",
       "method_note": "Only one path in this audit carries the DUPLICATE_SUPERSEDED classification: strategy/claude_code_prompt_strategy_engine_2026-07-22.md, where the superseding document says so in its own text. Every other duplication here is recorded as a conflict without a winner, because a later date, a tidier format or a shorter file are not evidence of authority."
     },
@@ -341,6 +414,37 @@
       ],
       "follow_up": "Documentation-sized, and it belongs with F-13 in the docs-only issue: either make --legacy-package do what its help text says, or remove the flag and the unreachable loader with it; and correct the comment at generate_and_publish_visibility.py:425 to claim only the audit trail. Both are behaviour-preserving as written.",
       "do_not_do": "Do not implement a resume capability under this issue. Establishing that it is absent is the audit's job; adding it is a product change nobody asked for."
+    },
+    {
+      "id": "F-16",
+      "severity": "medium",
+      "title": "The three retained decision records document implementations that do not exist or no longer match the code",
+      "classification_of_subject": "LEGACY_INTENTIONAL (the three records stay; only their content is wrong)",
+      "what": "config/prompts/{image_hook,strategy_brief,topic_score}.yaml are decision records, and this audit's reclassification of them out of DEAD stands: `status: not_needed` makes src/utils/config_loader.py:49-53 refuse them by design, and scripts/dry_run.py:101 asserts the refusal. What does NOT stand is the claim that each names where its deterministic implementation lives. Verified at 4a121b2, two of the three name modules that are not in the tree, and the third misstates what its module does.",
+      "per_artifact": [
+        {
+          "path": "config/prompts/image_hook.yaml",
+          "recorded": "implementation_note (:15-17): `src/content/image_builder.py` extracts `hook = brief.observation_statement[:brand_config.image.hook_max_chars]`.",
+          "actual": "src/content/image_builder.py does not exist. The hook is produced by src/publishing/image_pipeline.py:596 `hook = trim_hook_text(observation)`; trim_hook_text (:172-182) is word-based, HOOK_MAX_WORDS 7 with a hard ceiling of 10 (:46-47). config/brand.yaml:36 `image.hook_max_chars: 80` has no reader in src/, scripts/ or tests/.",
+          "still_true": "The decision itself: the hook is derived deterministically from the observation, with no model call."
+        },
+        {
+          "path": "config/prompts/strategy_brief.yaml",
+          "recorded": "decision (:7-12): tag assignment from strategy.yaml `tag_assignment`; slug uniqueness checked against memory/published.json; platform format from a strategy.yaml `platform_format` mapping; content goal from `content_goal_by_observation_type`; all logic in src/internal/strategy.py.",
+          "actual": "The module exists and two claims hold — tag assignment (strategy.py:38-53) and a slug generated from the title under strategy.yaml `slug.max_length` (:22-35, :77-79). Three do not: generate_slug performs no uniqueness check and strategy.py never imports src/internal/memory.py, so memory/published.json is never consulted; the brief takes `platforms=topic.platform_fit` and `content_goal=topic.content_goal` from the candidate. config/strategy.yaml:31 `platform_format` and :43 `content_goal_by_observation_type` exist and are read by nothing in src/, scripts/ or tests/.",
+          "still_true": "The decision itself: ContentBrief construction is deterministic, with no model call, in the module named."
+        },
+        {
+          "path": "config/prompts/topic_score.yaml",
+          "recorded": "decision (:9-13): a weighted formula with inputs from config/intelligence.yaml, cosine-similarity relevance, a diversity adjustment from memory/portfolio.json, and 'all computations happen in src/internal/topic_scorer.py'.",
+          "actual": "src/internal/topic_scorer.py does not exist and no code implements this formula. src/internal/topic_prioritizer.py:64,74 records the Intelligence Engine as a stub, 'not wired yet (Phase 7)'. The named weights source, config/intelligence.yaml, is DEAD_ORPHANED in this inventory — its only reader is scripts/dry_run.py:82. The scoring that does run (scripts/research/score.py:19, src/never_blank/wednesday_july/research/score.py:37) reads config/scoring_weights.yaml, a different file with a different formula.",
+          "still_true": "That no model call is intended here. Nothing else: this record describes a design that was never built."
+        }
+      ],
+      "why_it_matters": "A decision record is read as evidence. Two of these send a reader to a module that does not exist, and the third describes a mechanism that was replaced — so the file that exists to prevent a wrong assumption now creates one. It also hides three orphaned configuration keys (`image.hook_max_chars`, `platform_format`, `content_goal_by_observation_type`) that look wired because a record says they are. This is the same failure as F-07's SYSTEM_MAP problem, one level down: the index was wrong about which prompts are live, and the prompts are wrong about which code is live.",
+      "evidence": "Absent modules at 4a121b2: src/content/image_builder.py, src/internal/topic_scorer.py. Live instead: src/publishing/image_pipeline.py:46-47,:172-182,:596; src/internal/strategy.py:14-17,:22-35,:38-53,:77-79. Stub: src/internal/topic_prioritizer.py:64,:74. Unread keys: config/brand.yaml:36; config/strategy.yaml:31,:43. Refusal mechanism, unchanged and verified: src/utils/config_loader.py:49-53; scripts/dry_run.py:101.",
+      "follow_up": "Owner decision per file, outside #233, which is audit-only and may not edit source YAML: (1) image_hook.yaml — correct its implementation_note to src/publishing/image_pipeline.py and the word-based limits, or retire the record; (2) strategy_brief.yaml — correct the three stale rules, and decide separately whether the two unread config keys are a missing implementation or dead configuration; (3) topic_score.yaml — decide it together with config/intelligence.yaml and the Intelligence Engine stub (F-07 group), since retaining a record of an unbuilt design is a product choice, not a cleanup.",
+      "do_not_do": "Do not delete these three files on the strength of this finding: the refusal mechanism that keeps them inert is intact and their classification does not change. Do not repair the YAML inside the audit PR."
     }
   ],
   "reverse_reachability": {
@@ -353,16 +457,56 @@
     ]
   },
   "recommended_repair_order": [
-    {"rank": 1, "item": "F-01 — put a real control in front of the Friday cron (disable the schedule, or make publish.py honour release_scope). Highest risk: an unscoped six-channel publication is one YAML repair away.", "blocked_on": "nothing"},
-    {"rank": 2, "item": "F-05 — decide publication ownership of the Fri/Sun Research path; disable its cron in the meantime.", "blocked_on": "owner decision; the interim cron change is not blocked"},
-    {"rank": 3, "item": "F-02 + F-02b — untrack the 7,796 test-run records and the 26 card-audit PNGs, ignore both, and isolate PACKAGES_DIR in the test suite.", "blocked_on": "nothing"},
-    {"rank": 4, "item": "G-1 — add the configuration parse gate to pr_tests.yml. Cheapest durable guardrail; would have caught F-01's YAML at the commit that broke it.", "blocked_on": "nothing"},
-    {"rank": 5, "item": "F-10 — retarget or xfail tests/test_wednesday_golden.py:397 so CI stops asserting a contract production does not meet.", "blocked_on": "nothing; it changes only what CI reports"},
-    {"rank": 6, "item": "F-06 — add the never-blank-publish concurrency group to the three workflows that lack it.", "blocked_on": "nothing"},
-    {"rank": 7, "item": "F-12 + F-13 + F-14 + F-15 — documentation-only corrections: the Decision Lens bypass, the release_scope docstring, one source-of-truth line per conflict, and the two advertised-but-absent package retry paths.", "blocked_on": "nothing for F-12, F-13 and F-15; the Wednesday row of F-14 needs the owner"},
-    {"rank": 8, "item": "F-07 — rewrite or retire docs/SYSTEM_MAP.md first, then take one decision per orphaned group.", "blocked_on": "owner decision for the Strategy Engine and investigation groups"},
-    {"rank": 9, "item": "G-2 — the sentinel wiring test, built as part of the first #244 vertical slice.", "blocked_on": "the #244 rulings"},
-    {"rank": 10, "item": "F-03 + F-04 — the product-configuration repairs themselves.", "blocked_on": "#231, #240/#244 and the Wednesday July-fidelity decision. Explicitly out of scope for this audit."}
+    {
+      "rank": 1,
+      "item": "F-01 — put a real control in front of the Friday cron (disable the schedule, or make publish.py honour release_scope). Highest risk: an unscoped six-channel publication is one YAML repair away.",
+      "blocked_on": "nothing"
+    },
+    {
+      "rank": 2,
+      "item": "F-05 — decide publication ownership of the Fri/Sun Research path; disable its cron in the meantime.",
+      "blocked_on": "owner decision; the interim cron change is not blocked"
+    },
+    {
+      "rank": 3,
+      "item": "F-02 + F-02b — untrack the 7,796 test-run records and the 26 card-audit PNGs, ignore both, and isolate PACKAGES_DIR in the test suite.",
+      "blocked_on": "nothing"
+    },
+    {
+      "rank": 4,
+      "item": "G-1 — add the configuration parse gate to pr_tests.yml. Cheapest durable guardrail; would have caught F-01's YAML at the commit that broke it.",
+      "blocked_on": "nothing"
+    },
+    {
+      "rank": 5,
+      "item": "F-10 — retarget or xfail tests/test_wednesday_golden.py:397 so CI stops asserting a contract production does not meet.",
+      "blocked_on": "nothing; it changes only what CI reports"
+    },
+    {
+      "rank": 6,
+      "item": "F-06 — add the never-blank-publish concurrency group to the three workflows that lack it.",
+      "blocked_on": "nothing"
+    },
+    {
+      "rank": 7,
+      "item": "F-12 + F-13 + F-14 + F-15 — documentation-only corrections: the Decision Lens bypass, the release_scope docstring, one source-of-truth line per conflict, and the two advertised-but-absent package retry paths.",
+      "blocked_on": "nothing for F-12, F-13 and F-15; the Wednesday row of F-14 needs the owner"
+    },
+    {
+      "rank": 8,
+      "item": "F-07 — rewrite or retire docs/SYSTEM_MAP.md first, then take one decision per orphaned group.",
+      "blocked_on": "owner decision for the Strategy Engine and investigation groups"
+    },
+    {
+      "rank": 9,
+      "item": "G-2 — the sentinel wiring test, built as part of the first #244 vertical slice.",
+      "blocked_on": "the #244 rulings"
+    },
+    {
+      "rank": 10,
+      "item": "F-03 + F-04 — the product-configuration repairs themselves.",
+      "blocked_on": "#231, #240/#244 and the Wednesday July-fidelity decision. Explicitly out of scope for this audit."
+    }
   ],
   "guardrails": [
     {
