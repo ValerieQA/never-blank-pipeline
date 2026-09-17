@@ -5,17 +5,18 @@
   "scope_note": "Read-only. Nothing outside reports/repository_audit/** and docs/repository-audit/** was modified. Nothing was published, no provider call was made, no CONTROLLED_LIVE run was started. Discovery of a defect here does not authorize its repair: each finding below names the narrowly scoped follow-up it wants.",
   "counts_by_classification": {
     "ACTIVE_RUNTIME": 157,
-    "ACTIVE_SUPPORT": 246,
+    "ACTIVE_SUPPORT": 260,
     "PRODUCT_CONFIG_WIRED": 28,
-    "PRODUCT_CONFIG_UNWIRED_PARTIAL": 13,
+    "PRODUCT_CONFIG_UNWIRED_PARTIAL": 14,
     "HUMAN_DOCUMENTATION": 38,
-    "LEGACY_INTENTIONAL": 57,
-    "DEAD_ORPHANED": 7849,
-    "DUPLICATE_SUPERSEDED": 2,
+    "LEGACY_INTENTIONAL": 48,
+    "DEAD_ORPHANED": 7844,
+    "DUPLICATE_SUPERSEDED": 1,
     "SUSPICIOUS_UNRESOLVED": 2,
     "total": 8392
   },
-  "counts_note": "7,824 of the 7,849 DEAD_ORPHANED paths are the two test-run-record groups plus the card-audit renders (F-02, F-02b). Outside reports/, DEAD_ORPHANED is 25 paths. Both high-risk classes — PRODUCT_CONFIG_UNWIRED_PARTIAL (13) and SUSPICIOUS_UNRESOLVED (2) — carry one entry per path; neither appears in any paths_file group.",
+  "counts_note": "7,824 of the 7,844 DEAD_ORPHANED paths are the two test-run-record groups plus the card-audit renders (F-02, F-02b). Outside reports/, DEAD_ORPHANED is 20 paths. Both high-risk classes — PRODUCT_CONFIG_UNWIRED_PARTIAL (14) and SUSPICIOUS_UNRESOLVED (2) — carry one entry per path; neither appears in any paths_file group.",
+  "counts_revision_note": "These counts were revised after a review of this audit's own method, and the revision is recorded rather than silently applied. Five reclassifications, all in the same direction — the earlier pass had treated a refused loader or a missing workflow as proof of absent purpose, which it is not. (1) docs/NEVER_BLANK_GOLDEN_EDITORIAL_PATTERNS.md: DUPLICATE_SUPERSEDED -> PRODUCT_CONFIG_UNWIRED_PARTIAL — nothing supersedes it, and the claim that the three Wednesday artifacts carry no cross-reference was false: that document names both machine artifacts at :19-22. (2) config/prompts/{image_hook,strategy_brief,topic_score}.yaml: DEAD_ORPHANED -> LEGACY_INTENTIONAL — each states in its own text that it is retained to document an architectural decision, and its loader's refusal is the mechanism that keeps it inert, not evidence that it is purposeless. (3) scripts/{dry_run,render_card_audit}.py: DEAD_ORPHANED -> LEGACY_INTENTIONAL — both document their own manual invocation; having no workflow is not having no consumer. (4) reports/content_packages/<sig>_generated.json (8 paths): LEGACY_INTENTIONAL -> ACTIVE_SUPPORT — they are current output of research Stage 11 with a live reader, not legacy input to a fallback that cannot execute (F-15). (5) reports/content_packages/vis_00N_generated.json (6 paths): LEGACY_INTENTIONAL -> ACTIVE_SUPPORT — justified by the tracked history entries that name each path, not by a resume flag that does not exist (F-15).",
   "findings": [
     {
       "id": "F-01",
@@ -46,7 +47,7 @@
       "what": "reports/content_packages/sig-test-001/runs/<uuid>/ and reports/content_packages/sig-identity-test-001/runs/<uuid>/ hold 4,702 and 3,094 files respectively, plus the two flat sig-*.json packages. Across both namespaces there are exactly six distinct basenames — business_strategy.json (2,422), generated.json (2,263), editorial_acceptance.json (1,343), assignment.json (1,263), publication_results.json (469), run_report.json (36) — one set per test execution of the canonical entrypoint.",
       "mechanism": "scripts/generate_and_publish.py:320 defines PACKAGES_DIR as the RELATIVE path reports/content_packages and :321 mkdirs it at import time. :1052 calls resolve_run_dir(PACKAGES_DIR, signal_id, run_ctx.run_id), creating one directory per fresh uuid4 run id. tests/conftest.py isolates OpenAI credentials and does not isolate the filesystem, so any test that exercises the entrypoint without redirecting PACKAGES_DIR writes into the real tree. Nothing under reports/ is ignored except reports/content_packages/images/ (.gitignore:27).",
       "how_they_entered_and_why_it_keeps_costing": "They entered in one commit: ffe199a (2026-08-17), 7,830 files and 917,551 insertions, whose subject is a 69-line change to src/reporting/run_report.py. They keep re-entering: dd54dc5 (#223) — a two-line message change in src/utils/config_loader.py — shipped 145 files and 864 insertions/deletions, all of it this debris, and the same happened on its two rebases (299e747, 39043ea). Every future diff that follows a local test run carries this noise, which is exactly how a real change hides.",
-      "the_question_the_issue_asks": "Do ~8,000 tracked run records belong in source control? Split the answer. The 7,796 test-run records: no. They have no consumer, no product meaning and an active cost. The 63 daily research reports and 47 per-signal packages: yes for now — their tracking is deliberate, expressed in daily_signal_research.yml:106, and src/run/code_identity.py:34-43 states the repository's position that reports/ is an output root a run legitimately dirties. What those two groups lack is a retention policy, not a justification.",
+      "the_question_the_issue_asks": "Do ~8,000 tracked run records belong in source control? Split the answer. The 7,796 test-run records: no. They have no consumer, no product meaning and an active cost. The four real run-record groups — 63 daily research reports, 47 per-signal packages, 8 flat generated packages, 6 visibility packages: yes for now. Their tracking is deliberate and expressed in the workflows that commit them (daily_signal_research.yml:106, visibility_publish.yml:102), each has a producer and a demonstrated consumer (see 09_reports.json), and src/run/code_identity.py:34-43 states the repository's position that reports/ is an output root a run legitimately dirties. What those four groups lack is a retention policy, not a justification.",
       "evidence": [
         "scripts/generate_and_publish.py:320-321, :1052",
         "src/artifacts/__init__.py:9",
@@ -81,7 +82,7 @@
       "what": "For every artifact below the required chain file -> loader -> prompt/profile composition -> production model-message construction is broken at the first link: no loader in the repository can read Markdown as configuration. src/utils/config_loader.py:11,38 read YAML; src/strategy/business_config.py:272 reads JSON. Every .md read in src/ or scripts/ is a report being written.",
       "artifacts": [
         "config/brand_voice.md — registered at business_strategy.json:313-314 as prompt_rule_reference 'brand-voice' version r1-2026-08-13; never opened",
-        "docs/NEVER_BLANK_EDITORIAL_STYLE.md — WAS runtime until commit 2466611 (2026-07-03), when scripts/research/publish_packages._load_editorial_style() was deleted along with the prompt that used it; the commit message does not mention it and no test failed",
+        "docs/NEVER_BLANK_EDITORIAL_STYLE.md — WAS runtime until commit 2466611 (2026-07-03), when scripts/research/publish_packages._load_editorial_style() was deleted along with the prompt that used it; the commit message does not mention it, and no test referenced the document or the loader, so nothing could turn red. Quoted in full, with the reproducing commands, in reports/repository_audit/evidence/EDITORIAL_STYLE_DISCONNECTION.md",
         "docs/NEVER_BLANK_EDITORIAL_WORLDVIEW.md — claims to be the document all prompts follow from; not registered anywhere and not read",
         "docs/PLATFORM_AND_VISUAL_STRATEGY.md — registered at business_strategy.json:338-339; never opened; its numbers contradict the running code",
         "strategy/methodology/strategy_methodology.md — registered twice (business_strategy.json:323-324 and strategy.json:58); never opened",
@@ -106,8 +107,9 @@
         "strategy/current/business_strategy.json:306-342",
         "strategy/current/strategy.json:57-61",
         "tests/strategy/test_never_blank_business_config.py:80",
-        "reports/editorial_wiring/ISSUE_234_EDITORIAL_WIRING_FORENSIC.md §4, §6, §9 (branch evidence/234-editorial-wiring)",
-        "reports/editorial_wiring/ISSUE_244_MONDAY_SEMANTICS_INVENTORY.md §1-§4"
+        "reports/repository_audit/evidence/EDITORIAL_STYLE_DISCONNECTION.md — the STYLE chain before 2466611, the deletion, and the greps showing no test referenced it",
+        "`git log --oneline -S brand_voice -- src scripts` is empty: config/brand_voice.md was never wired, not unwired",
+        "the thirteen Python-constant system prompts, each cited by file and line in reports/repository_audit/inventory/03_src.json"
       ],
       "follow_up": "This audit does not propose the repair; #240/#244 already own it and are blocked on owner rulings. What this audit adds is the guardrail: G-2 below, which must exist before any of these documents is declared wired again.",
       "do_not_do": "Do not edit any of these ten artifacts, and do not make the #231 product choice implicitly."
@@ -120,7 +122,7 @@
       "what": "config/never_blank/wednesday_golden.yaml holds the nine-stage reasoning movement, the editorial prohibitions (including the 'no 5 lessons / 3 takeaways' bans), the title contract, text shape and source policy. Its loader src/never_blank/wednesday_golden.py executes in production — src/never_blank/__init__.py:7 re-exports it, so scripts/generate_and_publish.py:175 imports it transitively — but no production call site ever invokes WednesdayGoldenProfile.load(), source_eligibility_rules() or generation_rules(). The only callers are tests/test_wednesday_golden.py:146,496.",
       "what_generation_actually_receives": "scripts/generate_and_publish.py:1880 calls generate_for_wednesday(editorial.to_legacy_dict()) — the signal dict and nothing else. No strategy, no role rules, no channel rules, no CTA, no closing contract, no sources block. src/never_blank/wednesday_july/platform_composer.compose_platforms takes one argument. _editorial_role_rules IS computed for Wednesday at :920 and then not passed. #210 disclosed this; the deviation was accepted, not hidden.",
       "why_ci_allowed_it": "tests/test_wednesday_golden.py:397 test_golden_rules_reach_the_existing_wix_and_linkedin_prompt_constructor builds prompts with the SHARED src/editorial/platform_composer._build_user_prompt. Since #210 Wednesday generation uses src/never_blank/wednesday_july/platform_composer.compose_platforms. The test was not retargeted when production moved, so it still passes while the contract it names is unmet. grep for '5 lessons' or '3 takeaways' over src/never_blank/wednesday_july/ finds nothing.",
-      "the_three_copies": "config/never_blank/wednesday_golden.yaml (machine), docs/NEVER_BLANK_GOLDEN_EDITORIAL_PATTERNS.md (2026-08-20, self-declared 'Release 1 product configuration'), docs/product/wednesday_golden_contract.md (2026-09-05). None references another; none declares which is authoritative; none is read by production. The rubric path and identity are duplicated between the YAML (:10-11) and business_strategy.json:442-443, and only the JSON copy is honoured.",
+      "the_three_copies": "config/never_blank/wednesday_golden.yaml (machine), docs/NEVER_BLANK_GOLDEN_EDITORIAL_PATTERNS.md (2026-08-20, self-declared 'Release 1 product configuration'), docs/product/wednesday_golden_contract.md (2026-09-05). Exactly one cross-reference exists, and it runs from the 2026-08-20 document outward: :19-22 names the YAML profile as 'the machine-readable product profile' and config/prompts/editorial_acceptance/never_blank_golden_wednesday.yaml as its acceptance artifact. Nothing points the other way, and the 2026-09-05 contract names neither the others nor either machine copy. So there is no supersession in either direction — what is missing is an authority statement, not a reference. Neither prose document is read by production; of the two machine artifacts the profile is unread and the rubric is wired. The rubric path and identity are additionally duplicated between the YAML (:10-11) and business_strategy.json:442-443, and only the JSON copy is honoured.",
       "evidence": [
         "src/never_blank/wednesday_golden.py:26-31, :166-171, :173, :195-202, :232",
         "src/never_blank/__init__.py:7-19",
@@ -145,8 +147,7 @@
       "evidence": [
         "research_generate_and_publish.yml:28-34, :57-85, :100, :170, :183-186",
         "scheduled_publish.yml:23-24",
-        "scripts/generate_and_publish.py:1286, :1306-1336",
-        "reports/audit_inputs/ISSUE_248_META_CHANNEL_AUDIT.md §1e and F2 (branch evidence/234-editorial-wiring)"
+        "scripts/generate_and_publish.py:1286, :1306-1336"
       ],
       "follow_up": "An owner decision, not a code change: does the Fri/Sun Research path publish, and if so under which editorial role? Until that is answered, the safe intermediate step is to disable its cron, which is one line and reversible."
     },
@@ -167,7 +168,7 @@
     {
       "id": "F-07",
       "severity": "medium",
-      "title": "Dead and orphaned artifacts outside reports/: 25 paths with no justified consumer",
+      "title": "Dead and orphaned artifacts outside reports/: 20 paths with no justified consumer",
       "classification_of_subject": "DEAD_ORPHANED",
       "groups": [
         {
@@ -186,23 +187,28 @@
           "evidence": "No production importer. Its only consumer is tests/test_hypothesis_generator.py — a test is not a justified consumer for a module that presents itself as production code. docs/BUSINESS_INVESTIGATION_LAYER.md is its specification."
         },
         {
-          "name": "Orphaned scripts (3 paths)",
-          "paths": ["scripts/dry_run.py", "scripts/render_card_audit.py", "scripts/research/sync_from_sheets.py"],
-          "evidence": "None is invoked by a workflow or imported. sync_from_sheets is the human-override half of a two-way sheet sync that docs/SYSTEM_MAP.md:17 and docs/NEVER_BLANK_RESEARCH_PIPELINE.md present as part of the pipeline: run_daily_research.py:31 imports only sync_to_sheets."
+          "name": "Orphaned scripts (1 path)",
+          "paths": ["scripts/research/sync_from_sheets.py"],
+          "evidence": "It is not invoked by a workflow and not imported: run_daily_research.py:31 imports only sync_to_sheets. What makes it dead rather than manual is that it declares itself 'Stage 8' of the research pipeline (:1-4) and docs/SYSTEM_MAP.md:17 and docs/NEVER_BLANK_RESEARCH_PIPELINE.md repeat that claim — a declared position in a pipeline that never calls it, not a tool an operator is told to run."
         },
         {
-          "name": "Orphaned configuration and prompts (8 paths)",
-          "paths": ["config/content_matrix.yaml", "config/intelligence.yaml", "config/prompts/observation_discovery.yaml", "config/prompts/observation_score.yaml", "config/prompts/topic_extract.yaml", "config/prompts/topic_score.yaml", "config/prompts/image_hook.yaml", "config/prompts/strategy_brief.yaml"],
-          "evidence": "config/content_matrix.yaml is shadowed by config/prompts/content_matrix.yaml and loaded by nothing. config/intelligence.yaml is loaded only from scripts/dry_run.py:82. The four observation/topic prompts are named only in scripts/dry_run.py:96-101. image_hook, topic_score and strategy_brief carry status: not_needed, which src/utils/config_loader.py:49-53 turns into a raised ValueError — they cannot be loaded even deliberately. docs/SYSTEM_MAP.md:28,32,46,55-58 nevertheless presents all of them as live."
+          "name": "Orphaned configuration and prompts (5 paths)",
+          "paths": ["config/content_matrix.yaml", "config/intelligence.yaml", "config/prompts/observation_discovery.yaml", "config/prompts/observation_score.yaml", "config/prompts/topic_extract.yaml"],
+          "evidence": "config/content_matrix.yaml is shadowed by config/prompts/content_matrix.yaml and loaded by nothing. config/intelligence.yaml is loaded only from scripts/dry_run.py:82. The three observation/topic prompts are named only in scripts/dry_run.py:96-97 and all three carry status: ready, i.e. they present themselves as usable and are not. docs/SYSTEM_MAP.md:28,55-57 nevertheless presents them as live."
         },
         {
-          "name": "The index that keeps them looking alive (1 path, classified SUSPICIOUS_UNRESOLVED, not counted in the 25)",
+          "name": "Explicitly NOT in this finding, after a review of the method (5 paths)",
+          "paths": ["config/prompts/image_hook.yaml", "config/prompts/strategy_brief.yaml", "config/prompts/topic_score.yaml", "scripts/dry_run.py", "scripts/render_card_audit.py"],
+          "evidence": "An earlier revision of this audit counted these as DEAD_ORPHANED and proposed them for deletion. That was wrong twice over, and the reasoning is recorded here so the same error is not repeated. The three prompts carry `status: not_needed`, and each says in its own text that it is kept to document an architectural decision and where the deterministic implementation lives instead (image_hook.yaml:3-7,9-17 is the clearest). Their loader's refusal — src/utils/config_loader.py:49-53 raises a ValueError quoting the file's own `decision` field — is what guarantees they cannot become an accidental active path; a disabled execution path deliberately kept disabled is the definition of LEGACY_INTENTIONAL, not of DEAD. The two scripts document their own manual invocation (dry_run.py:1-9, render_card_audit.py:1-17); no workflow is not the same as no consumer, and this audit already classifies the dispatch-only smoke tests as LEGACY_INTENTIONAL on exactly that basis. All five are reclassified LEGACY_INTENTIONAL, which is why the count here is 20 and not 25."
+        },
+        {
+          "name": "The index that keeps them looking alive (1 path, classified SUSPICIOUS_UNRESOLVED, not counted in the 20)",
           "paths": ["docs/SYSTEM_MAP.md"],
-          "evidence": "Classified SUSPICIOUS_UNRESOLVED in 06_docs.json. It describes only the V1 system: Monday, Wednesday, Visibility, the canonical entrypoint and release_scope are absent, seven of its entries point at files with no consumer, and :73 names reports/full_live_matrix_test.{json,md}, which no script writes."
+          "evidence": "Classified SUSPICIOUS_UNRESOLVED in 06_docs.json. It describes only the V1 system: Monday, Wednesday, Visibility, the canonical entrypoint and release_scope are absent, seven of its entries name files that no code loads — including the three retained decision records at :32,:46,:58, which it presents as live prompts although their own text says they are deliberately not used — and :73 names reports/full_live_matrix_test.{json,md}, which no script writes."
         }
       ],
       "follow_up": "Three separate small issues, in this order: (1) rewrite or retire docs/SYSTEM_MAP.md — it is cheap and it stops the wrong picture spreading; (2) one owner decision on the Strategy Engine monthly loop, then retire or wire all twelve paths together; (3) one decision each on the investigation layer and on scripts/research/sync_from_sheets.py, since both correspond to a documented capability the product may still want.",
-      "do_not_do": "Do not delete any of these on static-search evidence alone. Each group corresponds to a documented intention, and the issue forbids deletion on the strength of a missing import."
+      "do_not_do": "Do not delete any of these on static-search evidence alone. Each group corresponds to a documented intention, and the issue forbids deletion on the strength of a missing import. Do not delete the five paths of the fourth group at all: their purpose is to be readable."
     },
     {
       "id": "F-08",
@@ -256,7 +262,7 @@
         }
       ],
       "the_general_shape": "Each proves the weakest thing that is easy to assert — existence, a call signature, a constructor in isolation, the absence of a symbol — and each was true when written. Production moved underneath three of them and nothing noticed, because no test in the repository spans entrypoint to model messages. That is hard to write naively for a real reason: every stage binds chat by name (from src.utils.llm_client import chat), so patching src.utils.llm_client.chat intercepts nothing; the patch must go into each stage module's own namespace.",
-      "evidence": ["the four test node ids above", "src/utils/llm_client.py and the by-name binding in each stage module", "reports/editorial_wiring/ISSUE_234_EDITORIAL_WIRING_FORENSIC.md §6"],
+      "evidence": ["the four test node ids above", "src/utils/llm_client.py, and the by-name binding in each stage module — src/editorial/decision_lens_lite.py:25, hook_engine.py:14, narrative_spine.py:15, story_assembly.py:18 all do `from src.utils.llm_client import chat` and then call the bare name at :184, :134, :127, :135"],
       "follow_up": "Guardrail G-2 below. Retargeting tests/test_wednesday_golden.py:397 can be done immediately and independently of any product decision, because it only changes what CI reports, not what Wednesday does."
     },
     {
@@ -286,7 +292,7 @@
       "classification_of_subject": "ACTIVE_RUNTIME",
       "what": "src/publishing/release_scope.py:1-25 states that adding a channel is 'a change to this file and nowhere else'. It is not. Independent Wix/LinkedIn-only lists exist at, among others: scripts/generate_and_publish.py:508 (_R1_COMPOSER_FORMATS), :509 (_R1_IMAGE_PLATFORMS), :2768 (_r1_cls), :2582-2632, :2821-2825, :2314, :3129; src/publishing/preflight.py:62-65, :226, :280, :484-492; src/visual/contract.py:44-47, :146-150, :291-309; src/reporting/run_report.py:131-136, :336, :446; src/publishing/idempotency.py:227-231, :278-305; src/strategy/business_config.py:182-184; src/strategy/execution_context.py:190-253; src/editorial/editorial_role.py:104-106; src/publishing/package.py:174-265 (no package model for any other channel).",
       "why_it_matters": "Two opposite risks from one false docstring. Someone adding a channel by editing release_scope.py alone gets a run that passes the allowlist and then fails deep in preflight or packaging. Someone reading the docstring believes the allowlist is the whole control, which is how F-01 stayed invisible.",
-      "evidence": ["src/publishing/release_scope.py:1-25", "the file:line list above", "reports/audit_inputs/ISSUE_248_META_CHANNEL_AUDIT.md §1, 'Other hard-coded Wix/LinkedIn-only lists' (branch evidence/234-editorial-wiring)"],
+      "evidence": ["src/publishing/release_scope.py:1-25", "the file:line list above, each checked at the audited commit"],
       "follow_up": "Correct the docstring. That is the whole fix; consolidating the lists is a separate design question that #248 owns."
     },
     {
@@ -298,8 +304,8 @@
         {
           "subject": "The Wednesday Golden contract",
           "copies": ["config/never_blank/wednesday_golden.yaml (machine)", "docs/NEVER_BLANK_GOLDEN_EDITORIAL_PATTERNS.md (2026-08-20, self-declared 'Release 1 product configuration for Issue #143')", "docs/product/wednesday_golden_contract.md (2026-09-05)"],
-          "state": "No cross-reference between any two; none read by production; the rubric path is additionally duplicated into strategy/current/business_strategy.json:442-443, which is the only copy the runtime honours.",
-          "provisional_source_of_truth": "business_strategy.json for the rubric path; for the contract itself, undecided — see F-04."
+          "state": "This conflict is UNRESOLVED, not superseded, and the distinction was got wrong in an earlier revision of this audit. The 2026-08-20 document is not a stale copy: it names its own machine artifacts at :19-22 (the profile and the acceptance rubric), which is one more declared relationship than either of the others carries. The 2026-09-05 document names nothing and is named by nothing. Newer is not more authoritative, and no artifact in the repository claims authority over another. Neither prose copy is read by production; the rubric path is additionally duplicated into strategy/current/business_strategy.json:442-443, which is the only copy the runtime honours.",
+          "provisional_source_of_truth": "business_strategy.json for the rubric path. For the contract prose, NONE — and this audit deliberately does not nominate one, because choosing between the 2026-08-20 and 2026-09-05 documents is the Wednesday product decision of #234, not an editorial-hygiene call. See F-04."
         },
         {
           "subject": "The Never Blank worldview",
@@ -314,8 +320,27 @@
           "provisional_source_of_truth": "strategy.json today; per the ruling it should become the derived artifact."
         }
       ],
-      "evidence": ["c5dff81 vs 0e6f82e/d3562ce/92eb292", "strategy/current/strategy.json:59", "src/strategy/history.py:46-48", "the #234 owner comment of 2026-09-15"],
-      "follow_up": "Name one source of truth per conflict, in-band, in a one-line header in each losing file. This is documentation-only and unblocks nothing else, but it is what stops a fourth copy being written."
+      "evidence": ["docs/NEVER_BLANK_GOLDEN_EDITORIAL_PATTERNS.md:19-22 (the one existing cross-reference)", "docs/product/wednesday_golden_contract.md (no outbound reference anywhere in the file)", "c5dff81 vs 0e6f82e/d3562ce/92eb292", "strategy/current/strategy.json:59", "src/strategy/history.py:46-48", "the #234 owner comment of 2026-09-15"],
+      "follow_up": "Name one source of truth per conflict, in-band, in a one-line header in each losing file — following the pattern strategy/claude_code_prompt_strategy_engine_FINAL_2026-07-22.md:3-6 already uses, which is the only demonstrated supersession in the repository. This is documentation-only and unblocks nothing else, but it is what stops a fourth copy being written. For the Wednesday row the naming is an owner decision, not a cleanup.",
+      "method_note": "Only one path in this audit carries the DUPLICATE_SUPERSEDED classification: strategy/claude_code_prompt_strategy_engine_2026-07-22.md, where the superseding document says so in its own text. Every other duplication here is recorded as a conflict without a winner, because a later date, a tidier format or a shorter file are not evidence of authority."
+    },
+    {
+      "id": "F-15",
+      "severity": "low",
+      "title": "Two recorded retry capabilities for prepared packages do not exist: one is unreachable code, the other is a comment with no implementation",
+      "classification_of_subject": "ACTIVE_RUNTIME (the two entrypoints); ACTIVE_SUPPORT (the package groups they were thought to serve)",
+      "what": "Both flat-package groups under reports/content_packages/ were justified in an earlier revision of this audit by a resume/fallback path. Neither path exists, and the difference between what the code advertises and what it does is the finding.",
+      "the_legacy_package_adapter": "scripts/generate_and_publish.py accepts --legacy-package (:854-855, documented at :77-80 and :98) and can never use it. The branch structure is `if not args.from_package and not args.legacy_package:` (:1174) ... `elif args.legacy_package:` (:1380), and that elif prints 'legacy prepared packages have no canonical research lineage' and returns 1 (:1381-1382). Since the elif is reached on exactly the condition that would make the flag meaningful, the loader beneath it at :1407-1421 — which opens PACKAGES_DIR / f'{signal_id}_generated.json' — is unreachable in every execution. --from-package is a different flag and does not fall back: :1391-1394 returns 1 when the run-scoped generated.json is missing.",
+      "the_visibility_resume": "scripts/generate_and_publish_visibility.py:425 comments that it saves the package 'for audit trail + --from-package retry'. The audit-trail half is real (:479 records the path into visibility_history.jsonl). The retry half is not: main() at :344-347 defines only --item-id and --dry-run, there is no --from-package flag, and the script never reads a package back — the only PACKAGES_DIR uses are the mkdir at :63, the DraftPackage draft_dir at :254 and the write at :426-427.",
+      "why_it_matters": "Neither is a live defect — no run takes either path, which is why this is low. It matters because both were read as evidence that a tracked artifact was retained on purpose, and both times the artifact turned out to have a different and better justification: current Stage 11 output with a live reader for the flat packages, and the tracked history pointer for the visibility packages. An advertised capability is not a consumer. The corrected entries are in reports/repository_audit/inventory/09_reports.json.",
+      "evidence": [
+        "scripts/generate_and_publish.py:854-855, :1174, :1380-1382, :1391-1394, :1407-1421",
+        "scripts/generate_and_publish_visibility.py:62, :254, :344-347, :425-427, :479",
+        "scripts/research/publish_packages.py:288 (the real producer of the flat packages)",
+        "scripts/smoke_test_publish_analytics.py:61 and smoke_test_full_cycle.yml:56,81,154 (the real reader)"
+      ],
+      "follow_up": "Documentation-sized, and it belongs with F-13 in the docs-only issue: either make --legacy-package do what its help text says, or remove the flag and the unreachable loader with it; and correct the comment at generate_and_publish_visibility.py:425 to claim only the audit trail. Both are behaviour-preserving as written.",
+      "do_not_do": "Do not implement a resume capability under this issue. Establishing that it is absent is the audit's job; adding it is a product change nobody asked for."
     }
   ],
   "reverse_reachability": {
@@ -334,7 +359,7 @@
     {"rank": 4, "item": "G-1 — add the configuration parse gate to pr_tests.yml. Cheapest durable guardrail; would have caught F-01's YAML at the commit that broke it.", "blocked_on": "nothing"},
     {"rank": 5, "item": "F-10 — retarget or xfail tests/test_wednesday_golden.py:397 so CI stops asserting a contract production does not meet.", "blocked_on": "nothing; it changes only what CI reports"},
     {"rank": 6, "item": "F-06 — add the never-blank-publish concurrency group to the three workflows that lack it.", "blocked_on": "nothing"},
-    {"rank": 7, "item": "F-12 + F-13 + F-14 — documentation-only corrections: the Decision Lens bypass, the release_scope docstring, and one source-of-truth line per conflict.", "blocked_on": "nothing"},
+    {"rank": 7, "item": "F-12 + F-13 + F-14 + F-15 — documentation-only corrections: the Decision Lens bypass, the release_scope docstring, one source-of-truth line per conflict, and the two advertised-but-absent package retry paths.", "blocked_on": "nothing for F-12, F-13 and F-15; the Wednesday row of F-14 needs the owner"},
     {"rank": 8, "item": "F-07 — rewrite or retire docs/SYSTEM_MAP.md first, then take one decision per orphaned group.", "blocked_on": "owner decision for the Strategy Engine and investigation groups"},
     {"rank": 9, "item": "G-2 — the sentinel wiring test, built as part of the first #244 vertical slice.", "blocked_on": "the #244 rulings"},
     {"rank": 10, "item": "F-03 + F-04 — the product-configuration repairs themselves.", "blocked_on": "#231, #240/#244 and the Wednesday July-fidelity decision. Explicitly out of scope for this audit."}
@@ -373,7 +398,7 @@
     "[R1][CI] Configuration parse gate (G-1)",
     "[R1][CI] Retarget the Wednesday Golden constructor test (F-10)",
     "[R1][DOCS] Rewrite or retire docs/SYSTEM_MAP.md (F-07, F-09)",
-    "[R1][DOCS] Record the role_bounded_r1 Decision Lens bypass; correct the release_scope docstring; name one source of truth per conflict (F-12, F-13, F-14)",
+    "[R1][DOCS] Record the role_bounded_r1 Decision Lens bypass; correct the release_scope docstring; correct the two advertised-but-absent package retry paths; name one source of truth per conflict (F-12, F-13, F-15, F-14)",
     "[R1][DECISION] Strategy Engine monthly loop: wire or retire (F-07)",
     "[R1][DECISION] Investigation layer and research Stage 8 sheet pull-back: wire or retire (F-07)",
     "[R1][CI] Sentinel wiring test for declared-executable product artifacts (G-2) — sequenced with the first #244 vertical slice"
