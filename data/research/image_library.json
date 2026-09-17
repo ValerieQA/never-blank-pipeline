@@ -1103,5 +1103,35 @@
     "visual_family": "sand_pause_card",
     "design_version": "3",
     "hook_text": "Most companies treat meetings like a necessary evil—United’s CEO just called their bluff."
+  },
+  "0c3ab0c08576373a": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650807/never-blank/posts/research/0c3ab0c08576373a/blog/1789650807.png",
+    "signal_type": "business becoming invisible",
+    "headline": "Google Search Profile Badges Expose The Publisher Traffic Crisis via @sejournal, @martinibuster",
+    "created_at": "2026-09-17",
+    "method": "quote_card",
+    "visual_family": "dark_insight_card",
+    "design_version": "3",
+    "hook_text": "Publishers are learning the hard way: Google’s latest update didn’t just change the rules—it exposed how little control they really have."
+  },
+  "50eb969320819f1a": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650859/never-blank/posts/research/50eb969320819f1a/blog/1789650859.png",
+    "signal_type": "platform reach change for small business",
+    "headline": "Google UCP Update Lets Merchants Enable Cart Transfer To Site via @sejournal, @MattGSouthern",
+    "created_at": "2026-09-17",
+    "method": "gpt-image-1",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "Cart transfer: a new path for merchants."
+  },
+  "a2cc701895d0e318": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650928/never-blank/posts/research/a2cc701895d0e318/blog/1789650928.png",
+    "signal_type": "presence maintenance failure",
+    "headline": "Google Search Profiles Now Available At 10,000 Followers via @sejournal, @MattGSouthern",
+    "created_at": "2026-09-17",
+    "method": "gpt-image-1",
+    "visual_family": "particle_flow",
+    "design_version": "3",
+    "hook_text": "10,000 followers unlocks new pathways for creators."
   }
 }

@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "50eb969320819f1a",
+  "HEADLINE": "Google UCP Update Lets Merchants Enable Cart Transfer To Site via @sejournal, @MattGSouthern",
+  "prepared_at": "2026-09-17 13:14 UTC",
+  "content": {
+    "blog": {
+      "headline": "Google’s New Cart Transfer Feature: Convenience at What Cost?",
+      "angle": "Google’s Merchant Center update promises smoother checkouts but forces merchants to weigh streamlined funnels against ceding control over their brand and customer experience."
+    },
+    "linkedin": {
+      "headline": "You just handed Google your checkout—and maybe your customer.",
+      "angle": "Platform-driven funnel integration simplifies buying but shifts critical control from merchants to Google, challenging founders to rethink brand ownership."
+    },
+    "facebook": {
+      "headline": "Google’s new cart transfer lets customers check out on your site with fewer clicks. But is convenience worth losing control?",
+      "angle": "Google’s Merchant Center update streamlines purchase journeys, but how will merchants protect their brand experience when the platform owns the checkout?"
+    },
+    "instagram": {
+      "headline": "When Google Controls Your Checkout",
+      "angle": "Streamlined funnels reduce friction but blur the lines between platform convenience and merchant autonomy."
+    },
+    "threads": {
+      "thread_hook": "Google just made it easier to move carts from ads to your site. But what are you really giving up?",
+      "angle": "This thread breaks down how Google’s cart transfer update reshapes merchant control, customer data ownership, and the future of e-commerce funnels."
+    },
+    "stories": {
+      "story_question": "Is smoother checkout worth handing over your customer?",
+      "angle": "Exploring the tension between platform convenience and maintaining brand control in the checkout process."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650859/never-blank/posts/research/50eb969320819f1a/blog/1789650859.png",
+        "path": "reports/content_packages/images/50eb969320819f1a_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650863/never-blank/posts/research/50eb969320819f1a/linkedin/1789650863.png",
+        "path": "reports/content_packages/images/50eb969320819f1a_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650867/never-blank/posts/research/50eb969320819f1a/facebook/1789650867.png",
+        "path": "reports/content_packages/images/50eb969320819f1a_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650873/never-blank/posts/research/50eb969320819f1a/instagram/1789650873.png",
+        "path": "reports/content_packages/images/50eb969320819f1a_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650877/never-blank/posts/research/50eb969320819f1a/threads/1789650877.png",
+        "path": "reports/content_packages/images/50eb969320819f1a_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650886/never-blank/posts/research/50eb969320819f1a/stories/1789650886.png",
+        "path": "reports/content_packages/images/50eb969320819f1a_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "constellation_networks",
+    "hook_text": "Cart transfer: a new path for merchants."
+  }
+}

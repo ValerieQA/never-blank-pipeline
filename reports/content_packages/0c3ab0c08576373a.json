@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "0c3ab0c08576373a",
+  "HEADLINE": "Google Search Profile Badges Expose The Publisher Traffic Crisis via @sejournal, @martinibuster",
+  "prepared_at": "2026-09-17 13:13 UTC",
+  "content": {
+    "blog": {
+      "headline": "Google’s Search Profile Badges Reveal the Publisher Traffic Trap",
+      "angle": "Google’s shift to a content destination exposes publishers’ dependence on its ecosystem, forcing a rethink of traffic strategies to avoid invisibility and business risk."
+    },
+    "linkedin": {
+      "headline": "Publishers are waking up to a brutal truth: Google’s new badges don’t just highlight creators—they spotlight how fragile publisher traffic really is.",
+      "angle": "Google’s evolving search features reduce publisher visibility, signaling urgent risks for businesses relying on a single platform for audience acquisition."
+    },
+    "facebook": {
+      "headline": "Google’s new Search profile badges are shining a light on a growing crisis for publishers—are you ready if your main traffic source disappears?",
+      "angle": "Google’s update exposes the dangers of platform dependency; what’s your plan to protect your audience and revenue?"
+    },
+    "instagram": {
+      "headline": "When Platforms Become Destinations, Publishers Fade",
+      "angle": "Google’s latest update reveals why relying on one platform for traffic is a losing game for publishers."
+    },
+    "threads": {
+      "thread_hook": "Google’s new Search profile badges just pulled back the curtain on a publisher traffic crisis few saw coming.",
+      "angle": "This thread breaks down how Google’s shift from referral source to content destination threatens publisher visibility and why owning your audience is non-negotiable."
+    },
+    "stories": {
+      "story_question": "Is your traffic strategy still trusting Google alone?",
+      "angle": "Exploring the risk publishers face as Google’s search changes cut into direct traffic and control."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650807/never-blank/posts/research/0c3ab0c08576373a/blog/1789650807.png",
+        "path": "reports/content_packages/images/0c3ab0c08576373a_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650809/never-blank/posts/research/0c3ab0c08576373a/linkedin/1789650809.png",
+        "path": "reports/content_packages/images/0c3ab0c08576373a_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650810/never-blank/posts/research/0c3ab0c08576373a/facebook/1789650810.png",
+        "path": "reports/content_packages/images/0c3ab0c08576373a_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650811/never-blank/posts/research/0c3ab0c08576373a/instagram/1789650811.png",
+        "path": "reports/content_packages/images/0c3ab0c08576373a_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650812/never-blank/posts/research/0c3ab0c08576373a/threads/1789650812.png",
+        "path": "reports/content_packages/images/0c3ab0c08576373a_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650814/never-blank/posts/research/0c3ab0c08576373a/stories/1789650813.png",
+        "path": "reports/content_packages/images/0c3ab0c08576373a_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "dark_insight_card",
+    "hook_text": "Publishers are learning the hard way: Google’s latest update didn’t just change the rules—it exposed how little control they really have."
+  }
+}

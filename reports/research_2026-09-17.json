@@ -1,0 +1,505 @@
+{
+  "date": "2026-09-17",
+  "candidates_found": 4,
+  "duplicates_skipped": 0,
+  "new_signals_added": 4,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Google Search Profile Badges Expose The Publisher Traffic Crisis via @sejournal,",
+    "Google UCP Update Lets Merchants Enable Cart Transfer To Site via @sejournal, @M",
+    "Google Search Profiles Now Available At 10,000 Followers via @sejournal, @MattGS"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "0c3ab0c08576373a",
+      "headline": "Google Search Profile Badges Expose The Publisher Traffic Crisis via @sejournal, @martinibuster",
+      "published_at": "2026-09-17 13:16 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/0c3ab0c08576373a_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650807/never-blank/posts/research/0c3ab0c08576373a/blog/1789650807.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650809/never-blank/posts/research/0c3ab0c08576373a/linkedin/1789650809.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650810/never-blank/posts/research/0c3ab0c08576373a/facebook/1789650810.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650811/never-blank/posts/research/0c3ab0c08576373a/instagram/1789650811.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650812/never-blank/posts/research/0c3ab0c08576373a/threads/1789650812.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650814/never-blank/posts/research/0c3ab0c08576373a/stories/1789650813.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "Publishers are learning the hard way: Google\u2019s latest update didn\u2019t just change the rules\u2014it exposed how little control they really have.",
+      "image_visual_family": "dark_insight_card",
+      "image_method": "quote_card"
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "publish_failures": [
+    "wix: 'DraftPackage' object has no attribute 'title'",
+    "linkedin: 'DraftPackage' object has no attribute 'linkedin_body'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "0c3ab0c08576373a",
+      "HEADLINE": "Google Search Profile Badges Expose The Publisher Traffic Crisis via @sejournal, @martinibuster",
+      "prepared_at": "2026-09-17 13:13 UTC",
+      "content": {
+        "blog": {
+          "headline": "Google\u2019s Search Profile Badges Reveal the Publisher Traffic Trap",
+          "angle": "Google\u2019s shift to a content destination exposes publishers\u2019 dependence on its ecosystem, forcing a rethink of traffic strategies to avoid invisibility and business risk."
+        },
+        "linkedin": {
+          "headline": "Publishers are waking up to a brutal truth: Google\u2019s new badges don\u2019t just highlight creators\u2014they spotlight how fragile publisher traffic really is.",
+          "angle": "Google\u2019s evolving search features reduce publisher visibility, signaling urgent risks for businesses relying on a single platform for audience acquisition."
+        },
+        "facebook": {
+          "headline": "Google\u2019s new Search profile badges are shining a light on a growing crisis for publishers\u2014are you ready if your main traffic source disappears?",
+          "angle": "Google\u2019s update exposes the dangers of platform dependency; what\u2019s your plan to protect your audience and revenue?"
+        },
+        "instagram": {
+          "headline": "When Platforms Become Destinations, Publishers Fade",
+          "angle": "Google\u2019s latest update reveals why relying on one platform for traffic is a losing game for publishers."
+        },
+        "threads": {
+          "thread_hook": "Google\u2019s new Search profile badges just pulled back the curtain on a publisher traffic crisis few saw coming.",
+          "angle": "This thread breaks down how Google\u2019s shift from referral source to content destination threatens publisher visibility and why owning your audience is non-negotiable."
+        },
+        "stories": {
+          "story_question": "Is your traffic strategy still trusting Google alone?",
+          "angle": "Exploring the risk publishers face as Google\u2019s search changes cut into direct traffic and control."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650807/never-blank/posts/research/0c3ab0c08576373a/blog/1789650807.png",
+            "path": "reports/content_packages/images/0c3ab0c08576373a_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650809/never-blank/posts/research/0c3ab0c08576373a/linkedin/1789650809.png",
+            "path": "reports/content_packages/images/0c3ab0c08576373a_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650810/never-blank/posts/research/0c3ab0c08576373a/facebook/1789650810.png",
+            "path": "reports/content_packages/images/0c3ab0c08576373a_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650811/never-blank/posts/research/0c3ab0c08576373a/instagram/1789650811.png",
+            "path": "reports/content_packages/images/0c3ab0c08576373a_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650812/never-blank/posts/research/0c3ab0c08576373a/threads/1789650812.png",
+            "path": "reports/content_packages/images/0c3ab0c08576373a_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650814/never-blank/posts/research/0c3ab0c08576373a/stories/1789650813.png",
+            "path": "reports/content_packages/images/0c3ab0c08576373a_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "dark_insight_card",
+        "hook_text": "Publishers are learning the hard way: Google\u2019s latest update didn\u2019t just change the rules\u2014it exposed how little control they really have."
+      }
+    },
+    {
+      "SIGNAL_ID": "50eb969320819f1a",
+      "HEADLINE": "Google UCP Update Lets Merchants Enable Cart Transfer To Site via @sejournal, @MattGSouthern",
+      "prepared_at": "2026-09-17 13:14 UTC",
+      "content": {
+        "blog": {
+          "headline": "Google\u2019s New Cart Transfer Feature: Convenience at What Cost?",
+          "angle": "Google\u2019s Merchant Center update promises smoother checkouts but forces merchants to weigh streamlined funnels against ceding control over their brand and customer experience."
+        },
+        "linkedin": {
+          "headline": "You just handed Google your checkout\u2014and maybe your customer.",
+          "angle": "Platform-driven funnel integration simplifies buying but shifts critical control from merchants to Google, challenging founders to rethink brand ownership."
+        },
+        "facebook": {
+          "headline": "Google\u2019s new cart transfer lets customers check out on your site with fewer clicks. But is convenience worth losing control?",
+          "angle": "Google\u2019s Merchant Center update streamlines purchase journeys, but how will merchants protect their brand experience when the platform owns the checkout?"
+        },
+        "instagram": {
+          "headline": "When Google Controls Your Checkout",
+          "angle": "Streamlined funnels reduce friction but blur the lines between platform convenience and merchant autonomy."
+        },
+        "threads": {
+          "thread_hook": "Google just made it easier to move carts from ads to your site. But what are you really giving up?",
+          "angle": "This thread breaks down how Google\u2019s cart transfer update reshapes merchant control, customer data ownership, and the future of e-commerce funnels."
+        },
+        "stories": {
+          "story_question": "Is smoother checkout worth handing over your customer?",
+          "angle": "Exploring the tension between platform convenience and maintaining brand control in the checkout process."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650859/never-blank/posts/research/50eb969320819f1a/blog/1789650859.png",
+            "path": "reports/content_packages/images/50eb969320819f1a_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650863/never-blank/posts/research/50eb969320819f1a/linkedin/1789650863.png",
+            "path": "reports/content_packages/images/50eb969320819f1a_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650867/never-blank/posts/research/50eb969320819f1a/facebook/1789650867.png",
+            "path": "reports/content_packages/images/50eb969320819f1a_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650873/never-blank/posts/research/50eb969320819f1a/instagram/1789650873.png",
+            "path": "reports/content_packages/images/50eb969320819f1a_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650877/never-blank/posts/research/50eb969320819f1a/threads/1789650877.png",
+            "path": "reports/content_packages/images/50eb969320819f1a_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650886/never-blank/posts/research/50eb969320819f1a/stories/1789650886.png",
+            "path": "reports/content_packages/images/50eb969320819f1a_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Cart transfer: a new path for merchants."
+      }
+    },
+    {
+      "SIGNAL_ID": "a2cc701895d0e318",
+      "HEADLINE": "Google Search Profiles Now Available At 10,000 Followers via @sejournal, @MattGSouthern",
+      "prepared_at": "2026-09-17 13:15 UTC",
+      "content": {
+        "blog": {
+          "headline": "Google Lowers Search Profile Bar to 10,000 Followers: What Founders Need to Know",
+          "angle": "Google\u2019s decision to lower Search profile eligibility creates tension between broader access and maintaining platform credibility, forcing founders to shift focus from gaining access to building authority."
+        },
+        "linkedin": {
+          "headline": "Google just handed 10,000-follower creators the keys to the front page\u2014now what happens to trust?",
+          "angle": "When platforms lower eligibility thresholds, businesses face a new battleground: establishing authority amid a flood of new entrants."
+        },
+        "facebook": {
+          "headline": "Google\u2019s new 10,000-follower rule shakes up who gets prime search real estate.",
+          "angle": "Google\u2019s lowered bar opens doors for more creators to claim visibility\u2014how will your business stand out when everyone\u2019s invited?"
+        },
+        "instagram": {
+          "headline": "Access Dropped. Authority Rises.",
+          "angle": "With Google Search profiles now open to smaller creators, the real challenge for founders is turning access into trust."
+        },
+        "threads": {
+          "thread_hook": "Google just dropped the follower requirement for Search profiles to 10,000. The gate is open wider\u2014but what comes next?",
+          "angle": "This thread unpacks how lowering platform barriers shifts the competitive edge from mere access to building genuine credibility."
+        },
+        "stories": {
+          "story_question": "Google\u2019s Search profiles now open at 10K followers\u2014are you ready to prove your authority?",
+          "angle": "Exploring the tension founders face between easier access and the harder task of earning trust on a crowded platform."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650928/never-blank/posts/research/a2cc701895d0e318/blog/1789650928.png",
+            "path": "reports/content_packages/images/a2cc701895d0e318_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650931/never-blank/posts/research/a2cc701895d0e318/linkedin/1789650931.png",
+            "path": "reports/content_packages/images/a2cc701895d0e318_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650935/never-blank/posts/research/a2cc701895d0e318/facebook/1789650935.png",
+            "path": "reports/content_packages/images/a2cc701895d0e318_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650942/never-blank/posts/research/a2cc701895d0e318/instagram/1789650942.png",
+            "path": "reports/content_packages/images/a2cc701895d0e318_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650947/never-blank/posts/research/a2cc701895d0e318/threads/1789650947.png",
+            "path": "reports/content_packages/images/a2cc701895d0e318_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650954/never-blank/posts/research/a2cc701895d0e318/stories/1789650954.png",
+            "path": "reports/content_packages/images/a2cc701895d0e318_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "particle_flow",
+        "hook_text": "10,000 followers unlocks new pathways for creators."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "0c3ab0c08576373a",
+      "headline": "Google Search Profile Badges Expose The Publisher Traffic Crisis via @sejournal, @martinibuster",
+      "published_at": "2026-09-17 13:16 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/0c3ab0c08576373a_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650807/never-blank/posts/research/0c3ab0c08576373a/blog/1789650807.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650809/never-blank/posts/research/0c3ab0c08576373a/linkedin/1789650809.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650810/never-blank/posts/research/0c3ab0c08576373a/facebook/1789650810.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650811/never-blank/posts/research/0c3ab0c08576373a/instagram/1789650811.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650812/never-blank/posts/research/0c3ab0c08576373a/threads/1789650812.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650814/never-blank/posts/research/0c3ab0c08576373a/stories/1789650813.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": true,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "Publishers are learning the hard way: Google\u2019s latest update didn\u2019t just change the rules\u2014it exposed how little control they really have.",
+      "image_visual_family": "dark_insight_card",
+      "image_method": "quote_card"
+    }
+  ]
+}

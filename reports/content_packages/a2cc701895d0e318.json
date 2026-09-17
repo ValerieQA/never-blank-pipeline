@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "a2cc701895d0e318",
+  "HEADLINE": "Google Search Profiles Now Available At 10,000 Followers via @sejournal, @MattGSouthern",
+  "prepared_at": "2026-09-17 13:15 UTC",
+  "content": {
+    "blog": {
+      "headline": "Google Lowers Search Profile Bar to 10,000 Followers: What Founders Need to Know",
+      "angle": "Google’s decision to lower Search profile eligibility creates tension between broader access and maintaining platform credibility, forcing founders to shift focus from gaining access to building authority."
+    },
+    "linkedin": {
+      "headline": "Google just handed 10,000-follower creators the keys to the front page—now what happens to trust?",
+      "angle": "When platforms lower eligibility thresholds, businesses face a new battleground: establishing authority amid a flood of new entrants."
+    },
+    "facebook": {
+      "headline": "Google’s new 10,000-follower rule shakes up who gets prime search real estate.",
+      "angle": "Google’s lowered bar opens doors for more creators to claim visibility—how will your business stand out when everyone’s invited?"
+    },
+    "instagram": {
+      "headline": "Access Dropped. Authority Rises.",
+      "angle": "With Google Search profiles now open to smaller creators, the real challenge for founders is turning access into trust."
+    },
+    "threads": {
+      "thread_hook": "Google just dropped the follower requirement for Search profiles to 10,000. The gate is open wider—but what comes next?",
+      "angle": "This thread unpacks how lowering platform barriers shifts the competitive edge from mere access to building genuine credibility."
+    },
+    "stories": {
+      "story_question": "Google’s Search profiles now open at 10K followers—are you ready to prove your authority?",
+      "angle": "Exploring the tension founders face between easier access and the harder task of earning trust on a crowded platform."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650928/never-blank/posts/research/a2cc701895d0e318/blog/1789650928.png",
+        "path": "reports/content_packages/images/a2cc701895d0e318_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650931/never-blank/posts/research/a2cc701895d0e318/linkedin/1789650931.png",
+        "path": "reports/content_packages/images/a2cc701895d0e318_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650935/never-blank/posts/research/a2cc701895d0e318/facebook/1789650935.png",
+        "path": "reports/content_packages/images/a2cc701895d0e318_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650942/never-blank/posts/research/a2cc701895d0e318/instagram/1789650942.png",
+        "path": "reports/content_packages/images/a2cc701895d0e318_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650947/never-blank/posts/research/a2cc701895d0e318/threads/1789650947.png",
+        "path": "reports/content_packages/images/a2cc701895d0e318_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789650954/never-blank/posts/research/a2cc701895d0e318/stories/1789650954.png",
+        "path": "reports/content_packages/images/a2cc701895d0e318_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "particle_flow",
+    "hook_text": "10,000 followers unlocks new pathways for creators."
+  }
+}
