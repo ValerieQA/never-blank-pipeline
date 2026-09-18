@@ -310,40 +310,15 @@
       "version": "r1-2026-08-13"
     },
     {
-      "reference_id": "brand-voice",
-      "path": "config/brand_voice.md",
-      "version": "r1-2026-08-13"
-    },
-    {
       "reference_id": "active-campaign-strategy",
       "path": "strategy/current/strategy.json",
       "version": "1"
-    },
-    {
-      "reference_id": "strategy-methodology",
-      "path": "strategy/methodology/strategy_methodology.md",
-      "version": "2026-07-22"
-    },
-    {
-      "reference_id": "editorial-strategy",
-      "path": "strategy/methodology/editorial_strategy.md",
-      "version": "2026-07-22"
-    },
-    {
-      "reference_id": "platform-strategy",
-      "path": "strategy/methodology/platform_strategy.md",
-      "version": "2026-07-22"
-    },
-    {
-      "reference_id": "platform-visual-strategy",
-      "path": "docs/PLATFORM_AND_VISUAL_STRATEGY.md",
-      "version": "r1-2026-08-13"
     }
   ],
   "editorial_roles": [
     {
       "role_id": "never-blank-monday-documented-case",
-      "intent": "A documented small-business, owner-led, or early-stage business story. The governing question is: what happened here that another business owner should notice? Verified facts, the strongest observable mechanism the case actually supports, one bounded consequence or question for another owner, and published sources. It does not need to be breaking news.",
+      "intent": "Owned by clients/never_blank/streams/monday.md — edit Monday's purpose and selection rules there. This text never reaches a prompt.",
       "structure": [
         "Hook or business tension: open on a fact, contradiction, surprising consequence or tension. Never restate the source headline.",
         "Verified account of what happened: only documented, verifiable facts, and only as much as the mechanism requires.",
@@ -370,13 +345,6 @@
         "Generic AI-business-blog prose.",
         "Padding to reach a length.",
         "Adding presence, visibility, recognition or memory language to satisfy a house style when the case does not support that mechanism."
-      ],
-      "eligibility_criteria": [
-        "Eligible: a documented case genuinely about a small business, an owner-led business, a founder-led operating business at a meaningfully small or early stage, or an early-stage company.",
-        "A company that is large today is eligible ONLY when the documented episode occurred while it was still meaningfully small, founder-led, or early-stage.",
-        "Ineligible: current large-company or public-company/major-corporate behaviour, however recognizable the company or interesting the analogy.",
-        "Ineligible: any case whose connection to an owner-led/small-business audience exists only by analogy.",
-        "Ineligible: any case whose business scale, stage, or ownership the available material does not establish. Unknown is ineligible; never classify an unestablished company as small."
       ],
       "wix_rules": [
         "Materially verifiable external claims keep publishable provenance: the article carries a visible Sources section and/or appropriate inline source links naming where the facts came from.",

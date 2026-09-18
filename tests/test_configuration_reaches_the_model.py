@@ -39,9 +39,10 @@ from src.editorial.editorial_acceptance import (
     EditorialAcceptanceRubric,
     LlmChatArticleRevisionTransport,
     LlmChatEditorialReviewTransport,
+    RevisionContext,
     run_editorial_acceptance,
 )
-from src.editorial.editorial_role import resolve_editorial_role
+from src.editorial.editorial_role import render_editorial_role_rules, resolve_editorial_role
 from src.editorial.source_eligibility import (
     LlmChatSourceEligibilityTransport,
     judge_source_eligibility,
@@ -160,10 +161,10 @@ def test_each_surface_receives_all_of_its_own_channel_rules_and_none_of_the_othe
 def test_every_configured_eligibility_criterion_reaches_the_selection_message(
     monkeypatch,
 ):
-    seen: list[str] = []
+    seen: list[dict] = []
 
     def fake_chat(*, system, user, **kwargs):
-        seen.append(_normalised(f"{system}\n{user}"))
+        seen.append({"system": system, "request": json.loads(user)})
         return json.dumps({"eligible": False, "reason": "Scale is not established."})
 
     monkeypatch.setattr(llm_client, "chat", fake_chat)
@@ -178,14 +179,14 @@ def test_every_configured_eligibility_criterion_reaches_the_selection_message(
 
     assert len(seen) == 1, "one candidate is one judgment call"
     assert role.eligibility_criteria, "the role declares no criteria to prove"
-    for criterion in role.eligibility_criteria:
-        assert _normalised(criterion) in seen[0], criterion
+    # every criterion, exactly and in order — including multi-line client lenses
+    assert seen[0]["request"]["eligibility_criteria"] == list(role.eligibility_criteria)
 
 
 # ── the acceptance rubric reaches the reviewer, and the revision the reviser ─
 
 
-def _acceptance_messages(monkeypatch, article_body: str, research):
+def _acceptance_messages(monkeypatch, article_body: str, research, revision_context=None):
     messages: dict[str, list[str]] = {}
     verdicts = iter(
         [
@@ -211,6 +212,7 @@ def _acceptance_messages(monkeypatch, article_body: str, research):
         rubric=EditorialAcceptanceRubric.load(RUBRIC_PATH),
         reviewer=LlmChatEditorialReviewTransport(),
         revisor=LlmChatArticleRevisionTransport(),
+        revision_context=revision_context,
     )
     return messages
 
@@ -243,27 +245,32 @@ def test_the_configured_revision_instructions_reach_the_reviser_message(monkeypa
     assert any("do not write content for any other channel" in m for m in reviser)
 
 
-def test_the_reviser_receives_the_rubric_alone_which_is_an_open_owner_decision(monkeypatch):
-    """Characterisation, not endorsement: #240 D10 is undecided.
+def test_role_and_voice_reach_the_reviser_message(monkeypatch):
+    """#254 D10 (temporary contract, until #253): the reviser inherits both.
 
-    The reviser rewrites the article that actually ships, and today it is given
-    the rubric and the article only — no editorial role, no configured voice.
-    This test records exactly that, so the day someone changes it, the change is
-    deliberate and visible rather than silent. It is not an argument for either
-    answer: D10 belongs to the owner.
+    This test replaced the characterisation it grew from, which recorded that
+    the reviser received the rubric alone. The owner decided in #253 that it
+    must receive the applicable role and the configured voice; this now proves
+    they reach the exact message the reviser model receives.
     """
     role = _monday_role()
     editorial = _configuration().brand_editorial
+    context = RevisionContext(
+        role_rules=render_editorial_role_rules(role, surface="wix"),
+        voice=editorial.voice,
+    )
 
     messages = _acceptance_messages(
-        monkeypatch, "A documented article body about one mechanism.", _research()
+        monkeypatch, "A documented article body about one mechanism.", _research(),
+        revision_context=context,
     )
 
     reviser = " ".join(messages["reviser"])
-    assert _normalised(f"EDITORIAL ROLE — {MONDAY_ROLE}") not in reviser
-    assert _normalised(role.structure[0]) not in reviser
+    assert _normalised(f"EDITORIAL ROLE — {MONDAY_ROLE}") in reviser
+    for rule in role.structure:
+        assert _normalised(rule) in reviser, rule
     for sentence in editorial.voice:
-        assert _normalised(sentence) not in reviser
+        assert _normalised(sentence) in reviser, sentence
 
 
 # ── the composer is the real one, not a constructor in isolation ────────────

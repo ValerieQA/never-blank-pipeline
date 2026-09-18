@@ -7,7 +7,13 @@ eligibility criteria that assumption is false: the queue's first candidate can
 be exactly the class the role must refuse.
 
 This selector walks the unused candidates in queue order, asks the role's
-eligibility judgment about each, and stops at the first eligible one. It
+eligibility judgment about each, and stops at the first eligible one: first
+valid signal wins (#254, owner ruling D8 in #240). There is no batch and no
+bound on how far down the queue it reads — a candidate is passed over only when
+it fails, and no already-valid candidate is ever compared with another. Where a
+client stream contract governs the role (#240 D12), the criteria are that
+contract's Selection rules plus every client lens routed to selection, and the
+audit records the identity and digest of each text that decided. It
 writes an audit record of every disposition it made, because "why did the stream
 pick this signal and skip that one" must be answerable from evidence, not from
 a rerun.
@@ -18,11 +24,6 @@ Exit codes:
   3  — EVERY available unused candidate was evaluated, every judgment
        completed, and all were genuinely ineligible. Only this complete search
        may claim a clean "publish nothing" outcome.
-  5  — no eligible candidate among the evaluated candidates, but unevaluated
-       candidates remain beyond ``--max-candidates``. An INCOMPLETE search:
-       candidate N+1 may be eligible, so this must fail visibly rather than
-       masquerade as a healthy empty run — "no eligible candidate in the
-       evaluated window" is not "no eligible candidate in the queue".
   4  — no candidate was selected AND at least one eligibility judgment failed.
        This is infrastructure failure, not a clean empty result: unattended
        automation must fail visibly rather than report "nothing to publish"
@@ -51,22 +52,15 @@ from src.editorial.source_eligibility import (
     judge_source_eligibility,
 )
 from src.strategy.business_config import load_business_strategy_configuration
+from src.strategy.client_contracts import ClientContractError, contracts_for_role
 
 
 NO_ELIGIBLE = 3
 ELIGIBILITY_FAILURE = 4
-SEARCH_TRUNCATED = 5
 
-#: Judging a candidate costs a model call, so a single selection bounds how far
-#: down the queue it will look. Recorded in the audit when the cap is reached —
-#: a truncated search must never read as "nothing in the queue was eligible".
-DEFAULT_MAX_CANDIDATES = 15
-
-#: Hard Release 1 bound on one eligibility sweep (#171 correction): the
-#: selector is the largest pre-run call multiplier, and the per-run text
-#: budget does not cover this separate process — so the bound must be
-#: enforced here, not merely defaulted. Matches the scheduled default.
-MAX_CANDIDATES_CEILING = 15
+#: Exit 5 ("search truncated") no longer exists: there is no search bound to
+#: truncate at. The #171 bound of 15 candidates re-judged the same oldest queue
+#: head every week (#237) and is superseded by D8's first-valid-wins.
 
 
 def _load_candidates(active_path: Path, published_path: Path) -> list[dict]:
@@ -97,24 +91,18 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
     )
     parser.add_argument("--audit-out", default="",
                         help="Where to write the selection audit JSON")
-    parser.add_argument("--max-candidates", type=int, default=DEFAULT_MAX_CANDIDATES)
     parser.add_argument("--active-path", default="data/research/signals_active.jsonl")
     parser.add_argument("--published-path", default="data/research/published_signal_ids.txt")
     args = parser.parse_args(argv)
 
-    # #171 correction: the bound is enforced, not merely defaulted. Refused
-    # before any queue is read and before any model call — never clamped.
-    if not 1 <= args.max_candidates <= MAX_CANDIDATES_CEILING:
-        print(
-            f"ERROR: --max-candidates must be between 1 and "
-            f"{MAX_CANDIDATES_CEILING} for Release 1; got {args.max_candidates}"
-        )
-        return 1
-
     try:
         configuration = load_business_strategy_configuration()
-        _, role = resolve_editorial_role(configuration, args.editorial_role)
-    except (EditorialRoleError, Exception) as exc:  # noqa: BLE001 — CLI boundary
+        # One snapshot: the criteria judged are the criteria the audit records.
+        contracts = contracts_for_role(args.editorial_role.strip())
+        _, role = resolve_editorial_role(
+            configuration, args.editorial_role, contracts=contracts
+        )
+    except (EditorialRoleError, ClientContractError, Exception) as exc:  # noqa: BLE001 — CLI boundary
         print(f"ERROR: {exc}")
         return 1
     if not role.eligibility_criteria:
@@ -134,15 +122,16 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
     judge = transport or LlmChatSourceEligibilityTransport()
     audit = {
         "role_id": role.role_id,
+        "selection": contracts.stream.selection if contracts is not None else "first_valid",
+        # the exact client texts this selection was judged against (#240 D12)
+        "client_contracts": contracts.provenance if contracts is not None else None,
         "requested_signal_id": args.signal_id or None,
-        "max_candidates": args.max_candidates,
         "candidates_available": len(candidates),
-        "truncated": len(candidates) > args.max_candidates,
         "dispositions": [],
         "selected_signal_id": None,
     }
     selected = None
-    for signal in candidates[: args.max_candidates]:
+    for signal in candidates:
         signal_id = str(signal.get("SIGNAL_ID", ""))
         try:
             verdict = judge_source_eligibility(signal, role, judge)
@@ -219,11 +208,8 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
         # One or more judgments never completed — a per-candidate failure, or
         # a provider-wide stop that left candidates unevaluated. Either way,
         # "no eligible candidate" would be a claim the evidence does not
-        # support, and this branch is checked before the truncation branch so
-        # a provider stop can never surface as search_truncated.
+        # support.
         audit["outcome"] = "eligibility_failure"
-    elif audit["truncated"]:
-        audit["outcome"] = "search_truncated"
     else:
         audit["outcome"] = "no_eligible_complete"
     if args.audit_out:
@@ -241,16 +227,6 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
             "This is not a clean nothing-to-publish outcome."
         )
         return ELIGIBILITY_FAILURE
-    if audit["truncated"]:
-        print(
-            f"Incomplete eligibility search: no eligible candidate among the "
-            f"{evaluated} evaluated, but {audit['remaining']} unused "
-            "candidates remain unevaluated beyond the search bound. One of "
-            "them may be eligible, so this is NOT a clean nothing-to-publish "
-            "outcome — it needs an operator (raise --max-candidates, dispatch "
-            "an explicit signal, or curate the queue)."
-        )
-        return SEARCH_TRUNCATED
     print(
         f"All {evaluated} unused candidates were judged ineligible — "
         "publishing nothing is the correct outcome."

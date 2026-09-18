@@ -50,19 +50,21 @@ _SOURCE_FIELDS = (
     "OUTCOME_IF_KNOWN",
 )
 
-_INSTRUCTIONS = """You judge ONE thing: whether the source case shown to you \
-belongs to the allowed source class described by the criteria. You do not judge \
-whether it would make a good article, whether its evidence is sufficient, or \
-what it might teach anyone — later stages own those questions.
+#: Mechanics only. What a candidate is judged against — the stream's selection
+#: requirements — arrives in the request as ``eligibility_criteria``, from the
+#: stream's human-readable document where one governs the role (#254 D1/D8).
+#: No product meaning belongs in this text: until #254 it framed the question
+#: as source class and company size, which was the superseded narrow contract.
+_INSTRUCTIONS = """You judge ONE candidate signal against the selection \
+requirements in `eligibility_criteria`, and nothing else.
 
 Rules:
 - Judge only from the material shown. Never manufacture, assume or infer facts \
-about the company's size, stage, ownership or history that the material does \
-not establish.
-- If the material does not establish eligibility, the answer is ineligible. \
-Uncertainty is ineligibility.
-- The reason must state what the material establishes (or fails to establish), \
-in one or two sentences.
+the material does not establish.
+- A requirement the material does not establish is not satisfied. If any \
+requirement is not satisfied, the answer is ineligible.
+- The reason must name the requirement that decided the answer and what the \
+material establishes, in one or two sentences.
 
 Return ONLY one valid JSON object:
 {"eligible": true|false, "reason": "string"}

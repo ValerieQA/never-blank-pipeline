@@ -118,8 +118,8 @@ format from structured semantic fields. Compose for the format rather than trimm
 platform's body down to size; individual lines — a strong hook, the Echo — may recur across
 formats.
 
-Article arc (production): Hook → Recognition → Tension → Market Observation → Investigation →
-Mechanism → Business Consequence → Reframe → Echo → Soft CTA.
+The article's structure is the client's, not the Composer's: when the editorial role carries
+client lenses, they are the client's own rules for this article — follow them.
 The mechanism is whichever one the evidence for this run most strongly supports —
 pricing, capacity, supply, regulation, distribution, operations, customer behaviour, a
 founder decision, communication, presence, or another supported mechanism. Do not

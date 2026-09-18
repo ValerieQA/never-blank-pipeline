@@ -347,8 +347,8 @@ def test_source_attribution_is_part_of_the_role():
 
 
 def test_monday_does_not_require_same_day_news():
-    rules = _role_rules().lower()
-    assert "does not need to be breaking news" in rules
+    useful = " ".join(_monday_stream().requirements).lower()
+    assert "a major story everyone is already discussing and a fresh development" in useful
 
     selector = Path("scripts/streams/select_eligible_signal.py").read_text()
     # selection is "eligible and unused", never "found today"
@@ -802,19 +802,18 @@ def _monday_role_object():
     return resolve_editorial_role(_configuration(), MONDAY_ROLE)[1]
 
 
-def test_the_eligibility_policy_names_the_disallowed_classes():
+def test_the_signal_rules_are_an_open_universe_not_a_taxonomy():
+    """#254 D1: no closed list of permitted signal types, no source-class gate."""
     criteria = " ".join(_monday_role_object().eligibility_criteria).lower()
 
-    # the classes the correction rules out, by name — including the class the
-    # current queue head belongs to
-    assert "public-company/major-corporate" in criteria
-    assert "only by analogy" in criteria
-    assert "unknown is ineligible" in criteria
-    assert "never classify an unestablished company as small" in criteria
-    # and the classes it allows
-    for allowed in ("small business", "owner-led", "founder-led", "early-stage"):
-        assert allowed in criteria
-    assert "only when the documented episode occurred" in criteria
+    assert "there is no list of permitted signal types" in criteria
+    assert "never reject a useful signal because of its source class alone" in criteria
+    assert "not a required class and never a reason to pass over another strong" in criteria
+    # the superseded narrow contract is gone, not reworded
+    for superseded in ("public-company/major-corporate", "unknown is ineligible",
+                       "never classify an unestablished company as small",
+                       "only when the documented episode occurred"):
+        assert superseded not in criteria
 
 
 def test_the_spacex_candidate_is_rejected_and_skipped(tmp_path):
@@ -848,12 +847,12 @@ def test_each_eligible_class_passes_selection(tmp_path, kind):
     assert audit["selected_signal_id"] == fixture["SIGNAL_ID"]
 
 
-def test_unknown_scale_fails_closed_at_the_judgment():
-    # the judgment contract: uncertainty is ineligibility, stated in the
-    # instructions the model receives
+def test_an_unestablished_requirement_fails_closed_at_the_judgment():
+    # the judgment contract, stated in the instructions the model receives: a
+    # requirement the material does not establish is not satisfied
     from src.editorial.source_eligibility import _INSTRUCTIONS
 
-    assert "Uncertainty is ineligibility" in _INSTRUCTIONS
+    assert "A requirement the material does not establish is not satisfied" in _INSTRUCTIONS
     assert "Never manufacture, assume or infer facts" in _INSTRUCTIONS
 
 
@@ -1054,7 +1053,14 @@ def test_monday_source_rules_do_not_leak_into_shared_channel_composition():
 
 
 def _select(tmp_path, signals, *, verdicts, failures=None, signal_id="",
-            published=None, max_candidates=None):
+            published=None):
+    return _select_with(
+        tmp_path, signals, PolicyTransport(verdicts, failures),
+        signal_id=signal_id, published=published,
+    )
+
+
+def _select_with(tmp_path, signals, transport, *, signal_id="", published=None):
     active = tmp_path / "signals_active.jsonl"
     active.write_text("\n".join(json.dumps(s) for s in signals) + "\n")
     if published is None:
@@ -1070,12 +1076,18 @@ def _select(tmp_path, signals, *, verdicts, failures=None, signal_id="",
     ]
     if signal_id:
         argv += ["--signal-id", signal_id]
-    if max_candidates is not None:
-        argv += ["--max-candidates", str(max_candidates)]
-    code = select_eligible_signal.main(
-        argv, transport=PolicyTransport(verdicts, failures)
-    )
+    code = select_eligible_signal.main(argv, transport=transport)
     return code, json.loads(audit_path.read_text())
+
+
+def _monday_contracts():
+    from src.strategy.client_contracts import contracts_for_role
+
+    return contracts_for_role(MONDAY_ROLE)
+
+
+def _monday_stream():
+    return _monday_contracts().stream
 
 
 # ===========================================================================
@@ -1114,31 +1126,32 @@ def test_a_completed_all_ineligible_search_is_a_clean_empty_result(tmp_path):
     code, audit = _select(
         tmp_path,
         [SPACEX_FIXTURE],
-        verdicts={SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case.")},
+        verdicts={SPACEX_FIXTURE["SIGNAL_ID"]: (False, "No practical small-business angle.")},
     )
 
     assert code == select_eligible_signal.NO_ELIGIBLE
     assert audit["outcome"] == "no_eligible_complete"
-    assert audit["truncated"] is False
+    assert audit["evaluated"] == audit["candidates_available"] == 1
+    assert audit["remaining"] == 0
 
 
-def test_a_truncated_all_ineligible_search_is_not_a_clean_empty_monday(tmp_path):
-    # candidate 2 is eligible but sits beyond the search bound: the run must
-    # NOT report the same healthy nothing-to-publish as an exhausted queue
-    fixtures = [SPACEX_FIXTURE, ELIGIBLE_FIXTURES["small"]]
+def test_the_first_valid_signal_wins_and_no_later_one_is_judged(tmp_path):
+    """#254 D8: select the first valid signal and stop; never compare valid ones."""
+    transport = PolicyTransport({
+        SPACEX_FIXTURE["SIGNAL_ID"]: (False, "No practical small-business angle."),
+        "sig-small-bakery": (True, "A practical, evidence-grounded angle."),
+        "sig-owner-led": (True, "Also valid, and never judged."),
+    })
+    fixtures = [SPACEX_FIXTURE, ELIGIBLE_FIXTURES["small"], ELIGIBLE_FIXTURES["owner_led"]]
 
-    code, audit = _select(
-        tmp_path, fixtures,
-        verdicts={SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case.")},
-        max_candidates=1,
-    )
+    code, audit = _select_with(tmp_path, fixtures, transport)
 
-    assert code == select_eligible_signal.SEARCH_TRUNCATED
-    assert audit["outcome"] == "search_truncated"
-    assert audit["truncated"] is True
-    assert audit["candidates_available"] == 2
-    assert audit["evaluated"] == 1
-    assert audit["remaining"] == 1
+    assert code == 0
+    assert audit["selected_signal_id"] == "sig-small-bakery"
+    assert [d["signal_id"] for d in audit["dispositions"]] == [
+        SPACEX_FIXTURE["SIGNAL_ID"], "sig-small-bakery",
+    ]
+    assert len(transport.requests) == 2, "a third valid candidate was judged"
 
 
 def test_a_failed_judgment_followed_by_an_eligible_candidate_still_selects(tmp_path):
@@ -1201,70 +1214,62 @@ def test_the_execution_step_keeps_the_credentials_the_r1_path_needs():
 # ===========================================================================
 
 
-def test_an_eligible_candidate_beyond_the_cap_is_never_a_clean_empty_result(tmp_path):
-    # 16 candidates: first 15 ineligible, candidate 16 eligible. The bounded
-    # search must not report the queue as holding nothing eligible.
+def test_a_valid_signal_deep_in_the_queue_is_still_reached(tmp_path):
+    """#254 D8: no fixed 15-candidate batch — a failing candidate always advances."""
     fixtures = [
-        {**SPACEX_FIXTURE, "SIGNAL_ID": f"sig-large-{i}"} for i in range(15)
+        {**SPACEX_FIXTURE, "SIGNAL_ID": f"sig-large-{i}"} for i in range(40)
     ] + [ELIGIBLE_FIXTURES["small"]]
-    verdicts = {f"sig-large-{i}": (False, "Current public-company case.")
-                for i in range(15)}
-    verdicts["sig-small-bakery"] = (True, "Documented small business.")
+    verdicts = {f"sig-large-{i}": (False, "No practical small-business angle.")
+                for i in range(40)}
+    verdicts["sig-small-bakery"] = (True, "A practical, evidence-grounded angle.")
 
-    code, audit = _select(tmp_path, fixtures, verdicts=verdicts, max_candidates=15)
+    code, audit = _select(tmp_path, fixtures, verdicts=verdicts)
 
-    assert code == select_eligible_signal.SEARCH_TRUNCATED
-    assert audit["outcome"] == "search_truncated"
-    assert audit["evaluated"] == 15 and audit["remaining"] == 1
-
-
-def test_exactly_the_cap_all_ineligible_is_a_clean_complete_search(tmp_path):
-    fixtures = [
-        {**SPACEX_FIXTURE, "SIGNAL_ID": f"sig-large-{i}"} for i in range(15)
-    ]
-    verdicts = {f"sig-large-{i}": (False, "Current public-company case.")
-                for i in range(15)}
-
-    code, audit = _select(tmp_path, fixtures, verdicts=verdicts, max_candidates=15)
-
-    # every available candidate was actually evaluated — this one may be green
-    assert code == select_eligible_signal.NO_ELIGIBLE
-    assert audit["outcome"] == "no_eligible_complete"
-    assert audit["truncated"] is False
-    assert audit["remaining"] == 0
+    assert code == 0
+    assert audit["selected_signal_id"] == "sig-small-bakery"
+    assert audit["evaluated"] == 41
 
 
-def test_an_eligible_candidate_inside_the_window_is_selected(tmp_path):
+def test_a_failed_candidate_advances_to_the_next(tmp_path):
     fixtures = [SPACEX_FIXTURE, ELIGIBLE_FIXTURES["small"]]
 
     code, audit = _select(
         tmp_path, fixtures,
         verdicts={
-            SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case."),
-            "sig-small-bakery": (True, "Documented small business."),
+            SPACEX_FIXTURE["SIGNAL_ID"]: (False, "No practical small-business angle."),
+            "sig-small-bakery": (True, "A practical, evidence-grounded angle."),
         },
-        max_candidates=15,
     )
 
     assert code == 0
     assert audit["outcome"] == "selected"
+    assert [d["disposition"] for d in audit["dispositions"]] == ["ineligible", "eligible"]
 
 
-def test_judgment_failure_outranks_truncation(tmp_path):
-    # a failed judgment inside a truncated window is infrastructure failure,
-    # not a truncation report — the stronger signal wins
-    fixtures = [SPACEX_FIXTURE, ELIGIBLE_FIXTURES["small"], ELIGIBLE_FIXTURES["owner_led"]]
+def test_the_audit_records_which_version_of_the_monday_document_decided(tmp_path):
+    code, audit = _select(
+        tmp_path, [ELIGIBLE_FIXTURES["small"]],
+        verdicts={"sig-small-bakery": (True, "A practical, evidence-grounded angle.")},
+    )
+
+    assert code == 0
+    assert audit["selection"] == "first_valid"
+    assert audit["client_contracts"] == _monday_contracts().provenance
+    assert audit["client_contracts"]["stream"]["identity"] == "never-blank-monday/1"
+    assert "max_candidates" not in audit and "truncated" not in audit
+
+
+def test_a_judgment_failure_with_nothing_selected_is_infrastructure_failure(tmp_path):
+    fixtures = [SPACEX_FIXTURE, ELIGIBLE_FIXTURES["small"]]
 
     code, audit = _select(
         tmp_path, fixtures,
-        verdicts={SPACEX_FIXTURE["SIGNAL_ID"]: (False, "Current public-company case.")},
+        verdicts={SPACEX_FIXTURE["SIGNAL_ID"]: (False, "No practical small-business angle.")},
         failures={"sig-small-bakery"},
-        max_candidates=2,
     )
 
     assert code == select_eligible_signal.ELIGIBILITY_FAILURE
     assert audit["outcome"] == "eligibility_failure"
-    assert audit["truncated"] is True  # the fact is still recorded
 
 
 def test_the_workflow_propagates_the_truncated_outcome_as_a_failure():
@@ -2269,8 +2274,8 @@ def test_a_role_without_source_transparency_receives_no_sources_block(tmp_path):
 def test_monday_no_longer_requires_compound_presence_as_the_mechanism():
     rules = _role_rules().lower()
 
-    # the governing question, and the two valid modes
-    assert "what happened here that another business owner should notice" in rules
+    # the purpose now comes from the Monday document, and the two valid modes
+    assert " ".join(_monday_stream().purpose.lower().split()) in " ".join(rules.split())
     assert "only where the material earns it" in rules
     assert "if the strongest supported mechanism is something else" in rules
     for alternative in ("pricing", "capacity", "supply", "regulation",
