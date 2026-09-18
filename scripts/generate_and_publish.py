@@ -444,7 +444,8 @@ def _ends_with_abbreviation(fragment: str) -> bool:
     Conservative by design (#259 review): no finite list covers every
     abbreviation ("Assoc.", "Gov.", "Rep."…), so any short capitalized token,
     any token with an internal period, and any single letter is treated as
-    one. A wrong guess only MERGES two real sentences into one longer unit —
+    one — and so is a period right after a digit ("steps: 1. Review…").
+    A wrong guess only MERGES two real sentences into one longer unit —
     which the length budget may then skip — and never cuts one.
     """
     words = fragment.rstrip("\"'”’)").split()
@@ -457,6 +458,9 @@ def _ends_with_abbreviation(fragment: str) -> bool:
         or (len(token) == 1 and token.isalpha())
         or "." in raw
         or (raw[:1].isupper() and len(raw) <= 6)
+        # a period straight after a digit may be a list marker ("1.") or an
+        # ordinal/number — ambiguous, so merge (#259 review round 5)
+        or raw[-1:].isdigit()
     )
 
 

@@ -467,3 +467,17 @@ def test_a_period_followed_by_lowercase_never_ends_a_sentence():
     telegram = _build_telegram(TITLE, f"{sentence}\n\nA short second paragraph.", "")
     assert "30 min." not in telegram
     assert telegram.splitlines()[-1] == "A short second paragraph."
+
+
+def test_a_numbered_list_marker_never_ends_a_sentence():
+    """#259 review round 5: "steps: 1. Review …" is not "…steps: 1."."""
+    from scripts.generate_and_publish import _build_telegram, _whole_sentences
+
+    text = ("The checklist has three steps: 1. Review every campaign result against "
+            "the purchases it produced, and compare them with the previous month "
+            "before deciding whether the new ad format should replace the old one "
+            "for every product line.")
+    for limit in range(1, 45):
+        assert _whole_sentences(text, limit) in ("", text), limit
+    telegram = _build_telegram("Campaign review", text, "")
+    assert telegram == "Campaign review"                 # skipped, never cut
