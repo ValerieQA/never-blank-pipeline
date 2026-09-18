@@ -39,7 +39,10 @@ from src.publishing.wix import WixPublisher
 from src.utils.logger import get_logger
 
 log = get_logger("research.publish_packages")
-PACKAGES_DIR = Path("reports/content_packages")
+#: Same root, same rule as the canonical entrypoint (#233 F-02): the
+#: production default is unchanged, and ``NB_PACKAGES_DIR`` redirects it so a
+#: test never writes package records into the tracked tree.
+PACKAGES_DIR = Path(os.environ.get("NB_PACKAGES_DIR", "").strip() or "reports/content_packages")
 
 #: Every publisher this stage knows how to drive. Kept complete on purpose:
 #: the classes are real, tested and usable by a manual operator tool, and

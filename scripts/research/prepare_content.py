@@ -32,7 +32,10 @@ from src.strategy.execution_context import AudienceSelection, ResearchStrategyVi
 log = get_logger("research.prepare_content")
 
 SELECTED_FILE = Path("data/research/selected_signals.jsonl")
-PACKAGES_DIR  = Path("reports/content_packages")
+#: Same root, same rule as the canonical entrypoint (#233 F-02): the
+#: production default is unchanged, and ``NB_PACKAGES_DIR`` redirects it so a
+#: test never writes package records into the tracked tree.
+PACKAGES_DIR  = Path(os.environ.get("NB_PACKAGES_DIR", "").strip() or "reports/content_packages")
 IMAGE_LIBRARY = Path("data/research/image_library.json")
 PLATFORMS     = ["blog", "linkedin", "facebook", "instagram", "threads", "stories"]
 
