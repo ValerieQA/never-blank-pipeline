@@ -445,9 +445,11 @@ def _build_user_prompt(
         # social surface through them (controlled live run 35383199073: the
         # reviewer removed "total engagement numbers drop" from the article;
         # the pre-review Threads and Telegram texts still carried it).
-        # Only the elements a contract requires verbatim still travel —
-        # the Echo — and the CTA line the run's mode may require.
-        if canonical_body and block not in ("echo", "cta"):
+        # Only the element a contract requires verbatim still travels — the
+        # Echo, supplied by the caller from the ACCEPTED article. Not even the
+        # draft's CTA line: a CTA the article carries after revision is in
+        # the canonical content itself (#259 review).
+        if canonical_body and block != "echo":
             continue
         content = _block_content(structured_article, block)
         if mode == "skip" or not content:

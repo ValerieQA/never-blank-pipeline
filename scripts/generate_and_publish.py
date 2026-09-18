@@ -437,11 +437,25 @@ _ABBREVIATIONS = frozenset({
 
 
 def _ends_with_abbreviation(fragment: str) -> bool:
+    """Might this period be an abbreviation rather than a sentence end?
+
+    Conservative by design (#259 review): no finite list covers every
+    abbreviation ("Assoc.", "Gov.", "Rep."…), so any short capitalized token,
+    any token with an internal period, and any single letter is treated as
+    one. A wrong guess only MERGES two real sentences into one longer unit —
+    which the length budget may then skip — and never cuts one.
+    """
     words = fragment.rstrip("\"'”’)").split()
     if not words or not words[-1].endswith("."):
         return False
-    token = words[-1].rstrip(".").casefold()
-    return token in _ABBREVIATIONS or (len(token) == 1 and token.isalpha())
+    raw = words[-1].rstrip(".").lstrip("\"'“‘(")
+    token = raw.casefold()
+    return (
+        token in _ABBREVIATIONS
+        or (len(token) == 1 and token.isalpha())
+        or "." in raw
+        or (raw[:1].isupper() and len(raw) <= 6)
+    )
 
 
 def _sentences(text: str) -> list[str]:
@@ -502,19 +516,31 @@ def _article_paragraphs(article_body: str, echo: str = "") -> list[str]:
 def _accepted_echo(final_article: str, draft_echo: str = "") -> str:
     """The Echo as the FINAL ACCEPTED article carries it.
 
-    The draft's Echo predates Editorial Acceptance: a revision may reword or
-    remove it (#259 review). The accepted article's own attributed line
-    ("Never Blank: <echo>") is authoritative; otherwise the draft Echo is
-    kept only when the accepted article still contains it verbatim; otherwise
-    there is no Echo — never the draft's.
+    The draft's Echo predates Editorial Acceptance: a revision may reword,
+    negate or remove it (#259 review). Authoritative, in order:
+
+    1. the accepted article's attributed paragraph ("Never Blank: <echo>"),
+       taken whole even when it wraps across lines;
+    2. the draft Echo only when it is, by itself, the accepted article's
+       final prose paragraph — the closing an unattributed contract
+       requires. Merely appearing inside a sentence proves nothing ("We
+       cannot conclude that <echo>" contains it and rejects it);
+    3. otherwise no Echo — never the draft's.
     """
-    for line in (final_article or "").splitlines():
-        plain = line.replace("*", "").strip()
-        match = re.match(r"^Never Blank\s*:\s*(.+)$", plain)
+    paragraphs = [
+        re.sub(r"\s+", " ", block.replace("*", "")).strip()
+        for block in re.split(r"\n\s*\n", final_article or "")
+        if block.strip()
+    ]
+    for paragraph in paragraphs:
+        match = re.match(r"^Never Blank\s*:\s*(.+)$", paragraph)
         if match:
             return match.group(1).strip()
-    if draft_echo and draft_echo.strip() and draft_echo.strip() in (final_article or ""):
-        return draft_echo.strip()
+    prose = [p for p in paragraphs
+             if not re.match(r"^(#+\s*)?sources?\s*:?", p, re.IGNORECASE)]
+    draft = re.sub(r"\s+", " ", (draft_echo or "").replace("*", "")).strip()
+    if draft and prose and prose[-1] == draft:
+        return draft
     return ""
 
 
@@ -2344,7 +2370,7 @@ def _run(
         # its Echo is replaced here by the accepted one (#259 review).
         echo_line = _accepted_echo(blog_body, echo_line)
         structured_final = {**structured, "echo_line": echo_line or None,
-                            "signature": None}
+                            "signature": None, "cta_line": None}
         print(
             f"  ✓  editorial acceptance: ACCEPT "
             f"({'after one revision' if _acceptance.revised else 'original article'}) "

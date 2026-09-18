@@ -302,7 +302,9 @@ def test_the_accepted_echo_rule():
 
     assert _accepted_echo(f"Body.\n\n**Never Blank:** {REVISED_ECHO}", ECHO_CLAIM) == REVISED_ECHO
     assert _accepted_echo(f"Body.\n\nNever Blank: {REVISED_ECHO}", "") == REVISED_ECHO
-    assert _accepted_echo(f"Body ends with {ECHO_CLAIM}", ECHO_CLAIM) == ECHO_CLAIM
+    # inside a sentence proves nothing; as the whole closing paragraph it stands
+    assert _accepted_echo(f"Body ends with {ECHO_CLAIM}", ECHO_CLAIM) == ""
+    assert _accepted_echo(f"Body.\n\n{ECHO_CLAIM}", ECHO_CLAIM) == ECHO_CLAIM
     assert _accepted_echo("Body without it.", ECHO_CLAIM) == ""       # never the draft's
 
 
@@ -395,3 +397,58 @@ def test_an_unattributed_preview_facebook_post_blocks_the_preview(tmp_path):
         assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 1
 
     assert not list(tmp_path.glob(f"{SIG}/runs/*/generated.json"))
+
+
+# ===========================================================================
+# #259 review round 3
+# ===========================================================================
+
+
+def test_a_negated_echo_is_not_rescued_by_substring():
+    from scripts.generate_and_publish import _accepted_echo, _build_telegram
+
+    article = ("Opening paragraph that sets the scene.\n\n"
+               "We cannot conclude that Every click is a buyer.")
+    assert _accepted_echo(article, "Every click is a buyer.") == ""
+    assert "Every click is a buyer." not in _build_telegram(
+        TITLE, article, _accepted_echo(article, "Every click is a buyer."))
+
+
+def test_the_draft_echo_survives_only_as_the_whole_closing_paragraph():
+    from scripts.generate_and_publish import _accepted_echo
+
+    article = "Opening paragraph.\n\nEvery click is a buyer."
+    assert _accepted_echo(article, "Every click is a buyer.") == "Every click is a buyer."
+
+
+def test_a_wrapped_attributed_echo_is_taken_whole():
+    from scripts.generate_and_publish import _accepted_echo, _build_telegram
+
+    article = "Opening paragraph.\n\n**Never Blank:** Only purchases\nshow demand."
+    echo = _accepted_echo(article, "")
+    assert echo == "Only purchases show demand."
+    assert _build_telegram(TITLE, article, echo).splitlines()[-1] == echo
+
+
+def test_no_derivative_receives_the_draft_cta():
+    from src.editorial.platform_composer import _build_user_prompt
+
+    structured = {"hook": "h", "echo_line": ECHO,
+                  "cta_line": "Request the system that doubles conversions."}
+    prompt = _build_user_prompt(structured, "medium", "reflection",
+                                canonical_body=FINAL_ARTICLE)
+    assert "doubles conversions" not in prompt
+    assert ECHO in prompt
+
+
+@pytest.mark.parametrize("text", [
+    "We spoke to Assoc. Prof. Smith about the campaign results before approving any spending.",
+    "Gov. Lee said the rule changes in March for every small shop in the state.",
+    "The U.K. regulator approved it after a long review of the whole market.",
+])
+def test_unlisted_abbreviations_never_produce_a_cut(text):
+    from scripts.generate_and_publish import _whole_sentences
+
+    for limit in range(1, len(text.split()) + 1):
+        result = _whole_sentences(text, limit)
+        assert result in ("", text), (limit, result)
