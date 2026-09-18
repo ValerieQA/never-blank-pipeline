@@ -481,3 +481,24 @@ def test_a_numbered_list_marker_never_ends_a_sentence():
         assert _whole_sentences(text, limit) in ("", text), limit
     telegram = _build_telegram("Campaign review", text, "")
     assert telegram == "Campaign review"                 # skipped, never cut
+
+
+@pytest.mark.parametrize("text", [
+    "The team tested “Ready to buy? Compare all available plans and choose the one "
+    "that best fits your business before you enter your payment details and complete "
+    "your first purchase with us today” against its original checkout message.",
+    'The team tested "Ready to buy? Compare all available plans and choose the one '
+    'that best fits your business before you enter your payment details today" '
+    "against its original checkout message.",
+    "The owner (who asked. Twice. about refunds before signing the contract with the "
+    "new supplier that quarter) finally switched vendors.",
+], ids=["curly-quotes", "straight-quotes", "parentheses"])
+def test_a_boundary_inside_an_open_quote_never_ends_the_sentence(text):
+    """#259 review round 6."""
+    from scripts.generate_and_publish import _build_telegram, _whole_sentences
+
+    for limit in range(1, 50):
+        assert _whole_sentences(text, limit) in ("", text), limit
+    # Telegram carries the whole sentence when it fits, and nothing otherwise
+    assert _build_telegram("Checkout test", text, "") in (
+        "Checkout test", f"Checkout test\n{text}")

@@ -464,6 +464,20 @@ def _ends_with_abbreviation(fragment: str) -> bool:
     )
 
 
+def _inside_open_quote(fragment: str) -> bool:
+    """Does ``fragment`` leave a quotation or bracket open?
+
+    A "?" or "." inside quoted or bracketed speech does not end the outer
+    sentence ("The team tested “Ready to buy? Compare …” against …" is one
+    sentence, #259 review round 6), so an open one always merges.
+    """
+    return (
+        fragment.count("“") > fragment.count("”")
+        or fragment.count("(") > fragment.count(")")
+        or fragment.count('"') % 2 == 1
+    )
+
+
 def _sentences(text: str) -> list[str]:
     """Whole sentences of one paragraph, markdown emphasis removed."""
     flat = re.sub(r"\s+", " ", (text or "").replace("*", "")).strip()
@@ -475,7 +489,8 @@ def _sentences(text: str) -> list[str]:
         # sentence, whatever the token before the period (#259 review).
         first_letter = next((ch for ch in part if ch.isalpha()), "")
         continues = bool(first_letter) and first_letter.islower()
-        if sentences and (continues or _ends_with_abbreviation(sentences[-1])):
+        if sentences and (continues or _ends_with_abbreviation(sentences[-1])
+                          or _inside_open_quote(sentences[-1])):
             sentences[-1] = f"{sentences[-1]} {part}"
         else:
             sentences.append(part)
