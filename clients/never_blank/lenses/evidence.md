@@ -9,8 +9,7 @@ stages: [selection, writing]
 Evidence and source integrity — CLIENT: NEVER_BLANK.
 Never Blank's own sourcing policy (#254, #240 D8). It is client policy, not
 Engine law: another client may require different sources or none (#240 D12).
-Everything outside this comment is delivered, word for word, to the stages
-named above.
+Format: docs/engine/CLIENT_CONTRACTS.md.
 -->
 
 Evidence and source integrity:

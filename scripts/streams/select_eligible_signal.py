@@ -97,17 +97,16 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
 
     try:
         configuration = load_business_strategy_configuration()
-        _, role = resolve_editorial_role(configuration, args.editorial_role)
-    except (EditorialRoleError, Exception) as exc:  # noqa: BLE001 — CLI boundary
+        # One snapshot: the criteria judged are the criteria the audit records.
+        contracts = contracts_for_role(args.editorial_role.strip())
+        _, role = resolve_editorial_role(
+            configuration, args.editorial_role, contracts=contracts
+        )
+    except (EditorialRoleError, ClientContractError, Exception) as exc:  # noqa: BLE001 — CLI boundary
         print(f"ERROR: {exc}")
         return 1
     if not role.eligibility_criteria:
         print(f"ERROR: role {role.role_id!r} declares no eligibility criteria")
-        return 1
-    try:
-        contracts = contracts_for_role(role.role_id)
-    except ClientContractError as exc:
-        print(f"ERROR: {exc}")
         return 1
 
     candidates = _load_candidates(Path(args.active_path), Path(args.published_path))

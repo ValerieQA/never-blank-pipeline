@@ -22,7 +22,11 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.strategy.client_contracts import contracts_for_role
+from src.strategy.client_contracts import ClientContracts, contracts_for_role
+
+#: "Load the client's contracts now." A caller that already holds a snapshot
+#: passes it instead, so one run judges and records the same texts.
+_LOAD = object()
 from src.strategy.business_config import (
     BusinessStrategyConfiguration,
     EditorialRole,
@@ -54,6 +58,7 @@ def resolve_editorial_role(
     configuration: BusinessStrategyConfiguration,
     role_id: str,
     client_dir: Path | None = None,
+    contracts: "ClientContracts | None | object" = _LOAD,
 ) -> tuple[EditorialRoleIdentity, EditorialRole]:
     """Resolve a requested role id against the declared roles.
 
@@ -74,7 +79,11 @@ def resolve_editorial_role(
                     configuration_version=configuration.configuration_version,
                     decision_policy=role.decision_policy,
                 ),
-                _with_client_contracts(role, client_dir),
+                _with_client_contracts(
+                    role,
+                    contracts_for_role(role.role_id, client_dir)
+                    if contracts is _LOAD else contracts,
+                ),
             )
     declared = ", ".join(role.role_id for role in configuration.editorial_roles)
     raise EditorialRoleError(
@@ -89,7 +98,7 @@ def resolve_editorial_role(
 STREAM_OWNED_INTENT_PREFIX = "Owned by clients/"
 
 
-def _with_client_contracts(role: EditorialRole, client_dir: Path | None) -> EditorialRole:
+def _with_client_contracts(role: EditorialRole, contracts: "ClientContracts | None") -> EditorialRole:
     """Apply the client's stream contract for this role, where one governs it.
 
     ENGINE mechanics (#240 D12): the contract is the authority for the role's
@@ -99,7 +108,6 @@ def _with_client_contracts(role: EditorialRole, client_dir: Path | None) -> Edit
     intent points at a client contract but has none fails closed: running on the
     pointer text would be running on no strategy at all.
     """
-    contracts = contracts_for_role(role.role_id, client_dir)
     if contracts is None:
         if role.intent.startswith(STREAM_OWNED_INTENT_PREFIX):
             raise EditorialRoleError(

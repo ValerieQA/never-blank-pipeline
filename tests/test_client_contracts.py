@@ -370,3 +370,67 @@ def test_never_blank_notes_stay_with_people():
     for text in (contracts.stream.purpose, *contracts.for_stage("selection"),
                  *contracts.for_stage("writing"), *contracts.for_stage("revision")):
         assert "<!--" not in text and "#240" not in text and "#254" not in text
+
+
+# ── review round 1 (#256): no rule may be dropped or rerouted silently ──────
+
+
+@pytest.mark.parametrize("mutation", [
+    ("### Another group", "# A second title\n\n### Another group"),   # title after the contract
+    ("### Another group", "#### Too deep"),
+    ("## Purpose\n", "## Purpose\n\n### Not under Selection\n"),
+])
+def test_a_heading_that_would_hide_rules_fails(tmp_path, mutation):
+    with pytest.raises(ClientContractError, match="title may only precede|only `###` group headings"):
+        load_stream_contract(_write(tmp_path, "streams/s.md", STREAM.replace(*mutation, 1)))
+
+
+@pytest.mark.parametrize("document, relative, mutation", [
+    (STREAM, "streams/s.md", ("role_id: r\n", "role_id: r\nrole_id: other\n")),
+    (LENS, "lenses/l.md", ("stages: [selection, writing]\n",
+                           "stages: [selection, writing]\nstages: [revision]\n")),
+])
+def test_a_duplicate_front_matter_key_fails(tmp_path, document, relative, mutation):
+    path = _write(tmp_path, relative, document.replace(*mutation, 1))
+    loader = load_stream_contract if relative.startswith("streams") else load_lens
+
+    with pytest.raises(ClientContractError, match="duplicate front-matter key"):
+        loader(path)
+
+
+def test_one_stream_id_in_two_contracts_fails(tmp_path):
+    _write(tmp_path, "streams/a.md", STREAM)
+    _write(tmp_path, "streams/b.md", STREAM.replace("role_id: r", "role_id: other"))
+
+    with pytest.raises(ClientContractError, match="stream id"):
+        contracts_for_role("r", tmp_path)
+
+
+def test_an_unclosed_comment_never_reaches_a_model(tmp_path):
+    text = LENS.replace("# A lens", "<!-- internal note without an end\n\n# A lens")
+
+    with pytest.raises(ClientContractError, match="not closed"):
+        load_lens(_write(tmp_path, "lenses/l.md", text))
+
+
+def test_a_run_judges_and_records_one_snapshot(tmp_path):
+    """The resolver uses the snapshot it is given, never a later re-read."""
+    _write(tmp_path, "streams/s.md", STREAM.replace("role_id: r", f"role_id: {MONDAY_ROLE}"))
+    snapshot = contracts_for_role(MONDAY_ROLE, tmp_path)
+    # the document changes after the snapshot was taken
+    _write(tmp_path, "streams/s.md", STREAM.replace("role_id: r", f"role_id: {MONDAY_ROLE}")
+           .replace("- First rule.", "- An edited rule."))
+
+    _, role = resolve_editorial_role(_configuration(), MONDAY_ROLE, contracts=snapshot)
+
+    assert role.eligibility_criteria == snapshot.selection_requirements
+    assert "An edited rule." not in role.eligibility_criteria
+
+
+def test_client_documents_carry_no_engine_format_instructions():
+    """How contracts are parsed is Engine documentation, not client policy."""
+    for path in NEVER_BLANK.rglob("*.md"):
+        text = path.read_text(encoding="utf-8")
+        assert "first_valid` is the only mode" not in text, path
+        assert "Front matter:" not in text, path
+    assert Path("docs/engine/CLIENT_CONTRACTS.md").is_file()

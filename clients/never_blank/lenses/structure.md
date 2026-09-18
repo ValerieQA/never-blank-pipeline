@@ -14,8 +14,7 @@ Step 11 names the soft call to action as a movement of the narrative. Whether
 a call to action actually appears is decided by the stream's CTA configuration:
 Monday's is "none", and the Engine writes a CTA only when one is supplied.
 
-Everything outside this comment is delivered, word for word, to the article
-and post composers.
+Format: docs/engine/CLIENT_CONTRACTS.md.
 -->
 
 Article structure: this is a narrative framework, not a requirement to

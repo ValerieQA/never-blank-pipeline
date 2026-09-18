@@ -7,17 +7,11 @@ selection: first_valid
 
 # Monday — CLIENT: NEVER_BLANK
 
-What Monday is for, and which signals it may start from. Owner decisions D1 and
-D8 in #240. Edit here: nothing else holds these rules.
-
-- `## Purpose` reaches the writers of the Wix article and the LinkedIn post.
-- Every bullet under `## Selection` is a rule a candidate signal is judged
-  against. The first signal that satisfies all of them — together with any lens
-  routed to selection, such as `lenses/evidence.md` — is used, and no later
-  candidate is judged.
-
-Keep the two headings `## Purpose` and `## Selection` exactly as written. See
-`../README.md` for how this file is read.
+<!--
+What Monday is for, and which signals it may start from: owner decisions D1
+and D8 in #240. Edit here; nothing else holds these rules. The format is
+explained in docs/engine/CLIENT_CONTRACTS.md.
+-->
 
 ## Purpose
 

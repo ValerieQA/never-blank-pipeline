@@ -919,10 +919,11 @@ def _run(
     _client_contracts = None
     if args.editorial_role:
         try:
+            # One snapshot per run: the texts that shape it are the texts it records.
+            _client_contracts = contracts_for_role(args.editorial_role.strip())
             _editorial_role_identity, _role = resolve_editorial_role(
-                business_configuration, args.editorial_role
+                business_configuration, args.editorial_role, contracts=_client_contracts
             )
-            _client_contracts = contracts_for_role(_role.role_id)
         except (EditorialRoleError, ClientContractError) as exc:
             print(f"  ERROR: {exc}")
             return 1

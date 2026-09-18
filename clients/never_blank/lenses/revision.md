@@ -9,8 +9,9 @@ stages: [revision]
 Revision — CLIENT: NEVER_BLANK (temporary).
 The temporary reviser contract, #254 D10, until Sveta and the owner settle the
 final one in #253. The reviser also receives the editorial role and the
-configured voice; this lens says how to use them. Everything outside this
-comment is delivered, word for word, to the reviser.
+configured voice; this lens says how to use them.
+
+Format: docs/engine/CLIENT_CONTRACTS.md.
 -->
 
 Revision is surgical, not regenerative. Change only what is necessary to resolve
