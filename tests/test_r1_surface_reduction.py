@@ -208,7 +208,10 @@ def _current_design_version():
 def test_the_entrypoint_scopes_image_platforms_to_r1():
     source = Path("scripts/generate_and_publish.py").read_text()
     assert '_R1_IMAGE_PLATFORMS = ["blog", "linkedin"]' in source
-    assert "platforms=_R1_IMAGE_PLATFORMS" in source
+    # a publishing run composes only its R1 surfaces; only the owner-
+    # controlled fresh-image preview (a dry run) composes every surface
+    assert "platforms=None if fresh_image_preview else _R1_IMAGE_PLATFORMS" in source
+    assert "fresh_image_preview = bool(args.dry_run and args.preview_fresh_images)" in source
 
 
 def test_daily_research_keeps_the_full_platform_set():

@@ -214,8 +214,8 @@ def test_cost_safety_contracts_survive_the_reorder():
     assert DEFAULT_CEILING == 40                               # #171
     assert os.environ.get("NB_OPENAI_API_KEY") is None         # #172
     tags = generate_hashtags({"INDUSTRY": "retail"}, "linkedin",
-                             mechanism="capacity", title="The Queue")
-    assert tags[:3] == list(BRANDED_HASHTAGS)                  # #176
+                             article_text="The Queue")
+    assert tags[:2] == list(BRANDED_HASHTAGS)                  # #176
 
 
 # ===========================================================================

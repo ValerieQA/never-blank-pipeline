@@ -134,7 +134,8 @@ def test_a_publishing_run_still_requires_its_visual():
     """The repair is scoped to dry runs: the live visual gate is untouched."""
     source = Path("scripts/generate_and_publish.py").read_text()
 
-    assert "text_only_dry_run = bool(args.dry_run and needs_regen)" in source
+    assert ("text_only_dry_run = bool(args.dry_run and needs_regen "
+            "and not fresh_image_preview)") in source
     assert "if text_only_dry_run:" in source
     assert "visual gate blocked publication" in source
 

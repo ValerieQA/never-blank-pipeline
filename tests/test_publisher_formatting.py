@@ -132,10 +132,11 @@ def test_generate_hashtags_blog_and_telegram_take_none():
     assert generate_hashtags(_HASHTAG_SIGNAL, "telegram") == []
 
 
-def test_generate_hashtags_branded_trio_leads_and_count_is_bounded():
+def test_generate_hashtags_fixed_tags_lead_and_count_is_bounded():
     tags = generate_hashtags(_HASHTAG_SIGNAL, "linkedin")
-    assert tags[:3] == ["#NeverBlank", "#CompoundPresence", "#CustomerTrust"]
-    assert 3 <= len(tags) <= 6
+    assert tags[:2] == ["#NeverBlank", "#CustomerTrust"]
+    assert "#CompoundPresence" not in tags          # never forced
+    assert 2 <= len(tags) <= 6
 
 
 def test_generate_hashtags_threads_respects_max_of_two():
@@ -157,8 +158,8 @@ def test_generate_hashtags_never_emits_the_company_name():
 def test_generate_hashtags_survives_empty_and_malformed_fields():
     tags = generate_hashtags({"SIGNAL_ID": "x", "HEADLINE": 42,
                               "INDUSTRY": "", "SIGNAL_TYPE": None}, "linkedin")
-    # nothing topical survives; the branded contract still holds
-    assert tags == ["#NeverBlank", "#CompoundPresence", "#CustomerTrust"]
+    # nothing topical survives; the fixed tags still hold
+    assert tags == ["#NeverBlank", "#CustomerTrust"]
 
 
 # --- wix._md_to_rich_nodes bold handling ---

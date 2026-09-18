@@ -416,8 +416,12 @@ def test_linkedin_still_derives_from_the_canonical_lifecycle(tmp_path):
 # ===========================================================================
 
 
-def test_monday_is_unchanged(tmp_path):
-    """Monday's model writes its own citation; the seam never runs for it."""
+def test_monday_keeps_its_one_canonical_sources_section(tmp_path):
+    """Monday's model writes its own citation; the seam never runs for it —
+    and, since the Monday preview-readiness repair, neither does the
+    signal-derived footer: a branded-echo-then-sources body already ends in
+    its one canonical Sources section (controlled live run 35383199073
+    carried both)."""
     attributed = (
         UNATTRIBUTED_BODY
         + f"\n\nSources: {CNBC['publisher']} · {CNBC['title']} · {CNBC['url']}"
@@ -427,10 +431,13 @@ def test_monday_is_unchanged(tmp_path):
     assert code == 0
     assert patches["generate_article"].called
     assert not patches["generate_for_wednesday"].called
-    # the formatting stage appended the footer exactly as it always did
     published = _wix_blog_body(patches)
-    assert published.count("## Source") == 1
-    assert published.endswith(f"[{CNBC['signal_name']}]({CNBC['url']})")
+    assert "## Source" not in published
+    # the signal's SOURCE_NAME is not a source-record field and never appears
+    assert CNBC["signal_name"] not in published
+    assert published.rstrip().endswith(
+        f"Sources: {CNBC['publisher']} · {CNBC['title']} · {CNBC['url']}"
+    )
 
 
 def test_a_roleless_run_is_unchanged(tmp_path):

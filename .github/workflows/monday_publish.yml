@@ -54,6 +54,12 @@ on:
         default: "false"
         type: choice
         options: ["false", "true"]
+      preview_fresh_images:
+        description: "Owner-controlled preview (requires dry_run=true): also generate + upload a FRESH image and run the visual gate; still no publish, nothing consumed"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
 
 # Serialize against the other publish streams: they share the published-content
 # index and the signal consumption marker.
@@ -252,6 +258,7 @@ jobs:
           EXPLICIT_SIGNAL_ID:             ${{ inputs.signal_id }}
           SELECTED_SIGNAL_ID:             ${{ steps.resolve.outputs.signal_id }}
           DRY_RUN:                        ${{ inputs.dry_run }}
+          PREVIEW_FRESH_IMAGES:           ${{ inputs.preview_fresh_images }}
           NB_OPENAI_API_KEY:              ${{ secrets.NB_OPENAI_API_KEY }}
           # Story #11 research evidence. Without it the canonical Exa
           # adapter fails closed and the research gate blocks generation —
@@ -291,9 +298,17 @@ jobs:
             FLAGS="$FLAGS --from-package --source-run-id $SOURCE_RUN_ID"
           fi
           [ "$DRY_RUN" = "true" ] && FLAGS="$FLAGS --dry-run"
+          if [ "$PREVIEW_FRESH_IMAGES" = "true" ]; then
+            if [ "$DRY_RUN" != "true" ] || [ -n "$SOURCE_RUN_ID" ]; then
+              echo "ERROR: preview_fresh_images requires dry_run=true and no source_run_id"
+              exit 1
+            fi
+            FLAGS="$FLAGS --preview-fresh-images"
+          fi
           if [ -z "$SOURCE_RUN_ID" ] && [ -z "$EXPLICIT_SIGNAL_ID" ]; then
             DRIVER_FLAGS=""
             [ "$DRY_RUN" = "true" ] && DRIVER_FLAGS="--dry-run"
+            [ "$PREVIEW_FRESH_IMAGES" = "true" ] && DRIVER_FLAGS="$DRIVER_FLAGS --preview-fresh-images"
             python scripts/streams/run_first_valid.py \
               --editorial-role "$MONDAY_ROLE" \
               --first-signal-id "$SELECTED_SIGNAL_ID" \

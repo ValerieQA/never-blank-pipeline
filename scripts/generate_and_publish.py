@@ -157,6 +157,7 @@ from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
+from src.editorial.platform_composer import CLOSING_BRANDED_ECHO_THEN_SOURCES
 from src.editorial.editorial_role import (
     EditorialRoleError,
     render_editorial_role_rules,
@@ -446,6 +447,23 @@ def _build_threads(structured: dict) -> list[str]:
     if not 3 <= len(sequence) <= 5:
         raise ValueError(f"Threads requires 3–5 distinct posts; generated {len(sequence)}")
     return sequence
+
+
+def _lead_with_canonical_title(body: str, title: str | None) -> str:
+    """Open a channel derivative with the article's accepted title.
+
+    Product Owner decision (Monday preview readiness): every content surface
+    carries the same accepted canonical headline — no composer invents its
+    own. Deterministic, never a model call: the title the run accepted is set
+    as the first line, unless the body already opens with it. Without an
+    accepted title the body is returned unchanged; nothing is invented.
+    """
+    if not title or not body:
+        return body
+    first = next((line for line in body.splitlines() if line.strip()), "")
+    if first.replace("*", "").strip().casefold() == title.strip().casefold():
+        return body
+    return f"{title.strip()}\n\n{body}"
 
 
 def _clean_line(value: str, max_words: int = 34) -> str:
@@ -864,6 +882,11 @@ def _run(
     parser.add_argument("--signal-id", default="")
     parser.add_argument("--dry-run", action="store_true",
                         help="Generate and validate content, save generated.json, but do not publish")
+    parser.add_argument("--preview-fresh-images", action="store_true",
+                        help="With --dry-run only: an owner-controlled full-content preview "
+                             "that generates and uploads a FRESH image (never reusing a "
+                             "cached one) and runs the visual gate. Still publishes nothing "
+                             "and consumes nothing.")
     parser.add_argument("--from-package", action="store_true",
                         help="Skip LLM generation — publish run-scoped generated.json (requires --source-run-id)")
     parser.add_argument("--source-run-id",
@@ -888,8 +911,15 @@ def _run(
     if args.source_run_id and not args.from_package:
         print("  ERROR: --source-run-id is only valid with --from-package")
         return 1
+    if args.preview_fresh_images and (
+        not args.dry_run or args.from_package or args.legacy_package
+    ):
+        print("  ERROR: --preview-fresh-images is a generating dry run only "
+              "(requires --dry-run; not with --from-package/--legacy-package)")
+        return 1
 
-    mode = ("dry-run (no publish)" if args.dry_run
+    mode = ("dry-run preview with fresh images (no publish)" if args.preview_fresh_images
+            else "dry-run (no publish)" if args.dry_run
             else "from-package" if args.from_package
             else "legacy-package" if args.legacy_package
             else "live (LLM generate)")
@@ -2408,7 +2438,19 @@ def _run(
         # transparency gate, so validated body == published body. Skipped
         # rather than made idempotent here so this line stays byte-identical
         # for every other stream.
-        if not _attribution_applied:
+        #
+        # A body closed under the branded-echo-then-sources contract already
+        # ends in its one canonical Sources section — composed from the run's
+        # own source records (#258) and verified by source transparency. The
+        # signal-derived footer would add a second section naming the
+        # signal's SOURCE_NAME, a publisher the source record may not hold
+        # (controlled live run 35383199073: "## Source [HubSpot Marketing
+        # Blog](…)" beside a publisher-less canonical citation).
+        _canonical_sources_section = (
+            _role is not None
+            and _role.closing_contract == CLOSING_BRANDED_ECHO_THEN_SOURCES
+        )
+        if not _attribution_applied and not _canonical_sources_section:
             blog_body += formatting.source_line(
                 source_name, source_url, "blog_markdown"
             )
@@ -2418,15 +2460,13 @@ def _run(
         # link cannot be appended here because it does not exist yet; it is
         # bound deterministically after Wix publication succeeds.
         linkedin_text   = formatting.append_hashtags(
-            formatting.bold_signature_prefix(linkedin_text, "unicode"),
-            # #176 correction: topical tags follow the published article —
-            # the supported mechanism and the composed title — never
-            # discovery metadata that may differ from what was written.
-            generate_hashtags(
-                signal, "linkedin",
-                mechanism=article.get("pattern", {}).get("mechanism", ""),
-                title=headline,
+            _lead_with_canonical_title(
+                formatting.bold_signature_prefix(linkedin_text, "unicode"),
+                _composed_title,
             ),
+            # Hashtags read the canonical accepted article, never free-text
+            # fragments of it (controlled live run 35383199073).
+            generate_hashtags(signal, "linkedin", article_text=blog_body),
         )
         facebook_text   = (
             formatting.bold_signature_prefix(facebook_text, "unicode") +
@@ -2435,11 +2475,7 @@ def _run(
         if instagram_text:
             instagram_text = formatting.append_hashtags(
                 formatting.bold_signature_prefix(instagram_text, "unicode"),
-                generate_hashtags(
-                    signal, "instagram",
-                    mechanism=article.get("pattern", {}).get("mechanism", ""),
-                    title=headline,
-                ),
+                generate_hashtags(signal, "instagram", article_text=blog_body),
             )
 
         # ── LinkedIn composition acceptance (Issue #93 / Story #14) ──────────
@@ -2486,9 +2522,14 @@ def _run(
         # ── Image preparation (fresh-gen path, after all text gates — #177) ──
         # Reading the package's images is a local file read — no model call,
         # no upload.
-        pimgs = _load_package_images(signal_id)
+        #
+        # The owner-controlled fresh-image preview ignores any cached image
+        # and generates a new one for every image surface, so the preview
+        # shows the visual pipeline as it actually runs today, end to end.
+        fresh_image_preview = bool(args.dry_run and args.preview_fresh_images)
+        pimgs = {} if fresh_image_preview else _load_package_images(signal_id)
         pkg_design_version = pimgs.get("_design_version") if pimgs else None
-        needs_regen = (
+        needs_regen = fresh_image_preview or (
             not pimgs.get("blog", {}).get("url")
             or pkg_design_version != CURRENT_DESIGN_VERSION
         )
@@ -2496,7 +2537,7 @@ def _run(
         # image model call, no Cloudinary upload. When the package has no
         # current image the dry run is text-only — it has no visual to gate,
         # and it publishes nothing, so nothing downstream depends on one.
-        text_only_dry_run = bool(args.dry_run and needs_regen)
+        text_only_dry_run = bool(args.dry_run and needs_regen and not fresh_image_preview)
         if text_only_dry_run:
             pimgs = {}
             needs_regen = False
@@ -2508,9 +2549,12 @@ def _run(
                 from scripts.research.prepare_content import prepare_content_packages
                 pkgs = prepare_content_packages(
                     [signal], strategy_execution.research, research_audience,
-                    platforms=_R1_IMAGE_PLATFORMS,
+                    # the preview shows every image surface; a publishing run
+                    # composes only the surfaces it publishes (#175)
+                    platforms=None if fresh_image_preview else _R1_IMAGE_PLATFORMS,
                     # #177 product decision: no preview generation here either
                     content_package=False,
+                    force_regenerate=fresh_image_preview,
                 )
                 if pkgs:
                     pimgs = pkgs[0].get("images", {}).get("platform_images", {})
@@ -2574,6 +2618,11 @@ def _run(
             "run_id":              run_ctx.run_id,
             "signal_id":           signal_id,
             "headline":            headline,
+            # The accepted article title, and only that: None when the
+            # composer produced none (``headline`` then falls back to the
+            # signal's own headline). The canonical hook every channel
+            # derivative leads with.
+            "title":               _composed_title or None,
             "generated_at":        _generated_at,
             "strategy_id":         strategy_id,
             "strategy_version":    strategy_version,
