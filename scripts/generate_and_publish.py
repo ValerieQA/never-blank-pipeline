@@ -317,7 +317,14 @@ from src.visual import VisualArtifactRequest
 
 log = get_logger("generate_and_publish")
 
-PACKAGES_DIR   = Path("reports/content_packages")
+#: Where run records are written. The production default is the repository's
+#: own reports/ output root, unchanged. ``NB_PACKAGES_DIR`` redirects it, so a
+#: test — or a sandboxed run of this entrypoint — never writes run records into
+#: the tracked tree. Until #233 F-02 this path was a fixed relative one, and any
+#: test that drove the entrypoint without redirecting it committed its residue:
+#: 7,796 tracked files, entering in bulk on unrelated commits.
+DEFAULT_PACKAGES_DIR = Path("reports/content_packages")
+PACKAGES_DIR   = Path(os.environ.get("NB_PACKAGES_DIR", "").strip() or DEFAULT_PACKAGES_DIR)
 PACKAGES_DIR.mkdir(parents=True, exist_ok=True)
 SIGNALS_FILES  = [
     Path("data/research/selected_signals.jsonl"),

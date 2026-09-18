@@ -32,6 +32,7 @@ This module is loaded only by pytest; production execution is untouched.
 from __future__ import annotations
 
 import os
+import sys
 
 import pytest
 
@@ -83,4 +84,37 @@ def _no_billed_openai_calls(request, monkeypatch):
     # past its authorization: the cache is cleared for every blocked test.
     # monkeypatch restores the previous value afterwards.
     monkeypatch.setattr(llm_client, "_client", None)
+    yield
+
+
+#: Every module that writes package or run records under one root. Each reads
+#: NB_PACKAGES_DIR at import; a module already imported is redirected per test.
+_PACKAGE_ROOT_MODULES = (
+    "scripts.generate_and_publish",
+    "scripts.generate_and_publish_visibility",
+    "scripts.research.prepare_content",
+    "scripts.research.publish_packages",
+)
+
+
+@pytest.fixture(autouse=True)
+def _run_artifacts_stay_out_of_the_tracked_tree(tmp_path_factory, monkeypatch):
+    """No test writes run records into ``reports/`` (#233 F-02).
+
+    ``scripts/generate_and_publish.py`` used to hold the run-artifact root as a
+    fixed relative path, so every test that drove the entrypoint without
+    redirecting it wrote real directories into the repository — 7,796 tracked
+    files, arriving on unrelated commits. The root now reads ``NB_PACKAGES_DIR``,
+    and this fixture points it at a temporary directory for the whole suite.
+
+    A test that redirects the root itself is unaffected: its own patch runs
+    after this fixture and wins.
+    """
+
+    root = tmp_path_factory.mktemp("run-artifacts")
+    monkeypatch.setenv("NB_PACKAGES_DIR", str(root))
+    for name in _PACKAGE_ROOT_MODULES:
+        module = sys.modules.get(name)
+        if module is not None and hasattr(module, "PACKAGES_DIR"):
+            monkeypatch.setattr(module, "PACKAGES_DIR", root)
     yield

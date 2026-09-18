@@ -59,7 +59,10 @@ log = get_logger("vi.publish")
 
 QUEUE_FILE   = Path("data/strategy/visibility_queue.jsonl")
 HISTORY_FILE = Path("data/strategy/visibility_history.jsonl")
-PACKAGES_DIR = Path("reports/content_packages")
+#: Same root, same rule as the canonical entrypoint (#233 F-02): the
+#: production default is unchanged, and ``NB_PACKAGES_DIR`` redirects it so a
+#: test never writes package records into the tracked tree.
+PACKAGES_DIR = Path(os.environ.get("NB_PACKAGES_DIR", "").strip() or "reports/content_packages")
 PACKAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 SEP = "─" * 60
