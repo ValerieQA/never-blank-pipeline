@@ -531,3 +531,29 @@ def test_apostrophes_are_not_quotes(text):
     from scripts.generate_and_publish import _sentences
 
     assert len(_sentences(text)) == 2
+
+
+@pytest.mark.parametrize("quote_open,quote_close,apostrophe", [
+    ("‘", "’", "’"), ("'", "'", "'"),
+], ids=["curly", "straight"])
+def test_a_possessive_never_cancels_a_later_opening_quote(quote_open, quote_close, apostrophe):
+    """#259 review round 8."""
+    from scripts.generate_and_publish import _build_telegram, _whole_sentences
+
+    text = (f"The customers{apostrophe} feedback led the team to test {quote_open}Ready to "
+            "buy? Compare all available plans and choose the one that best fits your "
+            "business before you enter your payment details and complete your first "
+            f"purchase with us today{quote_close} against its original checkout message.")
+    for limit in range(1, 55):
+        assert _whole_sentences(text, limit) in ("", text), limit
+    assert _build_telegram("Checkout test", text, "") in (
+        "Checkout test", f"Checkout test\n{text}")
+
+
+def test_a_brand_with_an_exclamation_mark_does_not_end_the_sentence():
+    from scripts.generate_and_publish import _whole_sentences
+
+    text = ("The Yahoo! Japan team rebuilt its checkout flow for every small merchant "
+            "that sold through its marketplace during the spring season.")
+    for limit in range(1, 30):
+        assert _whole_sentences(text, limit) in ("", text), limit

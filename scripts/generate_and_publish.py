@@ -449,7 +449,13 @@ def _ends_with_abbreviation(fragment: str) -> bool:
     which the length budget may then skip — and never cuts one.
     """
     words = fragment.rstrip("\"'”’)").split()
-    if not words or not words[-1].endswith("."):
+    if not words:
+        return False
+    if words[-1].endswith(("!", "?")):
+        # a brand or name such as "Yahoo!" — a short capitalized token
+        raw = words[-1].rstrip("!?").lstrip("\"'“‘(")
+        return bool(raw) and raw[:1].isupper() and len(raw) <= 6
+    if not words[-1].endswith("."):
         return False
     raw = words[-1].rstrip(".").lstrip("\"'“‘(")
     token = raw.casefold()
@@ -469,20 +475,46 @@ def _inside_open_quote(fragment: str) -> bool:
 
     A "?" or "." inside quoted or bracketed speech does not end the outer
     sentence ("The team tested “Ready to buy? Compare …” against …" is one
-    sentence, #259 review round 6), so an open one always merges.
+    sentence, #259 review), so an open one always merges.
+
+    Scanned in order, so a closing mark only ever closes a quotation that is
+    actually open: an apostrophe ("don’t") or a possessive ("customers’")
+    with nothing open is just an apostrophe and cancels nothing.
     """
-    # single quotes: an apostrophe sits between letters ("don’t", "don't")
-    # and is neither an opening nor a closing quote
-    curly_closes = len(re.findall(r"’(?![^\W\d_])|(?<![^\W\d_])’", fragment))
-    straight_opens = len(re.findall(r"(?:^|(?<=[\s(“\[]))'(?=[^\W_])", fragment))
-    straight_closes = len(re.findall(r"(?<=[^\s(\[])'(?=[\s.,;:!?)”\]]|$)", fragment))
-    return (
-        fragment.count("“") > fragment.count("”")
-        or fragment.count("‘") > curly_closes
-        or straight_opens > straight_closes
-        or fragment.count("(") > fragment.count(")")
-        or fragment.count('"') % 2 == 1
-    )
+    def is_letter(ch: str) -> bool:
+        return ch.isalpha()
+
+    double = single = straight_single = paren = 0
+    straight_double = False
+    text = fragment or ""
+    for i, ch in enumerate(text):
+        prev = text[i - 1] if i else ""
+        nxt = text[i + 1] if i + 1 < len(text) else ""
+        if ch == "“":
+            double += 1
+        elif ch == "”" and double:
+            double -= 1
+        elif ch == "‘":
+            single += 1
+        elif ch == "’":
+            if is_letter(prev) and is_letter(nxt):
+                continue                               # apostrophe: don’t
+            if single:
+                single -= 1                            # closes an open ‘
+        elif ch == "'":
+            if is_letter(prev) and is_letter(nxt):
+                continue                               # apostrophe: don't
+            if (not prev or prev.isspace() or prev in "(“[") and is_letter(nxt):
+                straight_single += 1                   # opens: 'Ready
+            elif straight_single and (not nxt or not is_letter(nxt)):
+                straight_single -= 1                   # closes an open '
+        elif ch == '"':
+            straight_double = not straight_double
+        elif ch == "(":
+            paren += 1
+        elif ch == ")" and paren:
+            paren -= 1
+    return bool(double or single or straight_single or paren or straight_double)
 
 
 def _sentences(text: str) -> list[str]:
