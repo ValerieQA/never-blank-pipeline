@@ -51,6 +51,8 @@ def _article(title: str | None = TITLE) -> dict:
     article = copy.deepcopy(_attributed_article())
     if title is not None:
         article["platforms"]["long"]["title"] = title
+    # the preview composes Facebook too, and it must pass source transparency
+    article["platforms"]["reading"]["body"] = article["platforms"]["long"]["body"]
     return article
 
 

@@ -24,6 +24,8 @@ import re
 import sys
 from unittest import mock
 
+import pytest
+
 import scripts.generate_and_publish as gap
 from scripts.generate_and_publish import main
 from src.editorial import platform_composer
@@ -104,7 +106,10 @@ class FaithfulComposer:
             and not line.startswith(("FINAL CANONICAL", "ECHO MODE", "Write the",
                                      "- echo", "TARGET", "FORMAT", "CTA"))
         ]
-        body = "\n\n".join(sentences[:6] + [f"**Never Blank:** {ECHO}"])
+        # the Echo it was handed — whichever one reached the prompt
+        echo = re.search(r"^- echo \[[^\]]*\]: (.+)$", user, re.MULTILINE)
+        body = "\n\n".join(sentences[:6] + (
+            [f"**Never Blank:** {echo.group(1).strip()}"] if echo else []))
         return json.dumps({"body": body, "echo_included": True,
                            "title": TITLE if format_key == "long" else None})
 
@@ -238,3 +243,155 @@ def test_telegram_keeps_the_existing_contract():
         "Every like and comment on your ad can disguise how few people are ready to buy.",
         ECHO,
     ]
+
+
+# ===========================================================================
+# #259 review round 2
+# ===========================================================================
+
+
+ECHO_CLAIM = "Engagement fell by 90%, which proves the quiz works."
+REVISED_ECHO = "The drop in clicks can be the first sign that your ad is finally working."
+
+
+def test_a_claim_in_the_draft_echo_never_survives_revision(tmp_path, monkeypatch):
+    """The draft's Echo predates acceptance: the accepted article's Echo wins."""
+    draft = _draft()
+    draft["structured_article"]["echo_line"] = ECHO_CLAIM
+    draft["platforms"]["long"]["body"] = DRAFT_ARTICLE.replace(
+        f"**Never Blank:** {ECHO}", f"**Never Blank:** {ECHO_CLAIM}")
+
+    argv, patches = _entry_patches(tmp_path)
+    argv = argv + ["--editorial-role", MONDAY_ROLE, "--preview-fresh-images"]
+    del patches["run_editorial_acceptance"]
+    del patches["recompose_platform"]
+    patches.pop("formatting", None)
+    patches.pop("generate_hashtags", None)
+    patches["generate_article"] = mock.MagicMock(return_value=draft)
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    reviewer = FakeReviewTransport(
+        _review_payload(disposition="revise", failed=["unsupported-claims"],
+                        guidance="The Echo's 90% claim is unsupported."),
+        _review_payload(),
+    )
+    composer = FaithfulComposer()
+    evaluator, _ = _evaluator(_model_output())
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches), \
+            mock.patch.object(platform_composer, "chat", side_effect=composer), \
+            mock.patch("scripts.research.prepare_content.prepare_content_packages",
+                       side_effect=lambda *a, **k: [
+                           {"images": {"platform_images": _pimgs(tmp_path)}}]):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator,
+                    editorial_reviewer=reviewer,
+                    article_revisor=FakeRevisionTransport(FINAL_ARTICLE))
+
+    assert code == 0
+    generated = json.loads(next(tmp_path.glob(f"{SIG}/runs/*/generated.json")).read_text())
+    for surface, text in _social_outputs(generated).items():
+        assert "90%" not in text, f"{surface} carried the draft Echo's claim"
+    for prompt in composer.prompts:
+        if "FINAL CANONICAL CONTENT" in prompt:
+            assert ECHO_CLAIM not in prompt
+    record = json.loads(next(tmp_path.glob(f"{SIG}/runs/*/accepted_composition.json")).read_text())
+    assert record["content"]["echo"] == REVISED_ECHO
+
+
+def test_the_accepted_echo_rule():
+    from scripts.generate_and_publish import _accepted_echo
+
+    assert _accepted_echo(f"Body.\n\n**Never Blank:** {REVISED_ECHO}", ECHO_CLAIM) == REVISED_ECHO
+    assert _accepted_echo(f"Body.\n\nNever Blank: {REVISED_ECHO}", "") == REVISED_ECHO
+    assert _accepted_echo(f"Body ends with {ECHO_CLAIM}", ECHO_CLAIM) == ECHO_CLAIM
+    assert _accepted_echo("Body without it.", ECHO_CLAIM) == ""       # never the draft's
+
+
+def test_the_wednesday_route_also_derives_after_acceptance(tmp_path):
+    """No route keeps a pre-acceptance composition, revised or not."""
+    from tests.test_monday_stream import _run_with_role
+    code, patches, _ = _run_with_role(tmp_path, "never-blank-wednesday-golden")
+
+    assert code == 0
+    derive = patches["recompose_platform"]
+    assert derive.call_count == 1
+    assert derive.call_args.args[1] == "medium"
+    record = json.loads(next(tmp_path.glob("*/runs/*/accepted_composition.json")).read_text())
+    assert record["editorial"]["revised"] is False
+    assert record["social_recomposition"]["performed"] is True
+
+
+def test_a_package_without_the_lineage_marker_is_never_republished(tmp_path):
+    from tests.test_generate_and_publish import _base_patches, _valid_package, _write_package
+
+    stale = _valid_package()
+    stale.pop("social_derivation")
+    _write_package(tmp_path, stale)
+    argv, patches = _base_patches(dry_run=False, from_package=True)
+    patches["PACKAGES_DIR"] = tmp_path
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main() == 1
+
+    assert not patches["WixPublisher"].called
+    assert not patches["LinkedInPublisher"].called
+
+
+def test_every_fresh_run_records_the_lineage_marker(tmp_path):
+    _, _, _, _, generated = _run(tmp_path)
+
+    assert generated["social_derivation"] == gap.SOCIAL_DERIVATION_LINEAGE
+
+
+@pytest.mark.parametrize("text,limit,expected", [
+    ("We consulted Dr. Smith about the campaign results in detail this week.", 5, ""),
+    ("We consulted Dr. Smith about it. Then we acted.", 7,
+     "We consulted Dr. Smith about it."),
+    ("Acme Inc. grew. Sales rose.", 5, "Acme Inc. grew. Sales rose."),
+    ("Acme Inc. grew. Sales rose.", 4, "Acme Inc. grew."),
+    ("J. Doe ran the test. It worked.", 5, "J. Doe ran the test."),
+], ids=["dr-too-long", "dr-fits", "inc", "inc-partial", "initial"])
+def test_abbreviations_never_end_a_sentence(text, limit, expected):
+    from scripts.generate_and_publish import _whole_sentences
+
+    assert _whole_sentences(text, limit) == expected
+
+
+def test_the_preview_hands_each_surface_its_role_rules(tmp_path):
+    argv, patches = _entry_patches(tmp_path)
+    argv = argv + ["--editorial-role", MONDAY_ROLE, "--preview-fresh-images"]
+    article = copy.deepcopy(_draft())
+    article["platforms"]["long"]["body"] = FINAL_ARTICLE
+    article["platforms"]["reading"]["body"] = FINAL_ARTICLE
+    patches["generate_article"] = mock.MagicMock(return_value=article)
+    evaluator, _ = _evaluator(_model_output())
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches), \
+            mock.patch("scripts.research.prepare_content.prepare_content_packages",
+                       side_effect=lambda *a, **k: [
+                           {"images": {"platform_images": _pimgs(tmp_path)}}]):
+        assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 0
+
+    calls = {c.args[1]: c.kwargs for c in patches["recompose_platform"].call_args_list}
+    assert set(calls) == {"medium", "reading", "instagram"}
+    for fmt in ("reading", "instagram"):
+        rules = calls[fmt]["editorial_role_rules"]
+        assert isinstance(rules, dict) and set(rules) == {fmt}, fmt
+        assert rules[fmt], f"{fmt} lost its role rules"
+    # the Facebook derivation gets the rules that carry the sources of record
+    assert "SOURCES OF RECORD" in calls["reading"]["editorial_role_rules"]["reading"]
+
+
+def test_an_unattributed_preview_facebook_post_blocks_the_preview(tmp_path):
+    argv, patches = _entry_patches(tmp_path)
+    argv = argv + ["--editorial-role", MONDAY_ROLE, "--preview-fresh-images"]
+    article = copy.deepcopy(_draft())
+    article["platforms"]["long"]["body"] = FINAL_ARTICLE
+    article["platforms"]["reading"]["body"] = "A Facebook post that cites nothing."
+    patches["generate_article"] = mock.MagicMock(return_value=article)
+    evaluator, _ = _evaluator(_model_output())
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches), \
+            mock.patch("scripts.research.prepare_content.prepare_content_packages",
+                       side_effect=lambda *a, **k: []):
+        assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 1
+
+    assert not list(tmp_path.glob(f"{SIG}/runs/*/generated.json"))

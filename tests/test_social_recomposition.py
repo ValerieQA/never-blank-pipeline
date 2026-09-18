@@ -521,7 +521,9 @@ def test_recomposition_sits_between_acceptance_and_every_later_gate():
     accept = source.index("blog_body = _acceptance.final_article_body")
     recompose = source.index("recompose_platform(\n")
     preserved = source.index("  ✓  accepted compositions preserved")
-    transparency = source.index("validate_source_transparency(\n")
+    # the canonical article's gate (the preview's Facebook check precedes it)
+    transparency = source.index(
+        "validate_source_transparency(\n                    article_body=blog_body")
     image = source.index("Image preparation (fresh-gen path")
     # acceptance → re-composition → preservation → transparency → images
     assert accept < recompose < preserved < transparency < image  # items 18, 6

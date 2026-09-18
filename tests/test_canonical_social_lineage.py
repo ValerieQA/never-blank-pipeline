@@ -445,7 +445,9 @@ def test_accepted_content_survives_a_transparency_block(tmp_path):  # item 13
     record = json.loads(records[0].read_text())
     assert record["content"]["article_body"] == UNATTRIBUTED_BODY
     assert record["content"]["linkedin_body"] == "A LinkedIn body."
-    assert record["content"]["echo"]
+    # the Echo is the ACCEPTED article's (#259): this fixture article carries
+    # none, so the record carries none rather than the draft's
+    assert record["content"]["echo"] == ""
     assert record["content"]["title"]
     # …while the run still produced no publishable package
     assert not list(tmp_path.glob("*/runs/*/generated.json"))

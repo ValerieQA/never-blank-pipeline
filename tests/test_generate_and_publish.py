@@ -294,6 +294,9 @@ def _valid_package(*, strategy_version: str = "1", **overrides) -> dict:
         "threads_sequence":  ["Post 1.", "Post 2.", "Post 3."],
         "telegram_text":     "Telegram text.",
         "echo_line":         "They waited.",
+        # #259: packages are reusable only when their social bodies were
+        # derived from the final accepted article
+        "social_derivation": "final-accepted-article/1",
     }
     pkg.update(overrides)
     return pkg

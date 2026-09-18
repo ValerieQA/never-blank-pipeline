@@ -295,6 +295,7 @@ def _valid_package(run_id: str = _KNOWN_RUN_ID) -> dict:
         "threads_sequence":    ["A", "B", "C"],
         "telegram_text":       "Telegram text.",
         "echo_line":           "Echo line.",
+        "social_derivation":   "final-accepted-article/1",   # #259 lineage
     }
 
 

@@ -426,11 +426,36 @@ def _slugify(text: str) -> str:
 
 _SENTENCE_END = re.compile(r"(?<=[.!?…])[\"'”’)]*\s+")
 
+#: A period after one of these does not end a sentence (#259 review: "We
+#: consulted Dr." is not a sentence). Single capital initials ("J.") too.
+_ABBREVIATIONS = frozenset({
+    "mr", "mrs", "ms", "dr", "prof", "sr", "jr", "st", "mt", "no", "vs",
+    "etc", "inc", "ltd", "co", "corp", "e.g", "i.e", "u.s", "u.k", "a.m",
+    "p.m", "approx", "est", "fig", "jan", "feb", "mar", "apr", "jun", "jul",
+    "aug", "sep", "sept", "oct", "nov", "dec",
+})
+
+
+def _ends_with_abbreviation(fragment: str) -> bool:
+    words = fragment.rstrip("\"'”’)").split()
+    if not words or not words[-1].endswith("."):
+        return False
+    token = words[-1].rstrip(".").casefold()
+    return token in _ABBREVIATIONS or (len(token) == 1 and token.isalpha())
+
 
 def _sentences(text: str) -> list[str]:
     """Whole sentences of one paragraph, markdown emphasis removed."""
     flat = re.sub(r"\s+", " ", (text or "").replace("*", "")).strip()
-    return [part.strip() for part in _SENTENCE_END.split(flat) if part.strip()]
+    sentences: list[str] = []
+    for part in (piece.strip() for piece in _SENTENCE_END.split(flat)):
+        if not part:
+            continue
+        if sentences and _ends_with_abbreviation(sentences[-1]):
+            sentences[-1] = f"{sentences[-1]} {part}"
+        else:
+            sentences.append(part)
+    return sentences
 
 
 def _whole_sentences(text: str, max_words: int) -> str:
@@ -472,6 +497,25 @@ def _article_paragraphs(article_body: str, echo: str = "") -> list[str]:
             continue
         paragraphs.append(text)
     return paragraphs
+
+
+def _accepted_echo(final_article: str, draft_echo: str = "") -> str:
+    """The Echo as the FINAL ACCEPTED article carries it.
+
+    The draft's Echo predates Editorial Acceptance: a revision may reword or
+    remove it (#259 review). The accepted article's own attributed line
+    ("Never Blank: <echo>") is authoritative; otherwise the draft Echo is
+    kept only when the accepted article still contains it verbatim; otherwise
+    there is no Echo — never the draft's.
+    """
+    for line in (final_article or "").splitlines():
+        plain = line.replace("*", "").strip()
+        match = re.match(r"^Never Blank\s*:\s*(.+)$", plain)
+        if match:
+            return match.group(1).strip()
+    if draft_echo and draft_echo.strip() and draft_echo.strip() in (final_article or ""):
+        return draft_echo.strip()
+    return ""
 
 
 def _build_threads(title: str | None, article_body: str, echo: str = "") -> list[str]:
@@ -606,6 +650,12 @@ _NON_R1_PUBLISHERS = NON_R1_PUBLISH_CHANNELS
 #: derivative composed beside the draft would carry the draft's claims past
 #: Editorial Acceptance (controlled live run 35383199073).
 _R1_COMPOSER_FORMATS = ("long",)
+
+#: Recorded in generated.json by every run whose social bodies were derived
+#: from the final accepted article. A package without it predates that
+#: invariant, so --from-package / --legacy-package refuse it: republishing
+#: it could put draft-derived social copy beside a corrected article.
+SOCIAL_DERIVATION_LINEAGE = "final-accepted-article/1"
 _R1_IMAGE_PLATFORMS = ["blog", "linkedin"]
 
 
@@ -1562,6 +1612,19 @@ def _run(
             print(f"  ERROR: Package is not a JSON object (got {type(pkg).__name__})")
             return 1
 
+        # Lineage check — the package's social bodies must be derivations of
+        # its final accepted article (#259). A package from before that
+        # invariant may pair a corrected article with draft-derived social
+        # copy; it is refused before any side effect, never republished.
+        if pkg.get("social_derivation") != SOCIAL_DERIVATION_LINEAGE:
+            print(
+                "  ERROR: package predates the social-derivation invariant "
+                f"(social_derivation={pkg.get('social_derivation')!r}, required "
+                f"{SOCIAL_DERIVATION_LINEAGE!r}) — its social copy may derive from "
+                "the pre-review draft; generate a new run instead of reusing it"
+            )
+            return 1
+
         # Field-type checks — strategy_id, strategy_version, and generated_at
         # must be non-blank strings before any further processing.
         for _field in ("strategy_id", "strategy_version", "generated_at"):
@@ -2275,6 +2338,13 @@ def _run(
             return 1
         state.reached(TerminalStage.EDITORIAL)
         blog_body = _acceptance.final_article_body
+        # Everything downstream derives from the accepted article — its Echo
+        # included. ``structured_final`` is the only outline a derivation may
+        # see: the draft's narrative fields are withheld by the composer, and
+        # its Echo is replaced here by the accepted one (#259 review).
+        echo_line = _accepted_echo(blog_body, echo_line)
+        structured_final = {**structured, "echo_line": echo_line or None,
+                            "signature": None}
         print(
             f"  ✓  editorial acceptance: ACCEPT "
             f"({'after one revision' if _acceptance.revised else 'original article'}) "
@@ -2311,81 +2381,76 @@ def _run(
         # Invariant (Monday preview readiness): every social derivative is
         # composed from the FINAL ACCEPTED article — never from the draft,
         # its outline or narrative spine, or a composition made before
-        # acceptance. The canonical route therefore composes no social body
-        # before acceptance and always composes it here. The restored July
-        # Wednesday route (paused, out of scope) still composes alongside
-        # its draft and keeps the #197 rule: recompose when revised.
-        _derive_after_acceptance = not is_wednesday_role(_editorial_role_identity)
-        if _acceptance.revised or _derive_after_acceptance:
-            _stale_social_body = linkedin_text or None
-            _accepted_record["social_recomposition"] = {
-                "performed": False,
-                "reason": (
-                    "every social derivative is composed from the final "
-                    "accepted article, after editorial acceptance"
-                    if _derive_after_acceptance else
-                    "editorial acceptance revised the article after the "
-                    "social composition was produced; the pre-revision "
-                    "composition is stale and was discarded"
+        # acceptance. The canonical route composes no social body before
+        # acceptance; any route that did (the restored July Wednesday path)
+        # has that body discarded here. Every run derives it here, revised
+        # or not.
+        _stale_social_body = linkedin_text or None
+        _accepted_record["social_recomposition"] = {
+            "performed": False,
+            "reason": (
+                "every social derivative is composed from the final "
+                "accepted article, after editorial acceptance; any "
+                "composition made before acceptance was discarded"
+            ),
+            "stale_composition_discarded": _stale_social_body,
+        }
+        try:
+            _recomposed = recompose_platform(
+                structured_final,
+                "medium",
+                canonical_body=blog_body,
+                cta_mode=cta_mode,
+                linkedin_strategy=strategy_execution.linkedin,
+                editorial_role_rules=_editorial_role_rules,
+                closing_contract=(
+                    _role.closing_contract if _role is not None else None
                 ),
-                "stale_composition_discarded": _stale_social_body,
+                research_artifact=research_artifact,
+                rejected_sink=_rejected_compositions,
+            )
+            linkedin_text = _recomposed["body"]
+            _social_recomposed = True
+            _accepted_record["social_recomposition"]["performed"] = True
+            print(
+                f"  ✓  social derivative re-composed from the final "
+                f"accepted article ({_recomposed['word_count']} words)"
+            )
+        except ArticleGenerationError as exc:
+            # Fail closed before any later gate or side effect: the run
+            # has a final accepted article and no valid social
+            # derivative. Preserve both facts honestly — Article B with
+            # NO social body (the stale one is evidence, not content) —
+            # and every rejected attempt for diagnosis.
+            print(
+                "  ERROR: social re-composition failed after revision: "
+                f"{exc.original} — the stale pre-revision composition is "
+                "never a fallback; the run stops"
+            )
+            _persist_rejected_compositions(run_dir, _rejected_compositions)
+            _accepted_record["social_recomposition"]["error"] = (
+                f"{type(exc.original).__name__}: {exc.original}"
+            )
+            _accepted_record["content"] = {
+                "title": headline,
+                "echo": echo_line,
+                "article_body": blog_body,
+                "linkedin_body": None,
             }
             try:
-                _recomposed = recompose_platform(
-                    structured,
-                    "medium",
-                    canonical_body=blog_body,
-                    cta_mode=cta_mode,
-                    linkedin_strategy=strategy_execution.linkedin,
-                    editorial_role_rules=_editorial_role_rules,
-                    closing_contract=(
-                        _role.closing_contract if _role is not None else None
-                    ),
-                    research_artifact=research_artifact,
-                    rejected_sink=_rejected_compositions,
-                )
-                linkedin_text = _recomposed["body"]
-                _social_recomposed = True
-                _accepted_record["social_recomposition"]["performed"] = True
+                write_accepted_composition_json(run_dir, _accepted_record)
                 print(
-                    f"  ✓  social derivative re-composed from the final "
-                    f"accepted article ({_recomposed['word_count']} words)"
+                    "  ✓  accepted article preserved without a social "
+                    f"derivative: {run_dir / 'accepted_composition.json'}"
                 )
-            except ArticleGenerationError as exc:
-                # Fail closed before any later gate or side effect: the run
-                # has a final accepted article and no valid social
-                # derivative. Preserve both facts honestly — Article B with
-                # NO social body (the stale one is evidence, not content) —
-                # and every rejected attempt for diagnosis.
-                print(
-                    "  ERROR: social re-composition failed after revision: "
-                    f"{exc.original} — the stale pre-revision composition is "
-                    "never a fallback; the run stops"
-                )
-                _persist_rejected_compositions(run_dir, _rejected_compositions)
-                _accepted_record["social_recomposition"]["error"] = (
-                    f"{type(exc.original).__name__}: {exc.original}"
-                )
-                _accepted_record["content"] = {
-                    "title": headline,
-                    "echo": echo_line,
-                    "article_body": blog_body,
-                    "linkedin_body": None,
-                }
-                try:
-                    write_accepted_composition_json(run_dir, _accepted_record)
-                    print(
-                        "  ✓  accepted article preserved without a social "
-                        f"derivative: {run_dir / 'accepted_composition.json'}"
-                    )
-                except (ArtifactCollisionError, OSError) as exc2:
-                    print(f"  ⚠  accepted article could not be preserved: {exc2}")
-                state.ended(
-                    TerminalStage.LINKEDIN_COMPOSITION,
-                    TerminalDisposition.BLOCKED,
-                    f"social recomposition: {type(exc.original).__name__}",
-                )
-                return 1
+            except (ArtifactCollisionError, OSError) as exc2:
+                print(f"  ⚠  accepted article could not be preserved: {exc2}")
+            state.ended(
+                TerminalStage.LINKEDIN_COMPOSITION,
+                TerminalDisposition.BLOCKED,
+                f"social recomposition: {type(exc.original).__name__}",
+            )
+            return 1
 
         # ── Full-content preview surfaces (owner-controlled, dry run) ────────
         # Facebook and Instagram are not part of Release 1, so a normal run
@@ -2397,17 +2462,19 @@ def _run(
             for _format_key, _rules_key in (("reading", "long"), ("instagram", "medium")):
                 try:
                     _derived = recompose_platform(
-                        structured,
+                        structured_final,
                         _format_key,
                         canonical_body=blog_body,
                         cta_mode=cta_mode,
                         wix_strategy=strategy_execution.wix,
                         linkedin_strategy=strategy_execution.linkedin,
-                        editorial_role_rules=(
+                        # a mapping keyed by THIS format: the composer forwards
+                        # a plain string only to long/medium (#259 review)
+                        editorial_role_rules={_format_key: (
                             _editorial_role_rules.get(_rules_key)
                             if isinstance(_editorial_role_rules, dict)
                             else _editorial_role_rules
-                        ),
+                        )},
                         closing_contract=(
                             _role.closing_contract if _role is not None else None
                         ),
@@ -2423,6 +2490,24 @@ def _run(
                     return 1
                 if _format_key == "reading":
                     facebook_text = _derived["body"]
+                    # The Facebook surface carries the article's facts, so
+                    # the same source-transparency gate the Wix article
+                    # passed applies — a preview must show a post that
+                    # could honestly be published.
+                    if _role is not None and _role.require_source_transparency:
+                        try:
+                            validate_source_transparency(
+                                article_body=facebook_text,
+                                research=research_artifact,
+                                allowed_destinations=tuple(
+                                    d for d in (os.environ.get("NB_WIX_SITE_BASE_URL", ""),) if d
+                                ),
+                            )
+                        except SourceTransparencyError as exc:
+                            print(f"  ERROR: preview facebook source transparency: {exc}")
+                            state.ended(TerminalStage.EDITORIAL, TerminalDisposition.BLOCKED,
+                                        f"preview facebook transparency: {type(exc).__name__}")
+                            return 1
                 else:
                     instagram_text = _derived["body"]
                 print(f"  ✓  preview {_format_key} composed from the final accepted "
@@ -2757,6 +2842,7 @@ def _run(
             # signal's own headline). The canonical hook every channel
             # derivative leads with.
             "title":               _composed_title or None,
+            "social_derivation":   SOCIAL_DERIVATION_LINEAGE,
             "generated_at":        _generated_at,
             "strategy_id":         strategy_id,
             "strategy_version":    strategy_version,
