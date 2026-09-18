@@ -280,13 +280,13 @@ Warm, practical, never alarmist. No sourcing requirement.
 # ── CLIENT: NEVER_BLANK's current documents ─────────────────────────────────
 
 
-def test_never_blank_monday_is_governed_by_its_contract_and_two_lenses():
+def test_never_blank_monday_is_governed_by_its_contract_and_three_lenses():
     contracts = contracts_for_role(MONDAY_ROLE, NEVER_BLANK)
 
     assert contracts.stream.identity == "never-blank-monday/1"
     assert contracts.stream.selection == "first_valid"
     assert sorted(lens.lens_id for lens in contracts.lenses) == [
-        "never-blank-evidence", "never-blank-revision",
+        "never-blank-article-structure", "never-blank-evidence", "never-blank-revision",
     ]
 
 

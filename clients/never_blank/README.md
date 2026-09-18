@@ -18,6 +18,7 @@ that is a leak and belongs in #255.
 | `streams/monday.md` | The Monday stream contract: its purpose and what makes a signal usable | purpose → writing; selection rules → selection |
 | `lenses/evidence.md` | Never Blank's evidence and source-integrity policy | as its front matter says |
 | `lenses/revision.md` | The temporary reviser contract (D10, until #253) | as its front matter says |
+| `lenses/structure.md` | The article structure: the 11-step arc, step 9 conditional (D4, until #252) | as its front matter says |
 
 ## Two kinds of document
 
@@ -42,7 +43,6 @@ authority (D12) and are not loaded.
 
 ## Still configured elsewhere, for now
 
-Monday's article structure, prohibitions, voice and channel rules are still read
-from `strategy/current/business_strategy.json`, and the acceptance rubric from
+Monday's prohibitions, voice and channel rules are still read from `strategy/current/business_strategy.json`, and the acceptance rubric from
 `config/prompts/editorial_acceptance/never_blank.yaml`. They move here in the
 Engine/Client work of #255.
