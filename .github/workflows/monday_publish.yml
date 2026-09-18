@@ -17,17 +17,24 @@ name: Monday — Never Blank Business Case
 # new invention.
 
 on:
-  schedule:
-    # #224: minute 17, not :00. GitHub itself warns that runs scheduled at the
-    # top of the hour are the most likely to be delayed, and a delayed firing
-    # is exactly what suppressed 2026-08-31.
-    #
-    # #232: the hour moved from 06:17 to 04:17 America/New_York. Same-day
-    # recovery margin is the whole point — #226 lets a delayed firing publish
-    # at any later time on its own local day, and starting two hours earlier
-    # buys two more hours of that day before it runs out.
-    - cron: "17 8 * * 1"   # 08:17 UTC = 04:17 ET (EDT)
-    - cron: "17 9 * * 1"   # 09:17 UTC = 04:17 ET (EST)
+  # SCHEDULE PAUSED — temporary safety control, not a product change.
+  #
+  # The Monday path changed materially in #254/#256 and in the pre-live repair
+  # (text-only dry run, first valid signal wins through generation). It must
+  # not publish unattended until the owner-authorized controlled text-only live
+  # proof has completed AND the owner has explicitly re-authorized the
+  # schedule. Until then Monday runs only by manual dispatch.
+  #
+  # To restore, put this block back under `on:` exactly as it was:
+  #
+  #   schedule:
+  #     # #224: minute 17, not :00 — GitHub delays top-of-the-hour runs most.
+  #     # #232: 04:17 America/New_York, for same-day recovery margin.
+  #     - cron: "17 8 * * 1"   # 08:17 UTC = 04:17 ET (EDT)
+  #     - cron: "17 9 * * 1"   # 09:17 UTC = 04:17 ET (EST)
+  #
+  # The window seam below still understands both firings, so restoring the
+  # block is the whole change.
 
   workflow_dispatch:
     inputs:
@@ -224,11 +231,27 @@ jobs:
           NB_ZERNIO_API_KEY:              ${{ secrets.NB_ZERNIO_API_KEY }}
           NB_ZERNIO_LINKEDIN_ACCOUNT_ID:  ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
 
+      # #240 D8, first valid signal wins — through generation, not only
+      # through selection. On an automatic run the driver generates the
+      # selected candidate; if the Pattern Extractor judges it editorially
+      # unsuitable (exit 6), the driver passes over it for this run only,
+      # asks the selector for the next candidate in queue order, and tries
+      # that one. Nothing is consumed on the way. `steps.publish.outputs.
+      # signal_id` is the candidate that actually completed — empty when none
+      # did — and it alone is what bookkeeping may mark.
+      #
+      # An explicitly dispatched signal_id, and a from-package retry, are the
+      # owner's choice of signal: they run exactly that signal and are never
+      # substituted.
       - name: "Monday — Generate + Publish ${{ steps.resolve.outputs.signal_id }}"
+        id: publish
         if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != ''
         env:
           MONDAY_ROLE:                    never-blank-monday-documented-case
           SOURCE_RUN_ID:                  ${{ inputs.source_run_id }}
+          EXPLICIT_SIGNAL_ID:             ${{ inputs.signal_id }}
+          SELECTED_SIGNAL_ID:             ${{ steps.resolve.outputs.signal_id }}
+          DRY_RUN:                        ${{ inputs.dry_run }}
           NB_OPENAI_API_KEY:              ${{ secrets.NB_OPENAI_API_KEY }}
           # Story #11 research evidence. Without it the canonical Exa
           # adapter fails closed and the research gate blocks generation —
@@ -267,14 +290,28 @@ jobs:
             case "$SOURCE_RUN_ID" in (*[!A-Za-z0-9-]*) echo "ERROR: invalid source_run_id"; exit 1;; esac
             FLAGS="$FLAGS --from-package --source-run-id $SOURCE_RUN_ID"
           fi
-          [ "${{ inputs.dry_run }}" = "true" ] && FLAGS="$FLAGS --dry-run"
-          python scripts/generate_and_publish.py \
-            --signal-id "${{ steps.resolve.outputs.signal_id }}" \
-            --editorial-role "$MONDAY_ROLE" $FLAGS
+          [ "$DRY_RUN" = "true" ] && FLAGS="$FLAGS --dry-run"
+          if [ -z "$SOURCE_RUN_ID" ] && [ -z "$EXPLICIT_SIGNAL_ID" ]; then
+            DRIVER_FLAGS=""
+            [ "$DRY_RUN" = "true" ] && DRIVER_FLAGS="--dry-run"
+            python scripts/streams/run_first_valid.py \
+              --editorial-role "$MONDAY_ROLE" \
+              --first-signal-id "$SELECTED_SIGNAL_ID" \
+              --selection-audit reports/stream_selection/monday_selection.json \
+              --audit-dir reports/stream_selection $DRIVER_FLAGS
+          else
+            python scripts/generate_and_publish.py \
+              --signal-id "$SELECTED_SIGNAL_ID" \
+              --editorial-role "$MONDAY_ROLE" $FLAGS
+            echo "signal_id=$SELECTED_SIGNAL_ID" >> "$GITHUB_OUTPUT"
+          fi
 
-      # Mark signal as published so next scheduled run picks the next one
+      # Mark signal as published so next scheduled run picks the next one.
+      # Only the candidate that completed (steps.publish), never the first one
+      # selected: a candidate passed over as editorially unsuitable is not
+      # consumed. A dry run marks nothing.
       - name: Mark signal as published
-        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && (success() && inputs.dry_run != 'true')
+        if: steps.window.outputs.due == 'true' && steps.publish.outputs.signal_id != '' && (success() && inputs.dry_run != 'true')
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -282,12 +319,12 @@ jobs:
           # Pull latest (autostash handles any generated files left in the working tree)
           git pull --rebase --autostash origin main
 
-          echo "${{ steps.resolve.outputs.signal_id }}" >> data/research/published_signal_ids.txt
+          echo "${{ steps.publish.outputs.signal_id }}" >> data/research/published_signal_ids.txt
           git add data/research/published_signal_ids.txt
 
           # Commit history index if it was updated by this run
           git add strategy/published_content_index.jsonl 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "Publish ${{ steps.resolve.outputs.signal_id }}: mark signal + update history [skip ci]"
+          git diff --staged --quiet || git commit -m "Publish ${{ steps.publish.outputs.signal_id }}: mark signal + update history [skip ci]"
           git push
 
       # Story #21 acceptance evidence. The canonical run namespace is written
@@ -314,15 +351,34 @@ jobs:
         if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && (always())
         uses: actions/upload-artifact@v4
         with:
-          name: "run-evidence-${{ steps.resolve.outputs.signal_id }}"
-          path: "reports/content_packages/${{ steps.resolve.outputs.signal_id }}/runs/"
+          name: "run-evidence-${{ steps.publish.outputs.signal_id || steps.resolve.outputs.signal_id }}"
+          # Every candidate the first-valid driver attempted — the one that
+          # completed, any passed over, and any that failed after them —
+          # otherwise the one candidate this run was launched with.
+          path: ${{ steps.publish.outputs.evidence_paths || format('reports/content_packages/{0}/runs/', steps.resolve.outputs.signal_id) }}
           if-no-files-found: warn
+          retention-days: 90
+
+      # Every candidate this run tried, in order, with each exit code and —
+      # for a candidate passed over — the entrypoint's own rejection record.
+      # A rejected candidate's reasons survive here even though its signal is
+      # not consumed and the evidence upload above follows the one that won.
+      - name: Preserve first-valid attempts
+        if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && (always())
+        uses: actions/upload-artifact@v4
+        with:
+          name: monday-first-valid-attempts
+          path: |
+            reports/stream_selection/first_valid_attempts.json
+            reports/stream_selection/excluded_this_run.txt
+            reports/stream_selection/reselection_*.json
+          if-no-files-found: ignore
           retention-days: 90
 
       - name: Upload generated package
         if: steps.window.outputs.due == 'true' && steps.resolve.outputs.signal_id != '' && (always())
         uses: actions/upload-artifact@v4
         with:
-          name: "generated-${{ steps.resolve.outputs.signal_id }}"
-          path: "reports/content_packages/${{ steps.resolve.outputs.signal_id }}_generated.json"
+          name: "generated-${{ steps.publish.outputs.signal_id || steps.resolve.outputs.signal_id }}"
+          path: "reports/content_packages/${{ steps.publish.outputs.signal_id || steps.resolve.outputs.signal_id }}_generated.json"
           if-no-files-found: ignore

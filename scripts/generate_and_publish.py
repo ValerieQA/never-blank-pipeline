@@ -189,6 +189,7 @@ from src.editorial.pipeline import (
     generate_article,
     recompose_platform,
 )
+from src.editorial.pattern_extractor import SignalRejectedError
 from src.editorial.decision_lens_evaluator import (
     DecisionLensEvaluator,
     production_evaluator,
@@ -328,6 +329,13 @@ log = get_logger("generate_and_publish")
 DEFAULT_PACKAGES_DIR = Path("reports/content_packages")
 PACKAGES_DIR   = Path(os.environ.get("NB_PACKAGES_DIR", "").strip() or DEFAULT_PACKAGES_DIR)
 PACKAGES_DIR.mkdir(parents=True, exist_ok=True)
+
+#: Exit code for "this signal is editorially unsuitable": the pre-generation
+#: suitability gate (the Pattern Extractor) rejected the candidate before any
+#: article was written. Not a failure of the run — a stream driver that walks
+#: candidates in queue order (first valid signal wins, #240 D8) moves on to the
+#: next one. The signal is never consumed; the rejection is recorded in the run.
+EXIT_EDITORIALLY_UNSUITABLE = 6
 SIGNALS_FILES  = [
     Path("data/research/selected_signals.jsonl"),
     Path("data/research/signals_active.jsonl"),
@@ -1935,8 +1943,22 @@ def _run(
             platforms  = article["platforms"]
             structured = article["structured_article"]
         except (ArticleGenerationError, WednesdayGenerationError) as exc:
-            print(f"  ERROR: Editorial Engine failed at stage {exc.stage!r}: {exc.original}")
             _persist_rejected_compositions(run_dir, _rejected_compositions)
+            if exc.stage == "pattern_extractor" and isinstance(exc.original, SignalRejectedError):
+                # Editorially unsuitable, not broken: recorded, never consumed,
+                # and distinguishable so the stream can try the next candidate.
+                (run_dir / "editorial_rejection.json").write_text(
+                    json.dumps({"signal_id": signal_id, "stage": exc.stage,
+                                "reason": str(exc.original)}, indent=2,
+                               ensure_ascii=False) + "\n",
+                    encoding="utf-8",
+                )
+                print(f"  —  signal {signal_id} is editorially unsuitable "
+                      f"({exc.original}); not consumed")
+                state.ended(TerminalStage.GENERATION, TerminalDisposition.STOPPED,
+                            "editorially unsuitable at pattern_extractor")
+                return EXIT_EDITORIALLY_UNSUITABLE
+            print(f"  ERROR: Editorial Engine failed at stage {exc.stage!r}: {exc.original}")
             return 1
 
         blog_body      = platforms["long"]["body"]
@@ -2462,12 +2484,23 @@ def _run(
         )
 
         # ── Image preparation (fresh-gen path, after all text gates — #177) ──
+        # Reading the package's images is a local file read — no model call,
+        # no upload.
         pimgs = _load_package_images(signal_id)
         pkg_design_version = pimgs.get("_design_version") if pimgs else None
         needs_regen = (
             not pimgs.get("blog", {}).get("url")
             or pkg_design_version != CURRENT_DESIGN_VERSION
         )
+        # A dry run never generates or uploads an image (pre-live repair): no
+        # image model call, no Cloudinary upload. When the package has no
+        # current image the dry run is text-only — it has no visual to gate,
+        # and it publishes nothing, so nothing downstream depends on one.
+        text_only_dry_run = bool(args.dry_run and needs_regen)
+        if text_only_dry_run:
+            pimgs = {}
+            needs_regen = False
+            print("  —  dry run: text-only — no image generation, no upload")
         if needs_regen:
             reason = "no pre-generated image" if not pimgs else f"stale design v{pkg_design_version} (current: v{CURRENT_DESIGN_VERSION})"
             print(f"  — {reason} — generating images for the active platforms…")
@@ -2508,28 +2541,33 @@ def _run(
         # silently converted into text-only success. The gate validates the
         # RESULTING derivatives (remote URL, dimensions, format, lineage,
         # design version) and persists the immutable visual passport.
-        try:
-            _visual_record = build_visual_assets_record(
-                pimgs,
-                run_id=run_ctx.run_id,
-                signal_id=signal_id,
-                article_body=blog_body,
-                design_version=CURRENT_DESIGN_VERSION,
+        # A text-only dry run has no image to judge, and the gate guards a
+        # publication that a dry run never makes.
+        if text_only_dry_run:
+            print("  —  visuals: not gated on a text-only dry run")
+        else:
+            try:
+                _visual_record = build_visual_assets_record(
+                    pimgs,
+                    run_id=run_ctx.run_id,
+                    signal_id=signal_id,
+                    article_body=blog_body,
+                    design_version=CURRENT_DESIGN_VERSION,
+                )
+                write_visual_assets_json(
+                    run_dir, json.loads(_visual_record.model_dump_json())
+                )
+            except (VisualGateError, ArtifactCollisionError, OSError) as exc:
+                print(f"  ERROR: visual gate blocked publication: {exc}")
+                state.ended(TerminalStage.VISUAL, TerminalDisposition.BLOCKED,
+                            f"visual gate: {type(exc).__name__}")
+                return 1
+            print(
+                f"  ✓  visuals: {_visual_record.status} "
+                f"(wix required ok; linkedin {_visual_record.linkedin_visual.value}) "
+                f"[{_visual_record.design_version}] "
+                f"({run_dir / 'visual_assets.json'})"
             )
-            write_visual_assets_json(
-                run_dir, json.loads(_visual_record.model_dump_json())
-            )
-        except (VisualGateError, ArtifactCollisionError, OSError) as exc:
-            print(f"  ERROR: visual gate blocked publication: {exc}")
-            state.ended(TerminalStage.VISUAL, TerminalDisposition.BLOCKED,
-                        f"visual gate: {type(exc).__name__}")
-            return 1
-        print(
-            f"  ✓  visuals: {_visual_record.status} "
-            f"(wix required ok; linkedin {_visual_record.linkedin_visual.value}) "
-            f"[{_visual_record.design_version}] "
-            f"({run_dir / 'visual_assets.json'})"
-        )
 
         _generated_at = datetime.now(timezone.utc).isoformat()
         _generated_data = {

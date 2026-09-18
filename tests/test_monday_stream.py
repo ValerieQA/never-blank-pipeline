@@ -420,13 +420,17 @@ def _fires_on(cron: str, weekday: str) -> bool:
     return weekday in {value.strip() for value in field.split(",")}
 
 
-def test_exactly_one_workflow_publishes_on_monday():
+def test_no_workflow_publishes_on_monday_while_the_schedule_is_paused():
+    """Pre-live repair: Monday's schedule is paused until the owner-authorized
+    controlled text-only proof completes and the owner re-authorizes it — and
+    no other workflow may have picked the day up in the meantime. When the
+    schedule is restored, monday_publish.yml must again be the only owner."""
     owners = [
         name for name, data in _publishing_workflows().items()
         if any(_fires_on(cron, "1") for cron in _schedule(data))
     ]
 
-    assert owners == ["monday_publish.yml"]
+    assert owners == []
 
 
 def test_the_legacy_scheduler_kept_friday_after_independent_streams_split_out():
@@ -908,9 +912,11 @@ def test_no_eligible_candidate_means_no_publication_attempt(tmp_path):
     resolve = _monday_step("Select eligible signal")["run"]
     assert 'if [ "$RC" = "3" ]' in resolve
     for name in ("Check OpenAI secret",
-                 "Monday — Generate + Publish ${{ steps.resolve.outputs.signal_id }}",
-                 "Mark signal as published"):
+                 "Monday — Generate + Publish ${{ steps.resolve.outputs.signal_id }}"):
         assert "steps.resolve.outputs.signal_id != ''" in _monday_step(name)["if"]
+    # marking follows the candidate that completed, which is empty whenever
+    # generation was skipped (pre-live repair, first valid wins)
+    assert "steps.publish.outputs.signal_id != ''" in _monday_step("Mark signal as published")["if"]
 
 
 def test_rejected_candidates_are_not_marked_published(tmp_path):

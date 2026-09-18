@@ -39,6 +39,7 @@ from src.run.decision_policy import (
     verify_decision_policy_record,
 )
 from src.research.provider import ResearchResultEnvelope
+from src.run.run_context import ExecutionMode
 from src.strategy.business_config import BusinessStrategyConfiguration
 from src.strategy.execution_context import ConfigurationIdentity
 from src.visual.contract import VisualAssetsRecord
@@ -178,6 +179,18 @@ def verify_run_provenance(
         )
 
     # ═══════════════════════════ generation run ═════════════════════════════
+    # A dry run never generates an image: when its package has no current
+    # image it is text-only, with no visual link in its chain. When it does
+    # carry a visual passport, that passport is verified exactly as before.
+    # Publication evidence always requires the visual link — a chain that
+    # claims a publication can never be text-only, whatever its mode. A
+    # text-only run can never be the source of a from-package publication:
+    # that path requires the source's visual passport and fails closed.
+    visual_optional = (
+        assignment_record.execution_mode == ExecutionMode.DRY_RUN.value
+        and publication is None
+    )
+
     research_raw = _load(run_dir, "research.json")
     decision_raw = _load(run_dir, "decision.json")
     decision_policy_raw = _load(run_dir, "decision_policy.json")
@@ -198,7 +211,10 @@ def verify_run_provenance(
         ("decision", decision_raw if decision_raw is not None else decision_policy_raw),
         ("editorial_acceptance", editorial),
         ("linkedin_composition", linkedin_raw),
-        ("visual_assets", visual_raw), ("generated", generated),
+        # an absent optional passport is no gap; a present one keeps every
+        # upstream-chain check it always had
+        *(() if visual_optional and visual_raw is None else (("visual_assets", visual_raw),)),
+        ("generated", generated),
         ("publication_results", publication),
     ]
     seen_gap: str | None = None
@@ -418,7 +434,7 @@ def verify_run_provenance(
         )
     _require(generated.get("run_id") == run_id, "generated.json belongs to a different run")
     _require(
-        linkedin is not None and visual is not None,
+        linkedin is not None and (visual_optional or visual is not None),
         "generated.json exists without its LinkedIn composition or visual passport",
     )
     article = generated.get("blog_article")
@@ -432,7 +448,7 @@ def verify_run_provenance(
         "linkedin composition does not derive from this run's accepted article",
     )
     _require(
-        visual.source_article_digest == digest,
+        visual is None or visual.source_article_digest == digest,
         "visual passport does not derive from this run's accepted article",
     )
     _require(
