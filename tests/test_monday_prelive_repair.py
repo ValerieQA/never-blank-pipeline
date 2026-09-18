@@ -535,3 +535,37 @@ def test_the_evidence_upload_follows_every_attempt_not_only_the_winner():
 
     assert "steps.publish.outputs.evidence_paths" in path
     assert "steps.resolve.outputs.signal_id" in path     # the explicit/retry path
+
+
+def test_a_dry_run_visual_passport_still_needs_its_upstream_chain(tmp_path):
+    """Review round 2: optional means "may be absent", never "unchecked"."""
+    from src.artifacts.provenance import ProvenanceError
+    from tests.test_linkedin_composition import ARTICLE_BODY, _native_linkedin_body
+    from tests.test_visual_contract import _pimgs
+
+    argv, patches = _entry_patches(tmp_path)
+    del patches["build_visual_assets_record"]
+    del patches["write_visual_assets_json"]
+    del patches["accept_linkedin_composition"]
+    del patches["write_linkedin_composition_json"]
+    patches["_load_package_images"] = mock.MagicMock(return_value=_pimgs(tmp_path))
+    article = json.loads(json.dumps(legacy._FAKE_ARTICLE))
+    article["platforms"]["long"]["body"] = ARTICLE_BODY
+    article["platforms"]["medium"]["body"] = _native_linkedin_body()
+    patches["generate_article"] = mock.MagicMock(return_value=article)
+    evaluator, _ = _evaluator(_model_output())
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 0
+    run_dir = next(tmp_path.glob(f"{SIG}/runs/*/visual_assets.json")).parent
+    # a dry run with current package images keeps its (verified) passport
+    assert "visual_assets" in verify_run_provenance(
+        tmp_path, SIG, run_dir.name).verified_artifacts
+
+    # strip the chain down to its anchor plus the passport
+    keep = {"assignment.json", "business_strategy.json", "visual_assets.json"}
+    for path in run_dir.glob("*.json"):
+        if path.name not in keep:
+            path.unlink()
+
+    with pytest.raises(ProvenanceError, match="visual_assets exists although"):
+        verify_run_provenance(tmp_path, SIG, run_dir.name)

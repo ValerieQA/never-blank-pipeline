@@ -211,7 +211,9 @@ def verify_run_provenance(
         ("decision", decision_raw if decision_raw is not None else decision_policy_raw),
         ("editorial_acceptance", editorial),
         ("linkedin_composition", linkedin_raw),
-        *(() if visual_optional else (("visual_assets", visual_raw),)),
+        # an absent optional passport is no gap; a present one keeps every
+        # upstream-chain check it always had
+        *(() if visual_optional and visual_raw is None else (("visual_assets", visual_raw),)),
         ("generated", generated),
         ("publication_results", publication),
     ]
