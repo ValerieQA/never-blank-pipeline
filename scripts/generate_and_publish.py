@@ -433,6 +433,8 @@ _ABBREVIATIONS = frozenset({
     "etc", "inc", "ltd", "co", "corp", "e.g", "i.e", "u.s", "u.k", "a.m",
     "p.m", "approx", "est", "fig", "jan", "feb", "mar", "apr", "jun", "jul",
     "aug", "sep", "sept", "oct", "nov", "dec",
+    "min", "mins", "hr", "hrs", "sec", "secs", "mo", "mos", "yr", "yrs",
+    "wk", "wks", "ft", "lb", "lbs", "oz", "pp", "dept", "govt", "misc",
 })
 
 
@@ -465,7 +467,11 @@ def _sentences(text: str) -> list[str]:
     for part in (piece.strip() for piece in _SENTENCE_END.split(flat)):
         if not part:
             continue
-        if sentences and _ends_with_abbreviation(sentences[-1]):
+        # A sentence never begins in lowercase: "30 min. before …" is one
+        # sentence, whatever the token before the period (#259 review).
+        first_letter = next((ch for ch in part if ch.isalpha()), "")
+        continues = bool(first_letter) and first_letter.islower()
+        if sentences and (continues or _ends_with_abbreviation(sentences[-1])):
             sentences[-1] = f"{sentences[-1]} {part}"
         else:
             sentences.append(part)

@@ -452,3 +452,18 @@ def test_unlisted_abbreviations_never_produce_a_cut(text):
     for limit in range(1, len(text.split()) + 1):
         result = _whole_sentences(text, limit)
         assert result in ("", text), (limit, result)
+
+
+def test_a_period_followed_by_lowercase_never_ends_a_sentence():
+    """#259 review round 4: "30 min. before …" is one sentence."""
+    from scripts.generate_and_publish import _build_telegram, _whole_sentences
+
+    sentence = ("The team waited 30 min. before reviewing the campaign results and "
+                "checking whether the new checkout design had changed the number of "
+                "completed purchases among customers who arrived through the paid "
+                "social advertisements that morning.")
+    for limit in range(1, 40):
+        assert _whole_sentences(sentence, limit) in ("", sentence), limit
+    telegram = _build_telegram(TITLE, f"{sentence}\n\nA short second paragraph.", "")
+    assert "30 min." not in telegram
+    assert telegram.splitlines()[-1] == "A short second paragraph."
