@@ -131,18 +131,27 @@ def test_the_role_structure_and_prohibitions_reach_the_composer_messages(
         assert any(_normalised(rule) in message for message in carrying), rule
 
 
-def test_each_surface_receives_only_its_own_channel_rules(monday_messages):
+def _composer_message_for(format_key: str, messages: list[str]) -> str:
+    matching = [m for m in messages if f"format: {format_key}" in m]
+    assert len(matching) == 1, f"expected one composer message for {format_key}"
+    return matching[0]
+
+
+def test_each_surface_receives_all_of_its_own_channel_rules_and_none_of_the_other(
+    monday_messages,
+):
     role = _monday_role()
     composer = monday_messages["platform_composer"]
+    article = _composer_message_for("long", composer)     # the Wix article
+    linkedin = _composer_message_for("medium", composer)  # the LinkedIn post
 
-    wix_only = role.wix_rules[0]
-    linkedin_only = role.linkedin_rules[0]
-    wix_messages = [m for m in composer if _normalised(wix_only) in m]
-    linkedin_messages = [m for m in composer if _normalised(linkedin_only) in m]
-
-    assert len(wix_messages) == 1 and len(linkedin_messages) == 1
-    # and they are different messages: no surface receives the other's rules
-    assert wix_messages[0] != linkedin_messages[0]
+    assert role.wix_rules and role.linkedin_rules
+    for rule in role.wix_rules:
+        assert _normalised(rule) in article, rule
+        assert _normalised(rule) not in linkedin, rule
+    for rule in role.linkedin_rules:
+        assert _normalised(rule) in linkedin, rule
+        assert _normalised(rule) not in article, rule
 
 
 # ── the role's eligibility criteria reach the selection model ───────────────
