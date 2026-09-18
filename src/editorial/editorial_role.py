@@ -18,8 +18,11 @@ lives on the run-scoped assignment record rather than on the intake contract.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.strategy.client_contracts import contracts_for_role
 from src.strategy.business_config import (
     BusinessStrategyConfiguration,
     EditorialRole,
@@ -48,7 +51,9 @@ class EditorialRoleIdentity(BaseModel):
 
 
 def resolve_editorial_role(
-    configuration: BusinessStrategyConfiguration, role_id: str
+    configuration: BusinessStrategyConfiguration,
+    role_id: str,
+    client_dir: Path | None = None,
 ) -> tuple[EditorialRoleIdentity, EditorialRole]:
     """Resolve a requested role id against the declared roles.
 
@@ -69,7 +74,7 @@ def resolve_editorial_role(
                     configuration_version=configuration.configuration_version,
                     decision_policy=role.decision_policy,
                 ),
-                role,
+                _with_client_contracts(role, client_dir),
             )
     declared = ", ".join(role.role_id for role in configuration.editorial_roles)
     raise EditorialRoleError(
@@ -78,8 +83,40 @@ def resolve_editorial_role(
     )
 
 
+
+#: A role whose intent is written in a client stream contract says so, in these
+#: words, in business_strategy.json — so nobody edits a copy that no longer runs.
+STREAM_OWNED_INTENT_PREFIX = "Owned by clients/"
+
+
+def _with_client_contracts(role: EditorialRole, client_dir: Path | None) -> EditorialRole:
+    """Apply the client's stream contract for this role, where one governs it.
+
+    ENGINE mechanics (#240 D12): the contract is the authority for the role's
+    intent (``## Purpose``) and for what a candidate is judged against (``##
+    Selection`` plus every lens routed to selection). The rest of the role is
+    still configured in business_strategy.json until #255. A role whose JSON
+    intent points at a client contract but has none fails closed: running on the
+    pointer text would be running on no strategy at all.
+    """
+    contracts = contracts_for_role(role.role_id, client_dir)
+    if contracts is None:
+        if role.intent.startswith(STREAM_OWNED_INTENT_PREFIX):
+            raise EditorialRoleError(
+                f"editorial role {role.role_id!r} says its intent is owned by a client "
+                "stream contract, and no stream contract governs it"
+            )
+        return role
+    return role.model_copy(
+        update={
+            "intent": contracts.stream.purpose,
+            "eligibility_criteria": contracts.selection_requirements,
+        }
+    )
+
+
 def render_editorial_role_rules(
-    role: EditorialRole, surface: str | None = None
+    role: EditorialRole, surface: str | None = None, lenses: tuple[str, ...] = ()
 ) -> str:
     """Render a declared role as deterministic prompt text.
 
@@ -89,6 +126,9 @@ def render_editorial_role_rules(
     role-scoped rules — rules that belong to this role only, deliberately not
     written into the shared channel configuration where every other stream
     would inherit them.
+
+    ``lenses`` are client lens texts routed to writing (#240 D12), appended
+    verbatim. The Engine does not interpret them; zero is the default.
     """
 
     lines = [
@@ -108,5 +148,9 @@ def render_editorial_role_rules(
         lines.append("")
         lines.append("For this surface:")
         lines.extend(f"- {item}" for item in surface_rules)
+    for lens in lenses:
+        lines.append("")
+        lines.append("Client lens:")
+        lines.append(lens)
     lines.append("")
     return "\n".join(lines)

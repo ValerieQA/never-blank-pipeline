@@ -434,7 +434,7 @@ def test_accepted_article_preserves_run_id_and_wix_metadata(tmp_path):
 
 
 def test_rubric_loads_with_stable_identity_and_required_criteria():
-    assert RUBRIC.identity == "never-blank-editorial-acceptance/1.1"
+    assert RUBRIC.identity == "never-blank-editorial-acceptance/1.0"
     required = {
         "evidence-use", "defensible-angle", "audience-recognition", "insight",
         "narrative-coherence", "voice", "unsupported-claims", "generic-filler",

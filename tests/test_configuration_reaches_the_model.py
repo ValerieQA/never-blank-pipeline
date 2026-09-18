@@ -161,10 +161,10 @@ def test_each_surface_receives_all_of_its_own_channel_rules_and_none_of_the_othe
 def test_every_configured_eligibility_criterion_reaches_the_selection_message(
     monkeypatch,
 ):
-    seen: list[str] = []
+    seen: list[dict] = []
 
     def fake_chat(*, system, user, **kwargs):
-        seen.append(_normalised(f"{system}\n{user}"))
+        seen.append({"system": system, "request": json.loads(user)})
         return json.dumps({"eligible": False, "reason": "Scale is not established."})
 
     monkeypatch.setattr(llm_client, "chat", fake_chat)
@@ -179,8 +179,8 @@ def test_every_configured_eligibility_criterion_reaches_the_selection_message(
 
     assert len(seen) == 1, "one candidate is one judgment call"
     assert role.eligibility_criteria, "the role declares no criteria to prove"
-    for criterion in role.eligibility_criteria:
-        assert _normalised(criterion) in seen[0], criterion
+    # every criterion, exactly and in order — including multi-line client lenses
+    assert seen[0]["request"]["eligibility_criteria"] == list(role.eligibility_criteria)
 
 
 # ── the acceptance rubric reaches the reviewer, and the revision the reviser ─

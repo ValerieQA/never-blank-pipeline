@@ -136,10 +136,8 @@ def test_the_rubric_version_was_bumped_with_its_content():
 
 
 def test_monday_s_rubric_is_untouched():
-    # Wednesday work must never move Monday's rubric. Its version moves only on
-    # Monday's own decisions: 1.1 is #254 D10 (the surgical revision contract).
     monday = yaml.safe_load(MONDAY_RUBRIC.read_text())
-    assert monday["version"] == "1.1"
+    assert monday["version"] == "1.0"
     business = json.loads(Path("strategy/current/business_strategy.json").read_text())
     pinned = [
         r.get("acceptance_rubric_identity")

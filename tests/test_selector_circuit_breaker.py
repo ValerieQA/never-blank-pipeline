@@ -211,42 +211,32 @@ def test_provider_failure_can_never_become_a_clean_empty_queue(tmp_path):
     assert audit["remaining"] == 5
 
 
-def test_provider_stop_on_a_truncated_queue_is_failure_not_truncation(tmp_path):
-    # 8 candidates, bound of 3, provider stop on the first: the outcome must
-    # be the infrastructure failure, not the softer search_truncated
+def test_a_provider_stop_is_failure_even_with_candidates_left(tmp_path):
+    # a provider stop on the first of several candidates is infrastructure
+    # failure: the remaining candidates are unevaluated, not ineligible
     transport = ScriptedTransport({"sig-queue-1": _rate_limit_error()})
 
-    code, audit, _ = _select(
-        tmp_path, MONDAY_ROLE, transport, max_candidates=3
-    )
+    code, audit, _ = _select(tmp_path, MONDAY_ROLE, transport)
 
-    assert audit["truncated"] is True
     assert code == select_eligible_signal.ELIGIBILITY_FAILURE
     assert audit["outcome"] == "eligibility_failure"
+    assert audit["remaining"] == len(CANDIDATES) - 1
 
 
-def test_existing_exit_semantics_are_unchanged(tmp_path):
+def test_the_exit_semantics(tmp_path):
     # 0: selected
-    ok = ScriptedTransport({"sig-queue-1": (True, "Documented case.")})
+    ok = ScriptedTransport({"sig-queue-1": (True, "A practical angle.")})
     code, _, _ = _select(tmp_path / "a", MONDAY_ROLE, ok)
     assert code == 0
     # 3: complete all-ineligible search
     all_no = ScriptedTransport({
-        s["SIGNAL_ID"]: (False, "Outside the class.") for s in CANDIDATES
+        s["SIGNAL_ID"]: (False, "No practical angle.") for s in CANDIDATES
     })
     code, audit, _ = _select(tmp_path / "b", MONDAY_ROLE, all_no)
     assert code == select_eligible_signal.NO_ELIGIBLE
     assert audit["outcome"] == "no_eligible_complete"
-    # 5: truncated search with no failures
-    code, audit, _ = _select(
-        tmp_path / "c", MONDAY_ROLE,
-        ScriptedTransport({
-            s["SIGNAL_ID"]: (False, "Outside the class.") for s in CANDIDATES[:3]
-        }),
-        max_candidates=3,
-    )
-    assert code == select_eligible_signal.SEARCH_TRUNCATED
-    assert audit["outcome"] == "search_truncated"
+    # there is no search bound, so there is no "truncated" outcome (#254 D8)
+    assert not hasattr(select_eligible_signal, "SEARCH_TRUNCATED")
 
 
 # ===========================================================================
@@ -413,38 +403,6 @@ def _selector_argv(tmp_path, extra):
         "--active-path", str(active),
         "--published-path", str(published),
     ] + extra
-
-
-def test_the_default_and_the_ceiling_are_fifteen():
-    assert select_eligible_signal.DEFAULT_MAX_CANDIDATES == 15
-    assert select_eligible_signal.MAX_CANDIDATES_CEILING == 15
-
-
-def test_bounds_one_through_fifteen_are_accepted(tmp_path):
-    transport = ScriptedTransport({"sig-queue-1": (True, "Documented case.")})
-    for bound in (1, 15):
-        code = select_eligible_signal.main(
-            _selector_argv(tmp_path / str(bound), ["--max-candidates", str(bound)]),
-            transport=transport,
-        )
-        assert code == 0
-
-
-@pytest.mark.parametrize("bound", ["0", "-1", "16", "100", "999999"],
-                         ids=["zero", "negative", "sixteen", "hundred", "huge"])
-def test_out_of_bound_max_candidates_is_refused_before_any_model_call(
-    tmp_path, bound, capsys
-):
-    transport = ScriptedTransport({})  # any request would KeyError — none may occur
-
-    code = select_eligible_signal.main(
-        _selector_argv(tmp_path, ["--max-candidates", bound]),
-        transport=transport,
-    )
-
-    assert code == 1                      # configuration error, not 0/3/4/5
-    assert transport.requests == []       # refused before any transport
-    assert "--max-candidates" in capsys.readouterr().out
 
 
 def test_malformed_max_candidates_still_fails_normally(tmp_path):

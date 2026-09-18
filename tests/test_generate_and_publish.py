@@ -249,7 +249,7 @@ def _fake_acceptance(**kwargs):
         initial_review=None,
         final_review=None,
         audit={
-            "rubric": "never-blank-editorial-acceptance/1.1",
+            "rubric": "never-blank-editorial-acceptance/1.0",
             "accepted": True,
             "revised": False,
             "final_disposition": "accept",

@@ -309,7 +309,7 @@ def test_safety_and_wednesday_golden_boundaries_remain_intact():
     assert policy.require_overlooked_y is True
     assert policy.required_primary_mechanisms == 1
     assert policy.required_transfer_mode.value == "bounded_business_question"
-    assert EditorialAcceptanceRubric.load().identity == "never-blank-editorial-acceptance/1.1"
+    assert EditorialAcceptanceRubric.load().identity == "never-blank-editorial-acceptance/1.0"
     with pytest.raises(SourceTransparencyError):
         validate_source_transparency(
             article_body="An article that cites nothing.",

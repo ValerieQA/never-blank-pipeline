@@ -11,10 +11,11 @@ Two layers, each proven where it lives:
   the revision request by the canonical entrypoint for any non-Wednesday role.
   Wednesday is paused and keeps its own acceptance; a run with no role is
   unchanged.
-* **"Surgical, not regenerative" is prose a person edits.** It lives in the
-  rubric's ``revision_instructions`` — the one human-edited text for revision —
-  and reaches the reviser as its system message. The tests read that file rather
-  than restating it.
+* **"Surgical, not regenerative" is client policy a person edits.** It is
+  CLIENT: NEVER_BLANK's revision lens, ``clients/never_blank/lenses/revision.md``
+  (#240 D12), routed by the Engine to the revision stage and delivered verbatim
+  in the reviser's request. The tests read that file rather than restating it.
+  The acceptance rubric is unchanged.
 
 No network, no model: every transport is a fake or has ``chat`` patched.
 """
@@ -125,15 +126,20 @@ def test_a_run_without_a_role_is_unchanged(tmp_path):
     assert "voice" not in request
 
 
-# ── the surgical contract is the human-edited text, and it reaches the model ─
+# ── the surgical contract is the client's lens, and it reaches the model ─────
 
 
-def _revision_instructions() -> str:
-    return yaml.safe_load(RUBRIC_PATH.read_text(encoding="utf-8"))["revision_instructions"]
+REVISION_LENS = Path("clients/never_blank/lenses/revision.md")
 
 
-def test_the_revision_contract_is_surgical_in_the_human_edited_rubric():
-    text = " ".join(_revision_instructions().split())
+def _revision_lens_text() -> str:
+    from src.strategy.client_contracts import load_lens
+
+    return load_lens(REVISION_LENS).text
+
+
+def test_the_revision_contract_is_surgical_in_the_client_lens():
+    text = " ".join(_revision_lens_text().split())
 
     assert "Revision is surgical, not regenerative." in text
     assert "Leave every sentence, paragraph and section they do not implicate as it is." in text
@@ -141,25 +147,25 @@ def test_the_revision_contract_is_surgical_in_the_human_edited_rubric():
     assert "Do not flatten the voice, change the article's editorial position" in text
 
 
-def test_the_rubric_version_moved_with_its_semantics():
-    rubric = EditorialAcceptanceRubric.load(RUBRIC_PATH)
+def test_the_rubric_is_unchanged_because_the_policy_is_the_clients():
+    assert EditorialAcceptanceRubric.load(RUBRIC_PATH).identity == (
+        "never-blank-editorial-acceptance/1.0"
+    )
 
-    assert rubric.identity == "never-blank-editorial-acceptance/1.1"
+
+def test_a_monday_revision_request_carries_the_clients_revision_lens(tmp_path):
+    request, _ = _run_entrypoint(tmp_path, role=MONDAY_ROLE)
+
+    assert request["client_lenses"] == [_revision_lens_text()]
+    assert "Follow every client lens in this request" in request["note"]
 
 
 def test_the_contract_and_the_context_reach_the_reviser_model_call(monkeypatch):
     seen: list[dict] = []
-    replies = iter([
-        json.dumps({"disposition": "revise", "failed_criterion_ids": ["evidence-use"],
-                    "rationale": "The source is not named.",
-                    "revision_guidance": "Name the source in the second paragraph."}),
-        "The revised article.",
-        json.dumps({"disposition": "accept", "failed_criterion_ids": [],
-                    "rationale": "Every criterion passes."}),
-    ])
+    replies = iter(["The revised article."])
 
     def fake_chat(*, system, user, **kwargs):
-        seen.append({"system": system, "user": user, "json": kwargs.get("json_mode")})
+        seen.append({"system": system, "user": user})
         return next(replies)
 
     monkeypatch.setattr(llm_client, "chat", fake_chat)
@@ -167,6 +173,7 @@ def test_the_contract_and_the_context_reach_the_reviser_model_call(monkeypatch):
     context = RevisionContext(
         role_rules=render_editorial_role_rules(role, surface="wix"),
         voice=_configuration().brand_editorial.voice,
+        lenses=(_revision_lens_text(),),
     )
 
     run_editorial_acceptance(
@@ -184,12 +191,38 @@ def test_the_contract_and_the_context_reach_the_reviser_model_call(monkeypatch):
         revision_context=context,
     )
 
-    reviser_calls = [call for call in seen if call["json"] is not True]
-    assert len(reviser_calls) == 1, "exactly one revision"
-    call = reviser_calls[0]
-    assert call["system"] == _revision_instructions()
-    request = json.loads(call["user"])
+    assert len(seen) == 1, "exactly one revision reached the model"
+    request = json.loads(seen[0]["user"])
+    assert seen[0]["system"] == EditorialAcceptanceRubric.load(RUBRIC_PATH).revision_instructions
     assert request["editorial_role"] == context.role_rules
     assert request["voice"] == list(context.voice)
+    assert request["client_lenses"] == [_revision_lens_text()]
     assert request["article"] == "The draft that passed everything except attribution."
     assert request["revision_guidance"] == "Name the source in the second paragraph."
+
+
+def test_without_revision_lenses_the_request_has_none():
+    """Zero client lenses is valid: nothing is invented in their place."""
+    from src.editorial.editorial_acceptance import _revise_article
+
+    revisor = acceptance_fixtures.FakeRevisionTransport("Revised.")
+    review = acceptance_fixtures.FakeReviewTransport(
+        acceptance_fixtures._review_payload(  # noqa: SLF001
+            disposition="revise", failed=["evidence-use"], guidance="g",
+        ),
+    )
+    from src.editorial.editorial_acceptance import _review_article
+
+    verdict = _review_article(
+        review, EditorialAcceptanceRubric.load(RUBRIC_PATH),
+        article_body="a", research=_research_artifact(), run_id="run-1",
+    )
+    _revise_article(
+        revisor, EditorialAcceptanceRubric.load(RUBRIC_PATH),
+        article_body="a", review=verdict, run_id="run-1",
+        revision_context=RevisionContext(role_rules="r", voice=("v",)),
+    )
+
+    request = json.loads(revisor.calls[0]["request"])
+    assert "client_lenses" not in request
+    assert request["voice"] == ["v"]

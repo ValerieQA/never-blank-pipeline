@@ -220,6 +220,7 @@ from src.editorial.editorial_acceptance import (
     run_editorial_acceptance,
 )
 from src.publishing import formatting
+from src.strategy.client_contracts import ClientContractError, contracts_for_role
 from src.publishing.formatting import ensure_source_line
 from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
 from src.publishing.hashtags import generate_hashtags
@@ -913,22 +914,39 @@ def _run(
     _editorial_acceptance_path = None
     _editorial_acceptance_identity = None
     _role = None
+    #: The client's contracts for this role (#240 D12), or None when the client
+    #: supplies none — zero client documents is a valid state.
+    _client_contracts = None
     if args.editorial_role:
         try:
             _editorial_role_identity, _role = resolve_editorial_role(
                 business_configuration, args.editorial_role
             )
-        except EditorialRoleError as exc:
+            _client_contracts = contracts_for_role(_role.role_id)
+        except (EditorialRoleError, ClientContractError) as exc:
             print(f"  ERROR: {exc}")
             return 1
+        _writing_lenses = (
+            _client_contracts.for_stage("writing") if _client_contracts is not None else ()
+        )
         # Per-format rendering: the role's surface-scoped rules reach exactly
         # the surface they are for. ``long`` is the Wix article and ``medium``
         # the LinkedIn artifact — the same mapping this entrypoint already
-        # relies on when it publishes them.
+        # relies on when it publishes them. Client lenses routed to writing
+        # reach both.
         _editorial_role_rules = {
-            "long": render_editorial_role_rules(_role, surface="wix"),
-            "medium": render_editorial_role_rules(_role, surface="linkedin"),
+            "long": render_editorial_role_rules(
+                _role, surface="wix", lenses=_writing_lenses
+            ),
+            "medium": render_editorial_role_rules(
+                _role, surface="linkedin", lenses=_writing_lenses
+            ),
         }
+        if _client_contracts is not None:
+            _provenance = _client_contracts.provenance
+            print(f"  ✓  client stream contract: {_provenance['stream']['identity']}"
+                  + "".join(f", lens {lens['identity']} → {'/'.join(lens['stages'])}"
+                            for lens in _provenance["lenses"]))
         _editorial_acceptance_path = _role.acceptance_rubric_path
         _editorial_acceptance_identity = _role.acceptance_rubric_identity
         print(f"  ✓  editorial role: {_editorial_role_identity.role_id}")
@@ -1069,6 +1087,13 @@ def _run(
         write_business_strategy_snapshot(
             run_dir, business_configuration.model_dump(mode="json")
         )
+        # The exact client texts this run executes (#240 D12): identity, path
+        # and digest of the stream contract and of every routed lens.
+        if _client_contracts is not None:
+            (run_dir / "client_contracts.json").write_text(
+                json.dumps(_client_contracts.provenance, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
         # Canonical intake evidence (Issue #98 / Story #16): the immutable
         # record of what this run was asked to process — the anchor of the
         # run's provenance chain. Written for every run, both branches.
@@ -2034,6 +2059,10 @@ def _run(
                     RevisionContext(
                         role_rules=render_editorial_role_rules(_role, surface="wix"),
                         voice=strategy_execution.decision_lens_editorial.brand_editorial.voice,
+                        lenses=(
+                            _client_contracts.for_stage("revision")
+                            if _client_contracts is not None else ()
+                        ),
                     )
                     if _role is not None
                     and not is_wednesday_role(_editorial_role_identity)

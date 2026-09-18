@@ -78,17 +78,17 @@ class ArticleRevisionTransport(Protocol):
 class RevisionContext(BaseModel):
     """What the reviser inherits besides the rubric (#254 D10, temporary #253).
 
-    The reviser rewrites the article that actually ships. Until #253 settles the
-    final contract, it receives the applicable editorial role and the configured
-    voice, so a revision cannot quietly flatten either. Both are carried as data;
-    what the reviser must do with them is the rubric's ``revision_instructions``,
-    the one human-edited text for revision.
+    ENGINE mechanics (#240 D12): the reviser rewrites the article that actually
+    ships, so it receives the run's editorial role, its configured voice and
+    every client lens routed to revision — as data, verbatim. What those texts
+    say is the client's; this carries them and says nothing of its own.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     role_rules: str = Field(min_length=1)
     voice: tuple[str, ...] = Field(min_length=1)
+    lenses: tuple[str, ...] = ()
 
 
 class EditorialDisposition(str, Enum):
@@ -301,6 +301,16 @@ def _revise_article(
     if revision_context is not None:
         payload["editorial_role"] = revision_context.role_rules
         payload["voice"] = list(revision_context.voice)
+        payload["note"] += (
+            " The editorial_role and voice in this request bind the revision "
+            "exactly as they bound the draft."
+        )
+        if revision_context.lenses:
+            payload["client_lenses"] = list(revision_context.lenses)
+            payload["note"] += (
+                " Follow every client lens in this request; they are the "
+                "client's own rules for this revision."
+            )
     if sources_of_record:
         payload["sources_of_record"] = sources_of_record
         payload["note"] += (
