@@ -502,3 +502,32 @@ def test_a_boundary_inside_an_open_quote_never_ends_the_sentence(text):
     # Telegram carries the whole sentence when it fits, and nothing otherwise
     assert _build_telegram("Checkout test", text, "") in (
         "Checkout test", f"Checkout test\n{text}")
+
+
+@pytest.mark.parametrize("text", [
+    "The team tested ‘Ready to buy? Compare all available plans and choose the one that "
+    "best fits your business before you enter your payment details and complete your "
+    "first purchase with us today’ against its original checkout message.",
+    "The team tested 'Ready to buy? Compare all available plans and choose the one that "
+    "best fits your business before you enter your payment details and complete your "
+    "first purchase with us today' against its original checkout message.",
+], ids=["curly-single", "straight-single"])
+def test_single_quoted_speech_never_ends_the_outer_sentence(text):
+    """#259 review round 7."""
+    from scripts.generate_and_publish import _build_telegram, _whole_sentences
+
+    for limit in range(1, 50):
+        assert _whole_sentences(text, limit) in ("", text), limit
+    assert _build_telegram("Checkout test", text, "") in (
+        "Checkout test", f"Checkout test\n{text}")
+
+
+@pytest.mark.parametrize("text", [
+    "Owners don’t read every report. They skim the numbers.",
+    "Owners don't read every report. They skim the numbers.",
+    "The customers’ orders doubled. The team noticed.",
+])
+def test_apostrophes_are_not_quotes(text):
+    from scripts.generate_and_publish import _sentences
+
+    assert len(_sentences(text)) == 2

@@ -471,8 +471,15 @@ def _inside_open_quote(fragment: str) -> bool:
     sentence ("The team tested “Ready to buy? Compare …” against …" is one
     sentence, #259 review round 6), so an open one always merges.
     """
+    # single quotes: an apostrophe sits between letters ("don’t", "don't")
+    # and is neither an opening nor a closing quote
+    curly_closes = len(re.findall(r"’(?![^\W\d_])|(?<![^\W\d_])’", fragment))
+    straight_opens = len(re.findall(r"(?:^|(?<=[\s(“\[]))'(?=[^\W_])", fragment))
+    straight_closes = len(re.findall(r"(?<=[^\s(\[])'(?=[\s.,;:!?)”\]]|$)", fragment))
     return (
         fragment.count("“") > fragment.count("”")
+        or fragment.count("‘") > curly_closes
+        or straight_opens > straight_closes
         or fragment.count("(") > fragment.count(")")
         or fragment.count('"') % 2 == 1
     )
@@ -513,6 +520,10 @@ def _whole_sentences(text: str, max_words: int) -> str:
             break
         kept.append(sentence)
         used += words
+    # safety net: never hand back a unit that leaves a quotation or bracket
+    # open — whatever the splitter concluded, that unit is unfinished
+    while kept and _inside_open_quote(" ".join(kept)):
+        kept.pop()
     return " ".join(kept)
 
 
