@@ -499,7 +499,8 @@ def test_the_real_rendered_sources_block_passes():
     result = _compose(_body(sources=_REAL_SOURCES))
 
     assert _real_source_entry() in result["body"]
-    assert "publisher: SBA Office of Advocacy" in result["body"]
+    # the renderer hands over the finished line: values only, no labels
+    assert "SBA Office of Advocacy · " in result["body"]
 
 
 # ---------------------------------------------------------------------------
@@ -660,13 +661,16 @@ def test_values_mixed_from_two_different_records_are_rejected():
         _compose(_body(sources="Sources\n- Publisher A · Title B"), research=research)
 
 
-def test_the_prompt_asks_for_values_not_labels():
-    """Prompt and validator now describe the same public contract."""
+def test_the_prompt_hands_over_the_exact_citation_line():
+    """Prompt and validator describe the same public contract. Since live run
+    35375812835 the prompt no longer asks the model to build a citation from
+    labelled values: it hands over the finished line to copy."""
     from src.editorial.sources_of_record import render_sources_of_record
 
     rendered = render_sources_of_record(_live_research(), surface="wix")
 
-    assert "must survive into your citation" in rendered
-    assert "only here to tell you which value is which" in rendered
-    # the labelled listing itself stays: it tells the model which is which
-    assert "publisher: " in rendered and "title: " in rendered
+    assert "copy each line character for character" in rendered
+    assert f"- {LIVE_PUBLISHER} · {LIVE_TITLE} · {LIVE_URL}" in rendered
+    # no field labels and no generic "Publisher · Title · URL" template
+    assert "publisher: " not in rendered and "title: " not in rendered
+    assert "Publisher · Title · URL" not in rendered

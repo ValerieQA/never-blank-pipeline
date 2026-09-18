@@ -78,19 +78,20 @@ def canonical_source_entries(
     instruction and the check from drifting apart — the #191 defect was two
     rules that could not both be satisfied.
 
-    Each component is conditional, because ``source_records`` treats a source
-    as citable when it carries a URL OR a publisher OR a title.
+    Each entry is the finished citation line, not a description of one: the
+    record's own values joined by " · " in a fixed order — ``publisher · title
+    · URL`` when the record has a publisher, ``title · URL`` when it does not.
+    Every component is conditional, because ``source_records`` treats a
+    source as citable when it carries a URL OR a publisher OR a title, and
+    nothing is ever filled in: a record without a publisher yields a line
+    without one. Live run 35375812835 showed why the model must be handed the
+    line rather than asked to build it — given a publisher-less record and a
+    "Publisher · Title · URL" example, it supplied the publisher itself.
     """
 
     entries = []
     for item in source_records(research):
-        parts = []
-        if item.get("publisher"):
-            parts.append(f"publisher: {item['publisher']}")
-        if item.get("title"):
-            parts.append(f"title: {item['title']}")
-        if item.get("url"):
-            parts.append(f"url: {item['url']}")
+        parts = [item[key] for key in ("publisher", "title", "url") if item.get(key)]
         if parts:
             entries.append(" · ".join(parts))
     return tuple(entries)
@@ -116,12 +117,15 @@ def render_sources_of_record(
     if surface == "wix":
         lines = [
             "",
-            "SOURCES OF RECORD — the only sources this run may cite. Every "
-            "publisher, title and URL below must survive into your citation "
-            "exactly as written; never invent, guess, complete, or substitute "
-            "one. The 'publisher:', 'title:' and 'url:' labels are only here to "
-            "tell you which value is which — write the citation naturally, for "
-            "example 'Publisher · Title · URL'.",
+            "SOURCES OF RECORD — the only sources this run may cite. Each "
+            "line below is the exact citation of one source, built from the "
+            "run's own source record. In the Sources section, copy each line "
+            "character for character, one line per source; never invent, "
+            "guess, complete, or substitute anything in a citation — in "
+            "particular never add a publisher, brand or site name the line "
+            "does not already contain, whether from the URL, the story or "
+            "your own knowledge. A line without a publisher is complete as "
+            "it is.",
             "",
         ]
         for entry in canonical_source_entries(research):

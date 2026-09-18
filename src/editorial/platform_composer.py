@@ -458,11 +458,9 @@ def _build_user_prompt(
                 f"'**{BRAND_ATTRIBUTION}:** <echo>'. It is the last editorial "
                 "word: no commentary, no invitation and no call to action after "
                 "it. Only the required Sources section may follow, and every "
-                "line in it must cite one of the supplied sources — carrying "
-                "that source's publisher, title and URL exactly as given, and "
-                "nothing else. Write it naturally; the 'publisher:'/'title:'/"
-                "'url:' labels above are only there to tell you which value "
-                "is which."
+                "line in it must be one of the supplied SOURCES OF RECORD "
+                "lines, copied exactly as given — never add a publisher or "
+                "any other value the supplied line does not contain."
             )
         elif echo_mode == "verbatim_final":
             # #196: a social derivative of the branded contract carries the
