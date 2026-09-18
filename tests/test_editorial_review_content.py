@@ -112,7 +112,7 @@ def test_a_blocked_run_preserves_the_article_linkedin_body_and_visuals(tmp_path)
     assert record["editorial"]["final_disposition"] == "revise"
     assert record["editorial"]["failed_criterion_ids"] == ["unsupported-claims"]
     assert record["editorial"]["revised"] is True
-    assert record["editorial"]["rubric"] == "never-blank-editorial-acceptance/1.0"
+    assert record["editorial"]["rubric"] == "never-blank-editorial-acceptance/1.1"
 
 
 def test_a_run_blocked_without_a_revision_preserves_the_article_it_wrote(tmp_path):

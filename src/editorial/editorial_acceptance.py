@@ -75,6 +75,22 @@ class ArticleRevisionTransport(Protocol):
     def complete(self, *, instructions: str, request: str) -> str: ...
 
 
+class RevisionContext(BaseModel):
+    """What the reviser inherits besides the rubric (#254 D10, temporary #253).
+
+    The reviser rewrites the article that actually ships. Until #253 settles the
+    final contract, it receives the applicable editorial role and the configured
+    voice, so a revision cannot quietly flatten either. Both are carried as data;
+    what the reviser must do with them is the rubric's ``revision_instructions``,
+    the one human-edited text for revision.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    role_rules: str = Field(min_length=1)
+    voice: tuple[str, ...] = Field(min_length=1)
+
+
 class EditorialDisposition(str, Enum):
     ACCEPT = "accept"
     REVISE = "revise"
@@ -257,6 +273,7 @@ def _revise_article(
     review: EditorialReview,
     run_id: str,
     sources_of_record: str | None = None,
+    revision_context: RevisionContext | None = None,
 ) -> str:
     """Perform the single controlled revision of the Wix article body only.
 
@@ -281,6 +298,9 @@ def _revise_article(
             "invent facts or evidence. Return only the revised article text."
         ),
     }
+    if revision_context is not None:
+        payload["editorial_role"] = revision_context.role_rules
+        payload["voice"] = list(revision_context.voice)
     if sources_of_record:
         payload["sources_of_record"] = sources_of_record
         payload["note"] += (
@@ -318,6 +338,7 @@ def run_editorial_acceptance(
     reviewer: EditorialReviewTransport,
     revisor: ArticleRevisionTransport,
     sources_of_record: str | None = None,
+    revision_context: RevisionContext | None = None,
 ) -> EditorialAcceptanceOutcome:
     """Run the complete Release 1 acceptance lifecycle for one generated article.
 
@@ -359,6 +380,7 @@ def run_editorial_acceptance(
     revised_body = _revise_article(
         revisor, rubric, article_body=article_body, review=initial, run_id=run_id,
         sources_of_record=sources_of_record,
+        revision_context=revision_context,
     )
     final = _review_article(
         reviewer, rubric, article_body=revised_body, research=research, run_id=run_id

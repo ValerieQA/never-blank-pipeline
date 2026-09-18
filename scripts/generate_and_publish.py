@@ -216,6 +216,7 @@ from src.editorial.editorial_acceptance import (
     EditorialReviewTransport,
     LlmChatArticleRevisionTransport,
     LlmChatEditorialReviewTransport,
+    RevisionContext,
     run_editorial_acceptance,
 )
 from src.publishing import formatting
@@ -2026,6 +2027,18 @@ def _run(
                     else None
                 ),
                 rubric=_acceptance_rubric,
+                # #254 D10 (temporary, until #253): the reviser inherits the
+                # role and the configured voice, so a revision cannot flatten
+                # either. Wednesday is paused and keeps its own acceptance.
+                revision_context=(
+                    RevisionContext(
+                        role_rules=render_editorial_role_rules(_role, surface="wix"),
+                        voice=strategy_execution.decision_lens_editorial.brand_editorial.voice,
+                    )
+                    if _role is not None
+                    and not is_wednesday_role(_editorial_role_identity)
+                    else None
+                ),
                 reviewer=(
                     editorial_reviewer
                     if editorial_reviewer is not None

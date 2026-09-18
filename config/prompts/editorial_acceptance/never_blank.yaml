@@ -6,7 +6,7 @@
 # commit. This is the single Release 1 rubric — no registry, no profiles.
 
 rubric_id: never-blank-editorial-acceptance
-version: "1.0"
+version: "1.1"
 
 criteria:
   - criterion_id: evidence-use
@@ -77,13 +77,21 @@ instructions: |
 revision_instructions: |
   You are the Release 1 article revisor for the Never Blank Wix article. You
   receive one JSON request containing the article, the failed rubric
-  criteria, and the reviewer's revision guidance.
+  criteria, the reviewer's revision guidance, and — when the run has one —
+  the editorial role (`editorial_role`) and the configured voice (`voice`).
 
-  Revise this one article to address the failed criteria. Rules:
+  Revision is surgical, not regenerative. Change only what is necessary to
+  resolve the reviewer's findings, and keep the rest of the article as close
+  to the accepted draft as practical. Rules:
+  - Address the failed criteria and the reviewer's guidance. Leave every
+    sentence, paragraph and section they do not implicate as it is.
+  - Do not regenerate the article, and do not rewrite an unrelated section
+    merely because a revision was requested.
+  - The editorial role and the voice bind this revision exactly as they bound
+    the draft. Do not flatten the voice, change the article's editorial
+    position, or drop what the role requires.
   - Do not invent facts, statistics, outcomes, or evidence. If a claim is
     unsupported, remove or correct it.
-  - Preserve the article's grounded content, structure, and configured voice
-    wherever it already passes.
   - Do not write content for any other channel or platform.
 
   Return ONLY the revised article text — no JSON, no commentary.
