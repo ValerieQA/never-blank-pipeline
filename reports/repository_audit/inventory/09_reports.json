@@ -1,0 +1,171 @@
+{
+  "shard": "reports",
+  "commit": "4a121b2b63983d91581bf241234f9a02647124ce",
+  "scope": "reports/** (7,957 tracked paths, 94.9% of the repository), excluding reports/repository_audit/** which is this audit's own output",
+  "note": "Nothing under reports/ is ignored except reports/content_packages/images/ (.gitignore:27). Everything a run writes there therefore becomes a candidate for the next `git add`. src/run/code_identity.py:34-43 states the repository's own position: reports/ and data/ are output roots a run legitimately dirties, which is why tracked run output is defensible in principle — but the boundary was never drawn, and 7,796 of these paths are test debris. Bulk groups below are genuinely uniform: one producer, one consumer, one method, which the reviewer can check against the cited source lines.",
+  "entries": [
+    {
+      "path": "reports/content_packages/.gitkeep",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "Keeps reports/content_packages/ present in a fresh checkout, because scripts/generate_and_publish.py:321 mkdirs it at import time and several scripts assume it exists.",
+      "consumer": "git; scripts/generate_and_publish.py:320-321; scripts/research/prepare_content.py:35; scripts/generate_and_publish_visibility.py:62; scripts/smoke_test_publish_analytics.py:55.",
+      "evidence": "scripts/generate_and_publish.py:320-321 `PACKAGES_DIR = Path('reports/content_packages'); PACKAGES_DIR.mkdir(parents=True, exist_ok=True)` — executed on import, including by every test that imports the module.",
+      "canonical": "directory marker",
+      "action_required": "none"
+    },
+    {
+      "path": "reports/content_packages/sig-test-001.json",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "A content package written under the fixed test signal id `sig-test-001`. Not a product artifact; a by-product of the canonical-entrypoint test suite reaching the real reports/ directory.",
+      "consumer": "NONE. No workflow, script or test reads this path. It is not the fixture a test loads — tests construct their own packages (tests/test_generate_and_publish.py `_write_package`) — it is what a run left behind.",
+      "evidence": "tests/test_generate_and_publish.py:40 `_SIGNAL_ID = 'sig-test-001'`; scripts/generate_and_publish.py:394 `path = PACKAGES_DIR / f'{signal_id}.json'` with PACKAGES_DIR relative to the working directory (:320). Committed by ffe199a (2026-08-17) as part of a 7,830-file sweep.",
+      "canonical": "test debris",
+      "action_required": "Delete and ignore, in one narrowly scoped follow-up together with the two run-record groups below. F-02."
+    },
+    {
+      "path": "reports/content_packages/sig-identity-test-001.json",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "A content package written under the fixed test signal id `sig-identity-test-001`, from the run-identity suite.",
+      "consumer": "NONE. No workflow, script or test reads this path.",
+      "evidence": "tests/test_run_identity.py uses this signal id; scripts/generate_and_publish.py:394 writes it relative to the working directory. Committed by ffe199a and re-touched by dd54dc5/299e747/39043ea (#223).",
+      "canonical": "test debris",
+      "action_required": "Delete and ignore with F-02."
+    },
+    {
+      "path": "reports/connectivity_audit.json",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Machine record of the last credential/connectivity audit across all six publishers.",
+      "consumer": "Written by scripts/test_publishers.py:16 <- connectivity_audit.yml:67-69 (manual). Read by humans. The tracked copy is from 2026-06-19.",
+      "evidence": "scripts/test_publishers.py:16-17; committed by fdd0c03 (2026-06-19) and updated by 02490c5.",
+      "canonical": "historical operational evidence; a new dispatch overwrites it",
+      "action_required": "None, but note the pattern: the tool overwrites a tracked file, so running it dirties the repository. Same class as F-02, far smaller scale."
+    },
+    {
+      "path": "reports/connectivity_audit.md",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Human-readable version of the same connectivity audit.",
+      "consumer": "Written by scripts/test_publishers.py:17 <- connectivity_audit.yml. Read by humans.",
+      "evidence": "scripts/test_publishers.py:17; commits fdd0c03, 02490c5.",
+      "canonical": "historical operational evidence",
+      "action_required": "See reports/connectivity_audit.json."
+    },
+    {
+      "path": "reports/live_publish_test.json",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Machine record of the Phase 5D live publish matrix test.",
+      "consumer": "Written by scripts/live_publish_test.py:15 <- live_publish_test.yml:63-65 (manual). Read by humans.",
+      "evidence": "scripts/live_publish_test.py:15-17; committed by 8979b9c (2026-06-20) 'docs: Phase 5D live publish test report'.",
+      "canonical": "historical acceptance evidence for Phase 5D",
+      "action_required": "none"
+    },
+    {
+      "path": "reports/live_publish_test.md",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Human-readable version of the Phase 5D live publish matrix test.",
+      "consumer": "Written by scripts/live_publish_test.py:16 <- live_publish_test.yml. Read by humans; PHASE_5D_REPORT.md is its narrative counterpart.",
+      "evidence": "scripts/live_publish_test.py:16; commit 8979b9c.",
+      "canonical": "historical acceptance evidence for Phase 5D",
+      "action_required": "none"
+    },
+    {
+      "path": "reports/linkedin_live_test.json",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "The evidence record of the first successful live LinkedIn publication (2026-06-20T22:38:33Z, urn:li:share:7474229229165891584).",
+      "consumer": "Humans. No script writes this exact filename today — scripts/live_publish_test.py:15-16 writes reports/live_publish_test.{json,md} — so this is a one-off record, not a regenerated report.",
+      "evidence": "reports/linkedin_live_test.json content (mode live, channels [linkedin], status PUBLISHED); added by d88ef0d (2026-06-20) 'Phase 5D: LinkedIn live publish complete', the same commit PHASE_5D_REPORT.md documents.",
+      "canonical": "frozen historical evidence of the Phase 5D LinkedIn milestone",
+      "action_required": "None. Its retention reason is legible from the commit that added it; a one-line header inside the file would make it legible without git."
+    },
+    {
+      "path": "reports/linkedin_live_test.md",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Human-readable record of the same first live LinkedIn publication.",
+      "consumer": "Humans. Not regenerated by any script.",
+      "evidence": "reports/linkedin_live_test.md:1-8; commit d88ef0d.",
+      "canonical": "frozen historical evidence",
+      "action_required": "See reports/linkedin_live_test.json."
+    },
+    {
+      "path": "reports/sample_linkedin_articles_2026-07-21.md",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "Three sample LinkedIn posts demonstrating the 2026-07-21 editorial system update: explicit cta_mode per article, candidate-based Echo, Presence Debt explained on first use.",
+      "consumer": "Humans. It is the worked example attached to strategy/claude_code_prompt_amendment_2026-07-21.md.",
+      "evidence": "reports/sample_linkedin_articles_2026-07-21.md:1-7; committed by 54d7694 'Apply editorial strategy amendment 2026-07-21', the commit that applied that amendment.",
+      "canonical": "frozen editorial reference sample",
+      "action_required": "None. Its purpose is stated in its own header — the pattern the other frozen reports should follow."
+    },
+    {
+      "path": "reports/monday-architecture/MONDAY_CURRENT_STATE.md",
+      "classification": "HUMAN_DOCUMENTATION",
+      "purpose": "The #240 trace of what Monday executes today: end-to-end path, stage-by-stage classification, the product semantics hard-coded in Python, the configuration Monday does and does not consume, and the business_strategy.json dependency map.",
+      "consumer": "Humans; docs/monday-architecture/README.md points at it as the document to read first.",
+      "evidence": "docs/monday-architecture/README.md:13-17; merged by 825a10d (#246). It is anchored to 58afe47, one commit behind this audit.",
+      "canonical": "canonical Monday trace",
+      "action_required": "This audit agrees with it on the Monday findings and extends the method to the whole repository. Where the two differ, this file is anchored to the earlier commit."
+    },
+
+    {
+      "paths_file": "reports/repository_audit/paths/daily_research_reports.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "63 daily research run reports, reports/research_YYYY-MM-DD.json, one per executed daily research run between 2026-06-22 and 2026-09-16. Each holds that day's discovery, scoring and selection summary.",
+      "consumer": "Produced by scripts/research/run_daily_research.py:253 `report_path = Path(f'reports/research_{date}.json')` and committed by daily_signal_research.yml:106 (`git add ... reports/research_*.json ...`). Consumed by humans and by the operational history; no code reads them back.",
+      "evidence": "scripts/research/run_daily_research.py:253; daily_signal_research.yml:106; commit 265d658 'research: daily signal update 2026-09-16' adds reports/research_2026-09-16.json. The group is uniform: every member matches reports/research_<ISO date>.json, has the same producer line and the same commit mechanism. Sample rows: reports/research_2026-06-22.json (earliest), reports/research_2026-08-20.json, reports/research_2026-09-16.json (latest, added by 265d658).",
+      "canonical": "canonical run history, tracked on purpose by an explicit `git add` pattern",
+      "action_required": "None. This is the one large reports/ group whose tracking is deliberate and expressed in the workflow that commits it. Retention policy (how many days to keep) is worth deciding before it grows further."
+    },
+    {
+      "paths_file": "reports/repository_audit/paths/content_packages_research_signal_records.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "47 per-signal content packages, reports/content_packages/<16-hex signal id>.json: the prepared blog/social payloads and image references for a researched signal.",
+      "consumer": "Produced by scripts/research/prepare_content.py:14,35 (`Output per signal: reports/content_packages/{SIGNAL_ID}.json`) and committed by daily_signal_research.yml:106 (`git add ... reports/content_packages/*.json`). Read back by scripts/research/publish_packages.py:42 PACKAGES_DIR at Stage 11, and by scripts/generate_and_publish.py:394 when a run is resumed for that signal.",
+      "evidence": "scripts/research/prepare_content.py:14-16,35; scripts/research/publish_packages.py:42; scripts/generate_and_publish.py:394. The group is uniform: every member is a 16-hex signal id with no suffix, one producer, one commit pattern. Sample rows: reports/content_packages/14312088307d8685.json, reports/content_packages/9d9bbaacdde4f7a9.json, reports/content_packages/f5eddf1f8c2478da.json (added 2026-09-16 by 265d658).",
+      "canonical": "canonical per-signal package records",
+      "action_required": "None for reachability. As with the daily reports, a retention policy is worth deciding."
+    },
+    {
+      "paths_file": "reports/repository_audit/paths/content_packages_generated_records.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "8 flat generated-package records, reports/content_packages/<16-hex signal id>_generated.json: the cross-platform payload (headline, blog article, LinkedIn/Facebook/Instagram/Threads/Telegram text) that research Stage 11 produced for one signal.",
+      "consumer": "Producer, current and not historical: scripts/research/publish_packages.py:288 `generated_path = PACKAGES_DIR / f'{sig_id}_generated.json'` <- run_daily_research.py:191-202 <- daily_signal_research.yml:85, committed by daily_signal_research.yml:106 (`git add ... reports/content_packages/*.json`, which matches the `_generated` suffix). Reader: scripts/smoke_test_publish_analytics.py:61 `_load_generated()` opens exactly this path for the `--signal-id` it is given <- smoke_test_full_cycle.yml:81, which checks the same path exists at :56 and uploads it at :154. research_generate_and_publish.yml:224 and monday_publish.yml:327 upload the same path as a run artifact. scripts/smoke_test_wix_image.py:36 uses the convention for its own (untracked) fixture.",
+      "evidence": "scripts/research/publish_packages.py:288; scripts/smoke_test_publish_analytics.py:55,61; smoke_test_full_cycle.yml:7,56,81,154. The group is uniform: every member is a 16-hex signal id with the `_generated` suffix, one producer, one commit pattern. `git log --diff-filter=A` dates the samples to the daily research workflow's own commits — 925b8d4842ecb439_generated.json to f275dec 'research: daily signal update 2026-09-14', 40bffc5a22c0e2d1_generated.json to a619ccc (2026-09-11), d28e5cdad72f0346_generated.json to d5dc366 (2026-09-07).",
+      "canonical": "current Stage 11 output, tracked by the same explicit `git add` pattern as the per-signal packages",
+      "action_required": "None for reachability. A retention policy is worth deciding with the other tracked reports/ groups (F-02). Note that these are NOT the input to the canonical entrypoint's `--legacy-package` adapter: that adapter is accepted by the CLI and then unconditionally rejected before its loader can run, so the reader above is the only one. F-15."
+    },
+    {
+      "paths_file": "reports/repository_audit/paths/content_packages_visibility_records.txt",
+      "classification": "ACTIVE_SUPPORT",
+      "purpose": "6 visibility packages, reports/content_packages/vis_00N_generated.json — the generated payload of each Visibility Intelligence run, one per item drained from visibility_queue.jsonl.",
+      "consumer": "Produced by scripts/generate_and_publish_visibility.py:426-427 (PACKAGES_DIR at :62) and committed by visibility_publish.yml:102 (`git add reports/content_packages/ || true`) on the Tue/Thu cron. No code reads them back; the demonstrated consumer is the run record that points at them: the same script writes the exact path into the immutable history entry at :479 (`\"generated_package_path\": str(pkg_path)`), and all six paths are present verbatim in the tracked data/strategy/visibility_history.jsonl, one per line. A human auditing a VI publication reaches the payload through that field. Deleting a package would leave a tracked history entry naming a path that no longer exists.",
+      "evidence": "scripts/generate_and_publish_visibility.py:62, :426-427, :479; data/strategy/visibility_history.jsonl lines 1-6, each carrying `\"generated_package_path\": \"reports/content_packages/vis_00N_generated.json\"`; visibility_publish.yml:4-8 (cron), :102. The group is uniform: six sequentially numbered vis_00N items from one producer, one commit mechanism. Rows: vis_001_generated.json through vis_006_generated.json.",
+      "canonical": "canonical per-item visibility run records, addressed by the history file",
+      "action_required": "Two notes, neither blocking. (1) The comment at scripts/generate_and_publish_visibility.py:425 justifies the write as being 'for audit trail + --from-package retry'; the audit-trail half is real (:479), the retry half is not — main() at :344-347 exposes only --item-id and --dry-run, and no `--from-package` flag or read-back exists in this script. F-15. (2) The workflow's unbounded `git add reports/content_packages/` (visibility_publish.yml:102) is the mechanism that can sweep in anything else left in that directory — the same mechanism as F-02."
+    },
+    {
+      "paths_file": "reports/repository_audit/paths/card_audit_renders.txt",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "26 PNG renders (3.1 MB) of the quote-card templates before and after a visual change, produced for one human comparison.",
+      "consumer": "NONE. Produced by scripts/render_card_audit.py:48 `OUT = REPO / 'reports' / 'card_audit'`, which itself has no workflow and no importer. No test, script or workflow reads these images.",
+      "evidence": "scripts/render_card_audit.py:1-14,48,260-265. Decisive: strategy/decision_log.md decision 97 (2026-08-07) records the owner's decision that `reports/card_audit/` was DELIBERATELY left untracked — '26 PNG (3.1 MB) ... не добавлен в .gitignore и не закоммичен — статус untracked сохраняется до отдельного решения' — and the Часть 22 status line repeats it. They were nevertheless committed ten days later by ffe199a (2026-08-17). The group is uniform: one producer, one directory, one commit. Sample rows: reports/card_audit/grid_preview_before.png, reports/card_audit/quote_card_after.png, reports/card_audit/very_long_comparison.png.",
+      "canonical": "the repository contradicts a recorded decision; the decision is the authority",
+      "action_required": "Untrack and add to .gitignore, restoring decision 97 — or supersede decision 97 with a new recorded decision. Either is fine; the current state is neither. F-02b."
+    },
+    {
+      "paths_file": "reports/repository_audit/paths/test_run_records_sig-test-001.txt",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "4,702 run-scoped artifacts under reports/content_packages/sig-test-001/runs/<uuid4>/ — business_strategy.json, generated.json, editorial_acceptance.json, assignment.json, publication_results.json, run_report.json — each written by one execution of the canonical entrypoint under the fixed test signal id `sig-test-001`. They are test debris, not product artifacts.",
+      "consumer": "NONE. No workflow, script, test or document reads any path in this group. They are not fixtures: tests build their own inputs and, where they are careful, redirect PACKAGES_DIR to tmp_path (tests/test_research_artifact_lifecycle.py:371-541 does exactly this).",
+      "evidence": "The producer chain is exact: tests/test_generate_and_publish.py:40 sets `_SIGNAL_ID = 'sig-test-001'`; scripts/generate_and_publish.py:320 defines `PACKAGES_DIR = Path('reports/content_packages')` as a RELATIVE path and :321 mkdirs it at import; :1052 `resolve_run_dir(PACKAGES_DIR, signal_id, run_ctx.run_id)` creates one directory per run id; src/artifacts/__init__.py:9 documents the layout. tests/conftest.py isolates credentials and does not isolate the filesystem, so a suite run from the repository root writes here. Every member of this group matches reports/content_packages/sig-test-001/runs/<uuid>/<one of six fixed filenames> — verified: the 7,796 paths across both test namespaces contain exactly six distinct basenames (business_strategy.json 2422, generated.json 2263, editorial_acceptance.json 1343, assignment.json 1263, publication_results.json 469, run_report.json 36). They entered the repository in a single commit, ffe199a (2026-08-17, 7,830 files, 917,551 insertions), whose subject is a 69-line change to src/reporting/run_report.py. Sample rows: reports/content_packages/sig-test-001/runs/0088997f-d636-401d-8bbb-6e8118f470e7/generated.json, .../010ea427-2e94-45a4-9c8e-3a488ebe4561/generated.json, .../013a0786-dbe8-4d54-8003-4b6e59599dd1/editorial_acceptance.json.",
+      "canonical": "not canonical anything; accidental",
+      "action_required": "HIGHEST by volume. Untrack, and ignore the test namespaces in .gitignore using the same explicit pattern data/ already uses. Ongoing cost is real: commit dd54dc5 (#223, a two-line change to src/utils/config_loader.py) shipped 145 files and 864 insertions/deletions, all of it this debris. F-02."
+    },
+    {
+      "paths_file": "reports/repository_audit/paths/test_run_records_sig-identity-test-001.txt",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "3,094 run-scoped artifacts under reports/content_packages/sig-identity-test-001/runs/<uuid4>/, the same six filenames, from the run-identity suite's executions of the canonical entrypoint.",
+      "consumer": "NONE. No workflow, script, test or document reads any path in this group.",
+      "evidence": "Same producer chain as the sig-test-001 group: tests/test_run_identity.py uses this signal id; scripts/generate_and_publish.py:320,1052; src/artifacts/__init__.py:9. Entered in ffe199a and were re-touched by the three rebases of #223 (dd54dc5, 299e747, 39043ea), which is the direct evidence that the debris keeps re-entering diffs. tests/test_run_identity.py in its CURRENT form redirects PACKAGES_DIR to tmp_path in thirteen places (:589-1344), so the suite as it stands today is careful; the tracked files predate that. Sample rows: reports/content_packages/sig-identity-test-001/runs/0015efbb-d5f8-4f06-8dad-968702d2fef4/business_strategy.json, .../001a902f-f86b-4b37-93c0-b94d95c67ed2/generated.json, .../00672d61-7380-4705-85ac-ddaee3da616a/assignment.json.",
+      "canonical": "not canonical anything; accidental",
+      "action_required": "Untrack and ignore with the sig-test-001 group in the same follow-up. F-02."
+    }
+  ]
+}

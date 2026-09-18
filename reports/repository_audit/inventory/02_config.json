@@ -1,0 +1,395 @@
+{
+  "shard": "config",
+  "commit": "4a121b2b63983d91581bf241234f9a02647124ce",
+  "scope": "config/**",
+  "note": "Reachability here means the file is opened on a path a workflow can execute. `src/utils/config_loader.py` has exactly two readers — load_yaml (:11) and load_prompt (:38) — and both read YAML only; no loader in the repository can read Markdown as configuration. One correction to the method, applied throughout this shard: a loader that REFUSES a file is not evidence that the file has no purpose. The three prompts carrying `status: not_needed` are refused by design — config_loader.py:49-53 raises a ValueError quoting the file's own `decision` field — and each states in its own text, in band, why it is kept: the architectural decision it records. What each then says about the implementing code is a separate claim and is not what this classification rests on — F-16 proves it false for two of the three and stale for the third. They are LEGACY_INTENTIONAL, not DEAD_ORPHANED: the retention reason is in-band and the refusal is what proves they cannot become an accidental active path. DEAD_ORPHANED in this shard is reserved for artifacts that claim to be usable (`status: ready`, or a live entry in docs/SYSTEM_MAP.md) and have no consumer and no stated reason to exist.",
+  "entries": [
+    {
+      "path": "config/brand.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Brand identity: palette, fonts, logo, and the voice fields the legacy QC checks quote.",
+      "consumer": "`load_brand()` (config_loader.py:73) <- src/quality/voice.py:159 and src/quality/rewrite.py:56 <- src/quality/gate.py <- scripts/generate.py:353 <- scripts/scheduled_publish.py:226 (Friday cron). Also declared as prompt_rule_reference `brand-identity` (business_strategy.json:308-309), where only the version string is checked.",
+      "evidence": "src/utils/config_loader.py:73-74; src/quality/voice.py:20,159; src/quality/rewrite.py:20,56; scripts/generate.py:353.",
+      "canonical": "canonical for the legacy QC path only",
+      "action_required": "Its only executing consumer is the owner-paused Friday path. Nothing on Monday or Wednesday reads it."
+    },
+    {
+      "path": "config/brand_voice.md",
+      "classification": "PRODUCT_CONFIG_UNWIRED_PARTIAL",
+      "purpose": "The Never Blank voice contract: tone, forbidden openings, ~36 auto-fail phrases, hashtag policy, the article arc. Declared as an executable prompt rule.",
+      "consumer": "NONE. It is registered at strategy/current/business_strategy.json:313-314 as prompt_rule_reference `brand-voice` version `r1-2026-08-13`, and src/strategy/business_config.py:187-191 validates only the id, path and version strings. No code opens the path.",
+      "evidence": "`grep -rn 'brand_voice' src scripts` returns no read of the file; the only hit outside config/ is tests/test_cross_platform_overlap_policy.py:333, which reads it as text to assert a withdrawn sentence is absent. `git log --oneline -S brand_voice -- src scripts` returns nothing, so no commit in this repository's history has ever added or removed a reference to it under src/ or scripts/ — it has not been wired and then unwired; it was never wired. Fragments were hand-copied into src/editorial/narrative_spine.py and src/editorial/hook_engine.py and have drifted.",
+      "canonical": "declared authoritative for voice; not executable",
+      "action_required": "HIGH. Decide per #244: compile it into the runtime, or restamp it as authoring material with an explicit in-band line saying the runtime does not read it. Until then no published sentence is governed by it. F-03."
+    },
+    {
+      "path": "config/content_matrix.yaml",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "Unknown beyond its name; docs/SYSTEM_MAP.md:28 calls it 'Content matrix config'.",
+      "consumer": "NONE. `load_yaml('content_matrix.yaml')` appears nowhere. The only `content_matrix` loader call is `load_prompt('content_matrix')` (src/content/matrix.py:88), which resolves to config/prompts/content_matrix.yaml, a different file.",
+      "evidence": "src/utils/config_loader.py:46 builds prompt paths as CONFIG_DIR/'prompts'/f'{name}.yaml'; `grep -rn 'content_matrix.yaml' src scripts` matches nothing. Only docs/SYSTEM_MAP.md:28 names it.",
+      "canonical": "superseded by config/prompts/content_matrix.yaml",
+      "action_required": "Propose deletion in a follow-up, together with the SYSTEM_MAP line that keeps it looking alive. F-07."
+    },
+    {
+      "path": "config/intelligence.yaml",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "V1 'intelligence' settings.",
+      "consumer": "`load_intelligence()` (config_loader.py:89) is called from exactly one place: scripts/dry_run.py:82 — a developer self-check script that no workflow executes.",
+      "evidence": "`grep -rn 'load_intelligence' src scripts` -> config_loader.py:89 (definition), dry_run.py:26,82 (only call). scripts/dry_run.py is absent from every `.github/workflows/*.yml`, so this file is reached only when a developer runs that tool by hand.",
+      "canonical": "orphaned V1 config",
+      "action_required": "Decide with the owner whether the V1 intelligence layer is still intended. Note that scripts/dry_run.py itself is NOT proposed for deletion (it is a documented manual tool, and guardrail G-1 proposes adopting its check into CI) — it is this file, which nothing but that check has ever read, that has no demonstrated purpose. F-07."
+    },
+    {
+      "path": "config/never_blank/wednesday_golden.yaml",
+      "classification": "PRODUCT_CONFIG_UNWIRED_PARTIAL",
+      "purpose": "The configured Wednesday Golden product contract: the nine-stage reasoning movement, editorial prohibitions (including the 'no 5 lessons / 3 takeaways' bans), title contract, text shape and source policy.",
+      "consumer": "NONE in production. `WednesdayGoldenProfile.load(DEFAULT_PROFILE_PATH)` (src/never_blank/wednesday_golden.py:166-171) is the only reader, and the only callers are tests. Wednesday generation runs src/never_blank/wednesday_july/pipeline.py, whose compose_platforms takes a single structured-article argument and no rules at all.",
+      "evidence": "src/never_blank/wednesday_golden.py:26-31, :166-171; the module is imported into the process only as a side effect of src/never_blank/__init__.py:7 when scripts/generate_and_publish.py:175 imports src.never_blank.wednesday_july, and no production call site invokes load() or generation_rules(). #210 disclosed the disconnection. `grep -rn '5 lessons\\|3 takeaways' src/never_blank/wednesday_july/` finds nothing.",
+      "canonical": "duplicates acceptance_rubric_path / acceptance_rubric_identity with strategy/current/business_strategy.json:442-443, which is the wired copy",
+      "action_required": "HIGH. Blocked on the owner decision between July byte-fidelity (#207/#210) and the configured Golden contract. Do not change it here. F-04."
+    },
+    {
+      "path": "config/platforms.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Per-channel strategy for the legacy generator (role, length, blocks).",
+      "consumer": "`load_platforms()` (config_loader.py:85) <- src/internal/strategy.py:75 `build_content_brief` <- scripts/generate.py:35 <- scripts/scheduled_publish.py:226 (Friday cron).",
+      "evidence": "src/internal/strategy.py:16,75; scripts/generate.py:35.",
+      "canonical": "canonical for the legacy path only; the canonical streams use business_strategy.json channel_rules",
+      "action_required": "Its content conflicts with docs/PLATFORM_AND_VISUAL_STRATEGY.md and with the hard-coded ranges in src/editorial/platform_composer.py:52-55. F-03."
+    },
+    {
+      "path": "config/prompts/blog_post.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "The nine-step blog article prompt of the legacy generator.",
+      "consumer": "`load_prompt('blog_post')` <- src/content/generator.py:85 `generate_blog_post` <- `generate_content_package` <- scripts/generate.py <- scripts/scheduled_publish.py:226 (Friday cron), plus the dispatch-only generate_content.yml and generate_and_publish.yml.",
+      "evidence": "src/content/generator.py:85; scripts/generate.py:38. It is NOT reached by Monday or Wednesday: the canonical entrypoint composes through src/editorial/platform_composer.py and never calls load_prompt.",
+      "canonical": "canonical for the legacy Friday path; not applicable to Monday or Wednesday",
+      "action_required": "Belongs to the Friday decision (#144/#234). Do not change here."
+    },
+    {
+      "path": "config/prompts/content_matrix.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Prompt that turns a ContentBrief into the Content Matrix (core idea, mechanism, hooks, CTA mode) for the legacy generator.",
+      "consumer": "`load_prompt('content_matrix')` <- src/content/matrix.py:88 `generate_content_matrix` <- scripts/generate.py:318 <- Friday cron.",
+      "evidence": "src/content/matrix.py:88; scripts/generate.py:37,318.",
+      "canonical": "canonical for the legacy path",
+      "action_required": "none"
+    },
+    {
+      "path": "config/prompts/decision_lens/never_blank.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "The Decision Lens rubric: the business judgment that decides PROCEED / REJECT before any writing.",
+      "consumer": "src/editorial/decision_lens_evaluator.py:61 <- src/editorial/decision_lifecycle.py:45 <- scripts/generate_and_publish.py:192. It is reached only when the run has no role-bounded decision policy, i.e. on the role-less Fri/Sun research path; Monday and Wednesday both declare `decision_policy: role_bounded_r1` (business_strategy.json:393, :444) and take the bypass at scripts/generate_and_publish.py:1286.",
+      "evidence": "src/editorial/decision_lens_evaluator.py:61; scripts/generate_and_publish.py:1280-1336.",
+      "canonical": "canonical for the role-less path",
+      "action_required": "Note the contract mismatch: docs/DECISION_LENS_CONTRACT.md describes the Lens as the mandatory gate, and two of three canonical streams bypass it. F-12."
+    },
+    {
+      "path": "config/prompts/editorial_acceptance/never_blank.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Monday's editorial acceptance rubric: reviewer instructions and reviser instructions for the one controlled revision.",
+      "consumer": "`EditorialAcceptanceRubric.load(DEFAULT_RUBRIC_PATH)` — src/editorial/editorial_acceptance.py:52 <- scripts/generate_and_publish.py (`run_editorial_acceptance`) <- monday_publish.yml:271.",
+      "evidence": "src/editorial/editorial_acceptance.py:52. It is the ONLY configuration file whose own text reaches a Monday model message: the two calls it feeds (reviewer, reviser) are the two exceptions among the fifteen Monday model calls, and the other thirteen take their system prompt from a Python string constant in their own stage module.",
+      "canonical": "canonical Monday acceptance rubric",
+      "action_required": "The reviser it configures rewrites the published Wix prose with this rubric but with neither editorial role rules nor brand voice — src/editorial/editorial_acceptance.py:52 is its only configuration read."
+    },
+    {
+      "path": "config/prompts/editorial_acceptance/never_blank_golden_wednesday.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Wednesday's Golden acceptance rubric: reviewer and reviser instructions.",
+      "consumer": "Selected by `acceptance_rubric_path` on the Wednesday role — strategy/current/business_strategy.json:442 -> run_editorial_acceptance <- scripts/generate_and_publish.py <- wednesday_golden.yml:211.",
+      "evidence": "strategy/current/business_strategy.json:442-443; tests/test_wednesday_golden.py:54 and tests/test_wednesday_diagnostics.py:63 pin the same path.",
+      "canonical": "canonical Wednesday acceptance rubric — and the ONLY configuration that reaches any Wednesday model message",
+      "action_required": "none; it is the one wired half of the Wednesday contract."
+    },
+    {
+      "path": "config/prompts/facebook_post.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Facebook post prompt for the legacy generator.",
+      "consumer": "`load_prompt('facebook_post')` <- src/content/generator.py:151 <- scripts/generate.py <- Friday cron.",
+      "evidence": "src/content/generator.py:151.",
+      "canonical": "legacy generator only; the canonical entrypoint composes Facebook text as an empty string (scripts/generate_and_publish.py:1920)",
+      "action_required": "Friday decision (#234)."
+    },
+    {
+      "path": "config/prompts/image_generation.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Image-model prompt and the shared style suffix for every generated visual.",
+      "consumer": "src/publishing/image_pipeline.py:43 IMG_GEN_PROMPT, read at :437 and :583 <- the canonical entrypoint's visual stage <- Monday, Wednesday, Visibility and the research pipeline.",
+      "evidence": "src/publishing/image_pipeline.py:43,437,583; scripts/generate_image.py:107 checks for its presence.",
+      "canonical": "canonical visual prompt",
+      "action_required": "none"
+    },
+    {
+      "path": "config/prompts/image_hook.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "A record of the decision NOT to make an LLM call for the image hook. The file states its own retention reason — 'This file is retained for documentation of the architectural decision' (:3-7) — and the decision it records (:9-13) still holds in production: the hook is derived deterministically from the observation. Its `implementation_note` (:15-17) is STALE and names nothing that exists: `src/content/image_builder.py` is not in the tree at this commit, and the character-based `brand_config.image.hook_max_chars` mechanism it describes is not how the hook is produced. The live implementation is `src/publishing/image_pipeline.py:596` `hook = trim_hook_text(observation)`, word-based (`:172-182`, HOOK_MAX_WORDS 7, hard ceiling 10). `config/brand.yaml:36 image.hook_max_chars: 80` has no reader anywhere in src/, scripts/ or tests/.",
+      "consumer": "Humans, deliberately and in-band. It is not loadable by design: `status: not_needed` (:2) makes src/utils/config_loader.py:49-53 raise a specific ValueError quoting the file's own `decision` field, so the reason for the absence is what a caller receives. scripts/dry_run.py:101 asserts the three not_needed prompts still raise. The loader refusal proves it is not an accidental active path, which is what this classification requires; it does not make the file's implementation_note true.",
+      "evidence": "config/prompts/image_hook.yaml:2, :3-7, :9-13, :15-17; src/utils/config_loader.py:49-53; scripts/dry_run.py:101. Verified absent: `src/content/image_builder.py` (not in the tree at 4a121b2). Verified live instead: src/publishing/image_pipeline.py:172-182 (trim_hook_text, word-based), :596 (deterministic fallback calls it), :46-47 (HOOK_MAX_WORDS 7 / HOOK_MAX_WORDS_HARD 10). Verified unread: config/brand.yaml:36 `image.hook_max_chars` has no consumer in src/, scripts/ or tests/.",
+      "canonical": "intentionally retained decision record whose recorded decision still holds; its implementation pointer is stale — the live implementation is src/publishing/image_pipeline.py",
+      "action_required": "Do NOT propose deletion: the decision it records is still the production behaviour, and a deliberately disabled execution path is not an absence of purpose. Two separate defects, neither of them a reason to delete this file: docs/SYSTEM_MAP.md:46 lists it as a live prompt (F-07), and its own implementation_note points at a module that does not exist and a mechanism that was replaced (F-16). Repairing the note would edit a source YAML, which #233 may not do."
+    },
+    {
+      "path": "config/prompts/instagram_caption.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Instagram caption prompt for the legacy generator.",
+      "consumer": "`load_prompt('instagram_caption')` <- src/content/generator.py:142 <- scripts/generate.py <- Friday cron.",
+      "evidence": "src/content/generator.py:142.",
+      "canonical": "legacy generator only",
+      "action_required": "Friday decision (#234)."
+    },
+    {
+      "path": "config/prompts/linkedin_post.yaml",
+      "classification": "SUSPICIOUS_UNRESOLVED",
+      "purpose": "Ostensibly the LinkedIn post prompt of the legacy generator. In practice it is also the only thing currently stopping a scheduled six-channel publication, which is not a purpose anyone chose.",
+      "consumer": "`load_prompt('linkedin_post')` <- src/content/generator.py:134 `generate_linkedin` <- `generate_content_package` <- scripts/generate.py <- scripts/scheduled_publish.py:226 step 1, which is `abort_on_fail=True`. So the file IS reached by the Friday cron, and the load raises.",
+      "evidence": "src/content/generator.py:134; scripts/scheduled_publish.py:226-241; scheduled_publish.yml:23-24. Three independent in-repo records state it does not parse: tests/test_cross_platform_overlap_policy.py:312-320 ('that file does not currently parse as YAML (an inline #hashtag truncates a scalar around line 64), a pre-existing defect on the non-R1 generate_content_package path'), the #234 forensic §4, and the owner's verification comment of 2026-09-15, which quotes the PyYAML error. The mechanism is visible at config/prompts/linkedin_post.yaml:63-67, where ` #success` and ` #PresenceDebt)` start YAML comments inside block-sequence scalars. I could not execute a parse in this environment; the classification rests on those three records plus the readable mechanism.",
+      "canonical": "unresolved: config, or an accidental brake",
+      "action_required": "HIGH, and the action is NOT to fix the YAML. The owner recorded on 2026-09-15 that it must not be repaired as part of current work, because repairing it re-enables a six-channel publisher that no allowlist covers. The real repair is the missing control in front of scheduled_publish.yml. F-01."
+    },
+    {
+      "path": "config/prompts/observation_discovery.yaml",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "V1 prompt for discovering 'observations' before the research pipeline existed. Marked `status: ready`.",
+      "consumer": "NONE. The only mention in the tree is scripts/dry_run.py:96, a manual self-check that merely loads it to see whether it parses — parsing is not consumption, and unlike the three retained decision records this file claims `status: ready`, i.e. it presents itself as usable.",
+      "evidence": "`grep -rn 'observation_discovery' src scripts` -> scripts/dry_run.py:96 only. docs/SYSTEM_MAP.md:55 still lists it under 'Research & Discovery'.",
+      "canonical": "superseded by config/prompts/research/*.yaml",
+      "action_required": "Propose deletion with the SYSTEM_MAP lines. F-07."
+    },
+    {
+      "path": "config/prompts/observation_score.yaml",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "V1 observation scoring prompt. Marked `status: ready`.",
+      "consumer": "NONE. Only scripts/dry_run.py:96.",
+      "evidence": "`grep -rn 'observation_score' src scripts` -> scripts/dry_run.py:96 only; docs/SYSTEM_MAP.md:56.",
+      "canonical": "superseded by config/prompts/research/score.yaml",
+      "action_required": "Propose deletion. F-07."
+    },
+    {
+      "path": "config/prompts/qc_factuality.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Factual-risk QC prompt.",
+      "consumer": "`load_prompt('qc_factuality')` <- src/quality/factuality.py:70 <- src/quality/gate.py <- scripts/generate.py:353 (`--qc`) <- Friday cron.",
+      "evidence": "src/quality/factuality.py:70; scripts/generate.py:353.",
+      "canonical": "legacy QC only",
+      "action_required": "No canonical stream runs this QC gate."
+    },
+    {
+      "path": "config/prompts/qc_voice.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Voice QC prompt; quotes config/brand.yaml at call time.",
+      "consumer": "`load_prompt('qc_voice')` <- src/quality/voice.py:161 <- src/quality/gate.py <- scripts/generate.py:353 <- Friday cron.",
+      "evidence": "src/quality/voice.py:159-161.",
+      "canonical": "legacy QC only",
+      "action_required": "src/quality/voice.py:28-70 is the only code encoding config/brand_voice.md's forbidden phrases, and it is reached only from scripts/generate.py:353 (the legacy Friday path), never from the canonical entrypoint."
+    },
+    {
+      "path": "config/prompts/research/angles.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Stage 5 angle-generation prompt for the daily research pipeline.",
+      "consumer": "`load_prompt('research/angles')` <- scripts/research/angles.py:36 <- scripts/research/run_daily_research.py <- daily_signal_research.yml:85.",
+      "evidence": "scripts/research/angles.py:36.",
+      "canonical": "canonical research prompt",
+      "action_required": "none"
+    },
+    {
+      "path": "config/prompts/research/content_package.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Prompt that builds the per-signal content package in the research pipeline.",
+      "consumer": "`load_prompt('research/content_package')` <- scripts/research/prepare_content.py:63 <- run_daily_research.py:191 <- daily_signal_research.yml:85.",
+      "evidence": "scripts/research/prepare_content.py:63.",
+      "canonical": "canonical research prompt",
+      "action_required": "none"
+    },
+    {
+      "path": "config/prompts/research/enrich.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Stage 4 enrichment prompt.",
+      "consumer": "`load_prompt('research/enrich')` <- scripts/research/enrich.py:76 <- run_daily_research.py <- daily_signal_research.yml:85.",
+      "evidence": "scripts/research/enrich.py:76.",
+      "canonical": "canonical research prompt",
+      "action_required": "none"
+    },
+    {
+      "path": "config/prompts/research/score.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Model-side scoring prompt for research candidates (the deterministic weights live in config/scoring_weights.yaml).",
+      "consumer": "`load_prompt('research/score')` <- scripts/research/score.py:40 <- run_daily_research.py <- daily_signal_research.yml:85.",
+      "evidence": "scripts/research/score.py:40.",
+      "canonical": "canonical research prompt",
+      "action_required": "none"
+    },
+    {
+      "path": "config/prompts/research/signal_enrichment.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Discovery-time enrichment prompt.",
+      "consumer": "`load_prompt('research/signal_enrichment')` <- scripts/research/discover.py:130 <- run_daily_research.py <- daily_signal_research.yml:85.",
+      "evidence": "scripts/research/discover.py:130.",
+      "canonical": "canonical research prompt",
+      "action_required": "none"
+    },
+    {
+      "path": "config/prompts/research/signal_selector.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Discovery-time signal-selection prompt.",
+      "consumer": "`load_prompt('research/signal_selector')` <- scripts/research/discover.py:99 <- run_daily_research.py <- daily_signal_research.yml:85.",
+      "evidence": "scripts/research/discover.py:99.",
+      "canonical": "canonical research prompt",
+      "action_required": "none"
+    },
+    {
+      "path": "config/prompts/rewrite_with_feedback.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Rewrite prompt applied when the legacy QC gate fails content.",
+      "consumer": "`load_prompt('rewrite_with_feedback')` <- src/quality/rewrite.py:58 <- src/quality/gate.py <- scripts/generate.py:353 <- Friday cron.",
+      "evidence": "src/quality/rewrite.py:58.",
+      "canonical": "legacy QC only",
+      "action_required": "none"
+    },
+    {
+      "path": "config/prompts/stories_post.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Instagram/Telegram Stories frames prompt for the legacy generator.",
+      "consumer": "`load_prompt('stories_post')` <- src/content/generator.py:176 <- scripts/generate.py <- Friday cron.",
+      "evidence": "src/content/generator.py:176.",
+      "canonical": "legacy generator only",
+      "action_required": "The four accepted baseline failures in tests/accepted_full_suite_failures.txt are all in this generator's Telegram/Stories tests."
+    },
+    {
+      "path": "config/prompts/strategy_brief.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "A record of the decision that ContentBrief construction is deterministic and needs no LLM call (:3-5). The decision holds and the module it names exists: src/internal/strategy.py builds the brief with no model call. Two of its recorded rules are true — tag assignment from strategy.yaml `tag_assignment` (strategy.py:38-53) and a slug generated from the title under strategy.yaml `slug.max_length` (:22-35, :77-79). Three are FALSE at this commit: slug uniqueness is never checked against memory/published.json (generate_slug does no uniqueness check, and strategy.py imports only load_brand/load_strategy/load_platforms, never src/internal/memory.py); the platform set comes from `topic.platform_fit`, not from a strategy.yaml `platform_format` mapping; and the content goal comes from `topic.content_goal`, not from a `content_goal_by_observation_type` mapping. Both named config keys exist (config/strategy.yaml:31, :43) and have no reader anywhere in src/, scripts/ or tests/.",
+      "consumer": "Humans, in-band. Unloadable by design: `status: not_needed` (:2) makes config_loader.py:49-53 raise a ValueError quoting the file's own `decision`. scripts/dry_run.py:101 asserts it still raises.",
+      "evidence": "config/prompts/strategy_brief.yaml:2, :3-5, :7-12, :14-16; src/utils/config_loader.py:49-53; scripts/dry_run.py:101. Verified true: src/internal/strategy.py:38-53 (tag_assignment), :22-35 and :77-79 (slug from title, strategy.yaml slug.max_length). Verified false: no `published.json` or memory import in src/internal/strategy.py (its imports are at :14-17); the brief takes `platforms=topic.platform_fit` and `content_goal=topic.content_goal` (:106, :112 region). Verified unread: config/strategy.yaml:31 `platform_format` and :43 `content_goal_by_observation_type` have no consumer in src/, scripts/ or tests/.",
+      "canonical": "intentionally retained decision record; the module it names is real, three of its recorded rules are stale",
+      "action_required": "Do not propose deletion. Defects recorded elsewhere: docs/SYSTEM_MAP.md:32 lists it as a live prompt (F-07); three of its recorded rules no longer describe src/internal/strategy.py, and the two config keys they name are unread (F-16). Repairing the record would edit a source YAML, which #233 may not do."
+    },
+    {
+      "path": "config/prompts/telegram_post.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Telegram post prompt for the legacy generator.",
+      "consumer": "`load_prompt('telegram_post')` <- src/content/generator.py:170 <- scripts/generate.py <- Friday cron.",
+      "evidence": "src/content/generator.py:170.",
+      "canonical": "legacy generator only; the canonical entrypoint builds Telegram text deterministically (scripts/generate_and_publish.py:1923)",
+      "action_required": "Friday decision (#234)."
+    },
+    {
+      "path": "config/prompts/threads_post.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Threads sequence prompt for the legacy generator.",
+      "consumer": "`load_prompt('threads_post')` <- src/content/generator.py:158 <- scripts/generate.py <- Friday cron.",
+      "evidence": "src/content/generator.py:158; tests/test_cross_platform_overlap_policy.py:328 reads it as text to assert a withdrawn rule stays withdrawn.",
+      "canonical": "legacy generator only",
+      "action_required": "Friday decision (#234)."
+    },
+    {
+      "path": "config/prompts/topic_extract.yaml",
+      "classification": "DEAD_ORPHANED",
+      "purpose": "V1 topic-extraction prompt. Marked `status: ready`.",
+      "consumer": "NONE. Only scripts/dry_run.py:97.",
+      "evidence": "`grep -rn 'topic_extract' src scripts` -> scripts/dry_run.py:97 only; docs/SYSTEM_MAP.md:57.",
+      "canonical": "superseded by the research pipeline",
+      "action_required": "Propose deletion. F-07."
+    },
+    {
+      "path": "config/prompts/topic_score.yaml",
+      "classification": "LEGACY_INTENTIONAL",
+      "purpose": "A record of a PLANNED deterministic design, not of an implementation. It states that topic scoring needs no LLM call (:3-5) and describes a weighted formula with cosine-similarity relevance and a diversity adjustment (:9-13). Nothing in the tree implements it: `src/internal/topic_scorer.py`, named as the place where 'all computations happen', does not exist at this commit, and src/internal/topic_prioritizer.py:64,74 records that the Intelligence Engine is a stub — 'Intelligence Engine not wired yet (Phase 7)'. The weights source it names, config/intelligence.yaml (:8-11, :15-17), is classified DEAD_ORPHANED by this audit: its only reader is the developer self-check scripts/dry_run.py:82. The scoring that does run elsewhere in the repository (scripts/research/score.py, src/never_blank/wednesday_july/research/score.py) reads config/scoring_weights.yaml, a different file, and is not what this record describes.",
+      "consumer": "Humans, in-band. Unloadable by design: `status: not_needed` (:2) makes config_loader.py:49-53 raise a ValueError quoting the file's own `decision`. scripts/dry_run.py:101 asserts it still raises.",
+      "evidence": "config/prompts/topic_score.yaml:2, :3-5, :9-13, :15-17; src/utils/config_loader.py:49-53; scripts/dry_run.py:101. Verified absent: `src/internal/topic_scorer.py` (not in the tree at 4a121b2). Verified stub: src/internal/topic_prioritizer.py:64 ('Intelligence Engine (stub in Phase 7)'), :74 ('Intelligence Engine not wired yet'). Verified dead weights source: config/intelligence.yaml is DEAD_ORPHANED in this inventory (only reader scripts/dry_run.py:82). Verified different: scripts/research/score.py:19 and src/never_blank/wednesday_july/research/score.py:37 read config/scoring_weights.yaml.",
+      "canonical": "intentionally retained record of an unimplemented design; no implementation exists and its named weights source is dead",
+      "action_required": "Do not delete on this audit's authority, and do not treat it as documentation of a live implementation. It belongs to the Intelligence Engine question, not to the prompt set: retiring it is one decision together with config/intelligence.yaml and the topic_prioritizer stub (F-07 group), and the owner takes it. Its false implementation pointer is recorded in F-16. docs/SYSTEM_MAP.md:58 lists it as a live prompt (F-07)."
+    },
+    {
+      "path": "config/prompts/visibility/_format_modifiers.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "Per-content-format instruction fragments injected into the visibility prompt.",
+      "consumer": "`load_yaml('prompts/visibility/_format_modifiers.yaml')` <- src/editorial/vi_pipeline.py:67 `_load_format_modifier` -> substituted into the prompt at :81,89 <- scripts/generate_and_publish_visibility.py <- visibility_publish.yml:93.",
+      "evidence": "src/editorial/vi_pipeline.py:65-71, :81, :89.",
+      "canonical": "canonical visibility config",
+      "action_required": "The load is wrapped in a bare `except Exception` that returns '' (:69-71), so a broken file degrades silently rather than failing closed."
+    },
+    {
+      "path": "config/prompts/visibility/presence_check.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "System+user prompt for the `presence_check` visibility product category.",
+      "consumer": "`load_prompt(f'visibility/{queue_item.product_category.value}')` <- src/editorial/vi_pipeline.py:80-94 <- scripts/generate_and_publish_visibility.py <- visibility_publish.yml:93 (Tue/Thu cron). The category value is src/strategy/models.py:70.",
+      "evidence": "src/editorial/vi_pipeline.py:80,83; src/strategy/models.py:70.",
+      "canonical": "canonical visibility prompt",
+      "action_required": "none"
+    },
+    {
+      "path": "config/prompts/visibility/presence_script.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "System+user prompt for the `presence_script` visibility product category.",
+      "consumer": "Same dynamic dispatch as presence_check; category value at src/strategy/models.py:71.",
+      "evidence": "src/editorial/vi_pipeline.py:80,83; src/strategy/models.py:71.",
+      "canonical": "canonical visibility prompt",
+      "action_required": "none"
+    },
+    {
+      "path": "config/prompts/visibility/visibility_framework.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "System+user prompt for the `visibility_framework` visibility product category.",
+      "consumer": "Same dynamic dispatch; category value at src/strategy/models.py:72.",
+      "evidence": "src/editorial/vi_pipeline.py:80,83; src/strategy/models.py:72.",
+      "canonical": "canonical visibility prompt",
+      "action_required": "none"
+    },
+    {
+      "path": "config/quality.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "QC thresholds: deduplication similarity, observation cooldown, voice-drift alert level.",
+      "consumer": "`load_quality()` (config_loader.py:81) <- src/quality/gate.py:94,141 and src/internal/memory.py:203,274,306,570 <- scripts/generate.py <- Friday cron.",
+      "evidence": "src/quality/gate.py:28,94,141; src/internal/memory.py:202-203,273-274,305-306,569-570.",
+      "canonical": "legacy path only",
+      "action_required": "none"
+    },
+    {
+      "path": "config/research_sources.yaml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "RSS/feed source list for the daily research discovery stage (current small-business feeds).",
+      "consumer": "scripts/research/discover.py:26 SOURCES_CONFIG <- run_daily_research.py <- daily_signal_research.yml:85.",
+      "evidence": "scripts/research/discover.py:26. Deliberately NOT used by Wednesday: src/never_blank/wednesday_july/research/discover.py:45-47 comments that pointing at this file 'would hand Wednesday the' wrong feeds and uses its own research_sources_july.yaml instead.",
+      "canonical": "canonical for the daily research stream only",
+      "action_required": "none"
+    },
+    {
+      "path": "config/schedule.yaml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "The publish-window definition the Friday scheduler checks before running.",
+      "consumer": "scripts/scheduled_publish.py:32 CONFIG_PATH, read by `load_config()` at :180 <- scheduled_publish.yml:86-91 (Friday cron).",
+      "evidence": "scripts/scheduled_publish.py:32,180.",
+      "canonical": "canonical for Friday only",
+      "action_required": "Monday, Wednesday, Visibility and Research encode their windows in cron plus scripts/streams/due_check.py instead — two independent schedule authorities coexist. F-09."
+    },
+    {
+      "path": "config/scoring_weights.yaml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "Explainable rule-based scoring weights for research candidates.",
+      "consumer": "scripts/research/score.py:19 WEIGHTS_CONFIG <- run_daily_research.py <- daily_signal_research.yml:85. Also src/never_blank/wednesday_july/research/score.py:37, on the Wednesday supply path.",
+      "evidence": "scripts/research/score.py:19; src/never_blank/wednesday_july/research/score.py:37. tests/fixtures/wednesday_july/july_research_originals/scoring_weights.yaml.txt pins the July bytes of this file for the restoration tests.",
+      "canonical": "canonical, shared by two streams",
+      "action_required": "Shared by the canonical research stream and the byte-fidelity-protected Wednesday path; a change here changes both."
+    },
+    {
+      "path": "config/strategy.yaml",
+      "classification": "PRODUCT_CONFIG_WIRED",
+      "purpose": "V1 content strategy used to build a ContentBrief and to prioritise manual topics.",
+      "consumer": "`load_strategy()` (config_loader.py:77) <- src/internal/strategy.py:74 and src/internal/topic_prioritizer.py:30 <- scripts/generate.py:34-35 <- Friday cron.",
+      "evidence": "src/internal/strategy.py:16,74; src/internal/topic_prioritizer.py:5,30.",
+      "canonical": "legacy; superseded for the canonical streams by strategy/current/strategy.json",
+      "action_required": "Two files named 'strategy' with different formats and different consumers — see F-09."
+    },
+    {
+      "path": "config/visual_system.yaml",
+      "classification": "ACTIVE_RUNTIME",
+      "purpose": "The visual system: six card families, palette, per-format rhythm rules and the instagram_grid_qa regression rules.",
+      "consumer": "src/publishing/image_pipeline.py:42 VISUAL_SYSTEM, read through `_load_visual_system()` at :122,:535,:783,:1011,:1372 <- the canonical entrypoint's visual stage <- Monday, Wednesday, Visibility, research.",
+      "evidence": "src/publishing/image_pipeline.py:42,160,535; scripts/generate_image.py:102-105 fails closed if it is missing.",
+      "canonical": "canonical visual configuration",
+      "action_required": "none"
+    }
+  ]
+}
