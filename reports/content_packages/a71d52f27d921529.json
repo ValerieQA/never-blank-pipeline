@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "a71d52f27d921529",
+  "HEADLINE": "This 23-Year-Old Turned a Facebook Marketplace Find Into a Creative Household Product. It Exploded on Social Media and Made $150K in 2 Weeks.",
+  "prepared_at": "2026-09-18 12:51 UTC",
+  "content": {
+    "blog": {
+      "headline": "When Viral Hits Meet Real Business: Managing Growth Beyond the First $150K",
+      "angle": "A 23-year-old’s viral household product hit $150K fast, exposing the tension between explosive demand and operational limits, revealing that sustainable brands build systems as quickly as buzz."
+    },
+    "linkedin": {
+      "headline": "Most founders dream of going viral—few survive it.",
+      "angle": "Viral success can skyrocket sales overnight but often exposes gaps in operations and long-term planning, forcing founders to rethink how they scale beyond the hype."
+    },
+    "facebook": {
+      "headline": "A 23-year-old turned a Facebook Marketplace find into $150K in two weeks. But can the business keep up?",
+      "angle": "When a product explodes on social media like Brittany Skylar’s, the real question isn’t the sales spike—it’s whether the founder can handle the operational strain and sustain growth."
+    },
+    "instagram": {
+      "headline": "Viral Sales Are Just The Start",
+      "angle": "Behind every viral product is a founder scrambling to build systems that can handle the chaos and turn buzz into a lasting brand."
+    },
+    "threads": {
+      "thread_hook": "Going viral is easy. Staying relevant is the hard part.",
+      "angle": "This thread breaks down how viral brands like Brittany Skylar’s household product face the real test when demand outpaces their infrastructure—and what founders can learn to prepare."
+    },
+    "stories": {
+      "story_question": "Can your business handle a viral hit without crashing?",
+      "angle": "Exploring the tension between rapid viral growth and the operational capacity needed to sustain it, a critical challenge for founders chasing fast success."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735853/never-blank/posts/research/a71d52f27d921529/blog/1789735853.png",
+        "path": "reports/content_packages/images/a71d52f27d921529_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735858/never-blank/posts/research/a71d52f27d921529/linkedin/1789735857.png",
+        "path": "reports/content_packages/images/a71d52f27d921529_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735861/never-blank/posts/research/a71d52f27d921529/facebook/1789735861.png",
+        "path": "reports/content_packages/images/a71d52f27d921529_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735869/never-blank/posts/research/a71d52f27d921529/instagram/1789735868.png",
+        "path": "reports/content_packages/images/a71d52f27d921529_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735874/never-blank/posts/research/a71d52f27d921529/threads/1789735873.png",
+        "path": "reports/content_packages/images/a71d52f27d921529_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735883/never-blank/posts/research/a71d52f27d921529/stories/1789735883.png",
+        "path": "reports/content_packages/images/a71d52f27d921529_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "mountains_depth_layers",
+    "hook_text": "From a $20 find to $150K in two weeks."
+  }
+}

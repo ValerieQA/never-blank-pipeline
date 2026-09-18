@@ -1133,5 +1133,35 @@
     "visual_family": "particle_flow",
     "design_version": "3",
     "hook_text": "10,000 followers unlocks new pathways for creators."
+  },
+  "a71d52f27d921529": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735853/never-blank/posts/research/a71d52f27d921529/blog/1789735853.png",
+    "signal_type": "referral and word-of-mouth mechanism",
+    "headline": "This 23-Year-Old Turned a Facebook Marketplace Find Into a Creative Household Product. It Exploded on Social Media and Made $150K in 2 Weeks.",
+    "created_at": "2026-09-18",
+    "method": "gpt-image-1",
+    "visual_family": "mountains_depth_layers",
+    "design_version": "3",
+    "hook_text": "From a $20 find to $150K in two weeks."
+  },
+  "8652ff85b4fdb830": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735888/never-blank/posts/research/8652ff85b4fdb830/blog/1789735888.png",
+    "signal_type": "trust accumulation pattern",
+    "headline": "Visa Study Reveals Consumer Trust as Key to Future of AI Commerce",
+    "created_at": "2026-09-18",
+    "method": "quote_card",
+    "visual_family": "light_message_card",
+    "design_version": "3",
+    "hook_text": "AI can process your shopping cart in milliseconds, but it can lose your customer’s trust even faster."
+  },
+  "129aea0b9274415f": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735934/never-blank/posts/research/129aea0b9274415f/blog/1789735934.png",
+    "signal_type": "presence maintenance failure",
+    "headline": "I Failed at Going Global — But This 3-Step Framework Has Fueled Every Successful Expansion I’ve Led Since",
+    "created_at": "2026-09-18",
+    "method": "gpt-image-1",
+    "visual_family": "focus_rings",
+    "design_version": "3",
+    "hook_text": "Three steps to validate new markets before expansion."
   }
 }

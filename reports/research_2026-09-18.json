@@ -1,0 +1,505 @@
+{
+  "date": "2026-09-18",
+  "candidates_found": 10,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "This 23-Year-Old Turned a Facebook Marketplace Find Into a Creative Household Pr",
+    "Visa Study Reveals Consumer Trust as Key to Future of AI Commerce",
+    "I Failed at Going Global \u2014 But This 3-Step Framework Has Fueled Every Successful"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "a71d52f27d921529",
+      "headline": "This 23-Year-Old Turned a Facebook Marketplace Find Into a Creative Household Product. It Exploded on Social Media and Made $150K in 2 Weeks.",
+      "published_at": "2026-09-18 12:53 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/a71d52f27d921529_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735853/never-blank/posts/research/a71d52f27d921529/blog/1789735853.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735858/never-blank/posts/research/a71d52f27d921529/linkedin/1789735857.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735861/never-blank/posts/research/a71d52f27d921529/facebook/1789735861.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735869/never-blank/posts/research/a71d52f27d921529/instagram/1789735868.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735874/never-blank/posts/research/a71d52f27d921529/threads/1789735873.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735883/never-blank/posts/research/a71d52f27d921529/stories/1789735883.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "From a $20 find to $150K in two weeks.",
+      "image_visual_family": "mountains_depth_layers",
+      "image_method": "gpt-image-1"
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "publish_failures": [
+    "wix: 'DraftPackage' object has no attribute 'title'",
+    "linkedin: 'DraftPackage' object has no attribute 'linkedin_body'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "a71d52f27d921529",
+      "HEADLINE": "This 23-Year-Old Turned a Facebook Marketplace Find Into a Creative Household Product. It Exploded on Social Media and Made $150K in 2 Weeks.",
+      "prepared_at": "2026-09-18 12:51 UTC",
+      "content": {
+        "blog": {
+          "headline": "When Viral Hits Meet Real Business: Managing Growth Beyond the First $150K",
+          "angle": "A 23-year-old\u2019s viral household product hit $150K fast, exposing the tension between explosive demand and operational limits, revealing that sustainable brands build systems as quickly as buzz."
+        },
+        "linkedin": {
+          "headline": "Most founders dream of going viral\u2014few survive it.",
+          "angle": "Viral success can skyrocket sales overnight but often exposes gaps in operations and long-term planning, forcing founders to rethink how they scale beyond the hype."
+        },
+        "facebook": {
+          "headline": "A 23-year-old turned a Facebook Marketplace find into $150K in two weeks. But can the business keep up?",
+          "angle": "When a product explodes on social media like Brittany Skylar\u2019s, the real question isn\u2019t the sales spike\u2014it\u2019s whether the founder can handle the operational strain and sustain growth."
+        },
+        "instagram": {
+          "headline": "Viral Sales Are Just The Start",
+          "angle": "Behind every viral product is a founder scrambling to build systems that can handle the chaos and turn buzz into a lasting brand."
+        },
+        "threads": {
+          "thread_hook": "Going viral is easy. Staying relevant is the hard part.",
+          "angle": "This thread breaks down how viral brands like Brittany Skylar\u2019s household product face the real test when demand outpaces their infrastructure\u2014and what founders can learn to prepare."
+        },
+        "stories": {
+          "story_question": "Can your business handle a viral hit without crashing?",
+          "angle": "Exploring the tension between rapid viral growth and the operational capacity needed to sustain it, a critical challenge for founders chasing fast success."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735853/never-blank/posts/research/a71d52f27d921529/blog/1789735853.png",
+            "path": "reports/content_packages/images/a71d52f27d921529_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735858/never-blank/posts/research/a71d52f27d921529/linkedin/1789735857.png",
+            "path": "reports/content_packages/images/a71d52f27d921529_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735861/never-blank/posts/research/a71d52f27d921529/facebook/1789735861.png",
+            "path": "reports/content_packages/images/a71d52f27d921529_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735869/never-blank/posts/research/a71d52f27d921529/instagram/1789735868.png",
+            "path": "reports/content_packages/images/a71d52f27d921529_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735874/never-blank/posts/research/a71d52f27d921529/threads/1789735873.png",
+            "path": "reports/content_packages/images/a71d52f27d921529_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735883/never-blank/posts/research/a71d52f27d921529/stories/1789735883.png",
+            "path": "reports/content_packages/images/a71d52f27d921529_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "mountains_depth_layers",
+        "hook_text": "From a $20 find to $150K in two weeks."
+      }
+    },
+    {
+      "SIGNAL_ID": "8652ff85b4fdb830",
+      "HEADLINE": "Visa Study Reveals Consumer Trust as Key to Future of AI Commerce",
+      "prepared_at": "2026-09-18 12:51 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why Trust Is the Hard Currency of AI Commerce",
+          "angle": "Visa\u2019s study exposes a gap between AI innovation and consumer trust \u2014 businesses rushing AI risk alienating customers \u2014 those embedding transparency and ethics build loyalty \u2014 trust must be engineered, not marketed."
+        },
+        "linkedin": {
+          "headline": "AI can process your shopping cart in milliseconds, but it can lose your customer\u2019s trust even faster.",
+          "angle": "Rapid AI adoption in commerce clashes with consumer demand for transparency and ethics, forcing founders to rethink trust as a core product feature."
+        },
+        "facebook": {
+          "headline": "Visa\u2019s latest study reveals a stark truth: consumer trust is the real battleground for AI commerce.",
+          "angle": "With AI innovation accelerating, businesses face a choice \u2014 prioritize transparency and ethics or risk losing customers. How are you building trust in your AI strategy?"
+        },
+        "instagram": {
+          "headline": "Trust: The Real AI Commerce Currency",
+          "angle": "AI speed impresses, but only trust keeps customers coming back \u2014 founders must treat trust as a product feature, not a PR afterthought."
+        },
+        "threads": {
+          "thread_hook": "AI can scan your cart in milliseconds but lose your customer\u2019s trust just as fast.",
+          "angle": "This thread breaks down why Visa\u2019s study makes trust the defining factor in AI commerce success and how founders can build it into their AI strategies from day one."
+        },
+        "stories": {
+          "story_question": "Is your AI innovation costing you customer trust?",
+          "angle": "Explores the tension between moving fast with AI and the risk of losing customers without clear transparency and ethical safeguards."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735888/never-blank/posts/research/8652ff85b4fdb830/blog/1789735888.png",
+            "path": "reports/content_packages/images/8652ff85b4fdb830_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735889/never-blank/posts/research/8652ff85b4fdb830/linkedin/1789735888.png",
+            "path": "reports/content_packages/images/8652ff85b4fdb830_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735889/never-blank/posts/research/8652ff85b4fdb830/facebook/1789735889.png",
+            "path": "reports/content_packages/images/8652ff85b4fdb830_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735890/never-blank/posts/research/8652ff85b4fdb830/instagram/1789735890.png",
+            "path": "reports/content_packages/images/8652ff85b4fdb830_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735891/never-blank/posts/research/8652ff85b4fdb830/threads/1789735891.png",
+            "path": "reports/content_packages/images/8652ff85b4fdb830_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735892/never-blank/posts/research/8652ff85b4fdb830/stories/1789735892.png",
+            "path": "reports/content_packages/images/8652ff85b4fdb830_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "light_message_card",
+        "hook_text": "AI can process your shopping cart in milliseconds, but it can lose your customer\u2019s trust even faster."
+      }
+    },
+    {
+      "SIGNAL_ID": "129aea0b9274415f",
+      "HEADLINE": "I Failed at Going Global \u2014 But This 3-Step Framework Has Fueled Every Successful Expansion I\u2019ve Led Since",
+      "prepared_at": "2026-09-18 12:52 UTC",
+      "content": {
+        "blog": {
+          "headline": "Why Rapid Global Expansion Fails Without a Rigorous Framework",
+          "angle": "An entrepreneur\u2019s costly global misstep reveals the tension between the rush to scale internationally and the necessity of disciplined market validation, leading to a three-step framework that prioritizes research, local testing, and phased investment to ensure sustainable expansion."
+        },
+        "linkedin": {
+          "headline": "The fastest way to burn cash? Expanding internationally on gut instinct.",
+          "angle": "Founders chasing rapid global growth often overlook disciplined market validation, risking costly failures that a structured, phased approach can prevent."
+        },
+        "facebook": {
+          "headline": "Tried to grow globally too fast and failed? You\u2019re not alone.",
+          "angle": "An entrepreneur\u2019s failed global expansion highlights why skipping structured research and pilots leads to wasted resources\u2014how are you validating your next market?"
+        },
+        "instagram": {
+          "headline": "Global Growth Needs More Than Gut Instinct",
+          "angle": "Successful international expansion demands a three-step process: research, local validation, and phased investment\u2014not just speed."
+        },
+        "threads": {
+          "thread_hook": "Expanding globally without a plan is the fastest way to burn cash.",
+          "angle": "This thread breaks down why founders must treat international growth as a process, sharing a three-step framework that turns costly failures into repeatable success."
+        },
+        "stories": {
+          "story_question": "Are you risking everything by rushing global expansion?",
+          "angle": "Explores the tension between the urge to scale fast internationally and the need for careful market validation to avoid costly mistakes."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735934/never-blank/posts/research/129aea0b9274415f/blog/1789735934.png",
+            "path": "reports/content_packages/images/129aea0b9274415f_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735938/never-blank/posts/research/129aea0b9274415f/linkedin/1789735938.png",
+            "path": "reports/content_packages/images/129aea0b9274415f_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735942/never-blank/posts/research/129aea0b9274415f/facebook/1789735942.png",
+            "path": "reports/content_packages/images/129aea0b9274415f_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735949/never-blank/posts/research/129aea0b9274415f/instagram/1789735949.png",
+            "path": "reports/content_packages/images/129aea0b9274415f_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735955/never-blank/posts/research/129aea0b9274415f/threads/1789735955.png",
+            "path": "reports/content_packages/images/129aea0b9274415f_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735965/never-blank/posts/research/129aea0b9274415f/stories/1789735964.png",
+            "path": "reports/content_packages/images/129aea0b9274415f_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "focus_rings",
+        "hook_text": "Three steps to validate new markets before expansion."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "a71d52f27d921529",
+      "headline": "This 23-Year-Old Turned a Facebook Marketplace Find Into a Creative Household Product. It Exploded on Social Media and Made $150K in 2 Weeks.",
+      "published_at": "2026-09-18 12:53 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/a71d52f27d921529_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735853/never-blank/posts/research/a71d52f27d921529/blog/1789735853.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735858/never-blank/posts/research/a71d52f27d921529/linkedin/1789735857.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735861/never-blank/posts/research/a71d52f27d921529/facebook/1789735861.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735869/never-blank/posts/research/a71d52f27d921529/instagram/1789735868.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735874/never-blank/posts/research/a71d52f27d921529/threads/1789735873.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789735883/never-blank/posts/research/a71d52f27d921529/stories/1789735883.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "From a $20 find to $150K in two weeks.",
+      "image_visual_family": "mountains_depth_layers",
+      "image_method": "gpt-image-1"
+    }
+  ]
+}
