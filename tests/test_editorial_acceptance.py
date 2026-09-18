@@ -403,14 +403,16 @@ def test_revision_regenerates_no_other_channels(tmp_path):
     assert patches["generate_article"].call_count == 1
     generated = _generated(tmp_path)
     assert "Channel-discipline revised body." in generated["blog_article"]
-    # #197: the published social derivative follows the final accepted
-    # article — LinkedIn is re-composed (never regenerated wholesale, never
-    # kept stale); the non-R1 channels keep their originally generated
-    # bodies because nothing publishes them
+    # #197 + preview-readiness invariant: the social derivative follows the
+    # final accepted article — LinkedIn is derived once, after acceptance
+    # (never regenerated wholesale, never kept stale). No surface keeps a
+    # body composed beside the draft: Facebook and Instagram are not
+    # composed outside the owner-controlled preview, so they stay empty
+    # rather than carrying pre-review text.
     assert patches["recompose_platform"].call_count == 1
     assert generated["linkedin_post"].startswith("Re-composed social body")
-    assert generated["facebook_post"].startswith("Facebook post text.")
-    assert generated["instagram_caption"].startswith("Instagram caption text.")
+    assert generated["facebook_post"] == ""
+    assert generated["instagram_caption"] == ""
     # the revision request contained only the one article
     request = json.loads(revisor.calls[0]["request"])
     assert "article" in request and "platforms" not in request

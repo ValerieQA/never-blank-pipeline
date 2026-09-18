@@ -139,6 +139,7 @@ def test_without_an_accepted_title_nothing_is_invented(tmp_path):
     ("Hook line.\n\nBody.", TITLE),
     (f"{TITLE}\n\nBody.", TITLE),                      # already leads: unchanged
     (f"**{TITLE}**\n\nBody.", f"**{TITLE}**"),         # bold form counts too
+    (f"{TITLE} Here is why.\n\nBody.", f"{TITLE} Here is why."),  # #259 review
 ])
 def test_the_title_is_set_once_and_never_duplicated(body, expected_first):
     result = _lead_with_canonical_title(body, TITLE)

@@ -407,9 +407,10 @@ def test_the_linkedin_body_no_longer_receives_the_original_source_line(tmp_path)
     styles = [
         call.args[2] for call in patches["formatting"].source_line.call_args_list
     ]
-    # exactly two source-line applications remain: the blog's markdown Sources
-    # footer and the non-R1 Facebook body (out of scope, unchanged)
-    assert styles == ["blog_markdown", "bare_url"]
+    # one source-line application remains: the blog's markdown Sources
+    # footer. The non-R1 Facebook body is not composed outside the owner-
+    # controlled preview, and an empty body never receives a footer.
+    assert styles == ["blog_markdown"]
     # and the LinkedIn assembly no longer applies one at all
     entry_source = Path("scripts/generate_and_publish.py").read_text()
     li_block = entry_source.split("linkedin_text   = formatting.append_hashtags(")[1]

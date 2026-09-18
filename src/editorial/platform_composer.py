@@ -399,23 +399,24 @@ def _build_user_prompt(
     lines = [
         f"FORMAT: {format_key}",
         f"TARGET LENGTH: {lo}-{hi} words",
-        f"NARRATIVE SPINE (context, do not quote automatically): {structured_article.get('narrative_spine', '')}",
+        *(() if canonical_body else (
+            f"NARRATIVE SPINE (context, do not quote automatically): {structured_article.get('narrative_spine', '')}",
+        )),
         f"FORMAT RULES: {_FORMAT_CONSTRAINTS[format_key]}",
         f"CTA MODE: {cta_mode}",
         "",
-        "STRUCTURED FIELDS:",
+        "REQUIRED ELEMENTS:" if canonical_body else "STRUCTURED FIELDS:",
     ]
     if canonical_body:
         # #197: this composition is a DERIVATIVE of already-accepted
-        # long-form content (an editorial revision changed it after the
-        # structured outline was produced). The final content is the
-        # authority; the outline remains context.
+        # long-form content. The final content is the only source: the
+        # pre-review outline is not supplied at all (see the block loop).
         lines[:0] = [
             "FINAL CANONICAL CONTENT — the accepted long-form this "
             "composition must derive from. Its facts, framing and single "
             "mechanism are authoritative: never introduce a claim that is "
-            "not supported by it, and where the structured fields below "
-            "differ from it, the final content wins. Write this format's "
+            "not supported by it, and use nothing that is not in it. Write "
+            "this format's "
             "prose as your own derivative of that content rather than "
             "reproducing the long-form wholesale — a body that is simply "
             "the article trimmed to length is rejected. Individual "
@@ -438,6 +439,16 @@ def _build_user_prompt(
             + [""]
         )
     for block, mode in _BLOCK_TABLE[format_key].items():
+        # A derivative of final accepted content sees NONE of the pre-review
+        # outline: its narrative fields predate Editorial Acceptance, and a
+        # claim the reviewer removed from the article must not reach a
+        # social surface through them (controlled live run 35383199073: the
+        # reviewer removed "total engagement numbers drop" from the article;
+        # the pre-review Threads and Telegram texts still carried it).
+        # Only the elements a contract requires verbatim still travel —
+        # the Echo — and the CTA line the run's mode may require.
+        if canonical_body and block not in ("echo", "cta"):
+            continue
         content = _block_content(structured_article, block)
         if mode == "skip" or not content:
             continue

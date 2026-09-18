@@ -145,8 +145,9 @@ def test_the_canonical_run_requests_only_the_r1_formats(tmp_path):
     code, captured, hashtag_calls, _ = _reduced_entry(tmp_path)
 
     assert code == 0
-    # the entrypoint asked the engine for exactly the active R1 formats
-    assert captured["composer_formats"] == ("long", "medium")
+    # before acceptance the entrypoint asks only for the canonical article;
+    # LinkedIn is derived after acceptance from the accepted text
+    assert captured["composer_formats"] == ("long",)
     # and the only hashtag transport was for the published LinkedIn surface
     assert hashtag_calls == ["linkedin"]
 
@@ -173,8 +174,8 @@ def test_monday_and_wednesday_share_the_single_reduced_call_site():
     # or per-weekday format branching anywhere
     assert source.count("composer_formats=_R1_COMPOSER_FORMATS") == 1
     assert source.count("composer_formats=") == 1
-    assert '_R1_COMPOSER_FORMATS = ("long", "medium")' in source
-    assert "weekday" not in source.split('_R1_COMPOSER_FORMATS = ("long", "medium")')[1][:200]
+    assert '_R1_COMPOSER_FORMATS = ("long",)' in source
+    assert "weekday" not in source.split('_R1_COMPOSER_FORMATS = ("long",)')[1][:200]
 
 
 # ===========================================================================

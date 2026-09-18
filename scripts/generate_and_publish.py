@@ -424,29 +424,87 @@ def _slugify(text: str) -> str:
     return canonical_slug(text)
 
 
-def _build_threads(structured: dict) -> list[str]:
-    discovery = structured.get("discovery", {})
-    candidates = [
-        structured.get("hook", ""),
-        discovery.get("aha_setup") or discovery.get("first_wrong_explanation", ""),
-        structured.get("surviving_explanation", ""),
-        structured.get("reframe", ""),
-        structured.get("echo_line", ""),
-    ]
+_SENTENCE_END = re.compile(r"(?<=[.!?…])[\"'”’)]*\s+")
+
+
+def _sentences(text: str) -> list[str]:
+    """Whole sentences of one paragraph, markdown emphasis removed."""
+    flat = re.sub(r"\s+", " ", (text or "").replace("*", "")).strip()
+    return [part.strip() for part in _SENTENCE_END.split(flat) if part.strip()]
+
+
+def _whole_sentences(text: str, max_words: int) -> str:
+    """The longest run of WHOLE opening sentences within ``max_words``.
+
+    Never cuts a sentence: when even the first sentence is longer than the
+    limit, the result is empty and the caller moves on. Controlled live run
+    35383199073 published "…and follow through—making your." — a length
+    limit must never end an output mid-sentence.
+    """
+    kept: list[str] = []
+    used = 0
+    for sentence in _sentences(text):
+        words = len(sentence.split())
+        if used + words > max_words:
+            break
+        kept.append(sentence)
+        used += words
+    return " ".join(kept)
+
+
+def _article_paragraphs(article_body: str, echo: str = "") -> list[str]:
+    """The accepted article's own prose paragraphs, in order.
+
+    Stops at the Echo attribution line and at any Sources section; skips
+    headings. Everything returned is text Editorial Acceptance approved.
+    """
+    paragraphs: list[str] = []
+    for block in re.split(r"\n\s*\n", article_body or ""):
+        text = block.strip()
+        if not text:
+            continue
+        plain = text.replace("*", "").strip()
+        if (echo and echo.strip() and echo.strip() in plain) or re.match(
+            r"^(#+\s*)?sources?\s*:?\s*$", plain.splitlines()[0], re.IGNORECASE
+        ):
+            break
+        if plain.startswith("#"):
+            continue
+        paragraphs.append(text)
+    return paragraphs
+
+
+def _build_threads(title: str | None, article_body: str, echo: str = "") -> list[str]:
+    """Threads, derived from the FINAL ACCEPTED article only.
+
+    The accepted title leads (Product Owner decision: one canonical headline
+    on every surface), then the opening whole sentences of the article's
+    paragraphs, then the Echo. Existing limits unchanged: at most 5 posts,
+    at most 55 words each — but a post is never cut mid-sentence to fit.
+    """
+    candidates = [title or ""]
+    for paragraph in _article_paragraphs(article_body, echo):
+        lead = _whole_sentences(paragraph, 55)
+        if lead:
+            candidates.append(lead)
+        if len([c for c in candidates if c]) >= 4:
+            break
+    candidates.append(echo or "")
     sequence: list[str] = []
     seen: set[str] = set()
     for value in candidates:
         post = re.sub(r"\s+", " ", (value or "").strip())
-        words = post.split()
-        if len(words) > 55:
-            post = " ".join(words[:55]).rstrip(" ,;:") + "."
         key = post.lower()
         if post and key not in seen:
             sequence.append(post)
             seen.add(key)
-    if not 3 <= len(sequence) <= 5:
-        raise ValueError(f"Threads requires 3–5 distinct posts; generated {len(sequence)}")
-    return sequence
+    # Never padded and never invented: an accepted article too short for the
+    # 3–5 post target yields what it honestly supports. Threads is not a
+    # Release 1 surface, so a short sequence is reported, never a run stop.
+    if len(sequence) < 3:
+        print(f"  ⚠  threads: the accepted article supports {len(sequence)} "
+              "post(s), fewer than the 3–5 target")
+    return sequence[:5]
 
 
 def _lead_with_canonical_title(body: str, title: str | None) -> str:
@@ -461,32 +519,34 @@ def _lead_with_canonical_title(body: str, title: str | None) -> str:
     if not title or not body:
         return body
     first = next((line for line in body.splitlines() if line.strip()), "")
-    if first.replace("*", "").strip().casefold() == title.strip().casefold():
+    # "Opens with it" means the opening line starts with the title — the
+    # title may be the whole line or its first sentence (#259 review): a
+    # second copy would trip the duplicate-sentence guard.
+    if first.replace("*", "").strip().casefold().startswith(title.strip().casefold()):
         return body
     return f"{title.strip()}\n\n{body}"
 
 
-def _clean_line(value: str, max_words: int = 34) -> str:
-    value = re.sub(r"\s+", " ", (value or "").strip())
-    words = value.split()
-    if len(words) <= max_words:
-        return value
-    return " ".join(words[:max_words]).rstrip(" ,;:") + "."
+def _build_telegram(title: str | None, article_body: str, echo: str = "",
+                    wix_url: str = "") -> str:
+    """Telegram, derived from the FINAL ACCEPTED article only.
 
-
-def _build_telegram(structured: dict, wix_url: str = "") -> str:
-    discovery = structured.get("discovery", {})
-    observation = (
-        discovery.get("aha_setup")
-        or discovery.get("first_wrong_explanation")
-        or structured.get("hook")
-        or structured.get("narrative_spine")
+    The existing contract is unchanged — one observation and one implication,
+    each at most 34 words (the Telegram length itself awaits a Product Owner
+    decision) — but both now come from accepted text: the observation is the
+    opening whole sentences of the article, the implication is the article's
+    own Echo. The accepted title leads. Never cut mid-sentence.
+    """
+    observation = next(
+        (lead for lead in (_whole_sentences(p, 34)
+                           for p in _article_paragraphs(article_body, echo)) if lead),
+        "",
     )
-    implication = structured.get("business_translation") or structured.get("reframe")
-    lines = [_clean_line(observation), _clean_line(implication)]
+    implication = _whole_sentences(echo, 34)
+    lines = [title or "", observation, implication]
     if wix_url:
         lines.append(wix_url.strip())
-    return "\n".join(line for line in lines if line)
+    return "\n".join(line.strip() for line in lines if line and line.strip())
 
 
 def _save_generated(
@@ -540,7 +600,12 @@ _NON_R1_PUBLISHERS = NON_R1_PUBLISH_CHANNELS
 # actually consume. Inactive surfaces execute nothing — no composition
 # transport, no image composite/upload — while their package fields and the
 # composer/image architecture remain for future configuration.
-_R1_COMPOSER_FORMATS = ("long", "medium")
+#: Composed BEFORE editorial acceptance: the canonical article only. Every
+#: social derivative is composed afterwards, from the final accepted article
+#: (see "Social derivatives from the final accepted article" in _run) — a
+#: derivative composed beside the draft would carry the draft's claims past
+#: Editorial Acceptance (controlled live run 35383199073).
+_R1_COMPOSER_FORMATS = ("long",)
 _R1_IMAGE_PLATFORMS = ["blog", "linkedin"]
 
 
@@ -1992,7 +2057,9 @@ def _run(
             return 1
 
         blog_body      = platforms["long"]["body"]
-        linkedin_text  = platforms["medium"]["body"]
+        # composed after acceptance, from the final article (absent here
+        # unless the generation path produced one — the Wednesday route)
+        linkedin_text  = platforms.get("medium", {}).get("body", "")
         # The published title is the article's own hook when the composition
         # produced one. Before this, Wix received the source signal's headline —
         # the RSS feed's words on our page. An absent title keeps the previous
@@ -2003,10 +2070,12 @@ def _run(
             print(f"  ✓  article title: {headline[:70]}")
         # #175: inactive surfaces were not composed; their package fields
         # stay present and empty.
-        facebook_text  = platforms.get("reading", {}).get("body", "")
-        instagram_text = platforms.get("instagram", {}).get("body", "")
-        threads_seq    = _build_threads(structured)
-        telegram_text  = _build_telegram(structured)
+        # Every other surface is derived after acceptance, from the final
+        # accepted article, never from this draft.
+        facebook_text  = ""
+        instagram_text = ""
+        threads_seq: list[str] = []
+        telegram_text  = ""
         echo_line      = structured.get("echo_line", "")
 
         # ── Pre-acceptance diagnostic evidence (Issue #215) ──────────────────
@@ -2238,11 +2307,23 @@ def _run(
         # still arrives verbatim from the structured article) — and the
         # stale body is preserved as evidence, never published, never a
         # fallback.
-        if _acceptance.revised:
-            _stale_social_body = linkedin_text
+        #
+        # Invariant (Monday preview readiness): every social derivative is
+        # composed from the FINAL ACCEPTED article — never from the draft,
+        # its outline or narrative spine, or a composition made before
+        # acceptance. The canonical route therefore composes no social body
+        # before acceptance and always composes it here. The restored July
+        # Wednesday route (paused, out of scope) still composes alongside
+        # its draft and keeps the #197 rule: recompose when revised.
+        _derive_after_acceptance = not is_wednesday_role(_editorial_role_identity)
+        if _acceptance.revised or _derive_after_acceptance:
+            _stale_social_body = linkedin_text or None
             _accepted_record["social_recomposition"] = {
                 "performed": False,
                 "reason": (
+                    "every social derivative is composed from the final "
+                    "accepted article, after editorial acceptance"
+                    if _derive_after_acceptance else
                     "editorial acceptance revised the article after the "
                     "social composition was produced; the pre-revision "
                     "composition is stale and was discarded"
@@ -2305,6 +2386,52 @@ def _run(
                     f"social recomposition: {type(exc.original).__name__}",
                 )
                 return 1
+
+        # ── Full-content preview surfaces (owner-controlled, dry run) ────────
+        # Facebook and Instagram are not part of Release 1, so a normal run
+        # does not pay to compose them (#175). The owner-controlled preview
+        # composes them — from the final accepted article, through the same
+        # composer, channel lenses and validators — so every intended surface
+        # can be inspected before any of them is enabled.
+        if args.dry_run and args.preview_fresh_images:
+            for _format_key, _rules_key in (("reading", "long"), ("instagram", "medium")):
+                try:
+                    _derived = recompose_platform(
+                        structured,
+                        _format_key,
+                        canonical_body=blog_body,
+                        cta_mode=cta_mode,
+                        wix_strategy=strategy_execution.wix,
+                        linkedin_strategy=strategy_execution.linkedin,
+                        editorial_role_rules=(
+                            _editorial_role_rules.get(_rules_key)
+                            if isinstance(_editorial_role_rules, dict)
+                            else _editorial_role_rules
+                        ),
+                        closing_contract=(
+                            _role.closing_contract if _role is not None else None
+                        ),
+                        research_artifact=research_artifact,
+                        rejected_sink=_rejected_compositions,
+                    )
+                except ArticleGenerationError as exc:
+                    print(f"  ERROR: preview {_format_key} composition failed: {exc.original}")
+                    _persist_rejected_compositions(run_dir, _rejected_compositions)
+                    state.ended(TerminalStage.GENERATION, TerminalDisposition.BLOCKED,
+                                f"preview composition {_format_key}: "
+                                f"{type(exc.original).__name__}")
+                    return 1
+                if _format_key == "reading":
+                    facebook_text = _derived["body"]
+                else:
+                    instagram_text = _derived["body"]
+                print(f"  ✓  preview {_format_key} composed from the final accepted "
+                      f"article ({_derived['word_count']} words)")
+
+        # Threads and Telegram: deterministic derivations of the final
+        # accepted article — accepted text only, whole sentences only.
+        threads_seq   = _build_threads(_composed_title, blog_body, echo_line)
+        telegram_text = _build_telegram(_composed_title, blog_body, echo_line)
 
         # Issue #196: preserve the accepted compositions NOW, before the
         # remaining gates. A run blocked downstream (transparency, images,
@@ -2468,13 +2595,20 @@ def _run(
             # fragments of it (controlled live run 35383199073).
             generate_hashtags(signal, "linkedin", article_text=blog_body),
         )
-        facebook_text   = (
-            formatting.bold_signature_prefix(facebook_text, "unicode") +
-            formatting.source_line(source_name, source_url, "bare_url")
-        )
+        if facebook_text:
+            facebook_text = _lead_with_canonical_title(
+                formatting.bold_signature_prefix(facebook_text, "unicode"),
+                _composed_title,
+            ) + (
+                "" if _canonical_sources_section
+                else formatting.source_line(source_name, source_url, "bare_url")
+            )
         if instagram_text:
             instagram_text = formatting.append_hashtags(
-                formatting.bold_signature_prefix(instagram_text, "unicode"),
+                _lead_with_canonical_title(
+                    formatting.bold_signature_prefix(instagram_text, "unicode"),
+                    _composed_title,
+                ),
                 generate_hashtags(signal, "instagram", article_text=blog_body),
             )
 

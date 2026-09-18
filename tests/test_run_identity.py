@@ -271,6 +271,9 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "CURRENT_DESIGN_VERSION":    "test-v1",
         "_emit_run_report":          mock.MagicMock(),
     }
+    # social derivation from the final accepted article: the shared stand-in
+    ref = {"patches": kwargs}
+    kwargs["recompose_platform"] = mock.MagicMock(side_effect=legacy._fake_derivation(ref))
     return argv, kwargs
 
 
