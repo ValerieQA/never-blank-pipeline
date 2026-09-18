@@ -54,11 +54,14 @@ def _run(argv: list[str]) -> int:
     return subprocess.run([sys.executable, *argv], cwd=REPO_ROOT, check=False).returncode
 
 
+def _packages_root() -> Path:
+    return Path(os.environ.get("NB_PACKAGES_DIR", "").strip() or "reports/content_packages")
+
+
 def _rejection_records(signal_id: str) -> list[dict]:
     """The entrypoint's editorial_rejection.json records for this signal, if any."""
-    root = Path(os.environ.get("NB_PACKAGES_DIR", "").strip() or "reports/content_packages")
     records = []
-    for path in sorted((root / signal_id / "runs").glob("*/editorial_rejection.json")):
+    for path in sorted((_packages_root() / signal_id / "runs").glob("*/editorial_rejection.json")):
         try:
             records.append(json.loads(path.read_text(encoding="utf-8")))
         except (OSError, ValueError):
@@ -71,6 +74,25 @@ def _emit_output(name: str, value: str) -> None:
     if target:
         with open(target, "a", encoding="utf-8") as handle:
             handle.write(f"{name}={value}\n")
+
+
+def _emit_evidence_paths(signal_ids: list[str]) -> None:
+    """Every attempted candidate's canonical evidence, one path per line.
+
+    Independent of ``signal_id``, which names only the candidate that
+    completed: a candidate that was passed over, or that failed after an
+    earlier one was passed over, is evidence too.
+    """
+    target = os.environ.get("GITHUB_OUTPUT")
+    if not target or not signal_ids:
+        return
+    root = _packages_root()
+    lines = []
+    for signal_id in signal_ids:
+        lines += [f"{root / signal_id / 'runs'}/", str(root / f"{signal_id}_generated.json")]
+    with open(target, "a", encoding="utf-8") as handle:
+        handle.write("evidence_paths<<__NB_EVIDENCE__\n" + "\n".join(lines)
+                     + "\n__NB_EVIDENCE__\n")
 
 
 def main(argv: list[str] | None = None, *, run: Runner = _run) -> int:
@@ -112,6 +134,7 @@ def main(argv: list[str] | None = None, *, run: Runner = _run) -> int:
         pass_over_judged(Path(args.selection_audit))
 
     def record(outcome: str, selected: str) -> None:
+        _emit_evidence_paths([attempt["signal_id"] for attempt in attempts])
         record_path.write_text(json.dumps(
             {"role_id": args.editorial_role, "dry_run": args.dry_run,
              "outcome": outcome, "selected_signal_id": selected or None,

@@ -468,3 +468,70 @@ def test_the_dry_run_input_still_exists():
 
     assert inputs["dry_run"]["options"] == ["false", "true"]
     assert inputs["dry_run"]["default"] == "false"
+
+
+# ===========================================================================
+# Review round 1 (#257)
+# ===========================================================================
+
+
+def test_a_dry_run_chain_claiming_a_publication_still_needs_its_visual(tmp_path):
+    """Visuals are optional only for a dry run that published nothing."""
+    from src.artifacts.provenance import ProvenanceError
+    from tests.test_linkedin_composition import ARTICLE_BODY, _native_linkedin_body
+
+    argv, patches = _entry_patches(tmp_path)
+    del patches["accept_linkedin_composition"]
+    del patches["write_linkedin_composition_json"]
+    patches["_load_package_images"] = mock.MagicMock(return_value={})
+    article = json.loads(json.dumps(legacy._FAKE_ARTICLE))
+    article["platforms"]["long"]["body"] = ARTICLE_BODY
+    article["platforms"]["medium"]["body"] = _native_linkedin_body()
+    patches["generate_article"] = mock.MagicMock(return_value=article)
+    evaluator, _ = _evaluator(_model_output())
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches):
+        assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 0
+    run_dir = next(tmp_path.glob(f"{SIG}/runs/*/generated.json")).parent
+    run_id = run_dir.name
+    configuration = json.loads((run_dir / "assignment.json").read_text())[
+        "configuration_identity"]
+    (run_dir / "publication_results.json").write_text(json.dumps({
+        "run_id": run_id, "signal_id": SIG, "source_run_id": run_id,
+        "generation_run_id": run_id, "execution_mode": "controlled_live",
+        "results": {}, "completed": True, "configuration_identity": configuration,
+    }))
+
+    with pytest.raises(ProvenanceError, match="visual"):
+        verify_run_provenance(tmp_path, SIG, run_id)
+
+
+def _evidence_paths(output: str) -> list[str]:
+    block = output.split("evidence_paths<<__NB_EVIDENCE__\n", 1)[1]
+    return block.split("\n__NB_EVIDENCE__\n", 1)[0].splitlines()
+
+
+def test_a_failure_after_a_passed_over_candidate_keeps_both_candidates_evidence(
+    tmp_path, monkeypatch,
+):
+    output = tmp_path / "github_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setenv("NB_PACKAGES_DIR", "reports/content_packages")
+    runner = ScriptedRunner({"sig-1": 6, "sig-2": 1}, [(0, "sig-2")])
+
+    assert _scripted(tmp_path, runner) == 1
+
+    text = output.read_text()
+    assert "signal_id=\n" in text                       # nothing to mark
+    assert _evidence_paths(text) == [
+        "reports/content_packages/sig-1/runs/",
+        "reports/content_packages/sig-1_generated.json",
+        "reports/content_packages/sig-2/runs/",
+        "reports/content_packages/sig-2_generated.json",
+    ]
+
+
+def test_the_evidence_upload_follows_every_attempt_not_only_the_winner():
+    path = _steps()["Preserve canonical run evidence"]["with"]["path"]
+
+    assert "steps.publish.outputs.evidence_paths" in path
+    assert "steps.resolve.outputs.signal_id" in path     # the explicit/retry path

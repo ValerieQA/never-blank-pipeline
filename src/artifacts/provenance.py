@@ -181,10 +181,15 @@ def verify_run_provenance(
     # ═══════════════════════════ generation run ═════════════════════════════
     # A dry run never generates an image: when its package has no current
     # image it is text-only, with no visual link in its chain. When it does
-    # carry a visual passport, that passport is verified exactly as before. A
+    # carry a visual passport, that passport is verified exactly as before.
+    # Publication evidence always requires the visual link — a chain that
+    # claims a publication can never be text-only, whatever its mode. A
     # text-only run can never be the source of a from-package publication:
     # that path requires the source's visual passport and fails closed.
-    visual_optional = assignment_record.execution_mode == ExecutionMode.DRY_RUN.value
+    visual_optional = (
+        assignment_record.execution_mode == ExecutionMode.DRY_RUN.value
+        and publication is None
+    )
 
     research_raw = _load(run_dir, "research.json")
     decision_raw = _load(run_dir, "decision.json")

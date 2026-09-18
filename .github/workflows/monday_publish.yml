@@ -352,7 +352,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "run-evidence-${{ steps.publish.outputs.signal_id || steps.resolve.outputs.signal_id }}"
-          path: "reports/content_packages/${{ steps.publish.outputs.signal_id || steps.resolve.outputs.signal_id }}/runs/"
+          # Every candidate the first-valid driver attempted — the one that
+          # completed, any passed over, and any that failed after them —
+          # otherwise the one candidate this run was launched with.
+          path: ${{ steps.publish.outputs.evidence_paths || format('reports/content_packages/{0}/runs/', steps.resolve.outputs.signal_id) }}
           if-no-files-found: warn
           retention-days: 90
 
