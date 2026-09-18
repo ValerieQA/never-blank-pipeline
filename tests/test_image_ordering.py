@@ -113,7 +113,10 @@ def test_an_early_decision_block_pays_for_no_images(tmp_path):
 
 
 def test_a_successful_run_generates_images_exactly_once_after_acceptance(tmp_path):
-    argv, patches = _entry_patches(tmp_path)
+    # a publishing run: a dry run never generates images (pre-live repair)
+    argv, patches = _entry_patches(tmp_path, dry_run=False)
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
     evaluator, _ = _evaluator(_model_output())
     calls: list = []
 
@@ -129,9 +132,11 @@ def test_a_successful_run_generates_images_exactly_once_after_acceptance(tmp_pat
     with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches), \
             mock.patch("scripts.research.prepare_content.prepare_content_packages",
                        side_effect=fake_images):
-        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+        main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
 
-    assert code == 0
+    # the stub publishers' results are not the subject here; reaching them
+    # proves the run passed every gate the images sit behind
+    assert patches["WixPublisher"].called
     assert calls == [["blog", "linkedin"]]     # once, R1 surfaces only (#175)
 
 

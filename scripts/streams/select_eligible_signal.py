@@ -93,6 +93,12 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
                         help="Where to write the selection audit JSON")
     parser.add_argument("--active-path", default="data/research/signals_active.jsonl")
     parser.add_argument("--published-path", default="data/research/published_signal_ids.txt")
+    parser.add_argument(
+        "--exclude-path", default="",
+        help="Signal ids to pass over in this selection only (one per line): "
+             "candidates an earlier attempt in the same run found editorially "
+             "unsuitable. Never written to the consumption marker.",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -110,6 +116,16 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
         return 1
 
     candidates = _load_candidates(Path(args.active_path), Path(args.published_path))
+    excluded: list[str] = []
+    if args.exclude_path:
+        excluded = [
+            line.strip() for line in Path(args.exclude_path).read_text().splitlines()
+            if line.strip()
+        ]
+        candidates = [
+            signal for signal in candidates
+            if str(signal.get("SIGNAL_ID", "")) not in set(excluded)
+        ]
     if args.signal_id:
         candidates = [
             signal for signal in candidates
@@ -126,6 +142,7 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
         # the exact client texts this selection was judged against (#240 D12)
         "client_contracts": contracts.provenance if contracts is not None else None,
         "requested_signal_id": args.signal_id or None,
+        "excluded_this_run": excluded,
         "candidates_available": len(candidates),
         "dispositions": [],
         "selected_signal_id": None,

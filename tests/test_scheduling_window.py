@@ -238,8 +238,9 @@ def test_the_friday_stream_uses_the_same_seam():
 # ===========================================================================
 
 
+# Monday's schedule is paused (pre-live repair); its restoration pair is pinned
+# by test_the_paused_monday_schedule_documents_its_exact_restoration below.
 @pytest.mark.parametrize("name, pair", [
-    ("monday_publish.yml", (MONDAY_EDT, MONDAY_EST)),
     ("wednesday_golden.yml", (WEDNESDAY_EDT, WEDNESDAY_EST)),
     ("scheduled_publish.yml", (FRIDAY_EDT, FRIDAY_EST)),
 ])
@@ -252,6 +253,20 @@ def test_every_canonical_stream_fires_at_04_17_off_the_top_of_the_hour(name, pai
         minute, hour, _, _, _ = cron.split()
         assert minute == "17", f"{name}: {cron}"
         assert hour in ("8", "9"), f"{name}: {cron} is not the 04:17 ET pair"
+
+
+def test_the_paused_monday_schedule_documents_its_exact_restoration():
+    """Temporary safety control: Monday runs only by manual dispatch until the
+    owner re-authorizes the schedule. The paused block keeps the exact 04:17
+    pair, so restoring it cannot drift from the window seam."""
+    text = (WORKFLOWS / "monday_publish.yml").read_text()
+    triggers = _workflow("monday_publish.yml")[True]
+
+    assert "schedule" not in triggers
+    assert "workflow_dispatch" in triggers
+    assert "SCHEDULE PAUSED" in text
+    for cron in (MONDAY_EDT, MONDAY_EST):
+        assert f'#     - cron: "{cron}"' in text
 
 
 @pytest.mark.parametrize("name, env_key, cron_pair", [
