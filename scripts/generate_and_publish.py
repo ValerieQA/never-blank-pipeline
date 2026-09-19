@@ -430,14 +430,18 @@ def _slugify(text: str) -> str:
     return canonical_slug(text)
 
 
-def _accepted_echo(final_article: str, draft_echo: str = "") -> str:
+def _accepted_echo(final_article: str, draft_echo: str = "",
+                   attribution: str = "") -> str:
     """The Echo as the FINAL ACCEPTED article carries it.
 
     The draft's Echo predates Editorial Acceptance: a revision may reword,
     negate or remove it (#259 review). Authoritative, in order:
 
-    1. the accepted article's attributed paragraph ("Never Blank: <echo>"),
-       taken whole even when it wraps across lines;
+    1. the accepted article's attributed paragraph ("<attribution>: <echo>"),
+       taken whole even when it wraps across lines. ``attribution`` is the
+       client's own name from its configuration (business.name) — this
+       helper knows no brand of its own (Replace-the-client, #259 review);
+       without one, no paragraph counts as attributed;
     2. the draft Echo only when it is, by itself, the accepted article's
        final prose paragraph — the closing an unattributed contract
        requires. Merely appearing inside a sentence proves nothing ("We
@@ -449,10 +453,13 @@ def _accepted_echo(final_article: str, draft_echo: str = "") -> str:
         for block in re.split(r"\n\s*\n", final_article or "")
         if block.strip()
     ]
-    for paragraph in paragraphs:
-        match = re.match(r"^Never Blank\s*:\s*(.+)$", paragraph)
-        if match:
-            return match.group(1).strip()
+    name = (attribution or "").strip()
+    if name:
+        attributed = re.compile(rf"^{re.escape(name)}\s*:\s*(.+)$", re.IGNORECASE)
+        for paragraph in paragraphs:
+            match = attributed.match(paragraph)
+            if match:
+                return match.group(1).strip()
     prose = [p for p in paragraphs
              if not re.match(r"^(#+\s*)?sources?\s*:?", p, re.IGNORECASE)]
     draft = re.sub(r"\s+", " ", (draft_echo or "").replace("*", "")).strip()
@@ -2246,7 +2253,8 @@ def _run(
         # included. ``structured_final`` is the only outline a derivation may
         # see: the draft's narrative fields are withheld by the composer, and
         # its Echo is replaced here by the accepted one (#259 review).
-        echo_line = _accepted_echo(blog_body, echo_line)
+        echo_line = _accepted_echo(
+            blog_body, echo_line, business_configuration.business.name)
         structured_final = {**structured, "echo_line": echo_line or None,
                             "signature": None, "cta_line": None}
         print(

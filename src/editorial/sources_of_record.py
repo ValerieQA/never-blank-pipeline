@@ -167,7 +167,9 @@ def render_sources_of_record(
     lines += [
         "",
         "Never write any URL in the post — not the source's, not the site's. "
-        "The link to the published Never Blank article is appended by the "
+        # brand-neutral: this Engine text reaches every client's social
+        # surfaces, including the Engine adapters (#259 review)
+        "The link to the published canonical article is appended by the "
         "system after publication.",
         "",
     ]

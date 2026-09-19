@@ -115,14 +115,21 @@ class FaithfulComposer:
         handed = user.split("FORMAT:", 1)[0]
         outline = user.split("REQUIRED ELEMENTS:", 1)[-1] if (
             "REQUIRED ELEMENTS:" in user) else user.split("STRUCTURED FIELDS:", 1)[-1]
+        supplied = re.search(r"^- echo \[[^\]]*\]: (.+)$", user, re.MULTILINE)
+        echo_text = supplied.group(1).strip() if supplied else ""
         sentences = [
             line.strip() for line in (handed + "\n" + outline).splitlines()
-            if line.strip() and not line.isupper() and "Never Blank" not in line
+            if line.strip() and not line.isupper()
+            and not (echo_text and echo_text in line)
             and not line.startswith(("FINAL CANONICAL", "ECHO MODE", "Write the",
                                      "- echo", "TARGET", "FORMAT", "CTA"))
         ][:4]
         echo = re.search(r"^- echo \[[^\]]*\]: (.+)$", user, re.MULTILINE)
-        closing = [f"**Never Blank:** {echo.group(1).strip()}"] if echo else []
+        # close with the attribution THIS prompt instructs — the adapter's
+        # client name or the shared composer's constant — never assume one
+        named = re.search(r"'(?:\*\*)?([^'*:]+):(?:\*\*)? <echo>'", user)
+        attribution = named.group(1).strip() if named else "Never Blank"
+        closing = [f"{attribution}: {echo.group(1).strip()}"] if echo else []
         if format_key == "threads":
             body = "\n---\n".join([s[:440] for s in sentences] + closing)
         else:
@@ -249,8 +256,8 @@ def test_a_claim_in_the_draft_echo_never_survives_revision(tmp_path):
 def test_the_accepted_echo_rule():
     from scripts.generate_and_publish import _accepted_echo
 
-    assert _accepted_echo(f"Body.\n\n**Never Blank:** {ECHO}", ECHO_CLAIM) == ECHO
-    assert _accepted_echo(f"Body.\n\nNever Blank: {ECHO}", "") == ECHO
+    assert _accepted_echo(f"Body.\n\n**Never Blank:** {ECHO}", ECHO_CLAIM, "Never Blank") == ECHO
+    assert _accepted_echo(f"Body.\n\nNever Blank: {ECHO}", "", "Never Blank") == ECHO
     # inside a sentence proves nothing; as the whole closing paragraph it stands
     assert _accepted_echo(f"Body ends with {ECHO_CLAIM}", ECHO_CLAIM) == ""
     assert _accepted_echo(f"Body.\n\n{ECHO_CLAIM}", ECHO_CLAIM) == ECHO_CLAIM
@@ -269,7 +276,7 @@ def test_a_wrapped_attributed_echo_is_taken_whole():
     from scripts.generate_and_publish import _accepted_echo
 
     article = "Opening paragraph.\n\n**Never Blank:** Only purchases\nshow demand."
-    assert _accepted_echo(article, "") == "Only purchases show demand."
+    assert _accepted_echo(article, "", "Never Blank") == "Only purchases show demand."
 
 
 def test_no_derivative_receives_the_draft_cta():
@@ -675,3 +682,84 @@ def test_the_shared_formats_keep_their_existing_closing_unchanged():
                                 closing_contract=CLOSING_BRANDED_ECHO_THEN_SOURCES)
     assert "ECHO MODE: verbatim, as the Never Blank perspective — the" in prompt
     assert "'Never Blank: <echo>'" in prompt
+
+
+# ===========================================================================
+# #259 review (15e316c): Replace the client, end to end
+# ===========================================================================
+
+
+def test_another_clients_accepted_echo_reaches_telegram_and_threads_under_its_name(tmp_path):
+    """End to end on the real Monday route with the client replaced: the
+    configuration names "Acme Studio", the client's rules are Acme's, and
+    the accepted article closes "Acme Studio: <echo>". The accepted Echo is
+    recognised under that name and reaches Telegram and Threads as
+    "Acme Studio: <echo>" — and no Engine code puts "Never Blank" into the
+    adapters' model input or output."""
+    from src.strategy.business_config import load_business_strategy_configuration
+
+    real = load_business_strategy_configuration()
+    acme = real.model_copy(update={
+        "business": real.business.model_copy(update={"name": OTHER_CLIENT})})
+    acme_article = FINAL_ARTICLE.replace("**Never Blank:**", f"**{OTHER_CLIENT}:**")
+    draft = _draft()
+    draft["platforms"]["long"]["body"] = acme_article
+
+    argv, patches = _entry_patches(tmp_path)
+    argv = argv + ["--editorial-role", MONDAY_ROLE, "--preview-fresh-images"]
+    del patches["run_editorial_acceptance"]
+    del patches["recompose_platform"]
+    patches.pop("formatting", None)
+    patches.pop("generate_hashtags", None)
+    patches["generate_article"] = mock.MagicMock(return_value=draft)
+    patches["load_business_strategy_configuration"] = mock.MagicMock(return_value=acme)
+    # the client's own rules — Acme's, carrying no Never Blank text
+    patches["render_editorial_role_rules"] = mock.MagicMock(
+        return_value="CLIENT RULES: Acme Studio writes for independent bakeries.")
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    composer = FaithfulComposer()
+    evaluator, _ = _evaluator(_model_output())
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches), \
+            mock.patch.object(platform_composer, "chat", side_effect=composer), \
+            mock.patch("scripts.research.prepare_content.prepare_content_packages",
+                       side_effect=lambda *a, **k: [
+                           {"images": {"platform_images": _pimgs(tmp_path)}}]):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator,
+                    editorial_reviewer=FakeReviewTransport(_review_payload()),
+                    article_revisor=FakeRevisionTransport(acme_article))
+
+    assert code == 0
+    generated = json.loads(next(tmp_path.glob(f"{SIG}/runs/*/generated.json")).read_text())
+    record = json.loads(next(tmp_path.glob(f"{SIG}/runs/*/accepted_composition.json")).read_text())
+    # the accepted Echo was recognised under the client's own name
+    assert record["content"]["echo"] == ECHO
+    # and reaches both adapters as "<client>: <echo>"
+    telegram = generated["telegram_text"]
+    threads = generated["threads_sequence"]
+    assert telegram.rstrip().endswith(f"{OTHER_CLIENT}: {ECHO}")
+    assert threads[-1].strip() == f"{OTHER_CLIENT}: {ECHO}"
+    for text in (telegram, *threads):
+        assert "never blank" not in text.casefold()
+    # nothing the Engine wrote into the adapters' model input names Never Blank
+    adapter_prompts = [p for p in composer.prompts
+                       if re.search(r"^FORMAT: (telegram|threads)$", p, re.MULTILINE)]
+    assert len(adapter_prompts) == 2
+    for prompt in adapter_prompts:
+        assert "never blank" not in prompt.casefold()
+        assert f"'{OTHER_CLIENT}: <echo>'" in prompt
+
+
+def test_the_accepted_echo_helper_knows_no_brand_of_its_own():
+    from scripts.generate_and_publish import _accepted_echo
+
+    acme_article = f"Body.\n\n**{OTHER_CLIENT}:** {ECHO}"
+    assert _accepted_echo(acme_article, "", OTHER_CLIENT) == ECHO
+    # a name the client did not configure is not an attribution
+    assert _accepted_echo(acme_article, "", "Never Blank") == ""
+    assert _accepted_echo(f"Body.\n\nNever Blank: {ECHO}", "", OTHER_CLIENT) == ""
+    # and with no configured name nothing counts as attributed
+    assert _accepted_echo(acme_article, "", "") == ""
+    source = Path("scripts/generate_and_publish.py").read_text()
+    helper = source[source.index("def _accepted_echo("):source.index("def _lead_with_canonical_title(")]
+    assert "Never Blank" not in helper.split('"""', 2)[2]      # no literal in the code
