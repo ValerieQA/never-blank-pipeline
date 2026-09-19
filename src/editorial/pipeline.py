@@ -20,6 +20,7 @@ not publish a generic article to fill the gap.
 from typing import Callable, Mapping
 from src.research.evidence import NormalizedResearchArtifact
 
+from src.editorial.editorial_plan import EditorialPlan
 from src.editorial.pattern_extractor import extract_pattern, SignalRejectedError
 from src.editorial.decision_lens_lite import generate_decision_lens
 from src.editorial.narrative_spine import build_narrative_spine
@@ -96,6 +97,7 @@ def generate_article(
     composer_formats: "tuple[str, ...] | None" = None,
     closing_contract: str | None = None,
     rejected_sink: "list | None" = None,
+    editorial_plan: EditorialPlan | None = None,
 ) -> dict:
     """
     Run the full Editorial Engine V2 pipeline for one enriched signal.
@@ -109,6 +111,9 @@ def generate_article(
             A mapping remains accepted only for legacy/non-canonical callers.
         wix_strategy: Declared Wix composition view for controlled R1.
         linkedin_strategy: Declared LinkedIn composition view for controlled R1.
+        editorial_plan: The validated plan this run executes the client's
+            editorial contract as (#267). Rendered into the composition
+            messages; a run without one composes exactly as before.
 
     Returns:
         {
@@ -200,6 +205,9 @@ def generate_article(
         formats=composer_formats,
         rejected_sink=rejected_sink,
         source_identities=_identities,
+        editorial_plan=(
+            editorial_plan.as_prompt_text() if editorial_plan is not None else None
+        ),
         **({} if closing_contract is None else {"closing_contract": closing_contract}),
     )
 
@@ -228,6 +236,7 @@ def recompose_platform(
     closing_attribution: "str | None" = None,
     draft_content: "str | None" = None,
     fidelity_judge=None,
+    editorial_plan: EditorialPlan | None = None,
 ) -> dict:
     """Re-compose ONE platform derivative from final accepted content (#197).
 
@@ -280,6 +289,11 @@ def recompose_platform(
                 if draft_content else None
             ),
             fidelity_judge=fidelity_judge,
+            # #267: a derivative obeys the same plan the article was written
+            # under; a re-composition is not an exemption from the contract.
+            editorial_plan=(
+                editorial_plan.as_prompt_text() if editorial_plan is not None else None
+            ),
             **({} if closing_contract is None else {"closing_contract": closing_contract}),
         )
     except ArticleGenerationError:

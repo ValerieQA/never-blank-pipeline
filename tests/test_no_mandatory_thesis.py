@@ -107,7 +107,9 @@ def _platform_chat(calls: dict[str, list[str]], echo: str):
     return fake
 
 
-def _run_real_prompt_path(monkeypatch, role_id: str, mechanism: str, pattern: str):
+def _run_real_prompt_path(
+    monkeypatch, role_id: str, mechanism: str, pattern: str, editorial_plan=None
+):
     calls: dict[str, list[str]] = {}
     echo = f"The {mechanism} constraint was visible before it was named."
 
@@ -232,6 +234,9 @@ def _run_real_prompt_path(monkeypatch, role_id: str, mechanism: str, pattern: st
         linkedin_strategy=strategy.linkedin,
         audience_selection=audience,
         editorial_role_rules=role_rules,
+        # #267: the plan this run executes the client's contract as, when the
+        # caller built one. Passed exactly as the production entrypoint does.
+        editorial_plan=editorial_plan,
     )
     return calls, result
 
