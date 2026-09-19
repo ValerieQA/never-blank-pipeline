@@ -28,10 +28,14 @@ would be a silent editorial change.
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from src.never_blank.wednesday_july import generate_wednesday_article
+from src.utils.llm_client import model_input_addendum
 from src.utils.logger import get_logger
+
+if TYPE_CHECKING:
+    from src.editorial.editorial_plan import EditorialPlan
 
 log = get_logger("never_blank.wednesday_routing")
 
@@ -54,7 +58,9 @@ def is_wednesday_role(role_identity) -> bool:
     return isinstance(role_id, str) and role_id == WEDNESDAY_ROLE_ID
 
 
-def generate_for_wednesday(signal: dict) -> dict:
+def generate_for_wednesday(
+    signal: dict, editorial_plan: EditorialPlan | None = None
+) -> dict:
     """Run the restored July path and present its result to the lifecycle.
 
     Returns the same top-level shape the shared engine returns, so every
@@ -71,9 +77,19 @@ def generate_for_wednesday(signal: dict) -> dict:
       only for topical hashtags and already tolerates its absence.
 
     Nothing is invented. No July value is overwritten.
+
+    ``editorial_plan`` (#267) is the run's plan when the client's contract for
+    this stream needs one. The restored modules stay verbatim, so the plan is
+    not threaded through them: its prompt text is appended to the user message
+    of every model call the restored path makes, for this generation only.
+    With no plan — Never Blank's Wednesday today — the path is exactly July's.
     """
 
-    result = generate_wednesday_article(signal)
+    if editorial_plan is None:
+        result = generate_wednesday_article(signal)
+    else:
+        with model_input_addendum(editorial_plan.as_prompt_text()):
+            result = generate_wednesday_article(signal)
 
     structured = dict(result.get("structured_article") or {})
     if not structured.get("echo_line"):

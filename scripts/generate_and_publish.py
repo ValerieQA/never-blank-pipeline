@@ -2029,7 +2029,8 @@ def _run(
                     + render_sources_of_record(research_artifact, surface="linkedin"),
                 }
             # #267: the plan this run executes the client's editorial contract
-            # as. Built only where the stream contract declares a ``## Plan``:
+            # as. Built wherever the contract needs one — a ``## Plan``, or a
+            # conditional lens, which can only apply through a plan:
             # the Engine carries the slots, the client's documents decide every
             # value, and a client that plans nothing runs exactly as before. A
             # value the contract does not permit, or a choice it requires and
@@ -2042,7 +2043,7 @@ def _run(
             # anything is written, and recorded in the plan with the evidence
             # ids and the decider behind each answer. A contract that leaves
             # nothing open makes no call.
-            if _client_contracts is not None and _client_contracts.stream.plan_slots:
+            if _client_contracts is not None and _client_contracts.requires_plan:
                 _planned_signal = editorial.to_legacy_dict()
                 _plan_claim = Claim(text=str(
                     _planned_signal.get("CORE_FACT")
@@ -2095,7 +2096,11 @@ def _run(
             # the whole publication lifecycle — is shared and unchanged.
             if is_wednesday_role(_editorial_role_identity):
                 print("  ✓  editorial path: restored July Wednesday pipeline")
-                article = generate_for_wednesday(editorial.to_legacy_dict())
+                # the restored path stays verbatim; the plan reaches every
+                # model call it makes through the routing seam (#267)
+                article = generate_for_wednesday(
+                    editorial.to_legacy_dict(), editorial_plan=_editorial_plan
+                )
             else:
                 article    = generate_article(
                     editorial.to_legacy_dict(),

@@ -79,6 +79,18 @@ selection with its value, its position among the permitted values, the
 evidence ids and the reason. An activated lens also carries its finding into
 the writer's message.
 
+A run builds a plan whenever its contract needs one (`requires_plan`): a
+`## Plan`, or any conditional lens — a conditional lens applies only through a
+plan, so it needs none of the plan slots to be executable.
+
+**Every generation path carries it.** The shared engine receives the plan as
+`editorial_plan=`. The restored Wednesday path (`src/never_blank/wednesday_july`)
+is pinned verbatim to July (#207), so the routing seam
+(`generate_for_wednesday(signal, editorial_plan=…)`) does not thread the plan
+through its modules: it appends the plan's prompt text to the user message of
+every model call that path makes, for that generation only
+(`llm_client.model_input_addendum`). With no plan the path is exactly July's.
+
 Nothing here knows a weekday. A new stream — a different day, a different
 ending, a different lens — is a stream contract bound to a role the business
 configuration declares, plus whatever lenses it needs; no Engine Python changes

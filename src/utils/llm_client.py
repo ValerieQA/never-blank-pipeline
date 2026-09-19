@@ -1,5 +1,8 @@
 import os
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any, TypeVar
 from pydantic import BaseModel as PydanticBaseModel
 from openai import OpenAI, BadRequestError
@@ -11,6 +14,32 @@ _T = TypeVar("_T", bound=PydanticBaseModel)
 log = get_logger("llm_client")
 
 _client: OpenAI | None = None
+
+#: Text appended to the user message of every model call made inside a
+#: ``model_input_addendum`` scope (#267). Empty outside one.
+_USER_ADDENDUM: ContextVar[str] = ContextVar("nb_user_addendum", default="")
+
+
+@contextmanager
+def model_input_addendum(text: str) -> Iterator[None]:
+    """Append ``text`` to the user message of every model call in this scope.
+
+    For a caller that must bind every model call of a pipeline it may not
+    edit — the restored Wednesday path, which is pinned verbatim (#207) — to
+    one run's editorial plan (#267). Scoped and reset on exit, so nothing
+    outside the ``with`` block sees it; nested scopes accumulate.
+    """
+    outer = _USER_ADDENDUM.get()
+    token = _USER_ADDENDUM.set(outer + text if text else outer)
+    try:
+        yield
+    finally:
+        _USER_ADDENDUM.reset(token)
+
+
+def _with_addendum(user: str) -> str:
+    addendum = _USER_ADDENDUM.get()
+    return f"{user}\n{addendum}" if addendum else user
 
 
 #: The complete set of retry policies Release 1 permits. This is a strict
@@ -125,7 +154,7 @@ def chat(system: str, user: str, json_mode: bool = False, model: str | None = No
         "temperature": _temperature(),
         "messages": [
             {"role": "system", "content": system},
-            {"role": "user", "content": user},
+            {"role": "user", "content": _with_addendum(user)},
         ],
     }
     if json_mode:
@@ -174,7 +203,7 @@ def chat_qc(system: str, user: str, json_mode: bool = False, model: str | None =
         "temperature": _qc_temperature(),
         "messages": [
             {"role": "system", "content": system},
-            {"role": "user", "content": user},
+            {"role": "user", "content": _with_addendum(user)},
         ],
     }
     if json_mode:
@@ -239,7 +268,7 @@ def chat_parsed(
             temperature=_temperature(),
             messages=[
                 {"role": "system", "content": system},
-                {"role": "user", "content": user},
+                {"role": "user", "content": _with_addendum(user)},
             ],
             response_format=response_model,
         )
@@ -253,7 +282,7 @@ def chat_parsed(
                 model=model,
                 messages=[
                     {"role": "system", "content": system},
-                    {"role": "user", "content": user},
+                    {"role": "user", "content": _with_addendum(user)},
                 ],
                 response_format=response_model,
             )

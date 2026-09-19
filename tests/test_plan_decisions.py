@@ -836,3 +836,337 @@ def test_no_engine_module_knows_the_new_stream_or_any_weekday_policy():
         "src/strategy/client_contracts.py",
     ):
         assert not days.search(Path(module).read_text(encoding="utf-8")), module
+
+
+# ── a conditional lens needs no ``## Plan`` to be executable ────────────────
+
+
+def _planless_client(tmp_path: Path) -> Path:
+    """The fixture client with its ``## Plan`` removed; its conditional lens stays."""
+    client = tmp_path / "client"
+    shutil.copytree(FIXTURE_CLIENT, client)
+    stream = client / "streams" / "weekly.md"
+    stream.write_text(
+        stream.read_text(encoding="utf-8").split("## Plan")[0], encoding="utf-8"
+    )
+    contracts = _contracts(client)
+    assert contracts.stream.plan_slots == ()
+    assert contracts.requires_plan
+    return client
+
+
+def _recall_only(*, met: bool) -> dict:
+    return {
+        "activations": [
+            _activation(
+                met=met,
+                refs=(RUN_EVIDENCE,) if met else (),
+                finding="The notice in the research names the part." if met else "",
+            ),
+            _activation("regulatory_change", met=False, refs=()),
+        ],
+        "selections": [],
+    }
+
+
+def test_a_conditional_lens_activates_in_production_without_a_plan_section(
+    tmp_path, monkeypatch
+):
+    client = _planless_client(tmp_path)
+    decider = ScriptedDecider(_recall_only(met=True))
+
+    code, _, composer, record = _entrypoint(
+        tmp_path / "run", monkeypatch, client=client, role=MONDAY_ROLE, decider=decider
+    )
+
+    assert code == 0
+    assert decider.requests[0]["slots"] == []
+    activated = [lens for lens in record["active_lenses"] if lens["activation"]]
+    assert [lens["identity"] for lens in activated] == ["gearworks-recall/1"]
+    assert record["ending_mode"] == ""  # no plan values were declared
+    medium = _medium_prompt(composer)
+    assert "GEARWORKS-LENS-CANARY" in medium
+    assert "The notice in the research names the part." in medium
+
+
+def test_a_conditional_lens_without_a_plan_section_stays_out_when_not_met(
+    tmp_path, monkeypatch
+):
+    client = _planless_client(tmp_path)
+
+    code, _, composer, record = _entrypoint(
+        tmp_path / "run",
+        monkeypatch,
+        client=client,
+        role=MONDAY_ROLE,
+        decider=ScriptedDecider(_recall_only(met=False)),
+    )
+
+    assert code == 0
+    assert record["run_decisions"]["activations"][0]["met"] is False
+    assert all(not lens["activation"] for lens in record["active_lenses"])
+    assert "GEARWORKS-LENS-CANARY" not in _medium_prompt(composer)
+
+
+# ── the real Wednesday path executes the plan too ───────────────────────────
+
+WEDNESDAY_STREAM = """---
+stream_id: wednesday-plan-test
+version: "1"
+role_id: never-blank-wednesday-golden
+selection: first_valid
+---
+
+# Wednesday — test stream
+
+## Purpose
+
+Read one documented event past its obvious public reading.
+
+## Selection
+
+### Usable
+
+- The signal documents a company decision with a published source.
+
+## Plan
+
+### ending_mode
+
+- WEDNESDAY-ENDING-CANARY close on the boundary that moved, not on the price
+"""
+WEDNESDAY_LENS = """---
+lens_id: wednesday-boundary
+version: "1"
+applies_to: [wednesday-plan-test]
+stages: [writing]
+activates_on: [category_boundary_moved]
+---
+
+WEDNESDAY-LENS-CANARY: where the evidence shows a category boundary moving,
+name the old boundary and the new one before any figure.
+"""
+
+
+def _wednesday_client(tmp_path: Path) -> Path:
+    client = tmp_path / "client"
+    shutil.copytree(Path("clients/never_blank"), client)
+    (client / "streams" / "wednesday.md").write_text(WEDNESDAY_STREAM, encoding="utf-8")
+    (client / "lenses" / "wednesday_boundary.md").write_text(
+        WEDNESDAY_LENS, encoding="utf-8"
+    )
+    return client
+
+
+class _July:
+    """The provider behind the REAL ``llm_client.chat``, answering each restored
+    stage in its own schema and recording the exact user message it received."""
+
+    def __init__(self) -> None:
+        from types import SimpleNamespace
+
+        self.stage = ""
+        self.messages: list[tuple[str, str]] = []
+        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
+
+    def _create(self, **kwargs):
+        from types import SimpleNamespace
+
+        from tests.test_wednesday_july_restoration import _stage_payload
+
+        self.messages.append((self.stage, kwargs["messages"][1]["content"]))
+        content = _stage_payload(self.stage)
+        if self.stage == "platform_composer":
+            # a body that names the run's research source, so the run clears
+            # source transparency — the gate is not what these tests are about
+            content = json.dumps(
+                {
+                    "body": "A composed platform body long enough to satisfy the "
+                    "composer. Source: Verified report "
+                    "(https://source.example/report)."
+                }
+            )
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
+        )
+
+    def through(self, stage: str):
+        from src.utils import llm_client
+
+        def staged(*args, **kwargs):
+            self.stage = stage
+            return llm_client.chat(*args, **kwargs)
+
+        return staged
+
+    def user_messages(self, stage: str) -> list[str]:
+        return [user for s, user in self.messages if s == stage]
+
+
+def _wednesday_entrypoint(tmp_path, monkeypatch, *, client: Path, decider):
+    """The canonical entrypoint under the Wednesday role, with the REAL
+    routing seam and restored July generation; only the provider is faked."""
+    from src.never_blank.wednesday_routing import WEDNESDAY_ROLE_ID
+    from tests.test_generate_and_publish import _make_ok_publish_result, _make_rc_mock
+    from tests.test_monday_stream import WEDNESDAY_SUPPLY
+    from tests.test_wednesday_july_restoration import _MODULE, _STAGE_MODULES
+
+    monkeypatch.setenv("NB_CLIENT_DIR", str(client))
+    argv, patches = _entry_patches(tmp_path)
+    argv += ["--editorial-role", WEDNESDAY_ROLE_ID]
+    supplied = dict(WEDNESDAY_SUPPLY)
+    patches["supply_wednesday_signal"] = mock.MagicMock(return_value=supplied)
+    argv = [supplied["SIGNAL_ID"] if i == 2 else part for i, part in enumerate(argv)]
+
+    def _rc_with_signal(assignment, raw_signal, run_ctx):
+        rc = _make_rc_mock(run_ctx.run_id)
+        rc.to_editorial.return_value.to_legacy_dict.return_value = supplied
+        return rc
+
+    patches["_build_legacy_research_context"] = mock.MagicMock(
+        side_effect=_rc_with_signal
+    )
+    del patches["generate_for_wednesday"]  # the REAL routing seam
+    wix, li = mock.MagicMock(), mock.MagicMock()
+    wix.publish.return_value = _make_ok_publish_result("wix")
+    li.publish.return_value = _make_ok_publish_result("linkedin")
+    patches["WixPublisher"] = mock.MagicMock(return_value=wix)
+    patches["LinkedInPublisher"] = mock.MagicMock(return_value=li)
+    july = _July()
+    stage_patches = [
+        mock.patch(f"{_MODULE}.{module}.chat", side_effect=july.through(module))
+        for module in _STAGE_MODULES
+    ]
+    stage_patches.append(
+        mock.patch(
+            "src.editorial.reader_context.chat",
+            side_effect=july.through("reader_context"),
+        )
+    )
+    evaluator, _ = _evaluator(_model_output())
+    with (
+        mock.patch.object(sys, "argv", argv),
+        mock.patch.multiple(gap, **patches),
+        mock.patch("src.utils.llm_client._get_client", return_value=july),
+    ):
+        for patcher in stage_patches:
+            patcher.start()
+        try:
+            code = main(
+                research_provider=ReadyProvider(),
+                decision_evaluator=evaluator,
+                plan_decider=decider,
+            )
+        finally:
+            for patcher in stage_patches:
+                patcher.stop()
+    plan_file = next(tmp_path.glob("*/runs/*/editorial_plan.json"), None)
+    return code, july, json.loads(plan_file.read_text()) if plan_file else None
+
+
+def test_a_wednesday_client_document_reaches_the_restored_july_model_messages(
+    tmp_path, monkeypatch
+):
+    """Document → plan → the exact user messages the restored July stages send.
+
+    The Wednesday stream contract and its conditional lens are documents only;
+    the restored July modules are unchanged, and the plan still reaches the
+    provider on every call they make — including the article composer.
+    """
+    decider = ScriptedDecider(
+        {
+            "activations": [
+                {
+                    "condition": "category_boundary_moved",
+                    "met": True,
+                    "finding": "The research records the boundary moving.",
+                    "evidence_refs": [RUN_EVIDENCE],
+                    "reason": "Stated in the evidence.",
+                }
+            ],
+            "selections": [],
+        }
+    )
+
+    code, july, record = _wednesday_entrypoint(
+        tmp_path, monkeypatch, client=_wednesday_client(tmp_path), decider=decider
+    )
+
+    assert code == 0
+    assert record["lineage"]["stream"]["identity"] == "wednesday-plan-test/1"
+    assert record["ending_mode"].startswith("WEDNESDAY-ENDING-CANARY")
+    stages = {stage for stage, _ in july.messages}
+    assert {"decision_lens_lite", "never_blank_voice", "platform_composer"} <= stages
+    for stage, user in july.messages:
+        assert "WEDNESDAY-ENDING-CANARY" in user, stage
+        assert "WEDNESDAY-LENS-CANARY" in user, stage
+        assert "The research records the boundary moving." in user, stage
+
+
+def test_a_wednesday_lens_the_evidence_does_not_meet_stays_out_of_july(
+    tmp_path, monkeypatch
+):
+    decider = ScriptedDecider(
+        {
+            "activations": [
+                {
+                    "condition": "category_boundary_moved",
+                    "met": False,
+                    "finding": "",
+                    "evidence_refs": [],
+                    "reason": "Not in the evidence.",
+                }
+            ],
+            "selections": [],
+        }
+    )
+
+    code, july, record = _wednesday_entrypoint(
+        tmp_path, monkeypatch, client=_wednesday_client(tmp_path), decider=decider
+    )
+
+    assert code == 0
+    assert record["run_decisions"]["activations"][0]["met"] is False
+    composer = july.user_messages("platform_composer")
+    assert composer
+    for user in composer:
+        assert "WEDNESDAY-ENDING-CANARY" in user
+        assert "WEDNESDAY-LENS-CANARY" not in user
+
+
+def test_never_blanks_wednesday_declares_no_contract_and_stays_exactly_july(
+    tmp_path, monkeypatch
+):
+    code, july, record = _wednesday_entrypoint(
+        tmp_path,
+        monkeypatch,
+        client=Path("clients/never_blank"),
+        decider=ExplodingDecider(),
+    )
+
+    assert code == 0
+    assert record is None
+    assert july.messages
+    for _, user in july.messages:
+        assert "EDITORIAL PLAN" not in user
+
+
+def test_the_model_input_addendum_is_scoped_to_its_block():
+    from src.utils import llm_client
+
+    seen: list[str] = []
+    fake = mock.MagicMock()
+    fake.chat.completions.create.side_effect = lambda **kw: (
+        seen.append(kw["messages"][1]["content"])
+        or mock.MagicMock(
+            choices=[mock.MagicMock(message=mock.MagicMock(content="ok"))]
+        )
+    )
+    with mock.patch.object(llm_client, "_get_client", return_value=fake):
+        llm_client.chat(system="s", user="before")
+        with pytest.raises(RuntimeError), llm_client.model_input_addendum("PLAN"):
+            llm_client.chat(system="s", user="inside")
+            raise RuntimeError
+        llm_client.chat(system="s", user="after")
+
+    assert seen == ["before", "inside\nPLAN", "after"]

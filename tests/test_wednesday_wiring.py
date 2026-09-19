@@ -410,7 +410,8 @@ def test_wednesday_can_never_be_silently_routed_back_to_the_shared_engine():
     source = Path("scripts/generate_and_publish.py").read_text()
 
     assert "if is_wednesday_role(_editorial_role_identity):" in source
-    assert "article = generate_for_wednesday(editorial.to_legacy_dict())" in source
+    assert "article = generate_for_wednesday(\n" in source
+    assert "editorial.to_legacy_dict(), editorial_plan=_editorial_plan" in source
 
     branch = source.split("if is_wednesday_role(_editorial_role_identity):")[1]
     wednesday_arm, _, shared_arm = branch.partition("else:")

@@ -64,7 +64,8 @@ contract does not permit — it never falls back to the first value. `central_cl
 `active_lenses`, `portable_noun` and `lineage` are slots a run derives from its
 own evidence: a contract may not state their values.
 
-A stream that declares no `## Plan` builds no plan and runs exactly as before.
+A stream that declares no `## Plan` and has no conditional lens builds no plan
+and runs exactly as before; a conditional lens alone is enough to build one.
 See [EDITORIAL_PLAN.md](EDITORIAL_PLAN.md).
 
 ## Lens

@@ -498,7 +498,7 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         # no ``pattern`` and no composed ``title``; the routing adapter
         # supplies ``echo_line`` from July's ``signature``.
         "generate_for_wednesday": mock.MagicMock(
-            side_effect=lambda signal: _fake_wednesday_article()
+            side_effect=lambda signal, **kwargs: _fake_wednesday_article()
         ),
         "validate_article_for_publish": mock.MagicMock(return_value=None),
         "_save_generated": mock.MagicMock(),

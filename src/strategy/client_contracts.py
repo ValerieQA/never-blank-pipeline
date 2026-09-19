@@ -236,6 +236,19 @@ class ClientContracts:
         )
 
     @property
+    def requires_plan(self) -> bool:
+        """Whether a run must build an ``EditorialPlan`` to carry this contract.
+
+        Two independent reasons, either one sufficient: the stream declares a
+        ``## Plan``, or some lens is conditional — a conditional lens reaches a
+        model only through a plan that recorded what activated it, so without
+        one it could never apply.
+        """
+        return bool(self.stream.plan_slots) or any(
+            not lens.is_standing for lens in self.lenses
+        )
+
+    @property
     def activation_conditions(self) -> tuple[str, ...]:
         """Every condition some conditional lens names, in document order."""
         conditions: list[str] = []
