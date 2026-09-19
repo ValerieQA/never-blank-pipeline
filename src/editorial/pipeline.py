@@ -20,6 +20,7 @@ not publish a generic article to fill the gap.
 from typing import Callable, Mapping
 from src.research.evidence import NormalizedResearchArtifact
 
+from src.editorial.editorial_plan import PLAN_SIGNAL_KEY, EditorialPlan
 from src.editorial.pattern_extractor import extract_pattern, SignalRejectedError
 from src.editorial.decision_lens_lite import generate_decision_lens
 from src.editorial.narrative_spine import build_narrative_spine
@@ -29,7 +30,6 @@ from src.editorial.discovery_builder import build_discovery
 from src.editorial.story_assembly import assemble_story
 from src.editorial.never_blank_voice import finalize_article
 from src.run.call_budget import RunCallBudgetExceededError
-from src.editorial.conditional_lenses import ACTIVE_GUIDANCE_KEY
 from src.editorial.derivation_fidelity import removed_phrases
 from src.editorial.platform_composer import CompositionRejected, compose_platforms
 from src.editorial.sources_of_record import source_citation_values
@@ -97,14 +97,10 @@ def generate_article(
     composer_formats: "tuple[str, ...] | None" = None,
     closing_contract: str | None = None,
     rejected_sink: "list | None" = None,
-    active_guidance: str = "",
+    editorial_plan: EditorialPlan | None = None,
 ) -> dict:
     """
     Run the full Editorial Engine V2 pipeline for one enriched signal.
-
-    ``active_guidance``: the client's conditional lenses this run's research
-    evidence activated (#263) — read by the stages that shape the argument
-    and its closing (spine, hook, voice) before anything is composed.
 
     Args:
         signal: Enriched signal dict from the Investigation Layer.
@@ -115,6 +111,11 @@ def generate_article(
             A mapping remains accepted only for legacy/non-canonical callers.
         wix_strategy: Declared Wix composition view for controlled R1.
         linkedin_strategy: Declared LinkedIn composition view for controlled R1.
+        editorial_plan: The validated plan this run executes the client's
+            editorial contract as (#267). Carried into the stages that shape
+            the argument — spine, hook, voice — before anything is written,
+            and into the composition messages; a run without one runs exactly
+            as before.
 
     Returns:
         {
@@ -144,8 +145,12 @@ def generate_article(
     # Merge pattern fields into signal so downstream stages receive owner-centered fields.
     # Pattern fields override same-named signal fields.
     enriched = {**signal, **pattern}
-    if active_guidance:
-        enriched[ACTIVE_GUIDANCE_KEY] = active_guidance
+    # #267/#263: the plan reaches the stages that build the argument, not only
+    # the composer — an obligation applied after the article is shaped is
+    # applied cosmetically. One key, read by every stage through
+    # ``plan_block``; the Engine adds nothing of its own to it.
+    if editorial_plan is not None:
+        enriched[PLAN_SIGNAL_KEY] = editorial_plan.as_prompt_text()
     typed_strategy = (
         strategy_context
         if isinstance(strategy_context, DecisionLensEditorialStrategyView)
@@ -208,6 +213,9 @@ def generate_article(
         formats=composer_formats,
         rejected_sink=rejected_sink,
         source_identities=_identities,
+        editorial_plan=(
+            editorial_plan.as_prompt_text() if editorial_plan is not None else None
+        ),
         **({} if closing_contract is None else {"closing_contract": closing_contract}),
     )
 
@@ -236,6 +244,7 @@ def recompose_platform(
     closing_attribution: "str | None" = None,
     draft_content: "str | None" = None,
     fidelity_judge=None,
+    editorial_plan: EditorialPlan | None = None,
 ) -> dict:
     """Re-compose ONE platform derivative from final accepted content (#197).
 
@@ -288,6 +297,11 @@ def recompose_platform(
                 if draft_content else None
             ),
             fidelity_judge=fidelity_judge,
+            # #267: a derivative obeys the same plan the article was written
+            # under; a re-composition is not an exemption from the contract.
+            editorial_plan=(
+                editorial_plan.as_prompt_text() if editorial_plan is not None else None
+            ),
             **({} if closing_contract is None else {"closing_contract": closing_contract}),
         )
     except ArticleGenerationError:

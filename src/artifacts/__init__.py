@@ -322,26 +322,11 @@ def write_preview_compositions_json(run_dir: Path, data: dict) -> None:
     )
 
 
-CONDITIONAL_LENSES_KIND = "conditional_lens_decisions"
 FIDELITY_CHECK_KIND = "fidelity_check"
 DIAGNOSTIC_ONLY_NOTICE = (
     "Diagnostic evidence only. NOT publishable and never a packaging or "
     "publication input; nothing reads it back."
 )
-
-
-def write_conditional_lenses_json(run_dir: Path, data: dict) -> None:
-    """Record which conditional client lenses this run's evidence activated (#263).
-
-    The client's condition, the judge's decision, the finding and the reason
-    — so an article written under an active lens can be traced to the
-    evidence that activated it. Diagnostic only; read by nothing.
-    """
-    atomic_write_json(
-        run_dir / "conditional_lenses.json",
-        {"artifact_kind": CONDITIONAL_LENSES_KIND, "publishable": False,
-         "notice": DIAGNOSTIC_ONLY_NOTICE, **data},
-    )
 
 
 def write_fidelity_check_json(run_dir: Path, sequence: int, surface: str, data: dict) -> Path:

@@ -157,13 +157,6 @@ from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
-from src.editorial.conditional_lenses import (
-    LensActivationError,
-    LensActivationJudge,
-    ModelLensActivationJudge,
-    active_guidance,
-    resolve_conditional_lenses,
-)
 from src.editorial.derivation_fidelity import (
     FidelityJudge,
     ModelFidelityJudge,
@@ -240,6 +233,17 @@ from src.editorial.editorial_acceptance import (
     run_editorial_acceptance,
 )
 from src.publishing import formatting
+from src.editorial.editorial_plan import (
+    Claim,
+    EditorialPlanError,
+    build_editorial_plan,
+    evidence_package_from_artifact,
+)
+from src.editorial.plan_decisions import (
+    ModelPlanDecider,
+    PlanDecider,
+    resolve_plan_decisions,
+)
 from src.strategy.client_contracts import ClientContractError, contracts_for_role
 from src.publishing.formatting import ensure_source_line
 from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
@@ -304,7 +308,6 @@ from src.artifacts import (
     write_linkedin_composition_json,
     write_linkedin_final_preflight_json,
     write_preview_compositions_json,
-    write_conditional_lenses_json,
     write_fidelity_check_json,
     write_visual_assets_json,
     write_business_strategy_snapshot,
@@ -881,7 +884,7 @@ def main(
     editorial_reviewer: EditorialReviewTransport | None = None,
     article_revisor: ArticleRevisionTransport | None = None,
     derivation_judge: "FidelityJudge | None" = None,
-    lens_activation_judge: "LensActivationJudge | None" = None,
+    plan_decider: PlanDecider | None = None,
 ) -> int:
     """Run one signal end to end and account for it exactly once.
 
@@ -923,7 +926,7 @@ def main(
                 editorial_reviewer=editorial_reviewer,
                 article_revisor=article_revisor,
                 derivation_judge=derivation_judge,
-                lens_activation_judge=lens_activation_judge,
+                plan_decider=plan_decider,
             )
     except RunCallBudgetExceededError as exc:
         print(f"  ERROR: {exc}")
@@ -947,7 +950,7 @@ def _run(
     editorial_reviewer: EditorialReviewTransport | None = None,
     article_revisor: ArticleRevisionTransport | None = None,
     derivation_judge: "FidelityJudge | None" = None,
-    lens_activation_judge: "LensActivationJudge | None" = None,
+    plan_decider: PlanDecider | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(description="Generate + publish one signal end-to-end")
     # #211: Wednesday's fresh-generation runs discover their own signal
@@ -1030,6 +1033,10 @@ def _run(
     #: The client's contracts for this role (#240 D12), or None when the client
     #: supplies none — zero client documents is a valid state.
     _client_contracts = None
+    #: The plan this run executes those contracts as (#267). Built once the run
+    #: has a signal and its research, and only where the client's stream
+    #: contract declares a plan; a client that declares none runs as before.
+    _editorial_plan = None
     if args.editorial_role:
         try:
             # One snapshot per run: the texts that shape it are the texts it records.
@@ -2008,54 +2015,6 @@ def _run(
         # #191: diagnostic sink for compositions rejected by local validation.
         _rejected_compositions: list = []
 
-        # ── 3a'. Conditional client lenses (#263) ────────────────────────────
-        # A client lens may apply only when its own condition holds. Decided
-        # HERE — research is ready, nothing is written yet — from the research
-        # evidence alone, so an active lens shapes the article from its spine
-        # to its closing, never cosmetically afterwards. The Engine passes the
-        # client's condition through; it does not know what it says.
-        _active_lens_ids: frozenset[str] = frozenset()
-        _active_guidance = ""
-        _conditional = (
-            _client_contracts.conditional_lenses if _client_contracts is not None else ()
-        )
-        if _conditional and research_artifact is not None:
-            _activation_judge = lens_activation_judge or ModelLensActivationJudge()
-            try:
-                _decisions = resolve_conditional_lenses(
-                    _conditional, research_artifact, signal, _activation_judge)
-            except (LensActivationError, RunCallBudgetExceededError) as exc:
-                print(f"  ERROR: conditional lens activation could not be decided: {exc}")
-                state.ended(TerminalStage.GENERATION, TerminalDisposition.BLOCKED,
-                            f"conditional lens activation: {type(exc).__name__}")
-                return 1
-            _active_lens_ids = frozenset(d.lens_id for d in _decisions if d.active)
-            _active_guidance = active_guidance(_conditional, _decisions)
-            try:
-                write_conditional_lenses_json(run_dir, {
-                    "run_id": run_ctx.run_id, "signal_id": signal_id,
-                    "judge": type(_activation_judge).__name__,
-                    "model_setting": getattr(_activation_judge, "model_setting", None),
-                    "decisions": [
-                        {"lens": f"{d.lens_id}/{d.lens_version}", "active": d.active,
-                         "finding": d.finding, "reason": d.reason}
-                        for d in _decisions
-                    ],
-                })
-            except (ArtifactCollisionError, OSError) as exc:
-                print(f"  ⚠  conditional lens decisions could not be preserved: {exc}")
-            for _decision in _decisions:
-                print(f"  {'✓' if _decision.active else '—'}  conditional lens "
-                      f"{_decision.lens_id}/{_decision.lens_version}: "
-                      f"{'ACTIVE' if _decision.active else 'inactive'} — {_decision.reason}")
-            if _active_lens_ids and _role is not None:
-                _writing_lenses = _client_contracts.for_stage("writing", _active_lens_ids)
-                _editorial_role_rules = {
-                    "long": render_editorial_role_rules(
-                        _role, surface="wix", lenses=_writing_lenses),
-                    "medium": render_editorial_role_rules(
-                        _role, surface="linkedin", lenses=_writing_lenses),
-                }
 
         # ── 3b. Generate content via LLM ─────────────────────────────────────
         print(f"\n[3/6] Generating content (LLM — Editorial Engine V2)…")
@@ -2075,6 +2034,63 @@ def _run(
                     "medium": _editorial_role_rules["medium"]
                     + render_sources_of_record(research_artifact, surface="linkedin"),
                 }
+            # #267: the plan this run executes the client's editorial contract
+            # as. Built wherever the contract needs one — a ``## Plan``, or a
+            # conditional lens, which can only apply through a plan:
+            # the Engine carries the slots, the client's documents decide every
+            # value, and a client that plans nothing runs exactly as before. A
+            # value the contract does not permit, or a choice it requires and
+            # this run did not make, stops the run here — a plan that is
+            # quietly less than the contract is the failure this replaces.
+            #
+            # What the contract leaves open — which conditional lenses this
+            # run's evidence activates, and which value a multi-value slot
+            # takes — is decided here from the research evidence, before
+            # anything is written, and recorded in the plan with the evidence
+            # ids and the decider behind each answer. A contract that leaves
+            # nothing open makes no call.
+            if _client_contracts is not None and _client_contracts.requires_plan:
+                _planned_signal = editorial.to_legacy_dict()
+                _plan_claim = Claim(text=str(
+                    _planned_signal.get("CORE_FACT")
+                    or _planned_signal.get("HEADLINE") or ""
+                ).strip())
+                _plan_evidence = (
+                    evidence_package_from_artifact(research_artifact)
+                    if research_artifact is not None else None
+                )
+                try:
+                    _plan_decisions = resolve_plan_decisions(
+                        _client_contracts,
+                        central_claim=_plan_claim,
+                        evidence=_plan_evidence,
+                        decider=(
+                            plan_decider if plan_decider is not None
+                            else ModelPlanDecider()
+                        ),
+                    )
+                    _editorial_plan = build_editorial_plan(
+                        _client_contracts,
+                        central_claim=_plan_claim,
+                        evidence=_plan_evidence,
+                        decisions=_plan_decisions,
+                    )
+                except EditorialPlanError as exc:
+                    raise ArticleGenerationError("editorial_plan", exc) from exc
+                # the plan, and the exact contract and lens digests behind it
+                (run_dir / "editorial_plan.json").write_text(
+                    json.dumps(
+                        {"run_id": run_ctx.run_id, **_editorial_plan.as_evidence()},
+                        indent=2, ensure_ascii=False,
+                    ) + "\n",
+                    encoding="utf-8",
+                )
+                print(
+                    f"  ✓  editorial plan: {len(_editorial_plan.active_lenses)} active "
+                    f"lens(es), {len(_editorial_plan.evidence.items)} evidence item(s)"
+                    + "".join(f", {slot} chosen by the run"
+                              for slot in _plan_decisions.selected)
+                )
             # ── Wednesday runs the restored July path (#207/#209) ─────────
             # Wednesday's editorial intelligence was lost to changes made for
             # Monday — most decisively pattern_extractor, which asserts an
@@ -2098,9 +2114,6 @@ def _run(
                     research_artifact=research_artifact,
                     editorial_role_rules=_editorial_role_rules,
                     composer_formats=_R1_COMPOSER_FORMATS,
-                    # #263: active conditional client lenses reach the stages
-                    # that shape the argument and its closing
-                    active_guidance=_active_guidance,
                     # #191: how this role closes its long-form surface. Roles
                     # that declare nothing keep the existing contract.
                     closing_contract=(
@@ -2109,6 +2122,7 @@ def _run(
                     # #191: compositions our own validator refuses are
                     # preserved for diagnosis instead of dying with the runner.
                     rejected_sink=_rejected_compositions,
+                    editorial_plan=_editorial_plan,
                 )
             platforms  = article["platforms"]
             structured = article["structured_article"]
@@ -2256,8 +2270,16 @@ def _run(
                     RevisionContext(
                         role_rules=render_editorial_role_rules(_role, surface="wix"),
                         voice=strategy_execution.decision_lens_editorial.brand_editorial.voice,
+                        # standing revision lenses, then the conditional
+                        # ones this run's plan activated for revision (#267)
                         lenses=(
-                            _client_contracts.for_stage("revision", _active_lens_ids)
+(
+                                *_client_contracts.for_stage("revision"),
+                                *(
+                                    _editorial_plan.activated_lens_texts("revision")
+                                    if _editorial_plan is not None else ()
+                                ),
+                            )
                             if _client_contracts is not None else ()
                         ),
                     )
@@ -2443,6 +2465,7 @@ def _run(
                 ),
                 research_artifact=research_artifact,
                 rejected_sink=_rejected_compositions,
+                editorial_plan=_editorial_plan,
             )
             linkedin_text = _recomposed["body"]
             _social_recomposed = True
@@ -2563,6 +2586,7 @@ def _run(
                         ),
                         research_artifact=research_artifact,
                         rejected_sink=_rejected_compositions,
+                        editorial_plan=_editorial_plan,
                         # the Engine adapters carry no brand of their own: a
                         # branded closing names the client its configuration
                         # declares (#259 review, Replace-the-client)

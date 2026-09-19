@@ -289,9 +289,11 @@ def test_never_blank_monday_is_governed_by_its_contract_and_four_lenses():
         "never-blank-article-structure", "never-blank-evidence",
         "never-blank-evidence-tension", "never-blank-revision",
     ]
-    # #263: exactly one of them is conditional
-    assert [lens.lens_id for lens in contracts.conditional_lenses] == [
-        "never-blank-evidence-tension"]
+    # #263: exactly one of them is conditional, and it declares its condition
+    conditional = [lens for lens in contracts.lenses if not lens.is_standing]
+    assert [lens.lens_id for lens in conditional] == ["never-blank-evidence-tension"]
+    assert contracts.activation_conditions == ("evidence_tension",)
+    assert conditional[0].stages == ("writing", "revision")
 
 
 def test_never_blank_evidence_policy_is_a_client_lens_for_selection_and_writing():

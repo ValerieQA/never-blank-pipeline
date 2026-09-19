@@ -327,8 +327,8 @@ def test_connective_words_alone_never_count_as_removed_content():
 
 @pytest.mark.parametrize("raw,expected", [
     ('{"unsupported": []}', []),
-    ('{"unsupported": [{"quote": "the same lesson holds", "kind": "broader_generalization", '
-     '"reason": "extends the case"}]}',
+    (('{"unsupported": [{"quote": "the same lesson holds", '
+      '"kind": "broader_generalization", "reason": "extends the case"}]}'),
      [{"quote": "the same lesson holds", "kind": "broader_generalization",
        "reason": "extends the case"}]),
 ])

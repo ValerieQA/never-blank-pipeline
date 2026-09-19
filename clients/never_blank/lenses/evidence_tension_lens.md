@@ -3,7 +3,7 @@ lens_id: never-blank-evidence-tension
 version: "1"
 applies_to: [never-blank-monday]
 stages: [writing, revision]
-activation: conditional
+activates_on: [evidence_tension]
 ---
 
 # Evidence Tension Lens — CLIENT: NEVER_BLANK
@@ -15,18 +15,20 @@ replace lenses/evidence.md: that lens decides what evidence is acceptable and
 what may be built from it; this one decides what Never Blank does editorially
 when acceptable research contradicts itself.
 
-It is conditional: the Engine asks, from the research evidence alone and
-before anything is written, whether "## Activation" below is met, and only
-then hands "## When active" to the writers and the reviser. It never sees an
-article, so a mismatch introduced by our own writing can never trigger it —
-that is a generation error, which editorial acceptance must still reject.
+It is conditional: it declares the condition `evidence_tension` in its front
+matter, and the run decides from the research evidence alone — before anything
+is written — whether that condition holds. Only then does this lens reach the
+stages it names: the spine, hook and voice that build the argument, the
+composition, and the reviser. The decision never sees an article, so a
+mismatch introduced by our own writing can never trigger it — that is a
+generation error, which editorial acceptance must still reject.
 
 Format: docs/engine/CLIENT_CONTRACTS.md.
 -->
 
-## Activation
+## When `evidence_tension` holds
 
-Apply this lens only when the research evidence itself shows a material tension or
+The condition is met only when the research evidence itself shows a material tension or
 contradiction between what a source claims, concludes, frames or implies and what the
 facts or data it relies on actually establish — for example, a source that presents a
 stronger conclusion than its own figures support, or figures that point the other way
@@ -40,7 +42,7 @@ Do not activate to make an article more interesting. If there is no material
 contradiction, this lens does not apply and the normal Never Blank article path
 continues unchanged.
 
-## When active
+## What to do when it is active
 
 The research for this signal contains a material tension between what the source claims
 and what its evidence establishes. Keep the signal and write from that tension:
