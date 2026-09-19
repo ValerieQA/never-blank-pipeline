@@ -415,6 +415,13 @@ def _validate_branded_echo_final(
     the canonical article link, hashtags — is appended deterministically by
     the system, never composed, which is what keeps the Echo the last
     *editorial* word while the assembled post still carries its link.
+
+    The attribution block is a closing block, not a closing phrase: both
+    Instagram attempts of controlled live run 35417616416 wrote the right
+    Echo behind the last prose sentence, on the same line. That is refused
+    here — and named as what it is, rather than reported as a missing Echo —
+    because the prompt asks for a standalone block and the product contract
+    is a distinct branded closing.
     """
     if body.count(echo) != 1:
         raise CompositionRejected(
@@ -424,10 +431,15 @@ def _validate_branded_echo_final(
         )
     index = _attributed_echo_line(body, echo, attribution)
     if index is None:
+        carrier = next(
+            (line.strip() for line in body.splitlines() if echo in line), ""
+        )
         raise CompositionRejected(
             f"Platform Composer ({format_key}): the Echo must be the "
-            f"{attribution} attribution block — a line reading "
-            f"'{attribution}: <echo>'",
+            f"{attribution} attribution block — a closing line of its own "
+            f"reading '{attribution}: <echo>', never appended to the end of "
+            "a prose paragraph"
+            + (f" (found on: {carrier!r})" if carrier else ""),
             format_key=format_key, body=body,
         )
     trailing = [ln for ln in body.splitlines()[index + 1:] if ln.strip()]
@@ -436,6 +448,51 @@ def _validate_branded_echo_final(
             f"Platform Composer ({format_key}): nothing may follow the "
             f"{attribution} Echo in the composed body — the link and hashtags "
             "are appended by the system, never composed",
+            format_key=format_key, body=body,
+        )
+
+
+#: A figure as a reader meets it: a run of digits with optional thousands or
+#: decimal separators. Percent signs, currency and units stay outside the
+#: match — the fidelity question is the number, not how it is dressed.
+_FIGURE = re.compile(r"\d+(?:[.,]\d+)*")
+
+
+def _figures(text: str) -> "set[str]":
+    """Every figure in the text, normalized so 1,200 and 1200 are one figure."""
+    found: "set[str]" = set()
+    for match in _FIGURE.finditer(text or ""):
+        value = match.group(0).replace(",", "")
+        if "." in value:
+            value = value.rstrip("0").rstrip(".")
+        found.add(value or "0")
+    return found
+
+
+def _validate_derived_figures(
+    body: str, canonical_body: str, format_key: str
+) -> None:
+    """A derivative may not state a figure its source content does not (#260).
+
+    Derivation is compression, restructuring and platform mechanics — never
+    addition. Most of "add nothing" is a matter of meaning and stays with the
+    editorial reviewer, but figures can be proven mechanically, so they are
+    proven here instead of being left to the prompt: controlled live run
+    35417616416 produced social copy carrying conditions and conclusions the
+    accepted article did not state, and no Engine check could see it.
+
+    Deliberately narrow and client-neutral: a number the accepted content
+    does not contain is a fabricated fact whoever the client is. Runs only
+    for compositions that HAVE final accepted content to be faithful to; a
+    first composition has no such source and is untouched.
+    """
+    invented = sorted(_figures(body) - _figures(canonical_body))
+    if invented:
+        raise CompositionRejected(
+            f"Platform Composer ({format_key}): the derivative states "
+            f"{', '.join(invented)}, which the final accepted content does "
+            "not — a derivation may compress and restructure, never add a "
+            "figure",
             format_key=format_key, body=body,
         )
 
@@ -489,8 +546,13 @@ def _build_user_prompt(
             "FINAL CANONICAL CONTENT — the accepted long-form this "
             "composition must derive from. Its facts, framing and single "
             "mechanism are authoritative: never introduce a claim that is "
-            "not supported by it, and use nothing that is not in it. Write "
-            "this format's "
+            "not supported by it, and use nothing that is not in it. It is "
+            "the FINAL version: whatever an earlier draft said and this one "
+            "does not was removed deliberately, so never restore it, and "
+            "never add a conclusion, a generalization, a condition or an "
+            "implication the content does not itself state, however "
+            "reasonable the inference. Every figure you write must appear "
+            "in the content above. Write this format's "
             "prose as your own derivative of that content rather than "
             "reproducing the long-form wholesale — a body that is simply "
             "the article trimmed to length is rejected. Individual "
@@ -556,8 +618,11 @@ def _build_user_prompt(
             lines.append(
                 f"ECHO MODE: verbatim, as the {attribution} perspective — the "
                 "EXACT supplied echo, word for word, never adapted or "
-                "rephrased. Put it exactly once, as the final line, rendered "
-                f"'{attribution}: <echo>'. It is the post's last word: "
+                "rephrased. Put it exactly once, as its OWN closing block: a "
+                "final line of its own, preceded by a blank line, reading "
+                f"'{attribution}: <echo>' and carrying nothing else — never "
+                "appended to the end of a sentence or of the last prose "
+                "paragraph. It is the post's last word: "
                 "write nothing after it — no sources section, no link, no "
                 "invitation, no hashtags (the system appends what follows). "
                 "Do not write any URL anywhere in the post."
@@ -655,6 +720,8 @@ def _compose_one(
     elif echo and echo_mode == "adapt" and not echo_included:
         raise ValueError(f"Platform Composer ({format_key}): adapted Echo missing")
 
+    if canonical_body:
+        _validate_derived_figures(body, canonical_body, format_key)
     validate_platform_output(_PLATFORM_NAMES[format_key], body)
     word_count = len(body.split())
     lo, hi = _WORD_RANGE[format_key]

@@ -291,6 +291,7 @@ from src.artifacts import (
     write_generated_json,
     write_linkedin_composition_json,
     write_linkedin_final_preflight_json,
+    write_preview_compositions_json,
     write_visual_assets_json,
     write_business_strategy_snapshot,
     write_preflight_result_json,
@@ -589,6 +590,34 @@ def _persist_rejected_compositions(run_dir: Path, rejected: list) -> None:
     except (OSError, ValueError) as exc:
         log.warning("rejected compositions could not be preserved (%s)",
                     type(exc).__name__)
+
+
+def _preserve_preview_compositions(
+    run_dir: Path,
+    *,
+    stopped_at: str,
+    facebook: str,
+    instagram: str,
+    telegram: str,
+    threads: list[str],
+) -> None:
+    """Keep the preview surfaces a stopped run had already composed (#260).
+
+    The preview composes one surface at a time, so a stop partway through
+    leaves earlier surfaces alive only in memory. Live run 35417616416 lost
+    its composed Facebook body that way. Diagnostic evidence, never a
+    publication input; failing to preserve it never rewrites the outcome.
+    """
+    try:
+        write_preview_compositions_json(run_dir, {
+            "stopped_at": stopped_at,
+            "surfaces": {"facebook": facebook, "instagram": instagram,
+                         "telegram": telegram, "threads": threads},
+        })
+        print("  ℹ  preview surfaces composed so far preserved: "
+              f"{run_dir / 'preview_compositions.json'} (not publishable)")
+    except (ArtifactCollisionError, OSError) as exc:
+        print(f"  ⚠  preview surfaces could not be preserved: {exc}")
 
 
 def _stop_with_preflight(
@@ -2364,6 +2393,46 @@ def _run(
             )
             return 1
 
+        # Issue #196: preserve the accepted compositions NOW, before the
+        # remaining gates. A run blocked downstream (transparency, images,
+        # visuals, preflight) used to lose its accepted article with the
+        # runner — live run 32666861632 cost a full regeneration to learn
+        # what it had written. Diagnostic evidence only: publishable=false,
+        # not canonical, and nothing (including --from-package) loads it, so
+        # preservation can never become a route past a gate. #197: written
+        # after re-composition, so the record holds the final internally
+        # consistent pair — never the revised article beside a stale social
+        # body presented as accepted.
+        #
+        # #260: and written BEFORE the preview surfaces are composed, not
+        # after them. Controlled live run 35417616416 reached ACCEPT,
+        # composed LinkedIn and Facebook from the accepted article, then
+        # failed at Instagram — and because this write sat below the preview
+        # loop, the accepted article, title and Echo were destroyed exactly
+        # as in 32666861632. A downstream adapter must never be able to
+        # erase a canonical article that has already reached ACCEPT.
+        try:
+            write_accepted_composition_json(
+                run_dir,
+                {
+                    **_accepted_record,
+                    "content": {
+                        "title": headline,
+                        "echo": echo_line,
+                        "article_body": blog_body,
+                        "linkedin_body": linkedin_text,
+                    },
+                },
+            )
+            print(
+                "  ✓  accepted compositions preserved: "
+                f"{run_dir / 'accepted_composition.json'} (not publishable)"
+            )
+        except (ArtifactCollisionError, OSError) as exc:
+            # Losing the diagnostic copy never changes the run's verdict —
+            # but the run says so honestly instead of silently.
+            print(f"  ⚠  accepted compositions could not be preserved: {exc}")
+
         # ── Full-content preview surfaces (owner-controlled, dry run) ────────
         # Facebook, Instagram, Telegram and Threads are not part of Release 1,
         # so a normal run does not pay to compose them (#175) and leaves them
@@ -2407,6 +2476,11 @@ def _run(
                 except ArticleGenerationError as exc:
                     print(f"  ERROR: preview {_format_key} composition failed: {exc.original}")
                     _persist_rejected_compositions(run_dir, _rejected_compositions)
+                    _preserve_preview_compositions(
+                        run_dir, stopped_at=f"composition:{_format_key}",
+                        facebook=facebook_text, instagram=instagram_text,
+                        telegram=telegram_text, threads=threads_seq,
+                    )
                     state.ended(TerminalStage.GENERATION, TerminalDisposition.BLOCKED,
                                 f"preview composition {_format_key}: "
                                 f"{type(exc.original).__name__}")
@@ -2428,6 +2502,11 @@ def _run(
                             )
                         except SourceTransparencyError as exc:
                             print(f"  ERROR: preview facebook source transparency: {exc}")
+                            _preserve_preview_compositions(
+                                run_dir, stopped_at="transparency:facebook",
+                                facebook=facebook_text, instagram=instagram_text,
+                                telegram=telegram_text, threads=threads_seq,
+                            )
                             state.ended(TerminalStage.EDITORIAL, TerminalDisposition.BLOCKED,
                                         f"preview facebook transparency: {type(exc).__name__}")
                             return 1
@@ -2446,43 +2525,16 @@ def _run(
                             f"\n{THREADS_POST_SEPARATOR}\n".join(threads_seq))
                     except ValueError as exc:
                         print(f"  ERROR: preview threads after the title lead: {exc}")
+                        _preserve_preview_compositions(
+                            run_dir, stopped_at="contract:threads",
+                            facebook=facebook_text, instagram=instagram_text,
+                            telegram=telegram_text, threads=threads_seq,
+                        )
                         state.ended(TerminalStage.GENERATION, TerminalDisposition.BLOCKED,
                                     "preview threads: contract")
                         return 1
                 print(f"  ✓  preview {_format_key} composed from the final accepted "
                       f"article ({_derived['word_count']} words)")
-
-        # Issue #196: preserve the accepted compositions NOW, before the
-        # remaining gates. A run blocked downstream (transparency, images,
-        # visuals, preflight) used to lose its accepted article with the
-        # runner — live run 32666861632 cost a full regeneration to learn
-        # what it had written. Diagnostic evidence only: publishable=false,
-        # not canonical, and nothing (including --from-package) loads it, so
-        # preservation can never become a route past a gate. #197: written
-        # after re-composition, so the record holds the final internally
-        # consistent pair — never the revised article beside a stale social
-        # body presented as accepted.
-        try:
-            write_accepted_composition_json(
-                run_dir,
-                {
-                    **_accepted_record,
-                    "content": {
-                        "title": headline,
-                        "echo": echo_line,
-                        "article_body": blog_body,
-                        "linkedin_body": linkedin_text,
-                    },
-                },
-            )
-            print(
-                "  ✓  accepted compositions preserved: "
-                f"{run_dir / 'accepted_composition.json'} (not publishable)"
-            )
-        except (ArtifactCollisionError, OSError) as exc:
-            # Losing the diagnostic copy never changes the run's verdict —
-            # but the run says so honestly instead of silently.
-            print(f"  ⚠  accepted compositions could not be preserved: {exc}")
 
         # ── Wednesday deterministic attribution (Issue #219) ────────────────
         # The restored July composer writes no attribution: July had no

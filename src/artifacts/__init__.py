@@ -292,6 +292,36 @@ def write_accepted_composition_json(run_dir: Path, data: dict) -> None:
     )
 
 
+PREVIEW_COMPOSITIONS_KIND = "preview_compositions"
+PREVIEW_COMPOSITIONS_NOTICE = (
+    "Preview surfaces composed before this run stopped, preserved for "
+    "diagnosis only. NOT publishable and never a packaging or publication "
+    "input: the run never reached a complete preview, and a surface missing "
+    "here is simply one that was never composed."
+)
+
+
+def write_preview_compositions_json(run_dir: Path, data: dict) -> None:
+    """Preserve the preview surfaces a stopped run had already composed (#260).
+
+    ``accepted_composition.json`` holds the canonical article and its
+    LinkedIn derivative; the remaining preview surfaces are composed after
+    it, one format at a time. Controlled live run 35417616416 composed
+    LinkedIn and Facebook, failed at Instagram, and left nothing of either
+    to read — the cost of diagnosing a preview was another preview.
+
+    Diagnostic evidence only, like every record beside it: publishable=false,
+    absent from ``CANONICAL_ARTIFACTS``, and read by nothing —
+    ``--from-package`` reads ``generated.json`` and only ``generated.json``.
+    """
+
+    atomic_write_json(
+        run_dir / "preview_compositions.json",
+        {"artifact_kind": PREVIEW_COMPOSITIONS_KIND, "publishable": False,
+         "notice": PREVIEW_COMPOSITIONS_NOTICE, **data},
+    )
+
+
 REJECTED_COMPOSITION_KIND = "rejected_composition"
 REJECTED_COMPOSITION_NOTICE = (
     "Composition rejected by local validation and preserved for diagnosis "
