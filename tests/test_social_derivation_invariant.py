@@ -583,3 +583,95 @@ def test_a_thread_that_breaks_the_contract_after_the_title_lead_fails_closed(tmp
 
     assert code == 1
     assert not list(tmp_path.glob(f"{SIG}/runs/*/generated.json"))
+
+
+# ===========================================================================
+# #259 review (4ed7afd): a branded closing on an adapter names the CLIENT
+# ===========================================================================
+
+
+OTHER_CLIENT = "Acme Studio"
+
+
+def _adapter_with_branded_closing(fmt, *, attribution, reply_attribution):
+    """Compose one adapter under branded_echo_then_sources; return what the
+    model saw and the result (or the raised error)."""
+    from src.editorial.platform_composer import CLOSING_BRANDED_ECHO_THEN_SOURCES
+
+    captured: dict = {}
+
+    def fake_chat(*, system, user, **kwargs):
+        captured["message"] = f"{system}\n{user}"
+        closing = f"{reply_attribution}: {ECHO}"
+        body = ("First post.\n---\nSecond post.\n---\n" + closing if fmt == "threads"
+                else f"An adaptation in complete sentences.\n\n{closing}")
+        return json.dumps({"body": body, "echo_included": True, "title": None})
+
+    with mock.patch.object(platform_composer, "chat", side_effect=fake_chat):
+        result = platform_composer.compose_platforms(
+            {"echo_line": ECHO}, formats=(fmt,), canonical_body="Content. " + ECHO,
+            closing_contract=CLOSING_BRANDED_ECHO_THEN_SOURCES,
+            closing_attribution=attribution,
+        )
+    return captured["message"], result
+
+
+@pytest.mark.parametrize("fmt", ["telegram", "threads"])
+def test_a_branded_adapter_closing_carries_the_clients_own_name(fmt):
+    """Replace the client on the REAL Monday path: a branded/verbatim closing
+    with another client's configured name uses that name, and 'Never Blank'
+    appears nowhere the Engine could have put it."""
+    message, result = _adapter_with_branded_closing(
+        fmt, attribution=OTHER_CLIENT, reply_attribution=OTHER_CLIENT)
+
+    assert f"'{OTHER_CLIENT}: <echo>'" in message
+    assert f"as the {OTHER_CLIENT} perspective" in message
+    assert "never blank" not in message.casefold()
+    assert result[fmt]["body"].rstrip().endswith(f"{OTHER_CLIENT}: {ECHO}")
+
+
+@pytest.mark.parametrize("fmt", ["telegram", "threads"])
+def test_an_adapter_closing_under_another_brand_is_rejected(fmt):
+    """The validator follows the client's name too: the Engine's old constant
+    is not an acceptable closing for another client."""
+    from src.editorial.platform_composer import CompositionRejected
+
+    with pytest.raises(CompositionRejected, match=OTHER_CLIENT):
+        _adapter_with_branded_closing(
+            fmt, attribution=OTHER_CLIENT, reply_attribution="Never Blank")
+
+
+@pytest.mark.parametrize("fmt", ["telegram", "threads"])
+def test_a_branded_adapter_closing_without_a_client_name_is_refused(fmt):
+    with pytest.raises(ValueError, match="client's attribution"):
+        _adapter_with_branded_closing(fmt, attribution=None, reply_attribution="X")
+
+
+def test_never_blank_reaches_its_adapters_only_from_its_own_configuration(tmp_path):
+    """The Monday path: the name comes from the client's configuration
+    (business.name), is handed to the adapters and only to them."""
+    from src.strategy.business_config import load_business_strategy_configuration
+
+    configured = load_business_strategy_configuration().business.name
+    code, patches = _preview_with_stub_derivation(tmp_path)
+
+    assert code == 0
+    calls = {c.args[1]: c.kwargs for c in patches["recompose_platform"].call_args_list}
+    for fmt in ("telegram", "threads"):
+        assert calls[fmt]["closing_attribution"] == configured, fmt
+    for fmt in ("medium", "reading", "instagram"):
+        assert "closing_attribution" not in calls[fmt], fmt
+
+
+def test_the_shared_formats_keep_their_existing_closing_unchanged():
+    """Bounded fix: the shared LinkedIn/Facebook/Instagram/article composer is
+    #255's — its branded closing text is byte-for-byte what it was."""
+    from src.editorial.platform_composer import (
+        CLOSING_BRANDED_ECHO_THEN_SOURCES,
+        _build_user_prompt,
+    )
+
+    prompt = _build_user_prompt({"echo_line": ECHO}, "medium", "none",
+                                closing_contract=CLOSING_BRANDED_ECHO_THEN_SOURCES)
+    assert "ECHO MODE: verbatim, as the Never Blank perspective — the" in prompt
+    assert "'Never Blank: <echo>'" in prompt

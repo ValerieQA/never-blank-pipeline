@@ -304,11 +304,14 @@ def _is_canonical_source_entry(
     return any(_cites_one_source_record(line, record) for record in records)
 
 
-def _attributed_echo_line(body: str, echo: str) -> "int | None":
-    """Index of the line carrying '[**]Never Blank[**]: <echo>', or None.
+def _attributed_echo_line(
+    body: str, echo: str, attribution: str = BRAND_ATTRIBUTION,
+) -> "int | None":
+    """Index of the line carrying '[**]<attribution>[**]: <echo>', or None.
 
     Bold markers are optional so the same contract holds for the markdown
-    (Wix) and plain-text (social) renderings.
+    (Wix) and plain-text (social) renderings. ``attribution`` defaults to the
+    shared composer's constant; the Engine adapters pass the client's own.
     """
     target = echo.strip()
     for index, line in enumerate(body.splitlines()):
@@ -317,7 +320,7 @@ def _attributed_echo_line(body: str, echo: str) -> "int | None":
             continue
         prefix = stripped[: len(stripped) - len(target)]
         normalized = prefix.replace("*", "").strip()
-        if normalized.rstrip(":").strip().casefold() == BRAND_ATTRIBUTION.casefold():
+        if normalized.rstrip(":").strip().casefold() == attribution.casefold():
             return index
     return None
 
@@ -401,7 +404,9 @@ def _effective_echo_mode(format_key: str, closing_contract: str) -> "str | None"
     return mode
 
 
-def _validate_branded_echo_final(body: str, echo: str, format_key: str) -> None:
+def _validate_branded_echo_final(
+    body: str, echo: str, format_key: str, attribution: str = BRAND_ATTRIBUTION,
+) -> None:
     """Prove a social derivative ends at the exact canonical Echo (#196).
 
     Three obligations: the Echo appears verbatim exactly once; it is rendered
@@ -417,20 +422,20 @@ def _validate_branded_echo_final(body: str, echo: str, format_key: str) -> None:
             "appear verbatim exactly once",
             format_key=format_key, body=body,
         )
-    index = _attributed_echo_line(body, echo)
+    index = _attributed_echo_line(body, echo, attribution)
     if index is None:
         raise CompositionRejected(
-            f"Platform Composer ({format_key}): the Echo must be the Never "
-            f"Blank attribution block — a line reading "
-            f"'{BRAND_ATTRIBUTION}: <echo>'",
+            f"Platform Composer ({format_key}): the Echo must be the "
+            f"{attribution} attribution block — a line reading "
+            f"'{attribution}: <echo>'",
             format_key=format_key, body=body,
         )
     trailing = [ln for ln in body.splitlines()[index + 1:] if ln.strip()]
     if trailing:
         raise CompositionRejected(
-            f"Platform Composer ({format_key}): nothing may follow the Never "
-            "Blank Echo in the composed body — the link and hashtags are "
-            "appended by the system, never composed",
+            f"Platform Composer ({format_key}): nothing may follow the "
+            f"{attribution} Echo in the composed body — the link and hashtags "
+            "are appended by the system, never composed",
             format_key=format_key, body=body,
         )
 
@@ -462,6 +467,7 @@ def _build_user_prompt(
     editorial_role_rules: str | None = None,
     closing_contract: str = CLOSING_INVITATION_LAST,
     canonical_body: str | None = None,
+    attribution: str = BRAND_ATTRIBUTION,
 ) -> str:
     lo, hi = _WORD_RANGE[format_key]
     lines = [
@@ -548,10 +554,10 @@ def _build_user_prompt(
             # exact same Echo as the canonical article — the one canonical
             # Echo travels; the lens never rewrites it.
             lines.append(
-                "ECHO MODE: verbatim, as the Never Blank perspective — the "
+                f"ECHO MODE: verbatim, as the {attribution} perspective — the "
                 "EXACT supplied echo, word for word, never adapted or "
                 "rephrased. Put it exactly once, as the final line, rendered "
-                f"'{BRAND_ATTRIBUTION}: <echo>'. It is the post's last word: "
+                f"'{attribution}: <echo>'. It is the post's last word: "
                 "write nothing after it — no sources section, no link, no "
                 "invitation, no hashtags (the system appends what follows). "
                 "Do not write any URL anywhere in the post."
@@ -584,7 +590,24 @@ def _compose_one(
     closing_contract: str = CLOSING_INVITATION_LAST,
     source_identities: "tuple[tuple[str, ...], ...]" = (),
     canonical_body: "str | None" = None,
+    closing_attribution: "str | None" = None,
 ) -> dict:
+    # Whose name a branded closing carries. The shared formats keep the
+    # composer's constant (#255 scope). An Engine adapter knows no client: the
+    # caller supplies the attribution from the client's configuration, and a
+    # branded closing without one is refused rather than defaulted
+    # (Replace-the-client test, #259 review).
+    if format_key in ADAPTER_FORMATS:
+        attribution = (closing_attribution or "").strip()
+        if not attribution and _effective_echo_mode(
+            format_key, closing_contract
+        ) in ("verbatim_final",) and _block_content(structured_article, "echo"):
+            raise ValueError(
+                f"{format_key}: a branded closing needs the client's attribution "
+                "(closing_attribution); the Engine supplies none of its own"
+            )
+    else:
+        attribution = BRAND_ATTRIBUTION
     model = model_article() if format_key in ("long", "reading") else model_social()
     raw = chat(
         system=_ADAPTER_SYSTEM_PROMPT if format_key in ADAPTER_FORMATS else _SYSTEM_PROMPT,
@@ -593,6 +616,7 @@ def _compose_one(
             editorial_role_rules=editorial_role_rules,
             closing_contract=closing_contract,
             canonical_body=canonical_body,
+            attribution=attribution or BRAND_ATTRIBUTION,
         ),
         json_mode=True,
         model=model,
@@ -627,7 +651,7 @@ def _compose_one(
     elif echo and echo_mode == "verbatim_final":
         # #196: the social derivative carries the article's exact Echo and
         # ends at it — proven structurally, never trusted to the prompt.
-        _validate_branded_echo_final(body, echo, format_key)
+        _validate_branded_echo_final(body, echo, format_key, attribution)
     elif echo and echo_mode == "adapt" and not echo_included:
         raise ValueError(f"Platform Composer ({format_key}): adapted Echo missing")
 
@@ -683,6 +707,7 @@ def compose_platforms(
     closing_contract: str = CLOSING_INVITATION_LAST,
     source_identities: "tuple[tuple[str, ...], ...]" = (),
     canonical_body: "str | None" = None,
+    closing_attribution: "str | None" = None,
 ) -> dict:
     """Compose one native body per requested format.
 
@@ -732,6 +757,9 @@ def compose_platforms(
             # final long-form content (post-revision re-composition) rather
             # than from the structured outline alone.
             canonical_body=canonical_body,
+            # the client's own name for a branded closing — used by the
+            # Engine adapters only (#259 review)
+            closing_attribution=closing_attribution,
         )
         log.info("Platform Composer: %s -> %d words", format_key, result[format_key]["word_count"])
     return result

@@ -157,7 +157,7 @@ from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
-from src.editorial.platform_composer import CLOSING_BRANDED_ECHO_THEN_SOURCES
+from src.editorial.platform_composer import ADAPTER_FORMATS, CLOSING_BRANDED_ECHO_THEN_SOURCES
 from src.content.output_guard import (
     THREADS_POST_MAX_CHARS,
     THREADS_POST_SEPARATOR,
@@ -2390,6 +2390,11 @@ def _run(
                         ),
                         research_artifact=research_artifact,
                         rejected_sink=_rejected_compositions,
+                        # the Engine adapters carry no brand of their own: a
+                        # branded closing names the client its configuration
+                        # declares (#259 review, Replace-the-client)
+                        **({"closing_attribution": business_configuration.business.name}
+                           if _format_key in ADAPTER_FORMATS else {}),
                     )
                 except ArticleGenerationError as exc:
                     print(f"  ERROR: preview {_format_key} composition failed: {exc.original}")
