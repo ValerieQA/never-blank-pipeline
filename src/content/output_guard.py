@@ -58,6 +58,8 @@ TELEGRAM_MESSAGE_MAX_CHARS = 4096
 #: Threads' own limits — platform mechanics, not editorial rules.
 THREADS_POST_MAX_CHARS = 500
 THREADS_MAX_POSTS = 6
+#: The adapter contract (Product Owner, #259): a thread is 3–6 posts.
+THREADS_MIN_POSTS = 3
 THREADS_POST_SEPARATOR = "---"
 
 
@@ -100,10 +102,11 @@ def split_threads_posts(text: str) -> list[str]:
 def validate_threads_adaptation(text: str) -> None:
     """The Engine Threads adaptation: platform mechanics only."""
     posts = split_threads_posts(text)
-    if not 2 <= len(posts) <= THREADS_MAX_POSTS:
+    if not THREADS_MIN_POSTS <= len(posts) <= THREADS_MAX_POSTS:
         raise ValueError(
-            f"Threads output has {len(posts)} posts; a thread carries 2–"
-            f"{THREADS_MAX_POSTS}, separated by '{THREADS_POST_SEPARATOR}' lines"
+            f"Threads output has {len(posts)} posts; the adapter contract is "
+            f"{THREADS_MIN_POSTS}–{THREADS_MAX_POSTS}, separated by "
+            f"'{THREADS_POST_SEPARATOR}' lines"
         )
     for number, post in enumerate(posts, start=1):
         if len(post) > THREADS_POST_MAX_CHARS:

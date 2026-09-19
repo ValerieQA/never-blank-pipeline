@@ -342,7 +342,7 @@ def _preview_with_stub_derivation(tmp_path, reading_body=FINAL_ARTICLE):
 
     def derive(structured, format_key, **kwargs):
         body = {"reading": reading_body,
-                "threads": f"First post.\n---\n**Never Blank:** {ECHO}"}.get(
+                "threads": f"First post.\n---\nSecond post.\n---\n**Never Blank:** {ECHO}"}.get(
             format_key, f"A {format_key} derivation.\n\n**Never Blank:** {ECHO}")
         return {"body": body, "word_count": len(body.split()),
                 "echo_included": True, "title": None}
@@ -419,8 +419,9 @@ def test_the_telegram_adapter_rules_carry_the_whole_argument():
                                 canonical_body=FINAL_ARTICLE)
     assert _WORD_RANGE["telegram"] == (180, 300)
     assert "TARGET LENGTH: 180-300 words" in prompt
-    for element in ("headline/hook", "core observation", "concrete evidence",
-                    "mechanism", "practical business implication", "final Echo"):
+    for element in ("headline or opening hook", "central observation",
+                    "concrete evidence", "explanation of why it happens",
+                    "implications it draws", "closing line"):
         assert element in prompt, element
     assert "add no fact" in prompt
     assert FINAL_ARTICLE in prompt
@@ -431,8 +432,8 @@ def test_the_threads_adapter_rules_demand_evidence_not_the_opening():
 
     prompt = _build_user_prompt({"echo_line": ECHO}, "threads", "none",
                                 canonical_body=FINAL_ARTICLE)
-    assert "not merely the opening of the article" in prompt
-    assert "evidence" in prompt and "mechanism" in prompt
+    assert "not merely the opening of the content" in prompt
+    assert "concrete evidence" in prompt and "explanation of why it happens" in prompt
     assert "---" in prompt and "Add no fact" in prompt
 
 
@@ -469,9 +470,12 @@ def test_threads_mechanics():
     assert split_threads_posts(ok) == ["First post.", "Second post.", "Third post."]
     validate_threads_adaptation(ok)
     with pytest.raises(ValueError, match="500"):
-        validate_threads_adaptation("x" * 501 + "\n---\nSecond.")
+        validate_threads_adaptation("x" * 501 + "\n---\nSecond.\n---\nThird.")
     with pytest.raises(ValueError, match="posts"):
         validate_threads_adaptation("Only one post.")
+    # the contract is 3–6 (#259 review): two posts are not a thread
+    with pytest.raises(ValueError, match="3–6"):
+        validate_threads_adaptation("First post.\n---\nSecond post.")
     with pytest.raises(ValueError, match="posts"):
         validate_threads_adaptation("\n---\n".join(f"Post {i}." for i in range(7)))
 
@@ -485,3 +489,97 @@ def test_a_thread_leads_with_the_title_without_breaking_the_post_limit():
     assert _lead_thread_with_canonical_title([long_first, "Echo."], TITLE) == [
         TITLE, long_first, "Echo."]
     assert _lead_thread_with_canonical_title(["Hook."], None) == ["Hook."]
+
+
+# ===========================================================================
+# #259 review (0df2a10): the adapter seam passes the Replace-the-client test
+# ===========================================================================
+
+
+_CLIENT_TERMS = ("never blank", "small-business", "small business", "owner",
+                 "business implication", "compound presence", "customer trust")
+
+
+@pytest.mark.parametrize("fmt", ["telegram", "threads"])
+def test_an_adapter_knows_no_client(fmt):
+    """Replace the client: with no client rules and no client closing
+    contract, nothing in the adapter's full model input is Never Blank's."""
+    captured: dict = {}
+
+    def fake_chat(*, system, user, **kwargs):
+        captured["message"] = f"{system}\n{user}"
+        body = ("First post.\n---\nSecond post.\n---\nThird post." if fmt == "threads"
+                else "An adaptation in complete sentences.")
+        return json.dumps({"body": body, "echo_included": False, "title": None})
+
+    neutral_content = "A retailer changed its checkout. Orders rose 12%. The change removed a step."
+    with mock.patch.object(platform_composer, "chat", side_effect=fake_chat):
+        platform_composer.compose_platforms(
+            {"echo_line": None}, formats=(fmt,), canonical_body=neutral_content,
+        )
+
+    message = captured["message"].casefold()
+    for term in _CLIENT_TERMS:
+        assert term not in message, term
+    assert neutral_content.casefold() in message
+
+
+@pytest.mark.parametrize("fmt", ["telegram", "threads"])
+def test_client_meaning_reaches_an_adapter_only_through_supplied_rules(fmt):
+    captured: dict = {}
+
+    def fake_chat(*, system, user, **kwargs):
+        captured["system"], captured["user"] = system, user
+        body = ("First post.\n---\nSecond post.\n---\nThird post." if fmt == "threads"
+                else "An adaptation in complete sentences.")
+        return json.dumps({"body": body, "echo_included": False, "title": None})
+
+    rules = "CLIENT RULE: write for independent bakery owners."
+    with mock.patch.object(platform_composer, "chat", side_effect=fake_chat):
+        platform_composer.compose_platforms(
+            {"echo_line": None}, formats=(fmt,), canonical_body="Content.",
+            editorial_role_rules={fmt: rules},
+        )
+
+    assert rules in captured["user"]                 # the client's rules arrive…
+    assert "bakery" not in captured["system"]        # …never baked into the Engine
+    assert "Never Blank" not in captured["system"]
+
+
+def test_the_shared_composer_prompt_is_unchanged_for_other_formats():
+    """Bounded fix: only the new adapter seam moved; #255 owns the rest."""
+    from src.editorial.platform_composer import _ADAPTER_SYSTEM_PROMPT, _SYSTEM_PROMPT
+
+    assert _SYSTEM_PROMPT.startswith("You are the Platform Composer for Never Blank.")
+    assert "Never Blank" not in _ADAPTER_SYSTEM_PROMPT
+
+
+def test_a_thread_that_breaks_the_contract_after_the_title_lead_fails_closed(tmp_path):
+    """A 6-post thread whose first post cannot take the title would become 7
+    posts: the preview stops rather than trimming anything."""
+    argv, patches = _entry_patches(tmp_path)
+    argv = argv + ["--editorial-role", MONDAY_ROLE, "--preview-fresh-images"]
+    article = copy.deepcopy(_draft())
+    article["platforms"]["long"]["body"] = FINAL_ARTICLE
+    article["platforms"]["reading"]["body"] = FINAL_ARTICLE
+    patches["generate_article"] = mock.MagicMock(return_value=article)
+    six_posts = "\n---\n".join(["y" * 450] + [f"Post {i}." for i in range(2, 6)]
+                               + [f"**Never Blank:** {ECHO}"])
+
+    def derive(structured, format_key, **kwargs):
+        body = six_posts if format_key == "threads" else (
+            FINAL_ARTICLE if format_key == "reading"
+            else f"A {format_key} derivation.\n\n**Never Blank:** {ECHO}")
+        return {"body": body, "word_count": len(body.split()),
+                "echo_included": True, "title": None}
+
+    patches["recompose_platform"] = mock.MagicMock(side_effect=derive)
+    evaluator, _ = _evaluator(_model_output())
+    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches), \
+            mock.patch("scripts.research.prepare_content.prepare_content_packages",
+                       side_effect=lambda *a, **k: [
+                           {"images": {"platform_images": _pimgs(tmp_path)}}]):
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+
+    assert code == 1
+    assert not list(tmp_path.glob(f"{SIG}/runs/*/generated.json"))

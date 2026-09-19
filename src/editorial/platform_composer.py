@@ -121,25 +121,30 @@ _FORMAT_CONSTRAINTS = {
         "Make the reader feel a specific owner situation before explaining it. No research diary, "
         "no stacked evidence, no company-led opening. One sentence per paragraph."
     ),
-    # Engine platform adapters. Channel mechanics are the Engine's; a client
-    # may later configure or override the adaptation at onboarding.
+    # Engine platform adapters: platform mechanics and faithful adaptation
+    # only. They carry no client's editorial meaning (Replace-the-client
+    # test, #259 review): voice and emphasis come from the client rules the
+    # caller supplies, or from the content itself. A client may configure or
+    # override the adaptation at onboarding.
     "telegram": (
         "Adapt the final content into one Telegram post of complete sentences. "
-        "Carry, where the content has them: the headline/hook, the core "
-        "observation, the concrete evidence or example (with its figures exactly "
-        "as given), the mechanism, the practical business implication, and the "
-        "final Echo. Compress and restructure freely, but add no fact, figure, "
-        "name or claim the content does not state. Short paragraphs. No "
-        "hashtags, no links, no 'read more' — the system appends the article link."
+        "Carry, where the content has them: its headline or opening hook, its "
+        "central observation, its concrete evidence or examples (figures exactly "
+        "as given), its explanation of why it happens, the implications it "
+        "draws, and its closing line. Compress and restructure freely, but add "
+        "no fact, figure, name or claim the content does not state. Short "
+        "paragraphs. No hashtags, no links, no 'read more' — the system appends "
+        "any link."
     ),
     "threads": (
         "Adapt the final content into a Threads sequence of 3 to 6 posts, each at "
         "most 450 characters, separated by a line containing only ---. Post 1 "
-        "opens with the headline/hook; the middle posts must carry the concrete "
-        "evidence (figures exactly as given) and the mechanism — not merely the "
-        "opening of the article; the practical implication follows; the final "
-        "post is the Echo line. Every post is complete sentences. Add no fact, "
-        "figure, name or claim the content does not state. No hashtags, no links."
+        "opens with its headline or opening hook; the middle posts must carry its "
+        "concrete evidence (figures exactly as given) and its explanation of why "
+        "it happens — not merely the opening of the content; the implications it "
+        "draws follow; the final post is its closing line. Every post is "
+        "complete sentences. Add no fact, figure, name or claim the content does "
+        "not state. No hashtags, no links."
     ),
     "short": (
         "Express one native short-form thought. Do not summarize the article; "
@@ -182,6 +187,27 @@ Other formats return "title": null.
 
 Return ONLY valid JSON:
 {"body": "string", "echo_included": true|false, "title": "string or null"}
+"""
+
+
+#: The system prompt for the Engine platform adapters (ADAPTER_FORMATS). Unlike
+#: _SYSTEM_PROMPT it holds no client's editorial stance — no brand, audience or
+#: argument: an adapter restates accepted content faithfully for one platform.
+_ADAPTER_SYSTEM_PROMPT = """You are a platform adapter. You adapt one final, already-accepted piece of
+content for one platform.
+
+The final content supplied with the request is the only source. Keep its facts, figures, names
+and conclusions exactly as it states them; compress and restructure for the platform, but add
+nothing it does not state and do not change what it concludes. Write complete sentences only.
+
+Voice, emphasis and editorial rules come from the client rules supplied with the request, when
+there are any — follow them. Without them, keep the content's own voice.
+
+Closing line: when an ECHO MODE instruction is given, follow it exactly. If none is given, do not
+invent a closing line.
+
+Return ONLY valid JSON:
+{"body": "string", "echo_included": true|false, "title": null}
 """
 
 
@@ -561,7 +587,7 @@ def _compose_one(
 ) -> dict:
     model = model_article() if format_key in ("long", "reading") else model_social()
     raw = chat(
-        system=_SYSTEM_PROMPT,
+        system=_ADAPTER_SYSTEM_PROMPT if format_key in ADAPTER_FORMATS else _SYSTEM_PROMPT,
         user=_build_user_prompt(
             structured_article, format_key, cta_mode, strategy_rules,
             editorial_role_rules=editorial_role_rules,

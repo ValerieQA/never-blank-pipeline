@@ -158,7 +158,12 @@ from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
 from src.editorial.platform_composer import CLOSING_BRANDED_ECHO_THEN_SOURCES
-from src.content.output_guard import THREADS_POST_MAX_CHARS, split_threads_posts
+from src.content.output_guard import (
+    THREADS_POST_MAX_CHARS,
+    THREADS_POST_SEPARATOR,
+    split_threads_posts,
+    validate_threads_adaptation,
+)
 from src.editorial.editorial_role import (
     EditorialRoleError,
     render_editorial_role_rules,
@@ -2421,6 +2426,16 @@ def _run(
                 else:
                     threads_seq = _lead_thread_with_canonical_title(
                         split_threads_posts(_derived["body"]), _composed_title)
+                    # the thread as it will be shown — after the title lead —
+                    # must still meet the adapter contract; never trimmed
+                    try:
+                        validate_threads_adaptation(
+                            f"\n{THREADS_POST_SEPARATOR}\n".join(threads_seq))
+                    except ValueError as exc:
+                        print(f"  ERROR: preview threads after the title lead: {exc}")
+                        state.ended(TerminalStage.GENERATION, TerminalDisposition.BLOCKED,
+                                    "preview threads: contract")
+                        return 1
                 print(f"  ✓  preview {_format_key} composed from the final accepted "
                       f"article ({_derived['word_count']} words)")
 

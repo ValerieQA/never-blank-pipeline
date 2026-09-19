@@ -545,6 +545,9 @@ def _fake_derivation(ref: dict):
             draft_long and canonical_body.strip() == draft_long.strip()
         ) else None
         body = body or "Re-composed social body derived from the final accepted article."
+        if format_key == "threads":
+            # the Threads adapter contract is a 3–6 post sequence (#259)
+            body = "\n---\n".join([body, "Second post.", "Third post."])
         return {"body": body, "word_count": len(body.split()),
                 "echo_included": True, "title": None}
     return derive
