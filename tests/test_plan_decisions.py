@@ -266,6 +266,7 @@ def test_a_met_condition_carries_its_finding_and_evidence_into_the_plan():
         "evidence_refs": [],
         "reason": "The notice is in the evidence.",
         "declared_by": ["gearworks-recall/1"],
+        "stages": ["writing"],
     }
     # the writer is told what activated it
     assert "What activated it in this run's evidence: Recall notice R-114" in (
@@ -475,7 +476,15 @@ def test_an_open_contract_with_no_decider_stops_the_run():
 
 
 def _entrypoint(
-    tmp_path, monkeypatch, *, client: Path, role: str, decider, configuration=None
+    tmp_path,
+    monkeypatch,
+    *,
+    client: Path,
+    role: str,
+    decider,
+    configuration=None,
+    reviewer=None,
+    revisor=None,
 ):
     """Run the canonical entrypoint (dry run) under ``client``'s documents."""
     monkeypatch.setenv("NB_CLIENT_DIR", str(client))
@@ -512,8 +521,8 @@ def _entrypoint(
         code = main(
             research_provider=ReadyProvider(),
             decision_evaluator=evaluator,
-            editorial_reviewer=FakeReviewTransport(_review_payload()),
-            article_revisor=FakeRevisionTransport(FINAL_ARTICLE),
+            editorial_reviewer=reviewer or FakeReviewTransport(_review_payload()),
+            article_revisor=revisor or FakeRevisionTransport(FINAL_ARTICLE),
             derivation_judge=RecordingJudge(),
             plan_decider=decider,
         )
@@ -1170,3 +1179,278 @@ def test_the_model_input_addendum_is_scoped_to_its_block():
         llm_client.chat(system="s", user="after")
 
     assert seen == ["before", "inside\nPLAN", "after"]
+
+
+# ── stage-aware activation: writing and revision, never selection ───────────
+
+REVISION_LENS = """---
+lens_id: gearworks-recall-revision
+version: "1"
+applies_to: [gearworks-weekly]
+stages: [revision]
+activates_on: [manufacturer_recall]
+---
+
+GEARWORKS-REVISION-CANARY: when revising a recall note, keep the affected part
+numbers and the effective date in the first paragraph, whatever else moves.
+"""
+
+
+def _revision_client(tmp_path: Path) -> Path:
+    """The fixture client plus a conditional lens routed to revision only."""
+    client = tmp_path / "client"
+    shutil.copytree(FIXTURE_CLIENT, client)
+    (client / "lenses" / "recall_revision.md").write_text(
+        REVISION_LENS, encoding="utf-8"
+    )
+    return client
+
+
+def _revising():
+    """A reviewer that asks for one revision, then accepts; and the reviser."""
+    reviewer = FakeReviewTransport(
+        _review_payload(
+            disposition="revise",
+            failed=["unsupported-claims"],
+            guidance="Tighten the claim to what the source states.",
+        ),
+        _review_payload(),
+    )
+    return reviewer, FakeRevisionTransport(FINAL_ARTICLE)
+
+
+def _reviser_lenses(revisor: FakeRevisionTransport) -> list[str]:
+    assert len(revisor.calls) == 1, "the reviewer asked for exactly one revision"
+    return json.loads(revisor.calls[0]["request"]).get("client_lenses", [])
+
+
+def test_a_conditional_revision_lens_reaches_the_real_reviser_when_met(
+    tmp_path, monkeypatch
+):
+    reviewer, revisor = _revising()
+    decider = ScriptedDecider(_run_answer(recall_met=True))
+
+    code, _, composer, record = _entrypoint(
+        tmp_path / "run",
+        monkeypatch,
+        client=_revision_client(tmp_path),
+        role=MONDAY_ROLE,
+        decider=decider,
+        reviewer=reviewer,
+        revisor=revisor,
+    )
+
+    assert code == 0
+    # one decision for the condition, serving every stage its lenses name
+    recall = decider.requests[0]["conditions"][0]
+    assert recall["condition"] == "manufacturer_recall"
+    assert [lens["lens"] for lens in recall["lenses"]] == [
+        "gearworks-recall/1",
+        "gearworks-recall-revision/1",
+    ]
+    decision = record["run_decisions"]["activations"][0]
+    assert decision["met"] is True
+    assert decision["stages"] == ["writing", "revision"]
+    assert {
+        "identity": "gearworks-recall-revision/1",
+        "activation": "manufacturer_recall",
+    } in record["active_by_stage"]["revision"]
+    # the reviser receives it, with what activated it — and the writer does not
+    lenses = "\n".join(_reviser_lenses(revisor))
+    assert "GEARWORKS-REVISION-CANARY" in lenses
+    assert "The notice in the research names the part." in lenses
+    assert "GEARWORKS-REVISION-CANARY" not in "\n".join(composer.prompts)
+    # the writing-only lens stays out of the reviser; the standing one is there
+    assert "GEARWORKS-LENS-CANARY" not in lenses
+    assert "Write to a shop owner standing at a bench" in lenses
+
+
+def test_a_conditional_revision_lens_is_recorded_inactive_and_absent_when_unmet(
+    tmp_path, monkeypatch
+):
+    reviewer, revisor = _revising()
+
+    code, _, _, record = _entrypoint(
+        tmp_path / "run",
+        monkeypatch,
+        client=_revision_client(tmp_path),
+        role=MONDAY_ROLE,
+        decider=ScriptedDecider(_run_answer(recall_met=False)),
+        reviewer=reviewer,
+        revisor=revisor,
+    )
+
+    assert code == 0
+    decision = record["run_decisions"]["activations"][0]
+    assert decision["met"] is False and decision["stages"] == ["writing", "revision"]
+    assert all(not lens["activation"] for lens in record["active_by_stage"]["revision"])
+    lenses = "\n".join(_reviser_lenses(revisor))
+    assert "GEARWORKS-REVISION-CANARY" not in lenses
+    assert "Write to a shop owner standing at a bench" in lenses  # standing stays
+
+
+def test_one_lens_for_writing_and_revision_is_decided_once_and_reaches_both(
+    tmp_path, monkeypatch
+):
+    client = tmp_path / "client"
+    shutil.copytree(FIXTURE_CLIENT, client)
+    lens = client / "lenses" / "recall.md"
+    lens.write_text(
+        lens.read_text(encoding="utf-8").replace(
+            "stages: [writing]", "stages: [writing, revision]"
+        ),
+        encoding="utf-8",
+    )
+    reviewer, revisor = _revising()
+    decider = ScriptedDecider(_run_answer(recall_met=True))
+
+    code, _, composer, record = _entrypoint(
+        tmp_path / "run",
+        monkeypatch,
+        client=client,
+        role=MONDAY_ROLE,
+        decider=decider,
+        reviewer=reviewer,
+        revisor=revisor,
+    )
+
+    assert code == 0
+    # one decider call, one answer per condition — no second authority
+    assert len(decider.requests) == 1
+    assert [c["condition"] for c in decider.requests[0]["conditions"]] == [
+        "manufacturer_recall",
+        "regulatory_change",
+    ]
+    activated = [lens for lens in record["active_lenses"] if lens["activation"]]
+    assert [lens["identity"] for lens in activated] == ["gearworks-recall/1"]
+    assert activated[0]["stages"] == ["writing", "revision"]
+    for stage in ("writing", "revision"):
+        assert {
+            "identity": "gearworks-recall/1",
+            "activation": "manufacturer_recall",
+        } in record["active_by_stage"][stage]
+    # the same lens, on the same evidence, at both stages
+    assert "GEARWORKS-LENS-CANARY" in _medium_prompt(composer)
+    lenses = "\n".join(_reviser_lenses(revisor))
+    assert "GEARWORKS-LENS-CANARY" in lenses
+    assert lenses.count("GEARWORKS-LENS-CANARY") == 1
+
+
+def test_disconnecting_revision_routing_removes_the_lens_from_the_reviser(
+    tmp_path, monkeypatch
+):
+    """The mutation twin: cut the plan's route to revision and the canary is
+    gone — the reviser has no other way to receive a conditional lens."""
+    from src.editorial.editorial_plan import EditorialPlan
+
+    original = EditorialPlan.activated_lens_texts
+
+    def writing_only(self, stage):
+        return () if stage == "revision" else original(self, stage)
+
+    monkeypatch.setattr(EditorialPlan, "activated_lens_texts", writing_only)
+    reviewer, revisor = _revising()
+
+    code, _, _, record = _entrypoint(
+        tmp_path / "run",
+        monkeypatch,
+        client=_revision_client(tmp_path),
+        role=MONDAY_ROLE,
+        decider=ScriptedDecider(_run_answer(recall_met=True)),
+        reviewer=reviewer,
+        revisor=revisor,
+    )
+
+    assert code == 0
+    assert record["run_decisions"]["activations"][0]["met"] is True
+    assert "GEARWORKS-REVISION-CANARY" not in "\n".join(_reviser_lenses(revisor))
+
+
+SELECTION_LENS = """---
+lens_id: gearworks-recall-selection
+version: "1"
+applies_to: [gearworks-weekly]
+stages: [selection, writing]
+activates_on: [manufacturer_recall]
+---
+
+Prefer a recall signal over any other this week.
+"""
+
+
+def test_a_conditional_selection_lens_is_refused_when_the_contract_loads(tmp_path):
+    from src.strategy.client_contracts import ClientContractError, load_lens
+
+    path = tmp_path / "selection.md"
+    path.write_text(SELECTION_LENS, encoding="utf-8")
+
+    with pytest.raises(ClientContractError, match="cannot route to selection"):
+        load_lens(path)
+
+
+def test_a_conditional_selection_lens_stops_the_production_run_before_any_work(
+    tmp_path, monkeypatch
+):
+    client = tmp_path / "client"
+    shutil.copytree(FIXTURE_CLIENT, client)
+    (client / "lenses" / "recall_selection.md").write_text(
+        SELECTION_LENS, encoding="utf-8"
+    )
+
+    code, generate, composer, record = _entrypoint(
+        tmp_path / "run",
+        monkeypatch,
+        client=client,
+        role=MONDAY_ROLE,
+        decider=ExplodingDecider(),
+    )
+
+    assert code == 1
+    assert not generate.called and composer.prompts == [] and record is None
+
+
+def test_a_standing_selection_lens_is_still_accepted(tmp_path):
+    from src.strategy.client_contracts import load_lens
+
+    path = tmp_path / "selection.md"
+    path.write_text(
+        SELECTION_LENS.replace("activates_on: [manufacturer_recall]\n", ""),
+        encoding="utf-8",
+    )
+
+    assert load_lens(path).stages == ("selection", "writing")
+
+
+# ── the restored Wednesday path refuses what it cannot execute ──────────────
+
+
+@pytest.mark.parametrize(
+    "stages, activates_on",
+    [
+        ("[writing]", ""),  # standing writing
+        ("[revision]", "activates_on: [category_boundary_moved]\n"),
+        ("[writing, revision]", "activates_on: [category_boundary_moved]\n"),
+    ],
+    ids=[
+        "standing-writing",
+        "conditional-revision",
+        "conditional-writing-and-revision",
+    ],
+)
+def test_wednesday_refuses_a_lens_route_its_restored_path_cannot_execute(
+    tmp_path, monkeypatch, stages, activates_on
+):
+    client = _wednesday_client(tmp_path)
+    (client / "lenses" / "wednesday_boundary.md").write_text(
+        WEDNESDAY_LENS.replace("stages: [writing]", f"stages: {stages}").replace(
+            "activates_on: [category_boundary_moved]\n", activates_on
+        ),
+        encoding="utf-8",
+    )
+
+    code, july, record = _wednesday_entrypoint(
+        tmp_path, monkeypatch, client=client, decider=ExplodingDecider()
+    )
+
+    assert code == 1
+    assert july.messages == [] and record is None

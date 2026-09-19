@@ -39,12 +39,12 @@ from dataclasses import dataclass
 from typing import Final, Protocol
 
 from src.editorial.editorial_plan import (
-    DEFAULT_PLAN_STAGE,
+    PLAN_STAGES,
     Claim,
     EditorialPlanError,
     EvidencePackage,
 )
-from src.strategy.client_contracts import PLAN_SCALAR_SLOTS, ClientContracts
+from src.strategy.client_contracts import PLAN_SCALAR_SLOTS, ClientContracts, Lens
 
 
 class PlanDecider(Protocol):
@@ -116,6 +116,9 @@ class ActivationDecision:
     reason: str
     #: The lens identities that name this condition.
     declared_by: tuple[str, ...]
+    #: Every stage those lenses route to. One decision serves all of them: a
+    #: lens named for writing and revision is never decided twice.
+    stages: tuple[str, ...] = ()
 
     @property
     def proof(self) -> str:
@@ -130,6 +133,7 @@ class ActivationDecision:
             "evidence_refs": list(self.evidence_refs),
             "reason": self.reason,
             "declared_by": list(self.declared_by),
+            "stages": list(self.stages),
         }
 
 
@@ -157,7 +161,8 @@ class SlotSelection:
 class PlanDecisions:
     """What this run decided that the contract left open, and on what."""
 
-    stage: str
+    #: The stages these decisions route lenses to.
+    stages: tuple[str, ...] = PLAN_STAGES
     #: The decider's identity; empty when nothing was left open.
     decided_by: str = ""
     #: The contract the options came from — identity and digest.
@@ -175,7 +180,7 @@ class PlanDecisions:
 
     def as_evidence(self) -> dict:
         return {
-            "stage": self.stage,
+            "stages": list(self.stages),
             "decided_by": self.decided_by,
             "contract": dict(self.contract or {}),
             "activations": [d.as_evidence() for d in self.activations],
@@ -183,12 +188,18 @@ class PlanDecisions:
         }
 
 
-def _open_conditions(contracts: ClientContracts, stage: str) -> dict[str, list[str]]:
-    """Every condition a conditional lens for ``stage`` names → the lenses naming it."""
-    conditions: dict[str, list[str]] = {}
-    for lens in contracts.conditional_for_stage(stage):
+def _open_conditions(contracts: ClientContracts) -> dict[str, list[Lens]]:
+    """Every condition a conditional lens names → the lenses naming it.
+
+    Across every plan stage at once, so a condition is decided once per run
+    whichever stages its lenses route to.
+    """
+    conditions: dict[str, list[Lens]] = {}
+    for lens in contracts.lenses:
+        if lens.is_standing or not set(lens.stages) & set(PLAN_STAGES):
+            continue
         for condition in lens.activates_on:
-            conditions.setdefault(condition, []).append(lens.identity)
+            conditions.setdefault(condition, []).append(lens)
     return conditions
 
 
@@ -206,21 +217,23 @@ def plan_decision_request(
     *,
     central_claim: Claim,
     evidence: EvidencePackage,
-    stage: str = DEFAULT_PLAN_STAGE,
 ) -> dict | None:
     """What the decider is asked, or ``None`` when the contract left nothing open."""
-    conditions, slots = _open_conditions(contracts, stage), _open_slots(contracts)
+    conditions, slots = _open_conditions(contracts), _open_slots(contracts)
     if not conditions and not slots:
         return None
-    lens_text = {lens.identity: lens.text for lens in contracts.lenses}
     return {
         "central_claim": central_claim.text,
         "conditions": [
             {
                 "condition": condition,
                 "lenses": [
-                    {"lens": identity, "text": lens_text[identity]}
-                    for identity in lenses
+                    {
+                        "lens": lens.identity,
+                        "stages": list(lens.stages),
+                        "text": lens.text,
+                    }
+                    for lens in lenses
                 ],
             }
             for condition, lenses in conditions.items()
@@ -247,25 +260,23 @@ def resolve_plan_decisions(
     central_claim: Claim,
     evidence: EvidencePackage | None,
     decider: PlanDecider | None,
-    stage: str = DEFAULT_PLAN_STAGE,
 ) -> PlanDecisions:
     """Decide what the contract left open for this run, or stop the run."""
     package = evidence if evidence is not None else EvidencePackage()
     request = plan_decision_request(
-        contracts, central_claim=central_claim, evidence=package, stage=stage
+        contracts, central_claim=central_claim, evidence=package
     )
     if request is None:
-        return PlanDecisions(stage=stage)
+        return PlanDecisions()
     if decider is None:
         raise EditorialPlanError(
             f"{contracts.stream.identity} leaves decisions to the run and no "
             "decider was given to make them"
         )
     raw = decider.decide(request)
-    conditions, slots = _open_conditions(contracts, stage), _open_slots(contracts)
+    conditions, slots = _open_conditions(contracts), _open_slots(contracts)
     answer = _parse(raw)
     return PlanDecisions(
-        stage=stage,
         decided_by=decider.identity,
         contract={
             "identity": contracts.stream.identity,
@@ -344,7 +355,7 @@ def _answered_once(
 
 
 def _activations(
-    entries: list, conditions: Mapping[str, list[str]], package: EvidencePackage
+    entries: list, conditions: Mapping[str, list[Lens]], package: EvidencePackage
 ) -> tuple[ActivationDecision, ...]:
     answered = _answered_once(entries, "condition", conditions, "condition")
     decisions = []
@@ -368,7 +379,12 @@ def _activations(
                 finding=finding if met else "",
                 evidence_refs=refs,
                 reason=_text(entry, "reason", what),
-                declared_by=tuple(lenses),
+                declared_by=tuple(lens.identity for lens in lenses),
+                stages=tuple(
+                    stage
+                    for stage in PLAN_STAGES
+                    if any(stage in lens.stages for lens in lenses)
+                ),
             )
         )
     return tuple(decisions)

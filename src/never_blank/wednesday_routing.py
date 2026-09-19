@@ -36,6 +36,7 @@ from src.utils.logger import get_logger
 
 if TYPE_CHECKING:
     from src.editorial.editorial_plan import EditorialPlan
+    from src.strategy.client_contracts import ClientContracts
 
 log = get_logger("never_blank.wednesday_routing")
 
@@ -56,6 +57,30 @@ def is_wednesday_role(role_identity) -> bool:
         return False
     role_id = getattr(role_identity, "role_id", role_identity)
     return isinstance(role_id, str) and role_id == WEDNESDAY_ROLE_ID
+
+
+def unexecutable_lens_routes(contracts: ClientContracts | None) -> tuple[str, ...]:
+    """Client lens routes the restored Wednesday path cannot execute (#267).
+
+    The restored July modules are pinned verbatim, so a client's text reaches
+    them only one way: the run's ``EditorialPlan``, appended to every model
+    call they make — which carries the conditional lenses the run activated
+    for ``writing``. Nothing else a lens can name reaches this path: standing
+    lenses travel with role rules the July stages never read, and Wednesday
+    keeps its own acceptance with no reviser context (#254 D10), so nothing
+    routed to ``revision`` reaches a reviser.
+
+    Every other route is returned as ``"<lens identity> → <stage>"`` so the
+    run can refuse it, rather than load policy that would never execute.
+    """
+    if contracts is None:
+        return ()
+    return tuple(
+        f"{lens.identity} → {stage}"
+        for lens in contracts.lenses
+        for stage in lens.stages
+        if lens.is_standing or stage != "writing"
+    )
 
 
 def generate_for_wednesday(

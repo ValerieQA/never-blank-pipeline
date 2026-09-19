@@ -79,6 +79,15 @@ selection with its value, its position among the permitted values, the
 evidence ids and the reason. An activated lens also carries its finding into
 the writer's message.
 
+**Stages.** A plan routes lenses to every stage that runs after research —
+`writing` and `revision` (`PLAN_STAGES`). Each condition is decided once, and
+the decision records every stage its lenses route to (`stages`);
+`active_by_stage` in `editorial_plan.json` lists what reached each stage.
+`as_prompt_text()` is the writing stage's input and carries the conditional
+lenses routed to writing; `activated_lens_texts("revision")` is what the
+reviser receives beside the standing revision lenses. A conditional lens
+cannot route to `selection` — see [CLIENT_CONTRACTS.md](CLIENT_CONTRACTS.md#lens).
+
 A run builds a plan whenever its contract needs one (`requires_plan`): a
 `## Plan`, or any conditional lens — a conditional lens applies only through a
 plan, so it needs none of the plan slots to be executable.
@@ -90,6 +99,8 @@ is pinned verbatim to July (#207), so the routing seam
 through its modules: it appends the plan's prompt text to the user message of
 every model call that path makes, for that generation only
 (`llm_client.model_input_addendum`). With no plan the path is exactly July's.
+That carries conditional lenses routed to writing; any other lens route on a
+Wednesday stream is refused before the run starts (`unexecutable_lens_routes`).
 
 Nothing here knows a weekday. A new stream — a different day, a different
 ending, a different lens — is a stream contract bound to a role the business

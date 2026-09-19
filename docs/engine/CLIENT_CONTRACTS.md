@@ -90,6 +90,18 @@ which condition fired and on what evidence. Without `activates_on` a lens is a
 obligations only: a conditional lens has no path to a stage that does not go
 through a plan.
 
+A condition is decided on the run's research evidence, so a conditional lens
+may route only to the stages that run after research: `writing` and
+`revision`. One routed to `selection` is refused when the contract loads — the
+candidate is chosen before any research exists, so nothing could activate it.
+Make it a standing lens to apply it at selection. A condition is decided once
+per run and that one decision serves every stage its lenses name.
+
+The restored Wednesday path executes only conditional lenses routed to
+`writing` (through the plan). A Wednesday stream whose lenses route anywhere
+else — a standing lens, or anything routed to `revision` — is refused before
+the run starts rather than loaded as policy that would never execute.
+
 ## Shared list
 
 A list of strings the client's output may not contain — machine tells, banned

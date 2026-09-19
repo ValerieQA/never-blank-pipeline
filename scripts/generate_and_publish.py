@@ -185,6 +185,7 @@ from src.never_blank.wednesday_routing import (
     WEDNESDAY_ROLE_ID,
     generate_for_wednesday,
     is_wednesday_role,
+    unexecutable_lens_routes,
 )
 from src.never_blank.wednesday_supply import (
     WEDNESDAY_SIGNALS_FILE,
@@ -1042,6 +1043,19 @@ def _run(
         except (EditorialRoleError, ClientContractError) as exc:
             print(f"  ERROR: {exc}")
             return 1
+        # #267: a lens the restored Wednesday path cannot execute is refused
+        # here, before any work — never loaded as policy that silently does
+        # nothing. See ``unexecutable_lens_routes`` for what that path runs.
+        if _client_contracts is not None and is_wednesday_role(_editorial_role_identity):
+            _unexecutable = unexecutable_lens_routes(_client_contracts)
+            if _unexecutable:
+                print(
+                    "  ERROR: the restored Wednesday path cannot execute these "
+                    "client lens routes: " + "; ".join(_unexecutable) + ". It "
+                    "carries only conditional lenses routed to writing (through "
+                    "the run's editorial plan)."
+                )
+                return 1
         _writing_lenses = (
             _client_contracts.for_stage("writing") if _client_contracts is not None else ()
         )
@@ -2268,8 +2282,16 @@ def _run(
                     RevisionContext(
                         role_rules=render_editorial_role_rules(_role, surface="wix"),
                         voice=strategy_execution.decision_lens_editorial.brand_editorial.voice,
+                        # standing revision lenses, then the conditional
+                        # ones this run's plan activated for revision (#267)
                         lenses=(
-                            _client_contracts.for_stage("revision")
+                            (
+                                *_client_contracts.for_stage("revision"),
+                                *(
+                                    _editorial_plan.activated_lens_texts("revision")
+                                    if _editorial_plan is not None else ()
+                                ),
+                            )
                             if _client_contracts is not None else ()
                         ),
                     )

@@ -25,7 +25,10 @@ Three document kinds:
   Without ``activates_on`` a lens is a **standing obligation** and reaches its
   stages on every run; with it the lens is **conditional** and reaches them only
   when the run supplies activation evidence for one of the conditions it names
-  (#267). Zero lenses is a valid state.
+  (#267). A condition is decided on the run's research evidence, so a
+  conditional lens may route only to stages that run after research
+  (``CONDITIONAL_STAGES``); one routed to ``selection`` is refused rather than
+  loaded as policy nothing can execute. Zero lenses is a valid state.
 * **Shared list** (``<client>/lists/*.md``). A list of strings the client's
   output may not contain — machine tells, banned phrases, whatever the client
   puts in it. Front matter: ``list_id``, ``version``, ``applies_to`` (stream
@@ -59,6 +62,12 @@ DEFAULT_CLIENT_DIR: Final[Path] = Path("clients/never_blank")
 
 #: Stages a lens may address. Adding one is an Engine capability decision.
 STAGES: Final[frozenset[str]] = frozenset({"selection", "writing", "revision"})
+
+#: The stages a conditional lens can execute at (#267): those that run after
+#: research, where the evidence a condition is decided on exists. ``selection``
+#: is not one — it chooses the candidate before any research is done, so no
+#: activation decision can precede it. In the order a run reaches them.
+CONDITIONAL_STAGES: Final[tuple[str, ...]] = ("writing", "revision")
 
 #: Selection modes the Engine implements. ``first_valid``: read candidates in
 #: queue order and select the first that satisfies every selection requirement.
@@ -502,6 +511,18 @@ def load_lens(path: Path) -> Lens:
             f"{path}: unknown stage(s) {', '.join(unknown)} "
             f"(the Engine routes to: {', '.join(sorted(STAGES))})"
         )
+    activates_on = (
+        _text_list(data, "activates_on", path) if "activates_on" in data else ()
+    )
+    unexecutable = [stage for stage in stages if stage not in CONDITIONAL_STAGES]
+    if activates_on and unexecutable:
+        raise ClientContractError(
+            f"{path}: a conditional lens (`activates_on`) cannot route to "
+            f"{', '.join(unexecutable)} — its condition is decided on the run's "
+            "research evidence, which does not exist yet at that stage. A "
+            f"conditional lens may route to: {', '.join(CONDITIONAL_STAGES)}; "
+            "make it a standing lens to apply it at selection"
+        )
     content = re.sub(r"\n{3,}", "\n\n", body).strip()
     if not content:
         raise ClientContractError(f"{path}: the lens has no content")
@@ -513,9 +534,7 @@ def load_lens(path: Path) -> Lens:
         text=content,
         path=str(path),
         digest=_digest(raw),
-        activates_on=(
-            _text_list(data, "activates_on", path) if "activates_on" in data else ()
-        ),
+        activates_on=activates_on,
     )
 
 

@@ -42,7 +42,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Final
 
-from src.strategy.client_contracts import ClientContracts, Lens
+from src.strategy.client_contracts import CONDITIONAL_STAGES, ClientContracts, Lens
 
 if TYPE_CHECKING:
     from src.editorial.plan_decisions import PlanDecisions
@@ -56,9 +56,11 @@ INVENTED_ENTITY_ATTRIBUTION: Final[str] = "invented_entity_attribution"
 UNTRACEABLE_NUMBER: Final[str] = "untraceable_number"
 DO_NOT_USE_EVIDENCE: Final[str] = "do_not_use_evidence"
 
-#: The stage a plan is built for. Only ``writing`` today; the slot exists so a
-#: second one is a call site, not a rewrite.
-DEFAULT_PLAN_STAGE: Final[str] = "writing"
+#: The stages a plan routes client lenses to (#267): every stage that runs after
+#: research, so every stage a conditional lens can be activated for. One plan,
+#: one activation decision per condition, however many of these stages a lens
+#: names — the writing stage and the reviser never decide it twice.
+PLAN_STAGES: Final[tuple[str, ...]] = CONDITIONAL_STAGES
 
 
 class EditorialPlanError(ValueError):
@@ -256,6 +258,28 @@ class EditorialPlan:
 
     # ── what the plan hands on ──────────────────────────────────────────────
 
+    def lenses_for(self, stage: str) -> tuple[ActiveLens, ...]:
+        """Every lens this run carries to ``stage``, standing and activated."""
+        if stage not in PLAN_STAGES:
+            raise EditorialPlanError(
+                f"a plan routes lenses to {', '.join(PLAN_STAGES)}, not {stage!r}"
+            )
+        return tuple(lens for lens in self.active_lenses if stage in lens.stages)
+
+    def activated_lens_texts(self, stage: str) -> tuple[str, ...]:
+        """The conditional lenses this run activated for ``stage``, each with
+        what activated it — the only route a conditional lens has to a stage.
+
+        Standing lenses are not here: they already travel to every stage with
+        the role's rules (``ClientContracts.for_stage``).
+        """
+        return tuple(
+            f"{lens.text}\n\nWhat activated it in this run's evidence "
+            f"({lens.activation}): {lens.activation_evidence}"
+            for lens in self.lenses_for(stage)
+            if not lens.is_standing
+        )
+
     def as_prompt_text(self) -> str:
         """The plan as deterministic model input.
 
@@ -303,8 +327,9 @@ class EditorialPlan:
         ))
         # Standing obligations already travel with the role's rules; a
         # conditional one reaches a model only here, and only once this run
-        # recorded what activated it.
-        for lens in self.active_lenses:
+        # recorded what activated it. This text is the writing stage's input,
+        # so it carries the lenses routed to writing and no others.
+        for lens in self.lenses_for("writing"):
             if lens.is_standing:
                 continue
             lines.extend(["", f"Client lens, active for this article ({lens.activation}):",
@@ -339,6 +364,12 @@ class EditorialPlan:
                 for item in self.evidence.items
             ],
             "active_lenses": [lens.as_evidence() for lens in self.active_lenses],
+            # which of them reached which stage, and on what
+            "active_by_stage": {
+                stage: [{"identity": lens.identity, "activation": lens.activation}
+                        for lens in self.lenses_for(stage)]
+                for stage in PLAN_STAGES
+            },
             "banned": [{"entry": entry, "list": source} for entry, source in self.banned],
             "regularity": [item.as_evidence() for item in self.regularity],
             "lineage": dict(self.lineage),
@@ -394,9 +425,10 @@ def _listed(contracts: ClientContracts, slot: str, supplied: Sequence[str]) -> t
 
 
 def _activated(
-    contracts: ClientContracts, stage: str, activation_evidence: Mapping[str, str]
+    contracts: ClientContracts, activation_evidence: Mapping[str, str]
 ) -> tuple[ActiveLens, ...]:
-    """Standing obligations, then every conditional lens this run activated."""
+    """Every lens routed to a plan stage: standing obligations, and each
+    conditional lens this run activated — once, for every stage it names."""
     declared = set(contracts.activation_conditions)
     unknown = sorted(set(activation_evidence) - declared)
     if unknown:
@@ -412,7 +444,7 @@ def _activated(
             )
     active: list[ActiveLens] = []
     for lens in contracts.lenses:
-        if stage not in lens.stages:
+        if not set(lens.stages) & set(PLAN_STAGES):
             continue
         if lens.is_standing:
             active.append(_active_lens(lens))
@@ -450,7 +482,6 @@ def build_editorial_plan(
     acknowledged_limits: Sequence[str] = (),
     portable_noun: PortableNoun | None = None,
     regularity: Sequence[RegularityObservation] = (),
-    stage: str = DEFAULT_PLAN_STAGE,
     decisions: PlanDecisions | None = None,
 ) -> EditorialPlan:
     """Create and validate the plan this run executes the contract as.
@@ -481,10 +512,6 @@ def build_editorial_plan(
         "audience_currency": audience_currency,
     }
     if decisions is not None:
-        if decisions.stage != stage:
-            raise EditorialPlanError(
-                f"decisions were made for stage {decisions.stage!r}, not {stage!r}"
-            )
         twice = sorted(
             slot for slot in decisions.selected if supplied_values.get(slot, "").strip()
         )
@@ -502,7 +529,7 @@ def build_editorial_plan(
     plan = EditorialPlan(
         central_claim=central_claim,
         evidence=package,
-        active_lenses=_activated(contracts, stage, activation_evidence or {}),
+        active_lenses=_activated(contracts, activation_evidence or {}),
         lineage=contracts.provenance,
         claim_strength_ceiling=resolved["claim_strength_ceiling"],
         strength_ladder=contracts.stream.plan_values("claim_strength_ceiling"),
