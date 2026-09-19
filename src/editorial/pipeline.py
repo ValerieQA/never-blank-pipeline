@@ -29,6 +29,7 @@ from src.editorial.discovery_builder import build_discovery
 from src.editorial.story_assembly import assemble_story
 from src.editorial.never_blank_voice import finalize_article
 from src.run.call_budget import RunCallBudgetExceededError
+from src.editorial.conditional_lenses import ACTIVE_GUIDANCE_KEY
 from src.editorial.derivation_fidelity import removed_phrases
 from src.editorial.platform_composer import CompositionRejected, compose_platforms
 from src.editorial.sources_of_record import source_citation_values
@@ -96,9 +97,14 @@ def generate_article(
     composer_formats: "tuple[str, ...] | None" = None,
     closing_contract: str | None = None,
     rejected_sink: "list | None" = None,
+    active_guidance: str = "",
 ) -> dict:
     """
     Run the full Editorial Engine V2 pipeline for one enriched signal.
+
+    ``active_guidance``: the client's conditional lenses this run's research
+    evidence activated (#263) — read by the stages that shape the argument
+    and its closing (spine, hook, voice) before anything is composed.
 
     Args:
         signal: Enriched signal dict from the Investigation Layer.
@@ -138,6 +144,8 @@ def generate_article(
     # Merge pattern fields into signal so downstream stages receive owner-centered fields.
     # Pattern fields override same-named signal fields.
     enriched = {**signal, **pattern}
+    if active_guidance:
+        enriched[ACTIVE_GUIDANCE_KEY] = active_guidance
     typed_strategy = (
         strategy_context
         if isinstance(strategy_context, DecisionLensEditorialStrategyView)

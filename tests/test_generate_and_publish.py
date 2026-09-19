@@ -516,9 +516,22 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
             side_effect=lambda assignment, raw_signal, run_ctx: _make_rc_mock(run_ctx.run_id)
         ),
         "_emit_run_report": mock.MagicMock(),
+        # #263 conditional client lenses: the harness evidence meets no
+        # client condition, so every conditional lens stays inactive. The
+        # real resolution is covered by tests/test_conditional_lenses.py.
+        "ModelLensActivationJudge": mock.MagicMock(return_value=_InactiveActivationJudge()),
     }
     kwargs_ref["patches"] = kwargs
     return argv, kwargs
+
+
+class _InactiveActivationJudge:
+    """Decides every client condition is unmet — the harness default (#263)."""
+
+    model_setting = None
+
+    def decide(self, *, criteria, evidence):
+        return False, "", "harness evidence meets no client condition"
 
 
 def _fake_derivation(ref: dict):

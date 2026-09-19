@@ -50,6 +50,29 @@ names. Front matter, all required, no duplicate keys: `lens_id`, `version`,
 | `writing` | in the editorial role rules, for both published surfaces |
 | `revision` | in the reviser's request, beside role and voice |
 
+## Conditional lens (#263)
+
+A lens may apply only when a condition holds. Front matter adds
+`activation: conditional` (the default is `always`), and the body has exactly
+two sections, in order:
+
+- `## Activation` — the client's own condition, verbatim;
+- `## When active` — the client's behaviour, delivered to the lens's stages
+  only on a run where the condition holds.
+
+After research and before anything is written, the Engine asks a judge
+whether the condition is met by the run's **research evidence** — the sources,
+the evidence records, any recorded contradictions and the signal's own
+claims, never any generated text. An active lens reaches the stages that shape
+the argument and its closing (narrative spine, hook, voice/Echo), both
+published surfaces' writing rules and — if it names it — revision, together
+with the finding that activated it. An inactive lens changes nothing. A
+judge that cannot answer stops the run. Every decision is recorded in
+`conditional_lenses.json` (diagnostic, never publishable).
+
+A conditional lens cannot address `selection`: selection runs before
+research. Missing, misordered or empty sections fail the run.
+
 ## Notes for people
 
 An HTML comment (`<!-- ... -->`) in either kind of document is for people and

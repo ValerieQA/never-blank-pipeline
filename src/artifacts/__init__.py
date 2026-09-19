@@ -322,6 +322,46 @@ def write_preview_compositions_json(run_dir: Path, data: dict) -> None:
     )
 
 
+CONDITIONAL_LENSES_KIND = "conditional_lens_decisions"
+FIDELITY_CHECK_KIND = "fidelity_check"
+DIAGNOSTIC_ONLY_NOTICE = (
+    "Diagnostic evidence only. NOT publishable and never a packaging or "
+    "publication input; nothing reads it back."
+)
+
+
+def write_conditional_lenses_json(run_dir: Path, data: dict) -> None:
+    """Record which conditional client lenses this run's evidence activated (#263).
+
+    The client's condition, the judge's decision, the finding and the reason
+    — so an article written under an active lens can be traced to the
+    evidence that activated it. Diagnostic only; read by nothing.
+    """
+    atomic_write_json(
+        run_dir / "conditional_lenses.json",
+        {"artifact_kind": CONDITIONAL_LENSES_KIND, "publishable": False,
+         "notice": DIAGNOSTIC_ONLY_NOTICE, **data},
+    )
+
+
+def write_fidelity_check_json(run_dir: Path, sequence: int, surface: str, data: dict) -> Path:
+    """Record one social-fidelity check (#263), create-once, one file per check.
+
+    One file per check rather than one growing file: every check survives a
+    run that stops at the next one, and nothing is ever overwritten.
+    Diagnostic only; read by nothing — never a publication input.
+    """
+    safe_surface = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in surface)
+    path = run_dir / "fidelity" / f"{sequence:03d}-{safe_surface}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write_json(
+        path,
+        {"artifact_kind": FIDELITY_CHECK_KIND, "publishable": False,
+         "notice": DIAGNOSTIC_ONLY_NOTICE, **data},
+    )
+    return path
+
+
 REJECTED_COMPOSITION_KIND = "rejected_composition"
 REJECTED_COMPOSITION_NOTICE = (
     "Composition rejected by local validation and preserved for diagnosis "
