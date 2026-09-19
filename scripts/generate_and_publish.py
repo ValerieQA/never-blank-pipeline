@@ -157,7 +157,18 @@ from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
-from src.editorial.derivation_fidelity import FidelityJudge, ModelFidelityJudge
+from src.editorial.conditional_lenses import (
+    LensActivationError,
+    LensActivationJudge,
+    ModelLensActivationJudge,
+    active_guidance,
+    resolve_conditional_lenses,
+)
+from src.editorial.derivation_fidelity import (
+    FidelityJudge,
+    ModelFidelityJudge,
+    RecordedFidelityJudge,
+)
 from src.editorial.platform_composer import ADAPTER_FORMATS, CLOSING_BRANDED_ECHO_THEN_SOURCES
 from src.content.output_guard import (
     THREADS_POST_MAX_CHARS,
@@ -293,6 +304,8 @@ from src.artifacts import (
     write_linkedin_composition_json,
     write_linkedin_final_preflight_json,
     write_preview_compositions_json,
+    write_conditional_lenses_json,
+    write_fidelity_check_json,
     write_visual_assets_json,
     write_business_strategy_snapshot,
     write_preflight_result_json,
@@ -868,6 +881,7 @@ def main(
     editorial_reviewer: EditorialReviewTransport | None = None,
     article_revisor: ArticleRevisionTransport | None = None,
     derivation_judge: "FidelityJudge | None" = None,
+    lens_activation_judge: "LensActivationJudge | None" = None,
 ) -> int:
     """Run one signal end to end and account for it exactly once.
 
@@ -909,6 +923,7 @@ def main(
                 editorial_reviewer=editorial_reviewer,
                 article_revisor=article_revisor,
                 derivation_judge=derivation_judge,
+                lens_activation_judge=lens_activation_judge,
             )
     except RunCallBudgetExceededError as exc:
         print(f"  ERROR: {exc}")
@@ -932,6 +947,7 @@ def _run(
     editorial_reviewer: EditorialReviewTransport | None = None,
     article_revisor: ArticleRevisionTransport | None = None,
     derivation_judge: "FidelityJudge | None" = None,
+    lens_activation_judge: "LensActivationJudge | None" = None,
 ) -> int:
     parser = argparse.ArgumentParser(description="Generate + publish one signal end-to-end")
     # #211: Wednesday's fresh-generation runs discover their own signal
@@ -1992,6 +2008,55 @@ def _run(
         # #191: diagnostic sink for compositions rejected by local validation.
         _rejected_compositions: list = []
 
+        # ── 3a'. Conditional client lenses (#263) ────────────────────────────
+        # A client lens may apply only when its own condition holds. Decided
+        # HERE — research is ready, nothing is written yet — from the research
+        # evidence alone, so an active lens shapes the article from its spine
+        # to its closing, never cosmetically afterwards. The Engine passes the
+        # client's condition through; it does not know what it says.
+        _active_lens_ids: frozenset[str] = frozenset()
+        _active_guidance = ""
+        _conditional = (
+            _client_contracts.conditional_lenses if _client_contracts is not None else ()
+        )
+        if _conditional and research_artifact is not None:
+            _activation_judge = lens_activation_judge or ModelLensActivationJudge()
+            try:
+                _decisions = resolve_conditional_lenses(
+                    _conditional, research_artifact, signal, _activation_judge)
+            except (LensActivationError, RunCallBudgetExceededError) as exc:
+                print(f"  ERROR: conditional lens activation could not be decided: {exc}")
+                state.ended(TerminalStage.GENERATION, TerminalDisposition.BLOCKED,
+                            f"conditional lens activation: {type(exc).__name__}")
+                return 1
+            _active_lens_ids = frozenset(d.lens_id for d in _decisions if d.active)
+            _active_guidance = active_guidance(_conditional, _decisions)
+            try:
+                write_conditional_lenses_json(run_dir, {
+                    "run_id": run_ctx.run_id, "signal_id": signal_id,
+                    "judge": type(_activation_judge).__name__,
+                    "model_setting": getattr(_activation_judge, "model_setting", None),
+                    "decisions": [
+                        {"lens": f"{d.lens_id}/{d.lens_version}", "active": d.active,
+                         "finding": d.finding, "reason": d.reason}
+                        for d in _decisions
+                    ],
+                })
+            except (ArtifactCollisionError, OSError) as exc:
+                print(f"  ⚠  conditional lens decisions could not be preserved: {exc}")
+            for _decision in _decisions:
+                print(f"  {'✓' if _decision.active else '—'}  conditional lens "
+                      f"{_decision.lens_id}/{_decision.lens_version}: "
+                      f"{'ACTIVE' if _decision.active else 'inactive'} — {_decision.reason}")
+            if _active_lens_ids and _role is not None:
+                _writing_lenses = _client_contracts.for_stage("writing", _active_lens_ids)
+                _editorial_role_rules = {
+                    "long": render_editorial_role_rules(
+                        _role, surface="wix", lenses=_writing_lenses),
+                    "medium": render_editorial_role_rules(
+                        _role, surface="linkedin", lenses=_writing_lenses),
+                }
+
         # ── 3b. Generate content via LLM ─────────────────────────────────────
         print(f"\n[3/6] Generating content (LLM — Editorial Engine V2)…")
         print(f"  strategy context injected: strategy_id={strategy_id}")
@@ -2033,6 +2098,9 @@ def _run(
                     research_artifact=research_artifact,
                     editorial_role_rules=_editorial_role_rules,
                     composer_formats=_R1_COMPOSER_FORMATS,
+                    # #263: active conditional client lenses reach the stages
+                    # that shape the argument and its closing
+                    active_guidance=_active_guidance,
                     # #191: how this role closes its long-form surface. Roles
                     # that declare nothing keep the existing contract.
                     closing_contract=(
@@ -2189,7 +2257,7 @@ def _run(
                         role_rules=render_editorial_role_rules(_role, surface="wix"),
                         voice=strategy_execution.decision_lens_editorial.brand_editorial.voice,
                         lenses=(
-                            _client_contracts.for_stage("revision")
+                            _client_contracts.for_stage("revision", _active_lens_ids)
                             if _client_contracts is not None else ()
                         ),
                     )
@@ -2285,7 +2353,23 @@ def _run(
         # review removed from it (#260)
         _draft_article_body = blog_body
         blog_body = _acceptance.final_article_body
-        _fidelity_judge = derivation_judge or ModelFidelityJudge()
+        # #263: every fidelity check is recorded, one diagnostic file each —
+        # never a publication input, never allowed to change the outcome.
+        _fidelity_sequence = [0]
+
+        def _record_fidelity_check(record: dict) -> None:
+            _fidelity_sequence[0] += 1
+            try:
+                write_fidelity_check_json(
+                    run_dir, _fidelity_sequence[0], record.get("surface", "surface"), record)
+            except (ArtifactCollisionError, OSError) as exc:
+                print(f"  ⚠  fidelity check could not be recorded: {exc}")
+
+        _fidelity_judge = RecordedFidelityJudge(
+            derivation_judge or ModelFidelityJudge(),
+            sink=_record_fidelity_check,
+            identity={"run_id": run_ctx.run_id, "signal_id": signal_id},
+        )
         # Everything downstream derives from the accepted article — its Echo
         # included. ``structured_final`` is the only outline a derivation may
         # see: the draft's narrative fields are withheld by the composer, and

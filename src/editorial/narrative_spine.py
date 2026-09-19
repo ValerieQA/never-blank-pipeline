@@ -12,6 +12,7 @@ that is — and never about a single company's strategy.
 
 import json
 
+from src.editorial.conditional_lenses import guidance_block
 from src.utils.llm_client import chat, model_enrich
 from src.utils.logger import get_logger
 
@@ -121,7 +122,7 @@ owner_system_objective (from Decision Lens): {decision_lens.get('owner_system_ob
 primary_business_tension (legacy field delivery_vs_presence_conflict, from Decision Lens): {decision_lens.get('delivery_vs_presence_conflict', '')}
 supported_business_consequence (legacy field customer_memory_consequence, from Decision Lens): {decision_lens.get('customer_memory_consequence', '')}
 structural_cause (from Decision Lens): {decision_lens.get('structural_cause', '')}
-never_blank_insight: {decision_lens.get('never_blank_insight', '')}{strategy_section}
+never_blank_insight: {decision_lens.get('never_blank_insight', '')}{strategy_section}{guidance_block(signal)}
 Produce the Narrative Spine JSON for this small business pattern."""
 
     raw = chat(system=_SYSTEM_PROMPT, user=user, json_mode=True, model=model_enrich())

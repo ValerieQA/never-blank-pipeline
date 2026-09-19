@@ -34,6 +34,7 @@ or an argument. The judge is given only the two texts and the platform name.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from typing import Protocol
@@ -111,28 +112,49 @@ class FidelityJudgeError(RuntimeError):
     """The judge could not give a usable answer — the derivative is not proven faithful."""
 
 
-FIDELITY_INSTRUCTIONS = """You check whether a platform adaptation is faithful to the final content it was
-adapted from. The adaptation may shorten, compress, omit, reorder and restructure the content,
-address the reader directly, and follow platform formatting. It may not say anything the
-content does not.
+#: What makes a derivative item unsupported — materially NEW meaning (#263).
+#: Anything else — paraphrase, compression, restructuring, a restatement of
+#: what the article says or reasonably entails — is faithful.
+UNSUPPORTED_KINDS = frozenset({
+    "new_fact", "new_number", "new_cause", "new_condition",
+    "broader_generalization", "new_conclusion",
+})
 
-List every factual claim, figure, condition, conclusion, generalization or implication in
-ADAPTATION that FINAL CONTENT does not state or directly support. A generalization to a wider
-group, a condition ("without...", "only if...", "regardless of..."), a cause, or a consequence
-counts as unsupported unless FINAL CONTENT itself says it. Quote each item as it appears in
-ADAPTATION. Rephrasings of what FINAL CONTENT says, and lines copied from it, are supported.
+FIDELITY_INSTRUCTIONS = """You check a platform adaptation against the FINAL CONTENT it was adapted from.
 
-REMOVED BY REVIEW, when present, lists wording that an earlier draft had, that FINAL CONTENT no
-longer has, and that ADAPTATION reuses. The reviewer may have removed the claim, or only
-reworded it. Treat each as unsupported unless FINAL CONTENT states or directly supports the same
-claim in other words.
+The adaptation may freely paraphrase, compress, reorder, restructure, change emphasis, address
+the reader directly and follow platform formatting. Different wording is NOT a problem: you are
+not checking wording. A sentence that says in other words what FINAL CONTENT says, or what FINAL
+CONTENT reasonably entails, is faithful — including restatements of its mechanism, its
+conclusions and its advice.
 
-Return ONLY valid JSON: {"unsupported": ["quoted phrase from ADAPTATION", ...]}
-Use an empty list when everything in ADAPTATION is supported."""
+Report an item ONLY when it adds materially new meaning that FINAL CONTENT neither states nor
+reasonably entails, and only of one of these kinds:
+- new_fact: a fact FINAL CONTENT does not establish;
+- new_number: a figure FINAL CONTENT does not contain;
+- new_cause: a causal relationship FINAL CONTENT does not claim;
+- new_condition: a condition, scope limit or qualifier FINAL CONTENT does not state
+  ("without...", "only if...", "regardless of...");
+- broader_generalization: a claim extended to a wider group, market or situation than FINAL
+  CONTENT covers;
+- new_conclusion: a conclusion, business implication or recommendation FINAL CONTENT does not
+  draw or reasonably entail.
+
+REMOVED BY REVIEW, when present, lists wording an earlier draft had that FINAL CONTENT no longer
+has and that ADAPTATION reuses. The reviewer may have removed the claim or only reworded it:
+report it only if its meaning is not stated or reasonably entailed by FINAL CONTENT.
+
+Quote each item exactly as it appears in ADAPTATION. Return ONLY valid JSON:
+{"unsupported": [{"quote": "...", "kind": "<one of the kinds above>", "reason": "one sentence"}]}
+Use an empty list when the adaptation adds no materially new meaning."""
 
 
 class ModelFidelityJudge:
     """The production judge: one budget-charged model call per derivative."""
+
+    #: The setting that names the model — recorded instead of the model value,
+    #: which deployments keep as a secret.
+    model_setting = "NB_ENRICH_MODEL"
 
     def unsupported(self, *, final_content: str, derivative: str, surface: str,
                     removed_by_review: tuple[str, ...] = ()) -> list[str]:
@@ -151,14 +173,66 @@ class ModelFidelityJudge:
         return parse_judgment(raw)
 
 
-def parse_judgment(raw: str) -> list[str]:
-    """The judge's answer, strictly: a list of quoted strings, or an error."""
+def parse_judgment(raw: str) -> list[dict]:
+    """The judge's answer, strictly: materially-new items of known kinds, or an error."""
     try:
         data = json.loads(raw)
     except (TypeError, ValueError) as exc:
         raise FidelityJudgeError(f"fidelity judge returned invalid JSON: {exc}") from exc
     items = data.get("unsupported") if isinstance(data, dict) else None
-    if not isinstance(items, list) or not all(isinstance(item, str) for item in items):
-        raise FidelityJudgeError(
-            "fidelity judge answer must be {\"unsupported\": [strings]}")
-    return [item.strip() for item in items if item.strip()]
+    if not isinstance(items, list):
+        raise FidelityJudgeError('fidelity judge answer must be {"unsupported": [items]}')
+    parsed: list[dict] = []
+    for item in items:
+        if (not isinstance(item, dict) or not isinstance(item.get("quote"), str)
+                or not item["quote"].strip() or item.get("kind") not in UNSUPPORTED_KINDS
+                or not isinstance(item.get("reason", ""), str)):
+            raise FidelityJudgeError(
+                "every unsupported item must be {quote, kind, reason} with kind one of "
+                + ", ".join(sorted(UNSUPPORTED_KINDS)))
+        parsed.append({"quote": item["quote"].strip(), "kind": item["kind"],
+                       "reason": item.get("reason", "").strip()})
+    return parsed
+
+
+def item_text(item) -> str:
+    """An unsupported item as text, whichever judge produced it."""
+    return item.get("quote", "") if isinstance(item, dict) else str(item)
+
+
+class RecordedFidelityJudge:
+    """Wraps a judge and records every check it makes (#263 diagnostics).
+
+    One record per check — surface, the final accepted content's identity,
+    the derivative, the removed-by-review evidence supplied, the items the
+    judge returned, PASS/FAIL (or ERROR when the judge could not answer),
+    and which judge ran. Diagnostic evidence only: the record never feeds
+    back into a verdict or a publication.
+    """
+
+    def __init__(self, inner: FidelityJudge, *, sink, identity: dict) -> None:
+        self.inner, self.sink, self.identity = inner, sink, dict(identity)
+
+    def unsupported(self, *, final_content: str, derivative: str, surface: str,
+                    removed_by_review: tuple[str, ...] = ()) -> list:
+        record = {
+            **self.identity,
+            "surface": surface,
+            "final_content_digest": "sha256:" + hashlib.sha256(
+                final_content.encode("utf-8")).hexdigest(),
+            "derivative": derivative,
+            "removed_by_review": list(removed_by_review),
+            "judge": type(self.inner).__name__,
+            "model_setting": getattr(self.inner, "model_setting", None),
+        }
+        try:
+            found = self.inner.unsupported(
+                final_content=final_content, derivative=derivative, surface=surface,
+                removed_by_review=removed_by_review)
+        except Exception as exc:
+            self.sink({**record, "unsupported": [], "verdict": "ERROR",
+                       "error": f"{type(exc).__name__}: {exc}"})
+            raise
+        self.sink({**record, "unsupported": list(found),
+                   "verdict": "FAIL" if found else "PASS"})
+        return found

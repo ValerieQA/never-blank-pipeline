@@ -18,6 +18,13 @@ Two document kinds:
 * **Lens** (``<client>/lenses/*.md``). Not parsed: the whole body is delivered
   verbatim to the stages its front matter names — ``lens_id``, ``version``,
   ``applies_to`` (stream ids), ``stages``. Zero lenses is a valid state.
+  Optional ``activation``: ``always`` (the default) or ``conditional`` (#263). A
+  conditional lens has exactly two sections — ``## Activation``, the client's
+  own condition, and ``## When active``, its behaviour — and reaches its stages
+  only when a run's research evidence meets that condition. The Engine decides
+  *whether* the client's condition holds; it never knows *what* the condition
+  is. A conditional lens cannot address ``selection``: whether it applies is
+  decided from research evidence, which selection runs before.
 
 In either kind, an HTML comment (``<!-- ... -->``) is a note for people and is
 never delivered to a model.
@@ -53,6 +60,12 @@ SELECTION_MODES: Final[frozenset[str]] = frozenset({"first_valid"})
 
 _STREAM_KEYS: Final[frozenset[str]] = frozenset({"stream_id", "version", "role_id", "selection"})
 _LENS_KEYS: Final[frozenset[str]] = frozenset({"lens_id", "version", "applies_to", "stages"})
+_LENS_OPTIONAL_KEYS: Final[frozenset[str]] = frozenset({"activation"})
+#: How a lens is applied. ``conditional``: only when the run's research
+#: evidence meets the client's own ``## Activation`` condition (#263).
+ACTIVATIONS: Final[frozenset[str]] = frozenset({"always", "conditional"})
+#: The conditional-lens heading contract, in order.
+_CONDITIONAL_HEADINGS: Final[tuple[str, ...]] = ("Activation", "When active")
 #: The stream heading contract, in order. Level-3 headings under Selection are free.
 _STREAM_HEADINGS: Final[tuple[str, ...]] = ("Purpose", "Selection")
 
@@ -111,14 +124,23 @@ class Lens:
     version: str
     applies_to: tuple[str, ...]
     stages: tuple[str, ...]
-    #: The whole body, verbatim — the Engine never interprets it.
+    #: The whole body, verbatim — the Engine never interprets it. For a
+    #: conditional lens: its ``## When active`` behaviour only.
     text: str
     path: str
     digest: str
+    #: ``always`` or ``conditional`` (#263).
+    activation: str = "always"
+    #: A conditional lens's own ``## Activation`` condition, verbatim.
+    activation_criteria: str = ""
 
     @property
     def identity(self) -> str:
         return f"{self.lens_id}/{self.version}"
+
+    @property
+    def conditional(self) -> bool:
+        return self.activation == "conditional"
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,10 +150,24 @@ class ClientContracts:
     stream: StreamContract
     lenses: tuple[Lens, ...]
 
-    def for_stage(self, stage: str) -> tuple[str, ...]:
+    def for_stage(self, stage: str, active: "frozenset[str] | set[str] | tuple[str, ...]" = ()
+                  ) -> tuple[str, ...]:
+        """The client texts addressed to ``stage``.
+
+        Always-on lenses every time; a conditional lens only when its id is
+        in ``active`` — the lenses this run's evidence activated (#263).
+        """
         if stage not in STAGES:
             raise ClientContractError(f"unknown stage {stage!r}")
-        return tuple(lens.text for lens in self.lenses if stage in lens.stages)
+        return tuple(
+            lens.text for lens in self.lenses
+            if stage in lens.stages and (not lens.conditional or lens.lens_id in active)
+        )
+
+    @property
+    def conditional_lenses(self) -> tuple[Lens, ...]:
+        """The lenses whose use depends on a run's evidence (#263)."""
+        return tuple(lens for lens in self.lenses if lens.conditional)
 
     @property
     def selection_requirements(self) -> tuple[str, ...]:
@@ -145,7 +181,8 @@ class ClientContracts:
             "stream": {"identity": self.stream.identity, "path": self.stream.path,
                        "digest": self.stream.digest},
             "lenses": [{"identity": lens.identity, "path": lens.path,
-                        "digest": lens.digest, "stages": list(lens.stages)}
+                        "digest": lens.digest, "stages": list(lens.stages),
+                        "activation": lens.activation}
                        for lens in self.lenses],
         }
 
@@ -300,11 +337,58 @@ def load_stream_contract(path: Path) -> StreamContract:
     )
 
 
+def _conditional_sections(body: str, path: Path) -> tuple[str, str]:
+    """A conditional lens's ``## Activation`` and ``## When active`` texts.
+
+    Exactly those two ``##`` sections, in that order, both non-empty; one
+    ``#`` title may precede them. Anything else fails the run rather than
+    letting a condition or a behaviour go missing.
+    """
+    sections: dict[str, list[str]] = {}
+    order: list[str] = []
+    current: str | None = None
+    for line in body.splitlines():
+        match = _HEADING.match(line)
+        if match and len(match.group(1)) == 2:
+            name = match.group(2).strip()
+            if name in sections:
+                raise ClientContractError(f"{path}: `## {name}` appears twice")
+            sections[name], current = [], name
+            order.append(name)
+            continue
+        if match and len(match.group(1)) == 1 and current is None:
+            continue                                   # a title before the sections
+        if current is None:
+            if line.strip():
+                raise ClientContractError(
+                    f"{path}: a conditional lens has no text before `## Activation`")
+            continue
+        sections[current].append(line)
+    if tuple(order) != _CONDITIONAL_HEADINGS:
+        raise ClientContractError(
+            f"{path}: a conditional lens needs exactly `## Activation` then "
+            f"`## When active`; found {', '.join(f'## {h}' for h in order) or 'none'}"
+        )
+    texts = tuple(re.sub(r"\n{3,}", "\n\n", "\n".join(sections[h])).strip()
+                  for h in _CONDITIONAL_HEADINGS)
+    for heading, text in zip(_CONDITIONAL_HEADINGS, texts):
+        if not text:
+            raise ClientContractError(f"{path}: `## {heading}` is empty")
+    return texts[0], texts[1]
+
+
 def load_lens(path: Path) -> Lens:
     raw, text = _read(path)
     data, body = _front_matter(text, path)
     body = _strip_comments(body, path)
-    _require_keys(data, _LENS_KEYS, path)
+    _require_keys({k: v for k, v in data.items() if k not in _LENS_OPTIONAL_KEYS},
+                  _LENS_KEYS, path)
+    activation = data.get("activation", "always")
+    if activation not in ACTIVATIONS:
+        raise ClientContractError(
+            f"{path}: front-matter `activation` must be one of "
+            f"{', '.join(sorted(ACTIVATIONS))}; got {activation!r}"
+        )
     stages = _text_list(data, "stages", path)
     unknown = sorted(set(stages) - STAGES)
     if unknown:
@@ -312,7 +396,16 @@ def load_lens(path: Path) -> Lens:
             f"{path}: unknown stage(s) {', '.join(unknown)} "
             f"(the Engine routes to: {', '.join(sorted(STAGES))})"
         )
-    content = re.sub(r"\n{3,}", "\n\n", body).strip()
+    criteria = ""
+    if activation == "conditional":
+        if "selection" in stages:
+            raise ClientContractError(
+                f"{path}: a conditional lens cannot address `selection` — whether it "
+                "applies is decided from research evidence, which selection precedes"
+            )
+        criteria, content = _conditional_sections(body, path)
+    else:
+        content = re.sub(r"\n{3,}", "\n\n", body).strip()
     if not content:
         raise ClientContractError(f"{path}: the lens has no content")
     return Lens(
@@ -323,6 +416,8 @@ def load_lens(path: Path) -> Lens:
         text=content,
         path=str(path),
         digest=_digest(raw),
+        activation=activation,
+        activation_criteria=criteria,
     )
 
 
