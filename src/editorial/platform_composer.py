@@ -562,6 +562,7 @@ def _build_user_prompt(
     closing_contract: str = CLOSING_INVITATION_LAST,
     canonical_body: str | None = None,
     attribution: str = BRAND_ATTRIBUTION,
+    editorial_plan: str | None = None,
 ) -> str:
     lo, hi = _WORD_RANGE[format_key]
     lines = [
@@ -680,6 +681,11 @@ def _build_user_prompt(
         # Issue #142: which editorial role this run is producing. The rules are
         # configured by the business, never inferred here from a weekday.
         lines.append(editorial_role_rules)
+    if editorial_plan:
+        # #267: the client's approved editorial contract, as the plan this run
+        # was built and validated against. Rendered by the Engine, decided by
+        # the client's documents and this run's evidence.
+        lines.append(editorial_plan)
     return "\n".join(lines)
 
 
@@ -695,6 +701,7 @@ def _compose_one(
     closing_attribution: "str | None" = None,
     removed_content: "frozenset | None" = None,
     fidelity_judge=None,
+    editorial_plan: "str | None" = None,
 ) -> dict:
     # Whose name a branded closing carries. The shared formats keep the
     # composer's constant (#255 scope). An Engine adapter knows no client: the
@@ -721,6 +728,7 @@ def _compose_one(
             closing_contract=closing_contract,
             canonical_body=canonical_body,
             attribution=attribution or BRAND_ATTRIBUTION,
+            editorial_plan=editorial_plan,
         ),
         json_mode=True,
         model=model,
@@ -818,6 +826,7 @@ def compose_platforms(
     closing_attribution: "str | None" = None,
     removed_content: "frozenset | None" = None,
     fidelity_judge=None,
+    editorial_plan: "str | None" = None,
 ) -> dict:
     """Compose one native body per requested format.
 
@@ -874,6 +883,9 @@ def compose_platforms(
             # content — removed draft phrases, and the fidelity judge
             removed_content=removed_content,
             fidelity_judge=fidelity_judge,
+            # #267: the editorial plan governs every surface this run composes,
+            # exactly as the contract it was built from does.
+            editorial_plan=editorial_plan,
         )
         log.info("Platform Composer: %s -> %d words", format_key, result[format_key]["word_count"])
     return result
