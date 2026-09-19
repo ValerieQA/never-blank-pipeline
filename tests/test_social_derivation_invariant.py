@@ -85,9 +85,9 @@ class RecordingJudge:
         self.flag = flag
         self.calls: list[dict] = []
 
-    def unsupported(self, *, final_content, derivative, surface):
-        self.calls.append({"final_content": final_content,
-                           "derivative": derivative, "surface": surface})
+    def unsupported(self, *, final_content, derivative, surface, removed_by_review=()):
+        self.calls.append({"final_content": final_content, "derivative": derivative,
+                           "surface": surface, "removed_by_review": removed_by_review})
         return [phrase for phrase in self.flag
                 if phrase.casefold() in derivative.casefold()
                 and phrase.casefold() not in final_content.casefold()]

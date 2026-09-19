@@ -501,35 +501,35 @@ def _validate_derivation_fidelity(
     body: str, canonical_body: str, format_key: str,
     removed: "frozenset | None", fidelity_judge,
 ) -> None:
-    """A derivative may not restore removed content or add unsupported claims (#260).
+    """A derivative may not state what the final accepted content does not (#260).
 
     The non-numeric half of the derivation invariant, enforced rather than
-    requested: (1) deterministic — no phrase the reviewed draft had and the
-    final accepted article removed; (2) semantic — the injected fidelity
-    judge lists anything the derivative states that the final accepted
-    content does not support, and any listed item rejects it. A judge that
-    cannot answer raises, and the derivative is not accepted. Generic: the
-    judge sees only the two texts and the platform.
+    requested: the injected fidelity judge lists anything the derivative
+    states that the final accepted content does not support, and any listed
+    item rejects it; a judge that cannot answer raises, and the derivative is
+    not accepted. Draft wording the final article no longer carries and the
+    derivative reuses is deterministic EVIDENCE handed to the judge — never a
+    rejection on its own, because revision may reword a claim it kept (#262
+    review). Generic: the judge sees only the texts and the platform.
     """
     from src.editorial.derivation_fidelity import resurrected_phrases
 
-    restored = resurrected_phrases(body, removed or frozenset())
-    if restored:
-        raise CompositionRejected(
-            f"Platform Composer ({format_key}): the derivative restores content "
-            "that Editorial Review removed from the article: "
-            + "; ".join(repr(phrase) for phrase in restored[:5]),
-            format_key=format_key, body=body,
-        )
     if fidelity_judge is None:
         return
+    restored = tuple(resurrected_phrases(body, removed or frozenset()))
     unsupported = fidelity_judge.unsupported(
-        final_content=canonical_body, derivative=body, surface=format_key)
+        final_content=canonical_body, derivative=body, surface=format_key,
+        removed_by_review=restored)
     if unsupported:
+        reused = [phrase for phrase in restored
+                  if any(phrase in item.casefold() or item.casefold() in phrase
+                         for item in unsupported)]
         raise CompositionRejected(
             f"Platform Composer ({format_key}): the derivative states what the "
             "final accepted content does not support: "
-            + "; ".join(repr(item) for item in unsupported[:5]),
+            + "; ".join(repr(item) for item in unsupported[:5])
+            + (" — wording Editorial Review removed from the article: "
+               + "; ".join(repr(phrase) for phrase in reused[:5]) if reused else ""),
             format_key=format_key, body=body,
         )
 

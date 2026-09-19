@@ -9,16 +9,24 @@ that: Instagram attempts added "without changing the ad or budget" and a
 renewed small-business generalization, neither of which the accepted
 article stated.
 
-Three enforceable checks, all fail-closed, run on every derivation (the
-composer applies them inside its retry-once contract):
+Two enforced, fail-closed checks run on every derivation (the composer
+applies them inside its retry-once contract), and one piece of evidence
+feeds the second:
 
 1. figures — deterministic, in ``platform_composer`` (#262): no number the
-   accepted content does not contain;
-2. resurrection — deterministic, here: no phrase the reviewed draft had and
-   the final accepted article removed;
-3. support — an injected fidelity judge lists anything in the derivative the
+   accepted content does not contain. Numbers compare mechanically;
+2. support — an injected fidelity judge lists anything in the derivative the
    accepted content does not state or directly support; any listed item, or
-   an unreadable answer, rejects the derivative.
+   an unreadable answer, rejects the derivative;
+3. removed-by-review evidence — deterministic, here: the phrases the
+   reviewed draft had, the final accepted article no longer has, and the
+   derivative reuses. Wording is not meaning — revision may reword a claim
+   it kept ("rose by twenty eight percent" → "increased 28%"), so reused
+   draft wording never rejects on its own (#262 review). It is handed to the
+   judge, which is told to treat each such phrase as unsupported unless the
+   final content supports the same claim in other words. A genuinely
+   removed claim ("without changing the ad or budget") is still rejected,
+   by the judge's confirmation.
 
 Generic Engine behaviour: nothing here knows a client, a brand, an audience
 or an argument. The judge is given only the two texts and the platform name.
@@ -89,9 +97,14 @@ def resurrected_phrases(derivative: str, removed: frozenset[tuple[str, ...]]) ->
 
 
 class FidelityJudge(Protocol):
-    """Lists what a derivative states that its source content does not support."""
+    """Lists what a derivative states that its source content does not support.
 
-    def unsupported(self, *, final_content: str, derivative: str, surface: str) -> list[str]: ...
+    ``removed_by_review``: draft phrases the final content no longer carries
+    and the derivative reuses — evidence to weigh, not a verdict.
+    """
+
+    def unsupported(self, *, final_content: str, derivative: str, surface: str,
+                    removed_by_review: tuple[str, ...] = ()) -> list[str]: ...
 
 
 class FidelityJudgeError(RuntimeError):
@@ -109,6 +122,11 @@ group, a condition ("without...", "only if...", "regardless of..."), a cause, or
 counts as unsupported unless FINAL CONTENT itself says it. Quote each item as it appears in
 ADAPTATION. Rephrasings of what FINAL CONTENT says, and lines copied from it, are supported.
 
+REMOVED BY REVIEW, when present, lists wording that an earlier draft had, that FINAL CONTENT no
+longer has, and that ADAPTATION reuses. The reviewer may have removed the claim, or only
+reworded it. Treat each as unsupported unless FINAL CONTENT states or directly supports the same
+claim in other words.
+
 Return ONLY valid JSON: {"unsupported": ["quoted phrase from ADAPTATION", ...]}
 Use an empty list when everything in ADAPTATION is supported."""
 
@@ -116,13 +134,17 @@ Use an empty list when everything in ADAPTATION is supported."""
 class ModelFidelityJudge:
     """The production judge: one budget-charged model call per derivative."""
 
-    def unsupported(self, *, final_content: str, derivative: str, surface: str) -> list[str]:
+    def unsupported(self, *, final_content: str, derivative: str, surface: str,
+                    removed_by_review: tuple[str, ...] = ()) -> list[str]:
         from src.utils.llm_client import chat, model_enrich
 
+        request = {"platform": surface, "FINAL CONTENT": final_content,
+                   "ADAPTATION": derivative}
+        if removed_by_review:
+            request["REMOVED BY REVIEW"] = list(removed_by_review)
         raw = chat(
             system=FIDELITY_INSTRUCTIONS,
-            user=json.dumps({"platform": surface, "FINAL CONTENT": final_content,
-                             "ADAPTATION": derivative}, ensure_ascii=False),
+            user=json.dumps(request, ensure_ascii=False),
             json_mode=True,
             model=model_enrich(),
         )
