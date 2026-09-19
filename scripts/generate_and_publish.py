@@ -235,6 +235,11 @@ from src.editorial.editorial_plan import (
     build_editorial_plan,
     evidence_package_from_artifact,
 )
+from src.editorial.plan_decisions import (
+    ModelPlanDecider,
+    PlanDecider,
+    resolve_plan_decisions,
+)
 from src.strategy.client_contracts import ClientContractError, contracts_for_role
 from src.publishing.formatting import ensure_source_line
 from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
@@ -874,6 +879,7 @@ def main(
     editorial_reviewer: EditorialReviewTransport | None = None,
     article_revisor: ArticleRevisionTransport | None = None,
     derivation_judge: "FidelityJudge | None" = None,
+    plan_decider: PlanDecider | None = None,
 ) -> int:
     """Run one signal end to end and account for it exactly once.
 
@@ -915,6 +921,7 @@ def main(
                 editorial_reviewer=editorial_reviewer,
                 article_revisor=article_revisor,
                 derivation_judge=derivation_judge,
+                plan_decider=plan_decider,
             )
     except RunCallBudgetExceededError as exc:
         print(f"  ERROR: {exc}")
@@ -938,6 +945,7 @@ def _run(
     editorial_reviewer: EditorialReviewTransport | None = None,
     article_revisor: ArticleRevisionTransport | None = None,
     derivation_judge: "FidelityJudge | None" = None,
+    plan_decider: PlanDecider | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(description="Generate + publish one signal end-to-end")
     # #211: Wednesday's fresh-generation runs discover their own signal
@@ -2027,19 +2035,38 @@ def _run(
             # value the contract does not permit, or a choice it requires and
             # this run did not make, stops the run here — a plan that is
             # quietly less than the contract is the failure this replaces.
+            #
+            # What the contract leaves open — which conditional lenses this
+            # run's evidence activates, and which value a multi-value slot
+            # takes — is decided here from the research evidence, before
+            # anything is written, and recorded in the plan with the evidence
+            # ids and the decider behind each answer. A contract that leaves
+            # nothing open makes no call.
             if _client_contracts is not None and _client_contracts.stream.plan_slots:
                 _planned_signal = editorial.to_legacy_dict()
+                _plan_claim = Claim(text=str(
+                    _planned_signal.get("CORE_FACT")
+                    or _planned_signal.get("HEADLINE") or ""
+                ).strip())
+                _plan_evidence = (
+                    evidence_package_from_artifact(research_artifact)
+                    if research_artifact is not None else None
+                )
                 try:
+                    _plan_decisions = resolve_plan_decisions(
+                        _client_contracts,
+                        central_claim=_plan_claim,
+                        evidence=_plan_evidence,
+                        decider=(
+                            plan_decider if plan_decider is not None
+                            else ModelPlanDecider()
+                        ),
+                    )
                     _editorial_plan = build_editorial_plan(
                         _client_contracts,
-                        central_claim=Claim(text=str(
-                            _planned_signal.get("CORE_FACT")
-                            or _planned_signal.get("HEADLINE") or ""
-                        ).strip()),
-                        evidence=(
-                            evidence_package_from_artifact(research_artifact)
-                            if research_artifact is not None else None
-                        ),
+                        central_claim=_plan_claim,
+                        evidence=_plan_evidence,
+                        decisions=_plan_decisions,
                     )
                 except EditorialPlanError as exc:
                     raise ArticleGenerationError("editorial_plan", exc) from exc
@@ -2054,6 +2081,8 @@ def _run(
                 print(
                     f"  ✓  editorial plan: {len(_editorial_plan.active_lenses)} active "
                     f"lens(es), {len(_editorial_plan.evidence.items)} evidence item(s)"
+                    + "".join(f", {slot} chosen by the run"
+                              for slot in _plan_decisions.selected)
                 )
             # ── Wednesday runs the restored July path (#207/#209) ─────────
             # Wednesday's editorial intelligence was lost to changes made for

@@ -39,12 +39,13 @@ to, never what its third paragraph is.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Final
 
 from src.strategy.client_contracts import ClientContracts, Lens
 
 if TYPE_CHECKING:
+    from src.editorial.plan_decisions import PlanDecisions
     from src.research.evidence import NormalizedResearchArtifact
 
 #: Evidence-integrity finding kinds. Universal, not editorial: each one names a
@@ -232,6 +233,10 @@ class EditorialPlan:
     portable_noun: PortableNoun | None = None
     banned: tuple[tuple[str, str], ...] = ()
     regularity: tuple[RegularityObservation, ...] = ()
+    #: What this run decided that the contract left open — activations and
+    #: slot choices, each with the evidence and the decider behind it
+    #: (``src.editorial.plan_decisions``). Empty when nothing was left open.
+    run_decisions: Mapping[str, object] = field(default_factory=dict)
 
     # ── what the plan can answer about a claim ──────────────────────────────
 
@@ -303,7 +308,9 @@ class EditorialPlan:
             if lens.is_standing:
                 continue
             lines.extend(["", f"Client lens, active for this article ({lens.activation}):",
-                          lens.text])
+                          lens.text,
+                          ("What activated it in this run's evidence: "
+                           f"{lens.activation_evidence}")])
         lines.append("")
         return "\n".join(lines)
 
@@ -335,6 +342,7 @@ class EditorialPlan:
             "banned": [{"entry": entry, "list": source} for entry, source in self.banned],
             "regularity": [item.as_evidence() for item in self.regularity],
             "lineage": dict(self.lineage),
+            "run_decisions": dict(self.run_decisions),
         }
 
 
@@ -443,6 +451,7 @@ def build_editorial_plan(
     portable_noun: PortableNoun | None = None,
     regularity: Sequence[RegularityObservation] = (),
     stage: str = DEFAULT_PLAN_STAGE,
+    decisions: PlanDecisions | None = None,
 ) -> EditorialPlan:
     """Create and validate the plan this run executes the contract as.
 
@@ -456,18 +465,39 @@ def build_editorial_plan(
     is unsupported and carries the restriction into the writing stage rather
     than pretending otherwise. ``check`` reports it as an unsupported inference
     for any caller that must treat it as a defect.
+
+    ``decisions`` is what this run decided that the contract left open
+    (``resolve_plan_decisions``): its activations and slot choices are applied
+    and recorded. A value supplied both there and directly is refused — one
+    authority per decision.
     """
     if not central_claim.text.strip():
         raise EditorialPlanError("a plan needs the central claim the run is built on")
     package = evidence if evidence is not None else EvidencePackage()
+    supplied_values = {
+        "claim_strength_ceiling": claim_strength_ceiling,
+        "reader_verifiable_artifact": reader_verifiable_artifact,
+        "ending_mode": ending_mode,
+        "audience_currency": audience_currency,
+    }
+    if decisions is not None:
+        if decisions.stage != stage:
+            raise EditorialPlanError(
+                f"decisions were made for stage {decisions.stage!r}, not {stage!r}"
+            )
+        twice = sorted(
+            slot for slot in decisions.selected if supplied_values.get(slot, "").strip()
+        )
+        if twice or (activation_evidence and decisions.activation_evidence):
+            raise EditorialPlanError(
+                "a decision was supplied twice — directly and by the run's plan "
+                f"decisions: {', '.join(twice) or 'activation evidence'}"
+            )
+        supplied_values.update(decisions.selected)
+        activation_evidence = activation_evidence or decisions.activation_evidence
     resolved = {
         slot: _scalar(contracts, slot, supplied)
-        for slot, supplied in (
-            ("claim_strength_ceiling", claim_strength_ceiling),
-            ("reader_verifiable_artifact", reader_verifiable_artifact),
-            ("ending_mode", ending_mode),
-            ("audience_currency", audience_currency),
-        )
+        for slot, supplied in supplied_values.items()
     }
     plan = EditorialPlan(
         central_claim=central_claim,
@@ -484,6 +514,7 @@ def build_editorial_plan(
         portable_noun=portable_noun,
         banned=contracts.banned_entries,
         regularity=tuple(regularity),
+        run_decisions=decisions.as_evidence() if decisions is not None else {},
     )
     breaches = [f for f in plan.check((central_claim,)) if f.kind != UNSUPPORTED_INFERENCE]
     if breaches:

@@ -28,19 +28,61 @@ editorial choices: an editorial rotation is a document edit.
 | The plan carries | Where it comes from |
 |---|---|
 | `central_claim` | the run: the claim it is built on, with what supports it |
-| `claim_strength_ceiling` | the contract, chosen from its ladder |
+| `claim_strength_ceiling` | the contract; a run decision where its ladder has several values |
 | `evidence_package` | the run's research, including what it may **not** use |
 | `factual_restrictions` | the contract, plus what the run adds |
-| `active_lenses` | routing: standing obligations + what this run activated |
-| `reader_verifiable_artifact` | the contract |
-| `ending_mode` | the contract |
-| `audience_currency` | the contract |
+| `active_lenses` | routing: standing obligations + what this run's evidence activated |
+| `reader_verifiable_artifact` | the contract; a run decision where it permits several |
+| `ending_mode` | the contract; a run decision where it permits several |
+| `audience_currency` | the contract; a run decision where it permits several |
 | `acknowledged_limits` | the contract, plus what the run adds |
 | `portable_noun` | the run: the noun, the decision, the reason |
 | `lineage` | the snapshot: identity, path and digest of every document |
+| `run_decisions` | what the run decided that the contract left open, and on what |
 
 It is **not** a paragraph outline. The Engine does not know that paragraph 1 is
 a Hook, and must not: the article's shape is the client's, written in a lens.
+
+## Run decisions
+
+A contract can leave two things open: whether a conditional lens applies
+(`activates_on`), and which value a multi-value scalar slot takes. Both are
+decided per run, from the run's own evidence, before anything is written
+(`src/editorial/plan_decisions.py`):
+
+    research artifact → evidence package → plan decider → PlanDecisions
+                     → build_editorial_plan(decisions=…) → active_lenses / slot values
+                     → generation, derivation and the composer's messages
+
+The decider is asked only what the contract left open — each condition with the
+text of every lens that names it, verbatim; each open slot with its permitted
+values, verbatim — plus the central claim and the evidence package. It never
+sees an article. In production it is one budget-charged model call
+(`ModelPlanDecider`, `NB_ENRICH_MODEL`); the canonical entrypoint takes any
+other decider as `main(plan_decider=…)`. A contract that leaves nothing open —
+Never Blank's today — makes no call.
+
+The Engine holds the answer to the contract:
+
+- every open condition and slot is answered exactly once, and nothing else is;
+- a condition is met only with a finding and the ids of evidence items this run
+  holds and may use — activation evidence cannot be invented;
+- a chosen value is one the contract permits (whitespace aside), verbatim;
+- no answer, an unreadable answer, an empty or hedged choice stops the run —
+  the first value is never a default and an unanswered condition is never
+  "inactive".
+
+`editorial_plan.json` records all of it under `run_decisions`: who decided, the
+contract identity and digest the options came from, every condition (met or
+not) with its finding, evidence ids, reason and declaring lenses, and every
+selection with its value, its position among the permitted values, the
+evidence ids and the reason. An activated lens also carries its finding into
+the writer's message.
+
+Nothing here knows a weekday. A new stream — a different day, a different
+ending, a different lens — is a stream contract bound to a role the business
+configuration declares, plus whatever lenses it needs; no Engine Python changes
+(`tests/test_plan_decisions.py::test_a_new_stream_day_policy_is_documents_only_and_reaches_the_composer`).
 
 ## Fails closed
 
@@ -48,7 +90,9 @@ The run stops, rather than carrying a plan that is quietly less than the
 contract, on any of:
 
 - a value the contract does not permit for a slot;
-- a slot the contract requires a choice for and the run did not make;
+- a slot the contract requires a choice for and the run did not make, or a
+  run decision that is missing, unreadable, ambiguous or not held to the
+  evidence (see Run decisions);
 - a `### slot` name the Engine does not carry, or a contract stating a value
   only the run can find;
 - activation evidence for a condition no lens declares, or a lens activated

@@ -57,8 +57,10 @@ the run — a misspelt slot would otherwise be policy nobody reads.
 
 "Choose one" is the run's choice, refused unless the contract permits it. Where
 a slot permits exactly one value, the contract has already chosen and the run
-need not; where it permits several and the run chooses none, the run stops
-rather than pick for the client. `central_claim`, `evidence_package`,
+need not; where it permits several, the run's plan decider chooses one from
+this run's evidence (see [EDITORIAL_PLAN.md](EDITORIAL_PLAN.md#run-decisions))
+and the run stops if it chooses none, chooses two, or chooses a value the
+contract does not permit — it never falls back to the first value. `central_claim`, `evidence_package`,
 `active_lenses`, `portable_noun` and `lineage` are slots a run derives from its
 own evidence: a contract may not state their values.
 
@@ -79,8 +81,9 @@ names. Front matter, all required, no duplicate keys: `lens_id`, `version`,
 | `revision` | in the reviser's request, beside role and voice |
 
 Optional front matter `activates_on` (a list of conditions) makes a lens
-**conditional**: it reaches its stages only on the runs that supply activation
-evidence for one of those conditions, through an `EditorialPlan` that records
+**conditional**: it reaches its stages only on the runs whose research evidence
+meets one of those conditions — decided per run by the plan decider, which is
+handed the condition name and this lens's text verbatim — through an `EditorialPlan` that records
 which condition fired and on what evidence. Without `activates_on` a lens is a
 **standing obligation** and applies to every run. The routing above is standing
 obligations only: a conditional lens has no path to a stage that does not go
