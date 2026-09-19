@@ -76,6 +76,23 @@ FINAL_ARTICLE = (
 PREVIEW_FORMATS = {"medium", "reading", "instagram", "telegram", "threads"}
 
 
+class RecordingJudge:
+    """A test fidelity judge: records every check and flags only the phrases it
+    is told are unsupported, when a derivative contains them. The production
+    judge is a model call; these suites prove the plumbing and the gate."""
+
+    def __init__(self, flag: tuple[str, ...] = ()) -> None:
+        self.flag = flag
+        self.calls: list[dict] = []
+
+    def unsupported(self, *, final_content, derivative, surface, removed_by_review=()):
+        self.calls.append({"final_content": final_content, "derivative": derivative,
+                           "surface": surface, "removed_by_review": removed_by_review})
+        return [phrase for phrase in self.flag
+                if phrase.casefold() in derivative.casefold()
+                and phrase.casefold() not in final_content.casefold()]
+
+
 def _draft() -> dict:
     article = copy.deepcopy(legacy._FAKE_ARTICLE)
     article["platforms"]["long"] = {"body": DRAFT_ARTICLE, "title": TITLE}
@@ -162,7 +179,8 @@ def _run(tmp_path, *, draft=None, revised=FINAL_ARTICLE):
                            {"images": {"platform_images": _pimgs(tmp_path)}}]):
         code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator,
                     editorial_reviewer=reviewer,
-                    article_revisor=FakeRevisionTransport(revised))
+                    article_revisor=FakeRevisionTransport(revised),
+                    derivation_judge=RecordingJudge())
     generated = next(tmp_path.glob(f"{SIG}/runs/*/generated.json"), None)
     return code, patches, composer, reviewer, (
         json.loads(generated.read_text()) if generated else None)
@@ -727,7 +745,8 @@ def test_another_clients_accepted_echo_reaches_telegram_and_threads_under_its_na
                            {"images": {"platform_images": _pimgs(tmp_path)}}]):
         code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator,
                     editorial_reviewer=FakeReviewTransport(_review_payload()),
-                    article_revisor=FakeRevisionTransport(acme_article))
+                    article_revisor=FakeRevisionTransport(acme_article),
+                    derivation_judge=RecordingJudge())
 
     assert code == 0
     generated = json.loads(next(tmp_path.glob(f"{SIG}/runs/*/generated.json")).read_text())
