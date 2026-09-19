@@ -105,6 +105,8 @@ def main(argv: list[str] | None = None, *, run: Runner = _run) -> int:
     parser.add_argument("--selection-audit", default="",
                         help="The audit of the selection that chose --first-signal-id")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--preview-fresh-images", action="store_true",
+                        help="Passed through to every generation attempt")
     args = parser.parse_args(argv)
 
     audit_dir = Path(args.audit_dir)
@@ -147,6 +149,8 @@ def main(argv: list[str] | None = None, *, run: Runner = _run) -> int:
                     "--editorial-role", args.editorial_role]
         if args.dry_run:
             generate.append("--dry-run")
+        if args.preview_fresh_images:
+            generate.append("--preview-fresh-images")
         code = run(generate)
         attempts.append({"signal_id": candidate, "exit_code": code,
                          "outcome": ("completed" if code == 0 else

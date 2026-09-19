@@ -224,6 +224,7 @@ def recompose_platform(
     closing_contract: "str | None" = None,
     research_artifact=None,
     rejected_sink: "list | None" = None,
+    closing_attribution: "str | None" = None,
 ) -> dict:
     """Re-compose ONE platform derivative from final accepted content (#197).
 
@@ -268,6 +269,7 @@ def recompose_platform(
             rejected_sink=rejected_sink,
             source_identities=_identities,
             canonical_body=canonical_body,
+            closing_attribution=closing_attribution,
             **({} if closing_contract is None else {"closing_contract": closing_contract}),
         )
     except ArticleGenerationError:

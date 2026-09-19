@@ -157,6 +157,13 @@ from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
+from src.editorial.platform_composer import ADAPTER_FORMATS, CLOSING_BRANDED_ECHO_THEN_SOURCES
+from src.content.output_guard import (
+    THREADS_POST_MAX_CHARS,
+    THREADS_POST_SEPARATOR,
+    split_threads_posts,
+    validate_threads_adaptation,
+)
 from src.editorial.editorial_role import (
     EditorialRoleError,
     render_editorial_role_rules,
@@ -423,52 +430,78 @@ def _slugify(text: str) -> str:
     return canonical_slug(text)
 
 
-def _build_threads(structured: dict) -> list[str]:
-    discovery = structured.get("discovery", {})
-    candidates = [
-        structured.get("hook", ""),
-        discovery.get("aha_setup") or discovery.get("first_wrong_explanation", ""),
-        structured.get("surviving_explanation", ""),
-        structured.get("reframe", ""),
-        structured.get("echo_line", ""),
+def _accepted_echo(final_article: str, draft_echo: str = "",
+                   attribution: str = "") -> str:
+    """The Echo as the FINAL ACCEPTED article carries it.
+
+    The draft's Echo predates Editorial Acceptance: a revision may reword,
+    negate or remove it (#259 review). Authoritative, in order:
+
+    1. the accepted article's attributed paragraph ("<attribution>: <echo>"),
+       taken whole even when it wraps across lines. ``attribution`` is the
+       client's own name from its configuration (business.name) — this
+       helper knows no brand of its own (Replace-the-client, #259 review);
+       without one, no paragraph counts as attributed;
+    2. the draft Echo only when it is, by itself, the accepted article's
+       final prose paragraph — the closing an unattributed contract
+       requires. Merely appearing inside a sentence proves nothing ("We
+       cannot conclude that <echo>" contains it and rejects it);
+    3. otherwise no Echo — never the draft's.
+    """
+    paragraphs = [
+        re.sub(r"\s+", " ", block.replace("*", "")).strip()
+        for block in re.split(r"\n\s*\n", final_article or "")
+        if block.strip()
     ]
-    sequence: list[str] = []
-    seen: set[str] = set()
-    for value in candidates:
-        post = re.sub(r"\s+", " ", (value or "").strip())
-        words = post.split()
-        if len(words) > 55:
-            post = " ".join(words[:55]).rstrip(" ,;:") + "."
-        key = post.lower()
-        if post and key not in seen:
-            sequence.append(post)
-            seen.add(key)
-    if not 3 <= len(sequence) <= 5:
-        raise ValueError(f"Threads requires 3–5 distinct posts; generated {len(sequence)}")
-    return sequence
+    name = (attribution or "").strip()
+    if name:
+        attributed = re.compile(rf"^{re.escape(name)}\s*:\s*(.+)$", re.IGNORECASE)
+        for paragraph in paragraphs:
+            match = attributed.match(paragraph)
+            if match:
+                return match.group(1).strip()
+    prose = [p for p in paragraphs
+             if not re.match(r"^(#+\s*)?sources?\s*:?", p, re.IGNORECASE)]
+    draft = re.sub(r"\s+", " ", (draft_echo or "").replace("*", "")).strip()
+    if draft and prose and prose[-1] == draft:
+        return draft
+    return ""
 
 
-def _clean_line(value: str, max_words: int = 34) -> str:
-    value = re.sub(r"\s+", " ", (value or "").strip())
-    words = value.split()
-    if len(words) <= max_words:
-        return value
-    return " ".join(words[:max_words]).rstrip(" ,;:") + "."
+def _lead_with_canonical_title(body: str, title: str | None) -> str:
+    """Open a channel derivative with the article's accepted title.
+
+    Product Owner decision (Monday preview readiness): every content surface
+    carries the same accepted canonical headline — no composer invents its
+    own. Deterministic, never a model call: the title the run accepted is set
+    as the first line, unless the body already opens with it. Without an
+    accepted title the body is returned unchanged; nothing is invented.
+    """
+    if not title or not body:
+        return body
+    first = next((line for line in body.splitlines() if line.strip()), "")
+    # "Opens with it" means the opening line starts with the title — the
+    # title may be the whole line or its first sentence (#259 review): a
+    # second copy would trip the duplicate-sentence guard.
+    if first.replace("*", "").strip().casefold().startswith(title.strip().casefold()):
+        return body
+    return f"{title.strip()}\n\n{body}"
 
 
-def _build_telegram(structured: dict, wix_url: str = "") -> str:
-    discovery = structured.get("discovery", {})
-    observation = (
-        discovery.get("aha_setup")
-        or discovery.get("first_wrong_explanation")
-        or structured.get("hook")
-        or structured.get("narrative_spine")
-    )
-    implication = structured.get("business_translation") or structured.get("reframe")
-    lines = [_clean_line(observation), _clean_line(implication)]
-    if wix_url:
-        lines.append(wix_url.strip())
-    return "\n".join(line for line in lines if line)
+def _lead_thread_with_canonical_title(posts: list[str], title: str | None) -> list[str]:
+    """Open a Threads sequence with the accepted title (PO: one headline).
+
+    Set on the first post when it fits Threads' per-post limit, otherwise as
+    a post of its own; never duplicated, nothing invented without a title.
+    """
+    if not title or not posts:
+        return posts
+    first = _lead_with_canonical_title(posts[0], title)
+    if first == posts[0]:
+        return posts
+    if len(first) <= THREADS_POST_MAX_CHARS:
+        return [first, *posts[1:]]
+    return [title.strip(), *posts]
 
 
 def _save_generated(
@@ -522,7 +555,18 @@ _NON_R1_PUBLISHERS = NON_R1_PUBLISH_CHANNELS
 # actually consume. Inactive surfaces execute nothing — no composition
 # transport, no image composite/upload — while their package fields and the
 # composer/image architecture remain for future configuration.
-_R1_COMPOSER_FORMATS = ("long", "medium")
+#: Composed BEFORE editorial acceptance: the canonical article only. Every
+#: social derivative is composed afterwards, from the final accepted article
+#: (see "Social derivatives from the final accepted article" in _run) — a
+#: derivative composed beside the draft would carry the draft's claims past
+#: Editorial Acceptance (controlled live run 35383199073).
+_R1_COMPOSER_FORMATS = ("long",)
+
+#: Recorded in generated.json by every run whose social bodies were derived
+#: from the final accepted article. A package without it predates that
+#: invariant, so --from-package / --legacy-package refuse it: republishing
+#: it could put draft-derived social copy beside a corrected article.
+SOCIAL_DERIVATION_LINEAGE = "final-accepted-article/1"
 _R1_IMAGE_PLATFORMS = ["blog", "linkedin"]
 
 
@@ -864,6 +908,11 @@ def _run(
     parser.add_argument("--signal-id", default="")
     parser.add_argument("--dry-run", action="store_true",
                         help="Generate and validate content, save generated.json, but do not publish")
+    parser.add_argument("--preview-fresh-images", action="store_true",
+                        help="With --dry-run only: an owner-controlled full-content preview "
+                             "that generates and uploads a FRESH image (never reusing a "
+                             "cached one) and runs the visual gate. Still publishes nothing "
+                             "and consumes nothing.")
     parser.add_argument("--from-package", action="store_true",
                         help="Skip LLM generation — publish run-scoped generated.json (requires --source-run-id)")
     parser.add_argument("--source-run-id",
@@ -888,8 +937,15 @@ def _run(
     if args.source_run_id and not args.from_package:
         print("  ERROR: --source-run-id is only valid with --from-package")
         return 1
+    if args.preview_fresh_images and (
+        not args.dry_run or args.from_package or args.legacy_package
+    ):
+        print("  ERROR: --preview-fresh-images is a generating dry run only "
+              "(requires --dry-run; not with --from-package/--legacy-package)")
+        return 1
 
-    mode = ("dry-run (no publish)" if args.dry_run
+    mode = ("dry-run preview with fresh images (no publish)" if args.preview_fresh_images
+            else "dry-run (no publish)" if args.dry_run
             else "from-package" if args.from_package
             else "legacy-package" if args.legacy_package
             else "live (LLM generate)")
@@ -1467,6 +1523,19 @@ def _run(
             print(f"  ERROR: Package is not a JSON object (got {type(pkg).__name__})")
             return 1
 
+        # Lineage check — the package's social bodies must be derivations of
+        # its final accepted article (#259). A package from before that
+        # invariant may pair a corrected article with draft-derived social
+        # copy; it is refused before any side effect, never republished.
+        if pkg.get("social_derivation") != SOCIAL_DERIVATION_LINEAGE:
+            print(
+                "  ERROR: package predates the social-derivation invariant "
+                f"(social_derivation={pkg.get('social_derivation')!r}, required "
+                f"{SOCIAL_DERIVATION_LINEAGE!r}) — its social copy may derive from "
+                "the pre-review draft; generate a new run instead of reusing it"
+            )
+            return 1
+
         # Field-type checks — strategy_id, strategy_version, and generated_at
         # must be non-blank strings before any further processing.
         for _field in ("strategy_id", "strategy_version", "generated_at"):
@@ -1962,7 +2031,9 @@ def _run(
             return 1
 
         blog_body      = platforms["long"]["body"]
-        linkedin_text  = platforms["medium"]["body"]
+        # composed after acceptance, from the final article (absent here
+        # unless the generation path produced one — the Wednesday route)
+        linkedin_text  = platforms.get("medium", {}).get("body", "")
         # The published title is the article's own hook when the composition
         # produced one. Before this, Wix received the source signal's headline —
         # the RSS feed's words on our page. An absent title keeps the previous
@@ -1973,10 +2044,12 @@ def _run(
             print(f"  ✓  article title: {headline[:70]}")
         # #175: inactive surfaces were not composed; their package fields
         # stay present and empty.
-        facebook_text  = platforms.get("reading", {}).get("body", "")
-        instagram_text = platforms.get("instagram", {}).get("body", "")
-        threads_seq    = _build_threads(structured)
-        telegram_text  = _build_telegram(structured)
+        # Every other surface is derived after acceptance, from the final
+        # accepted article, never from this draft.
+        facebook_text  = ""
+        instagram_text = ""
+        threads_seq: list[str] = []
+        telegram_text  = ""
         echo_line      = structured.get("echo_line", "")
 
         # ── Pre-acceptance diagnostic evidence (Issue #215) ──────────────────
@@ -2176,6 +2249,14 @@ def _run(
             return 1
         state.reached(TerminalStage.EDITORIAL)
         blog_body = _acceptance.final_article_body
+        # Everything downstream derives from the accepted article — its Echo
+        # included. ``structured_final`` is the only outline a derivation may
+        # see: the draft's narrative fields are withheld by the composer, and
+        # its Echo is replaced here by the accepted one (#259 review).
+        echo_line = _accepted_echo(
+            blog_body, echo_line, business_configuration.business.name)
+        structured_final = {**structured, "echo_line": echo_line or None,
+                            "signature": None, "cta_line": None}
         print(
             f"  ✓  editorial acceptance: ACCEPT "
             f"({'after one revision' if _acceptance.revised else 'original article'}) "
@@ -2208,73 +2289,168 @@ def _run(
         # still arrives verbatim from the structured article) — and the
         # stale body is preserved as evidence, never published, never a
         # fallback.
-        if _acceptance.revised:
-            _stale_social_body = linkedin_text
-            _accepted_record["social_recomposition"] = {
-                "performed": False,
-                "reason": (
-                    "editorial acceptance revised the article after the "
-                    "social composition was produced; the pre-revision "
-                    "composition is stale and was discarded"
+        #
+        # Invariant (Monday preview readiness): every social derivative is
+        # composed from the FINAL ACCEPTED article — never from the draft,
+        # its outline or narrative spine, or a composition made before
+        # acceptance. The canonical route composes no social body before
+        # acceptance; any route that did (the restored July Wednesday path)
+        # has that body discarded here. Every run derives it here, revised
+        # or not.
+        _stale_social_body = linkedin_text or None
+        _accepted_record["social_recomposition"] = {
+            "performed": False,
+            "reason": (
+                "every social derivative is composed from the final "
+                "accepted article, after editorial acceptance; any "
+                "composition made before acceptance was discarded"
+            ),
+            "stale_composition_discarded": _stale_social_body,
+        }
+        try:
+            _recomposed = recompose_platform(
+                structured_final,
+                "medium",
+                canonical_body=blog_body,
+                cta_mode=cta_mode,
+                linkedin_strategy=strategy_execution.linkedin,
+                editorial_role_rules=_editorial_role_rules,
+                closing_contract=(
+                    _role.closing_contract if _role is not None else None
                 ),
-                "stale_composition_discarded": _stale_social_body,
+                research_artifact=research_artifact,
+                rejected_sink=_rejected_compositions,
+            )
+            linkedin_text = _recomposed["body"]
+            _social_recomposed = True
+            _accepted_record["social_recomposition"]["performed"] = True
+            print(
+                f"  ✓  social derivative re-composed from the final "
+                f"accepted article ({_recomposed['word_count']} words)"
+            )
+        except ArticleGenerationError as exc:
+            # Fail closed before any later gate or side effect: the run
+            # has a final accepted article and no valid social
+            # derivative. Preserve both facts honestly — Article B with
+            # NO social body (the stale one is evidence, not content) —
+            # and every rejected attempt for diagnosis.
+            print(
+                "  ERROR: social re-composition failed after revision: "
+                f"{exc.original} — the stale pre-revision composition is "
+                "never a fallback; the run stops"
+            )
+            _persist_rejected_compositions(run_dir, _rejected_compositions)
+            _accepted_record["social_recomposition"]["error"] = (
+                f"{type(exc.original).__name__}: {exc.original}"
+            )
+            _accepted_record["content"] = {
+                "title": headline,
+                "echo": echo_line,
+                "article_body": blog_body,
+                "linkedin_body": None,
             }
             try:
-                _recomposed = recompose_platform(
-                    structured,
-                    "medium",
-                    canonical_body=blog_body,
-                    cta_mode=cta_mode,
-                    linkedin_strategy=strategy_execution.linkedin,
-                    editorial_role_rules=_editorial_role_rules,
-                    closing_contract=(
-                        _role.closing_contract if _role is not None else None
-                    ),
-                    research_artifact=research_artifact,
-                    rejected_sink=_rejected_compositions,
-                )
-                linkedin_text = _recomposed["body"]
-                _social_recomposed = True
-                _accepted_record["social_recomposition"]["performed"] = True
+                write_accepted_composition_json(run_dir, _accepted_record)
                 print(
-                    f"  ✓  social derivative re-composed from the final "
-                    f"accepted article ({_recomposed['word_count']} words)"
+                    "  ✓  accepted article preserved without a social "
+                    f"derivative: {run_dir / 'accepted_composition.json'}"
                 )
-            except ArticleGenerationError as exc:
-                # Fail closed before any later gate or side effect: the run
-                # has a final accepted article and no valid social
-                # derivative. Preserve both facts honestly — Article B with
-                # NO social body (the stale one is evidence, not content) —
-                # and every rejected attempt for diagnosis.
-                print(
-                    "  ERROR: social re-composition failed after revision: "
-                    f"{exc.original} — the stale pre-revision composition is "
-                    "never a fallback; the run stops"
-                )
-                _persist_rejected_compositions(run_dir, _rejected_compositions)
-                _accepted_record["social_recomposition"]["error"] = (
-                    f"{type(exc.original).__name__}: {exc.original}"
-                )
-                _accepted_record["content"] = {
-                    "title": headline,
-                    "echo": echo_line,
-                    "article_body": blog_body,
-                    "linkedin_body": None,
-                }
+            except (ArtifactCollisionError, OSError) as exc2:
+                print(f"  ⚠  accepted article could not be preserved: {exc2}")
+            state.ended(
+                TerminalStage.LINKEDIN_COMPOSITION,
+                TerminalDisposition.BLOCKED,
+                f"social recomposition: {type(exc.original).__name__}",
+            )
+            return 1
+
+        # ── Full-content preview surfaces (owner-controlled, dry run) ────────
+        # Facebook, Instagram, Telegram and Threads are not part of Release 1,
+        # so a normal run does not pay to compose them (#175) and leaves them
+        # empty. The owner-controlled preview composes them — each an Engine
+        # platform adaptation of the FINAL ACCEPTED article, through the same
+        # composer, channel mechanics and validators — so every intended
+        # surface can be inspected before any of them is enabled. None is a
+        # deterministic excerpt: Telegram and Threads carry the article's
+        # evidence and mechanism, not merely its opening (PO decision).
+        if args.dry_run and args.preview_fresh_images:
+            for _format_key, _rules_key in (
+                ("reading", "long"), ("instagram", "medium"),
+                ("telegram", "medium"), ("threads", "medium"),
+            ):
                 try:
-                    write_accepted_composition_json(run_dir, _accepted_record)
-                    print(
-                        "  ✓  accepted article preserved without a social "
-                        f"derivative: {run_dir / 'accepted_composition.json'}"
+                    _derived = recompose_platform(
+                        structured_final,
+                        _format_key,
+                        canonical_body=blog_body,
+                        cta_mode=cta_mode,
+                        wix_strategy=strategy_execution.wix,
+                        linkedin_strategy=strategy_execution.linkedin,
+                        # a mapping keyed by THIS format: the composer forwards
+                        # a plain string only to long/medium (#259 review)
+                        editorial_role_rules={_format_key: (
+                            _editorial_role_rules.get(_rules_key)
+                            if isinstance(_editorial_role_rules, dict)
+                            else _editorial_role_rules
+                        )},
+                        closing_contract=(
+                            _role.closing_contract if _role is not None else None
+                        ),
+                        research_artifact=research_artifact,
+                        rejected_sink=_rejected_compositions,
+                        # the Engine adapters carry no brand of their own: a
+                        # branded closing names the client its configuration
+                        # declares (#259 review, Replace-the-client)
+                        **({"closing_attribution": business_configuration.business.name}
+                           if _format_key in ADAPTER_FORMATS else {}),
                     )
-                except (ArtifactCollisionError, OSError) as exc2:
-                    print(f"  ⚠  accepted article could not be preserved: {exc2}")
-                state.ended(
-                    TerminalStage.LINKEDIN_COMPOSITION,
-                    TerminalDisposition.BLOCKED,
-                    f"social recomposition: {type(exc.original).__name__}",
-                )
-                return 1
+                except ArticleGenerationError as exc:
+                    print(f"  ERROR: preview {_format_key} composition failed: {exc.original}")
+                    _persist_rejected_compositions(run_dir, _rejected_compositions)
+                    state.ended(TerminalStage.GENERATION, TerminalDisposition.BLOCKED,
+                                f"preview composition {_format_key}: "
+                                f"{type(exc.original).__name__}")
+                    return 1
+                if _format_key == "reading":
+                    facebook_text = _derived["body"]
+                    # The Facebook surface carries the article's facts, so
+                    # the same source-transparency gate the Wix article
+                    # passed applies — a preview must show a post that
+                    # could honestly be published.
+                    if _role is not None and _role.require_source_transparency:
+                        try:
+                            validate_source_transparency(
+                                article_body=facebook_text,
+                                research=research_artifact,
+                                allowed_destinations=tuple(
+                                    d for d in (os.environ.get("NB_WIX_SITE_BASE_URL", ""),) if d
+                                ),
+                            )
+                        except SourceTransparencyError as exc:
+                            print(f"  ERROR: preview facebook source transparency: {exc}")
+                            state.ended(TerminalStage.EDITORIAL, TerminalDisposition.BLOCKED,
+                                        f"preview facebook transparency: {type(exc).__name__}")
+                            return 1
+                elif _format_key == "instagram":
+                    instagram_text = _derived["body"]
+                elif _format_key == "telegram":
+                    telegram_text = _lead_with_canonical_title(
+                        _derived["body"], _composed_title)
+                else:
+                    threads_seq = _lead_thread_with_canonical_title(
+                        split_threads_posts(_derived["body"]), _composed_title)
+                    # the thread as it will be shown — after the title lead —
+                    # must still meet the adapter contract; never trimmed
+                    try:
+                        validate_threads_adaptation(
+                            f"\n{THREADS_POST_SEPARATOR}\n".join(threads_seq))
+                    except ValueError as exc:
+                        print(f"  ERROR: preview threads after the title lead: {exc}")
+                        state.ended(TerminalStage.GENERATION, TerminalDisposition.BLOCKED,
+                                    "preview threads: contract")
+                        return 1
+                print(f"  ✓  preview {_format_key} composed from the final accepted "
+                      f"article ({_derived['word_count']} words)")
 
         # Issue #196: preserve the accepted compositions NOW, before the
         # remaining gates. A run blocked downstream (transparency, images,
@@ -2408,7 +2584,19 @@ def _run(
         # transparency gate, so validated body == published body. Skipped
         # rather than made idempotent here so this line stays byte-identical
         # for every other stream.
-        if not _attribution_applied:
+        #
+        # A body closed under the branded-echo-then-sources contract already
+        # ends in its one canonical Sources section — composed from the run's
+        # own source records (#258) and verified by source transparency. The
+        # signal-derived footer would add a second section naming the
+        # signal's SOURCE_NAME, a publisher the source record may not hold
+        # (controlled live run 35383199073: "## Source [HubSpot Marketing
+        # Blog](…)" beside a publisher-less canonical citation).
+        _canonical_sources_section = (
+            _role is not None
+            and _role.closing_contract == CLOSING_BRANDED_ECHO_THEN_SOURCES
+        )
+        if not _attribution_applied and not _canonical_sources_section:
             blog_body += formatting.source_line(
                 source_name, source_url, "blog_markdown"
             )
@@ -2418,28 +2606,29 @@ def _run(
         # link cannot be appended here because it does not exist yet; it is
         # bound deterministically after Wix publication succeeds.
         linkedin_text   = formatting.append_hashtags(
-            formatting.bold_signature_prefix(linkedin_text, "unicode"),
-            # #176 correction: topical tags follow the published article —
-            # the supported mechanism and the composed title — never
-            # discovery metadata that may differ from what was written.
-            generate_hashtags(
-                signal, "linkedin",
-                mechanism=article.get("pattern", {}).get("mechanism", ""),
-                title=headline,
+            _lead_with_canonical_title(
+                formatting.bold_signature_prefix(linkedin_text, "unicode"),
+                _composed_title,
             ),
+            # Hashtags read the canonical accepted article, never free-text
+            # fragments of it (controlled live run 35383199073).
+            generate_hashtags(signal, "linkedin", article_text=blog_body),
         )
-        facebook_text   = (
-            formatting.bold_signature_prefix(facebook_text, "unicode") +
-            formatting.source_line(source_name, source_url, "bare_url")
-        )
+        if facebook_text:
+            facebook_text = _lead_with_canonical_title(
+                formatting.bold_signature_prefix(facebook_text, "unicode"),
+                _composed_title,
+            ) + (
+                "" if _canonical_sources_section
+                else formatting.source_line(source_name, source_url, "bare_url")
+            )
         if instagram_text:
             instagram_text = formatting.append_hashtags(
-                formatting.bold_signature_prefix(instagram_text, "unicode"),
-                generate_hashtags(
-                    signal, "instagram",
-                    mechanism=article.get("pattern", {}).get("mechanism", ""),
-                    title=headline,
+                _lead_with_canonical_title(
+                    formatting.bold_signature_prefix(instagram_text, "unicode"),
+                    _composed_title,
                 ),
+                generate_hashtags(signal, "instagram", article_text=blog_body),
             )
 
         # ── LinkedIn composition acceptance (Issue #93 / Story #14) ──────────
@@ -2486,9 +2675,14 @@ def _run(
         # ── Image preparation (fresh-gen path, after all text gates — #177) ──
         # Reading the package's images is a local file read — no model call,
         # no upload.
-        pimgs = _load_package_images(signal_id)
+        #
+        # The owner-controlled fresh-image preview ignores any cached image
+        # and generates a new one for every image surface, so the preview
+        # shows the visual pipeline as it actually runs today, end to end.
+        fresh_image_preview = bool(args.dry_run and args.preview_fresh_images)
+        pimgs = {} if fresh_image_preview else _load_package_images(signal_id)
         pkg_design_version = pimgs.get("_design_version") if pimgs else None
-        needs_regen = (
+        needs_regen = fresh_image_preview or (
             not pimgs.get("blog", {}).get("url")
             or pkg_design_version != CURRENT_DESIGN_VERSION
         )
@@ -2496,7 +2690,7 @@ def _run(
         # image model call, no Cloudinary upload. When the package has no
         # current image the dry run is text-only — it has no visual to gate,
         # and it publishes nothing, so nothing downstream depends on one.
-        text_only_dry_run = bool(args.dry_run and needs_regen)
+        text_only_dry_run = bool(args.dry_run and needs_regen and not fresh_image_preview)
         if text_only_dry_run:
             pimgs = {}
             needs_regen = False
@@ -2508,9 +2702,12 @@ def _run(
                 from scripts.research.prepare_content import prepare_content_packages
                 pkgs = prepare_content_packages(
                     [signal], strategy_execution.research, research_audience,
-                    platforms=_R1_IMAGE_PLATFORMS,
+                    # the preview shows every image surface; a publishing run
+                    # composes only the surfaces it publishes (#175)
+                    platforms=None if fresh_image_preview else _R1_IMAGE_PLATFORMS,
                     # #177 product decision: no preview generation here either
                     content_package=False,
+                    force_regenerate=fresh_image_preview,
                 )
                 if pkgs:
                     pimgs = pkgs[0].get("images", {}).get("platform_images", {})
@@ -2574,6 +2771,12 @@ def _run(
             "run_id":              run_ctx.run_id,
             "signal_id":           signal_id,
             "headline":            headline,
+            # The accepted article title, and only that: None when the
+            # composer produced none (``headline`` then falls back to the
+            # signal's own headline). The canonical hook every channel
+            # derivative leads with.
+            "title":               _composed_title or None,
+            "social_derivation":   SOCIAL_DERIVATION_LINEAGE,
             "generated_at":        _generated_at,
             "strategy_id":         strategy_id,
             "strategy_version":    strategy_version,

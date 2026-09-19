@@ -85,20 +85,29 @@ def _accepted(tmp_path) -> dict:
 
 
 # ===========================================================================
-# Path A — ACCEPT without revision: nothing new happens (items 1, 2, 22)
+# Path A — ACCEPT without revision. Superseded by the Monday preview-
+# readiness invariant: the canonical route composes NO social body before
+# acceptance, so even an unrevised article gets its derivative afterwards,
+# from the accepted text — exactly one derivation either way.
 # ===========================================================================
 
 
-def test_accept_without_revision_never_recomposes(tmp_path):
+def test_accept_without_revision_derives_once_from_the_accepted_article(tmp_path):
     code, patches, provider = _run(tmp_path, reviewer=_accepting_reviewer())
 
     assert code == 0
-    assert patches["recompose_platform"].call_count == 0        # item 1, 22
-    # the original composition is retained end-to-end               item 2
-    assert _generated(tmp_path)["linkedin_post"] == "LinkedIn post text."
+    derive = patches["recompose_platform"]
+    assert derive.call_count == 1
+    assert derive.call_args.args[1] == "medium"
+    # derived from the accepted article (here unrevised: the draft body)
+    assert derive.call_args.kwargs["canonical_body"] == _generated(tmp_path)["blog_article"]
     record = _accepted(tmp_path)
+    assert record["social_recomposition"]["performed"] is True
+    assert "final accepted article" in record["social_recomposition"]["reason"]
+    # the accepted pair holds the derivation's body: the harness derivation of
+    # an unrevised article is the body the test composed for it
     assert record["content"]["linkedin_body"] == "LinkedIn post text."
-    assert "social_recomposition" not in record
+    assert derive.call_args.kwargs["canonical_body"] == record["content"]["article_body"]
 
 
 # ===========================================================================
@@ -363,10 +372,14 @@ def test_the_seam_makes_exactly_one_model_call_with_the_final_content():
     assert len(calls) == 1                                        # item 23
     assert result["body"] == body
     prompt = calls[0]
-    # the final content leads the prompt as the authority           item 7
+    # the final content leads the prompt as the ONLY authority      item 7
     assert "FINAL CANONICAL CONTENT" in prompt
     assert "The final accepted article body." in prompt
-    assert "the final content wins" in prompt
+    assert "use nothing that is not in it" in prompt
+    # and the pre-review outline is not supplied at all (preview-readiness
+    # invariant): no narrative spine, no structured narrative fields
+    assert "NARRATIVE SPINE" not in prompt
+    assert "STRUCTURED FIELDS" not in prompt
     # no title regeneration for the social format                   item 10
     assert result["title"] is None
 
@@ -473,15 +486,29 @@ def test_a_rejected_recomposition_is_preserved_for_diagnosis():
 
 
 def test_the_prompt_without_canonical_body_is_unchanged():
-    # the seam is additive: absent canonical_body, the prompt is byte-stable
+    # absent canonical_body, the first-composition prompt keeps its outline
     structured = _structured()
     before = _build_user_prompt(structured, "medium", "none")
     assert "FINAL CANONICAL CONTENT" not in before
+    assert "NARRATIVE SPINE" in before and "STRUCTURED FIELDS:" in before
+
+
+def test_a_derivative_prompt_carries_none_of_the_pre_review_outline():
+    """Every narrative field of the draft is withheld from a derivative; only
+    the verbatim Echo travels (preview-readiness invariant)."""
+    structured = _structured()
     with_body = _build_user_prompt(
         structured, "medium", "none",
         canonical_body="The final accepted article body.",
     )
-    assert with_body.endswith(before) or before in with_body
+    for field in ("hook", "reframe", "surviving_explanation", "narrative_spine"):
+        value = structured.get(field)
+        if isinstance(value, str) and value.strip():
+            assert value not in with_body, field
+    for value in (structured.get("discovery") or {}).values():
+        if isinstance(value, str) and value.strip():
+            assert value not in with_body
+    assert "REQUIRED ELEMENTS:" in with_body
 
 
 # ===========================================================================
@@ -494,7 +521,9 @@ def test_recomposition_sits_between_acceptance_and_every_later_gate():
     accept = source.index("blog_body = _acceptance.final_article_body")
     recompose = source.index("recompose_platform(\n")
     preserved = source.index("  ✓  accepted compositions preserved")
-    transparency = source.index("validate_source_transparency(\n")
+    # the canonical article's gate (the preview's Facebook check precedes it)
+    transparency = source.index(
+        "validate_source_transparency(\n                    article_body=blog_body")
     image = source.index("Image preparation (fresh-gen path")
     # acceptance → re-composition → preservation → transparency → images
     assert accept < recompose < preserved < transparency < image  # items 18, 6

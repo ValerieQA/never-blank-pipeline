@@ -96,7 +96,9 @@ def _save_image_library(lib: dict) -> None:
     IMAGE_LIBRARY.write_text(json.dumps(lib, indent=2, ensure_ascii=False))
 
 
-def _find_existing_image(signal: dict, library: dict) -> tuple[str | None, str]:
+def _find_existing_image(
+    signal: dict, library: dict, *, force_regenerate: bool = False,
+) -> tuple[str | None, str]:
     """
     Return a reusable image URL only if:
       - SIGNAL_ID matches, AND
@@ -108,7 +110,9 @@ def _find_existing_image(signal: dict, library: dict) -> tuple[str | None, str]:
     """
     from src.publishing.image_pipeline import CURRENT_DESIGN_VERSION
 
-    force = os.environ.get("NB_FORCE_REGENERATE_RESEARCH_IMAGES", "false").lower() == "true"
+    force = force_regenerate or (
+        os.environ.get("NB_FORCE_REGENERATE_RESEARCH_IMAGES", "false").lower() == "true"
+    )
     if force:
         return None, "force_regenerate"
 
@@ -276,13 +280,16 @@ def _generate_signal_image(signal: dict, platforms: list[str] | None = None) -> 
 
 
 def _build_image_plan(signal: dict, library: dict,
-                      platforms: list[str] | None = None) -> tuple[dict, dict | None]:
+                      platforms: list[str] | None = None,
+                      *, force_regenerate: bool = False) -> tuple[dict, dict | None]:
     """
     Determine image for this signal: reuse (same signal only) or generate fresh.
     Returns (image_plan, library_entry_or_None).
     Library entry is only returned when a new image was generated.
     """
-    existing_url, reuse_source = _find_existing_image(signal, library)
+    existing_url, reuse_source = _find_existing_image(
+        signal, library, force_regenerate=force_regenerate
+    )
 
     if existing_url:
         log.info("Image reused (same signal, same design_version) for %s", signal.get("SIGNAL_ID"))
@@ -349,6 +356,7 @@ def prepare_content_packages(
     audience: AudienceSelection | None = None,
     platforms: list[str] | None = None,
     content_package: bool = True,
+    force_regenerate: bool = False,
 ) -> list[dict]:
     """
     Main entry point. For each signal: generate content + image (one per signal).
@@ -365,6 +373,11 @@ def prepare_content_packages(
     deliberately removed from R1 — non-authoritative, absent from the
     evidence chain, and previously produced only on image-cache misses).
     The default True keeps legacy daily-research behaviour unchanged.
+
+    force_regenerate: when True, an image-library entry for the signal is
+    never reused — a fresh image is generated and uploaded. The owner-
+    controlled fresh-image preview passes it; every other caller keeps the
+    reuse contract (and the NB_FORCE_REGENERATE_RESEARCH_IMAGES setting).
     """
     if not signals:
         return []
@@ -382,7 +395,9 @@ def prepare_content_packages(
             _generate_content_package(signal, strategy_view, audience)
             if content_package else {}
         )
-        image_plan, library_entry = _build_image_plan(signal, library, platforms=platforms)
+        image_plan, library_entry = _build_image_plan(
+            signal, library, platforms=platforms, force_regenerate=force_regenerate,
+        )
 
         if library_entry:
             library[sig_id] = library_entry

@@ -294,6 +294,9 @@ def _valid_package(*, strategy_version: str = "1", **overrides) -> dict:
         "threads_sequence":  ["Post 1.", "Post 2.", "Post 3."],
         "telegram_text":     "Telegram text.",
         "echo_line":         "They waited.",
+        # #259: packages are reusable only when their social bodies were
+        # derived from the final accepted article
+        "social_derivation": "final-accepted-article/1",
     }
     pkg.update(overrides)
     return pkg
@@ -396,6 +399,7 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "editorial_role": None,
     }
 
+    kwargs_ref: dict = {}
     kwargs = {
         # echo the requested identity: the harness anchor binds to whatever
         # (signal, run) the test addresses, exactly as a real anchor would
@@ -468,14 +472,14 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
             side_effect=lambda package, url: package
         ),
         "validate_social_lineage": mock.MagicMock(return_value=None),
-        # Social re-composition after revision (Issue #197): fresh-body
-        # stand-in — the real seam is covered by
-        # tests/test_social_recomposition.py. Harness acceptance never
-        # revises, so this is inert unless a test drives a revision.
-        "recompose_platform": mock.MagicMock(return_value={
-            "body": "Re-composed social body derived from the final accepted article.",
-            "word_count": 150, "echo_included": True, "title": None,
-        }),
+        # Social derivation from the final accepted article (Issue #197;
+        # Monday preview readiness: every canonical run derives its social
+        # bodies after acceptance). Stand-in that mirrors a faithful
+        # derivation: the body the test's own generator composed for that
+        # format — so suites that exercise the real LinkedIn gate keep the
+        # body they chose. The real seam is covered by
+        # tests/test_social_recomposition.py.
+        "recompose_platform": mock.MagicMock(side_effect=_fake_derivation(kwargs_ref)),
         "WixPublicationTarget": mock.MagicMock(return_value=mock.sentinel.wix_target),
         "LinkedInPublicationTarget": mock.MagicMock(return_value=mock.sentinel.linkedin_target),
         "load_linkedin_composition_json": mock.MagicMock(return_value={"stand-in": True}),
@@ -513,7 +517,40 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         ),
         "_emit_run_report": mock.MagicMock(),
     }
+    kwargs_ref["patches"] = kwargs
     return argv, kwargs
+
+
+def _fake_derivation(ref: dict):
+    """A derivation stand-in faithful to "derive from the final article".
+
+    When the final accepted article is the draft the test composed (no
+    revision), the test's own body for that format IS a faithful derivation
+    of it and is returned — so suites exercising the real LinkedIn gate keep
+    the body they chose. When acceptance revised the article, the draft
+    body no longer derives from it and is never returned: a fixed body
+    stands in for the derivation of the final content (#197 semantics).
+    Reads the generator stub through ``ref`` at call time, so a test that
+    replaces ``patches["generate_article"]`` after building the harness is
+    still honoured.
+    """
+    def derive(structured, format_key, *, canonical_body="", **kwargs):
+        generator = ref.get("patches", {}).get("generate_article")
+        article = getattr(generator, "return_value", None)
+        if not isinstance(article, dict):
+            article = _FAKE_ARTICLE
+        platforms = article.get("platforms", {})
+        draft_long = platforms.get("long", {}).get("body", "")
+        body = platforms.get(format_key, {}).get("body") if (
+            draft_long and canonical_body.strip() == draft_long.strip()
+        ) else None
+        body = body or "Re-composed social body derived from the final accepted article."
+        if format_key == "threads":
+            # the Threads adapter contract is a 3–6 post sequence (#259)
+            body = "\n---\n".join([body, "Second post.", "Third post."])
+        return {"body": body, "word_count": len(body.split()),
+                "echo_included": True, "title": None}
+    return derive
 
 
 def _make_rc_mock(run_id: str):

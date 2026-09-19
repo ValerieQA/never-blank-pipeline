@@ -52,6 +52,70 @@ def validate_telegram(text: str) -> None:
         raise ValueError("Telegram output must not contain hashtags")
 
 
+#: Telegram's own message limit — a platform mechanic, not an editorial rule.
+TELEGRAM_MESSAGE_MAX_CHARS = 4096
+
+#: Threads' own limits — platform mechanics, not editorial rules.
+THREADS_POST_MAX_CHARS = 500
+THREADS_MAX_POSTS = 6
+#: The adapter contract (Product Owner, #259): a thread is 3–6 posts.
+THREADS_MIN_POSTS = 3
+THREADS_POST_SEPARATOR = "---"
+
+
+def validate_telegram_adaptation(text: str) -> None:
+    """The Engine Telegram adaptation: platform mechanics only.
+
+    Unlike ``validate_telegram`` (the legacy daily-research "one signal"
+    contract, unchanged), an adaptation of the accepted article has no line
+    or word cap — its length is a target the composer aims at, never a
+    boundary that cuts a sentence. What Telegram itself imposes still holds.
+    """
+    if not text or not text.strip():
+        raise ValueError("Telegram output is empty")
+    if len(text) > TELEGRAM_MESSAGE_MAX_CHARS:
+        raise ValueError(
+            f"Telegram output is {len(text)} characters; Telegram allows "
+            f"{TELEGRAM_MESSAGE_MAX_CHARS} per message"
+        )
+    lowered = text.lower()
+    forbidden = ("read more", "check the link", "new post", "i wrote about", "article is live")
+    if any(phrase in lowered for phrase in forbidden):
+        raise ValueError("Telegram output contains announcement/teaser language")
+    if "#" in text:
+        raise ValueError("Telegram output must not contain hashtags")
+
+
+def split_threads_posts(text: str) -> list[str]:
+    """A composed Threads body, split into its posts on separator lines."""
+    posts, current = [], []
+    for line in (text or "").splitlines():
+        if line.strip() == THREADS_POST_SEPARATOR:
+            posts.append("\n".join(current).strip())
+            current = []
+        else:
+            current.append(line)
+    posts.append("\n".join(current).strip())
+    return [post for post in posts if post]
+
+
+def validate_threads_adaptation(text: str) -> None:
+    """The Engine Threads adaptation: platform mechanics only."""
+    posts = split_threads_posts(text)
+    if not THREADS_MIN_POSTS <= len(posts) <= THREADS_MAX_POSTS:
+        raise ValueError(
+            f"Threads output has {len(posts)} posts; the adapter contract is "
+            f"{THREADS_MIN_POSTS}–{THREADS_MAX_POSTS}, separated by "
+            f"'{THREADS_POST_SEPARATOR}' lines"
+        )
+    for number, post in enumerate(posts, start=1):
+        if len(post) > THREADS_POST_MAX_CHARS:
+            raise ValueError(
+                f"Threads post {number} is {len(post)} characters; Threads "
+                f"allows {THREADS_POST_MAX_CHARS} per post"
+            )
+
+
 def validate_no_detective_template(text: str, platform: str) -> None:
     matches = [p for p in _DETECTIVE_PATTERNS if re.search(p, text or "", flags=re.IGNORECASE)]
     if len(matches) >= 2:
@@ -100,3 +164,7 @@ def validate_platform_output(platform: str, text: str) -> None:
     validate_no_duplicate_echo(text, platform)
     if platform == "telegram":
         validate_telegram(text)
+    elif platform == "telegram_adaptation":
+        validate_telegram_adaptation(text)
+    elif platform == "threads_adaptation":
+        validate_threads_adaptation(text)

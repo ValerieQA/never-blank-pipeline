@@ -39,6 +39,20 @@ _BLOCK_TABLE = {
         "recognition": "full", "evidence_pattern": "skip", "explanation": "skip",
         "reframe": "compressed", "business_meaning": "skip", "cta": "compressed", "echo": "adapt",
     },
+    # Engine platform adapters (#259, Product Owner decision): they
+    # derive from the FINAL ACCEPTED article only (canonical_body) — the
+    # block table matters only for a first composition, which never happens
+    # for these formats.
+    "telegram": {
+        "hook": "full", "reader_context": "skip", "observation": "compressed",
+        "recognition": "compressed", "evidence_pattern": "compressed", "explanation": "compressed",
+        "reframe": "compressed", "business_meaning": "compressed", "cta": "skip", "echo": "adapt",
+    },
+    "threads": {
+        "hook": "full", "reader_context": "skip", "observation": "compressed",
+        "recognition": "compressed", "evidence_pattern": "compressed", "explanation": "compressed",
+        "reframe": "compressed", "business_meaning": "compressed", "cta": "skip", "echo": "adapt",
+    },
     "short": {
         "hook": "compressed", "reader_context": "skip", "observation": "skip",
         "recognition": "skip", "evidence_pattern": "skip", "explanation": "skip",
@@ -52,6 +66,8 @@ _BLOCK_TABLE = {
 _WORD_RANGE = {
     "long": (400, 600), "reading": (350, 600), "medium": (120, 220),
     "instagram": (80, 150), "short": (20, 80),
+    # targets, never truncation boundaries (PO decision)
+    "telegram": (180, 300), "threads": (150, 400),
 }
 
 # Platform identities for output validation. Canonical Release 1 (Issue #93):
@@ -60,6 +76,7 @@ _WORD_RANGE = {
 _PLATFORM_NAMES = {
     "long": "blog", "reading": "facebook", "medium": "linkedin",
     "instagram": "instagram", "short": "short",
+    "telegram": "telegram_adaptation", "threads": "threads_adaptation",
 }
 
 # Version of the LinkedIn-native composition instruction and rule wiring for
@@ -103,6 +120,31 @@ _FORMAT_CONSTRAINTS = {
     "instagram": (
         "Make the reader feel a specific owner situation before explaining it. No research diary, "
         "no stacked evidence, no company-led opening. One sentence per paragraph."
+    ),
+    # Engine platform adapters: platform mechanics and faithful adaptation
+    # only. They carry no client's editorial meaning (Replace-the-client
+    # test, #259 review): voice and emphasis come from the client rules the
+    # caller supplies, or from the content itself. A client may configure or
+    # override the adaptation at onboarding.
+    "telegram": (
+        "Adapt the final content into one Telegram post of complete sentences. "
+        "Carry, where the content has them: its headline or opening hook, its "
+        "central observation, its concrete evidence or examples (figures exactly "
+        "as given), its explanation of why it happens, the implications it "
+        "draws, and its closing line. Compress and restructure freely, but add "
+        "no fact, figure, name or claim the content does not state. Short "
+        "paragraphs. No hashtags, no links, no 'read more' — the system appends "
+        "any link."
+    ),
+    "threads": (
+        "Adapt the final content into a Threads sequence of 3 to 6 posts, each at "
+        "most 450 characters, separated by a line containing only ---. Post 1 "
+        "opens with its headline or opening hook; the middle posts must carry its "
+        "concrete evidence (figures exactly as given) and its explanation of why "
+        "it happens — not merely the opening of the content; the implications it "
+        "draws follow; the final post is its closing line. Every post is "
+        "complete sentences. Add no fact, figure, name or claim the content does "
+        "not state. No hashtags, no links."
     ),
     "short": (
         "Express one native short-form thought. Do not summarize the article; "
@@ -148,9 +190,35 @@ Return ONLY valid JSON:
 """
 
 
+#: The system prompt for the Engine platform adapters (ADAPTER_FORMATS). Unlike
+#: _SYSTEM_PROMPT it holds no client's editorial stance — no brand, audience or
+#: argument: an adapter restates accepted content faithfully for one platform.
+_ADAPTER_SYSTEM_PROMPT = """You are a platform adapter. You adapt one final, already-accepted piece of
+content for one platform.
+
+The final content supplied with the request is the only source. Keep its facts, figures, names
+and conclusions exactly as it states them; compress and restructure for the platform, but add
+nothing it does not state and do not change what it concludes. Write complete sentences only.
+
+Voice, emphasis and editorial rules come from the client rules supplied with the request, when
+there are any — follow them. Without them, keep the content's own voice.
+
+Closing line: when an ECHO MODE instruction is given, follow it exactly. If none is given, do not
+invent a closing line.
+
+Return ONLY valid JSON:
+{"body": "string", "echo_included": true|false, "title": null}
+"""
+
+
 #: Every format the composer knows how to write. Future channels re-enable
 #: by passing their formats to compose_platforms — the tables stay complete.
 ALL_FORMATS = ("long", "reading", "medium", "instagram", "short")
+
+#: Engine platform adapters that exist ONLY as derivations of a final accepted
+#: article: never part of a first composition (ALL_FORMATS), and refused
+#: without canonical content.
+ADAPTER_FORMATS = ("telegram", "threads")
 
 #: How a role's long-form surface closes (#191). "invitation_last" is every
 #: role's existing contract: the verbatim Echo ends the body. A role may
@@ -236,11 +304,14 @@ def _is_canonical_source_entry(
     return any(_cites_one_source_record(line, record) for record in records)
 
 
-def _attributed_echo_line(body: str, echo: str) -> "int | None":
-    """Index of the line carrying '[**]Never Blank[**]: <echo>', or None.
+def _attributed_echo_line(
+    body: str, echo: str, attribution: str = BRAND_ATTRIBUTION,
+) -> "int | None":
+    """Index of the line carrying '[**]<attribution>[**]: <echo>', or None.
 
     Bold markers are optional so the same contract holds for the markdown
-    (Wix) and plain-text (social) renderings.
+    (Wix) and plain-text (social) renderings. ``attribution`` defaults to the
+    shared composer's constant; the Engine adapters pass the client's own.
     """
     target = echo.strip()
     for index, line in enumerate(body.splitlines()):
@@ -249,7 +320,7 @@ def _attributed_echo_line(body: str, echo: str) -> "int | None":
             continue
         prefix = stripped[: len(stripped) - len(target)]
         normalized = prefix.replace("*", "").strip()
-        if normalized.rstrip(":").strip().casefold() == BRAND_ATTRIBUTION.casefold():
+        if normalized.rstrip(":").strip().casefold() == attribution.casefold():
             return index
     return None
 
@@ -333,7 +404,9 @@ def _effective_echo_mode(format_key: str, closing_contract: str) -> "str | None"
     return mode
 
 
-def _validate_branded_echo_final(body: str, echo: str, format_key: str) -> None:
+def _validate_branded_echo_final(
+    body: str, echo: str, format_key: str, attribution: str = BRAND_ATTRIBUTION,
+) -> None:
     """Prove a social derivative ends at the exact canonical Echo (#196).
 
     Three obligations: the Echo appears verbatim exactly once; it is rendered
@@ -349,20 +422,20 @@ def _validate_branded_echo_final(body: str, echo: str, format_key: str) -> None:
             "appear verbatim exactly once",
             format_key=format_key, body=body,
         )
-    index = _attributed_echo_line(body, echo)
+    index = _attributed_echo_line(body, echo, attribution)
     if index is None:
         raise CompositionRejected(
-            f"Platform Composer ({format_key}): the Echo must be the Never "
-            f"Blank attribution block — a line reading "
-            f"'{BRAND_ATTRIBUTION}: <echo>'",
+            f"Platform Composer ({format_key}): the Echo must be the "
+            f"{attribution} attribution block — a line reading "
+            f"'{attribution}: <echo>'",
             format_key=format_key, body=body,
         )
     trailing = [ln for ln in body.splitlines()[index + 1:] if ln.strip()]
     if trailing:
         raise CompositionRejected(
-            f"Platform Composer ({format_key}): nothing may follow the Never "
-            "Blank Echo in the composed body — the link and hashtags are "
-            "appended by the system, never composed",
+            f"Platform Composer ({format_key}): nothing may follow the "
+            f"{attribution} Echo in the composed body — the link and hashtags "
+            "are appended by the system, never composed",
             format_key=format_key, body=body,
         )
 
@@ -394,28 +467,30 @@ def _build_user_prompt(
     editorial_role_rules: str | None = None,
     closing_contract: str = CLOSING_INVITATION_LAST,
     canonical_body: str | None = None,
+    attribution: str = BRAND_ATTRIBUTION,
 ) -> str:
     lo, hi = _WORD_RANGE[format_key]
     lines = [
         f"FORMAT: {format_key}",
         f"TARGET LENGTH: {lo}-{hi} words",
-        f"NARRATIVE SPINE (context, do not quote automatically): {structured_article.get('narrative_spine', '')}",
+        *(() if canonical_body else (
+            f"NARRATIVE SPINE (context, do not quote automatically): {structured_article.get('narrative_spine', '')}",
+        )),
         f"FORMAT RULES: {_FORMAT_CONSTRAINTS[format_key]}",
         f"CTA MODE: {cta_mode}",
         "",
-        "STRUCTURED FIELDS:",
+        "REQUIRED ELEMENTS:" if canonical_body else "STRUCTURED FIELDS:",
     ]
     if canonical_body:
         # #197: this composition is a DERIVATIVE of already-accepted
-        # long-form content (an editorial revision changed it after the
-        # structured outline was produced). The final content is the
-        # authority; the outline remains context.
+        # long-form content. The final content is the only source: the
+        # pre-review outline is not supplied at all (see the block loop).
         lines[:0] = [
             "FINAL CANONICAL CONTENT — the accepted long-form this "
             "composition must derive from. Its facts, framing and single "
             "mechanism are authoritative: never introduce a claim that is "
-            "not supported by it, and where the structured fields below "
-            "differ from it, the final content wins. Write this format's "
+            "not supported by it, and use nothing that is not in it. Write "
+            "this format's "
             "prose as your own derivative of that content rather than "
             "reproducing the long-form wholesale — a body that is simply "
             "the article trimmed to length is rejected. Individual "
@@ -438,6 +513,18 @@ def _build_user_prompt(
             + [""]
         )
     for block, mode in _BLOCK_TABLE[format_key].items():
+        # A derivative of final accepted content sees NONE of the pre-review
+        # outline: its narrative fields predate Editorial Acceptance, and a
+        # claim the reviewer removed from the article must not reach a
+        # social surface through them (controlled live run 35383199073: the
+        # reviewer removed "total engagement numbers drop" from the article;
+        # the pre-review Threads and Telegram texts still carried it).
+        # Only the element a contract requires verbatim still travels — the
+        # Echo, supplied by the caller from the ACCEPTED article. Not even the
+        # draft's CTA line: a CTA the article carries after revision is in
+        # the canonical content itself (#259 review).
+        if canonical_body and block != "echo":
+            continue
         content = _block_content(structured_article, block)
         if mode == "skip" or not content:
             continue
@@ -467,10 +554,10 @@ def _build_user_prompt(
             # exact same Echo as the canonical article — the one canonical
             # Echo travels; the lens never rewrites it.
             lines.append(
-                "ECHO MODE: verbatim, as the Never Blank perspective — the "
+                f"ECHO MODE: verbatim, as the {attribution} perspective — the "
                 "EXACT supplied echo, word for word, never adapted or "
                 "rephrased. Put it exactly once, as the final line, rendered "
-                f"'{BRAND_ATTRIBUTION}: <echo>'. It is the post's last word: "
+                f"'{attribution}: <echo>'. It is the post's last word: "
                 "write nothing after it — no sources section, no link, no "
                 "invitation, no hashtags (the system appends what follows). "
                 "Do not write any URL anywhere in the post."
@@ -503,15 +590,33 @@ def _compose_one(
     closing_contract: str = CLOSING_INVITATION_LAST,
     source_identities: "tuple[tuple[str, ...], ...]" = (),
     canonical_body: "str | None" = None,
+    closing_attribution: "str | None" = None,
 ) -> dict:
+    # Whose name a branded closing carries. The shared formats keep the
+    # composer's constant (#255 scope). An Engine adapter knows no client: the
+    # caller supplies the attribution from the client's configuration, and a
+    # branded closing without one is refused rather than defaulted
+    # (Replace-the-client test, #259 review).
+    if format_key in ADAPTER_FORMATS:
+        attribution = (closing_attribution or "").strip()
+        if not attribution and _effective_echo_mode(
+            format_key, closing_contract
+        ) in ("verbatim_final",) and _block_content(structured_article, "echo"):
+            raise ValueError(
+                f"{format_key}: a branded closing needs the client's attribution "
+                "(closing_attribution); the Engine supplies none of its own"
+            )
+    else:
+        attribution = BRAND_ATTRIBUTION
     model = model_article() if format_key in ("long", "reading") else model_social()
     raw = chat(
-        system=_SYSTEM_PROMPT,
+        system=_ADAPTER_SYSTEM_PROMPT if format_key in ADAPTER_FORMATS else _SYSTEM_PROMPT,
         user=_build_user_prompt(
             structured_article, format_key, cta_mode, strategy_rules,
             editorial_role_rules=editorial_role_rules,
             closing_contract=closing_contract,
             canonical_body=canonical_body,
+            attribution=attribution or BRAND_ATTRIBUTION,
         ),
         json_mode=True,
         model=model,
@@ -546,7 +651,7 @@ def _compose_one(
     elif echo and echo_mode == "verbatim_final":
         # #196: the social derivative carries the article's exact Echo and
         # ends at it — proven structurally, never trusted to the prompt.
-        _validate_branded_echo_final(body, echo, format_key)
+        _validate_branded_echo_final(body, echo, format_key, attribution)
     elif echo and echo_mode == "adapt" and not echo_included:
         raise ValueError(f"Platform Composer ({format_key}): adapted Echo missing")
 
@@ -602,6 +707,7 @@ def compose_platforms(
     closing_contract: str = CLOSING_INVITATION_LAST,
     source_identities: "tuple[tuple[str, ...], ...]" = (),
     canonical_body: "str | None" = None,
+    closing_attribution: "str | None" = None,
 ) -> dict:
     """Compose one native body per requested format.
 
@@ -613,8 +719,13 @@ def compose_platforms(
     """
     result = {}
     for format_key in (ALL_FORMATS if formats is None else formats):
-        if format_key not in ALL_FORMATS:
+        if format_key not in ALL_FORMATS + ADAPTER_FORMATS:
             raise ValueError(f"unknown composer format: {format_key!r}")
+        if format_key in ADAPTER_FORMATS and not canonical_body:
+            raise ValueError(
+                f"{format_key} is an adaptation of a final accepted article; "
+                "it cannot be composed without canonical content"
+            )
         strategy_rules = (
             _wix_rules(wix_strategy)
             if format_key == "long"
@@ -646,6 +757,9 @@ def compose_platforms(
             # final long-form content (post-revision re-composition) rather
             # than from the structured outline alone.
             canonical_body=canonical_body,
+            # the client's own name for a branded closing — used by the
+            # Engine adapters only (#259 review)
+            closing_attribution=closing_attribution,
         )
         log.info("Platform Composer: %s -> %d words", format_key, result[format_key]["word_count"])
     return result

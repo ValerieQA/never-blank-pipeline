@@ -77,10 +77,14 @@ def test_future_channel_definitions_remain_configurable():
     assert platform_composer.ALL_FORMATS == (
         "long", "reading", "medium", "instagram", "short",
     )
+    # the tables also define the Engine platform adapters (#259), which exist
+    # only as derivations of a final accepted article
+    assert platform_composer.ADAPTER_FORMATS == ("telegram", "threads")
     for table in (platform_composer._BLOCK_TABLE,
                   platform_composer._WORD_RANGE,
                   platform_composer._FORMAT_CONSTRAINTS):
-        assert set(table) == set(platform_composer.ALL_FORMATS)
+        assert set(table) == set(platform_composer.ALL_FORMATS
+                                 + platform_composer.ADAPTER_FORMATS)
 
 
 def test_an_unknown_format_is_refused_not_ignored(monkeypatch):
@@ -145,8 +149,9 @@ def test_the_canonical_run_requests_only_the_r1_formats(tmp_path):
     code, captured, hashtag_calls, _ = _reduced_entry(tmp_path)
 
     assert code == 0
-    # the entrypoint asked the engine for exactly the active R1 formats
-    assert captured["composer_formats"] == ("long", "medium")
+    # before acceptance the entrypoint asks only for the canonical article;
+    # LinkedIn is derived after acceptance from the accepted text
+    assert captured["composer_formats"] == ("long",)
     # and the only hashtag transport was for the published LinkedIn surface
     assert hashtag_calls == ["linkedin"]
 
@@ -173,8 +178,8 @@ def test_monday_and_wednesday_share_the_single_reduced_call_site():
     # or per-weekday format branching anywhere
     assert source.count("composer_formats=_R1_COMPOSER_FORMATS") == 1
     assert source.count("composer_formats=") == 1
-    assert '_R1_COMPOSER_FORMATS = ("long", "medium")' in source
-    assert "weekday" not in source.split('_R1_COMPOSER_FORMATS = ("long", "medium")')[1][:200]
+    assert '_R1_COMPOSER_FORMATS = ("long",)' in source
+    assert "weekday" not in source.split('_R1_COMPOSER_FORMATS = ("long",)')[1][:200]
 
 
 # ===========================================================================
@@ -208,7 +213,10 @@ def _current_design_version():
 def test_the_entrypoint_scopes_image_platforms_to_r1():
     source = Path("scripts/generate_and_publish.py").read_text()
     assert '_R1_IMAGE_PLATFORMS = ["blog", "linkedin"]' in source
-    assert "platforms=_R1_IMAGE_PLATFORMS" in source
+    # a publishing run composes only its R1 surfaces; only the owner-
+    # controlled fresh-image preview (a dry run) composes every surface
+    assert "platforms=None if fresh_image_preview else _R1_IMAGE_PLATFORMS" in source
+    assert "fresh_image_preview = bool(args.dry_run and args.preview_fresh_images)" in source
 
 
 def test_daily_research_keeps_the_full_platform_set():

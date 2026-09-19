@@ -407,9 +407,10 @@ def test_the_linkedin_body_no_longer_receives_the_original_source_line(tmp_path)
     styles = [
         call.args[2] for call in patches["formatting"].source_line.call_args_list
     ]
-    # exactly two source-line applications remain: the blog's markdown Sources
-    # footer and the non-R1 Facebook body (out of scope, unchanged)
-    assert styles == ["blog_markdown", "bare_url"]
+    # one source-line application remains: the blog's markdown Sources
+    # footer. The non-R1 Facebook body is not composed outside the owner-
+    # controlled preview, and an empty body never receives a footer.
+    assert styles == ["blog_markdown"]
     # and the LinkedIn assembly no longer applies one at all
     entry_source = Path("scripts/generate_and_publish.py").read_text()
     li_block = entry_source.split("linkedin_text   = formatting.append_hashtags(")[1]
@@ -444,7 +445,9 @@ def test_accepted_content_survives_a_transparency_block(tmp_path):  # item 13
     record = json.loads(records[0].read_text())
     assert record["content"]["article_body"] == UNATTRIBUTED_BODY
     assert record["content"]["linkedin_body"] == "A LinkedIn body."
-    assert record["content"]["echo"]
+    # the Echo is the ACCEPTED article's (#259): this fixture article carries
+    # none, so the record carries none rather than the draft's
+    assert record["content"]["echo"] == ""
     assert record["content"]["title"]
     # …while the run still produced no publishable package
     assert not list(tmp_path.glob("*/runs/*/generated.json"))

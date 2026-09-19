@@ -2,8 +2,8 @@
 
 The last model-backed hashtag call reachable on the canonical path (LinkedIn)
 is replaced by a deterministic implementation of the documented product rule:
-three branded tags first, then bounded article-specific tags, prohibitions
-enforced. These scenarios prove determinism, structural zero-transport,
+the fixed Never Blank tags first (#CompoundPresence only when the article names
+it), then the industry tag, prohibitions enforced. These scenarios prove determinism, structural zero-transport,
 sanitization, bounds, assembly position, and that every cost-safety contract
 from #170–#175 composes unchanged.
 """
@@ -36,13 +36,13 @@ SIGNAL = {
     "BUSINESS_LESSON": "Schedules build repeat demand.",
 }
 
-#: Canonical article context — what the run actually produced and publishes.
-CONTEXT = {"mechanism": "capacity", "title": "The Queue Was Rationing the Wrong Constraint"}
+#: The canonical accepted article text: what the run actually publishes.
+ARTICLE = "The queue was rationing the wrong constraint. Echo line."
+CP_ARTICLE = ARTICLE + " This is where Compound Presence comes in."
 
 
-def _tags(signal=SIGNAL, platform="linkedin", **ctx):
-    merged = {**CONTEXT, **ctx}
-    return generate_hashtags(dict(signal), platform, **merged)
+def _tags(signal=SIGNAL, platform="linkedin", article_text=ARTICLE):
+    return generate_hashtags(dict(signal), platform, article_text=article_text)
 
 
 # ===========================================================================
@@ -53,7 +53,7 @@ def _tags(signal=SIGNAL, platform="linkedin", **ctx):
 def test_identical_input_always_produces_identical_output():
     runs = [_tags() for _ in range(5)]
     assert all(r == runs[0] for r in runs)
-    assert runs[0][:3] == list(BRANDED_HASHTAGS)
+    assert runs[0][:2] == list(BRANDED_HASHTAGS)
 
 
 def test_no_model_transport_is_structurally_possible(monkeypatch):
@@ -79,65 +79,52 @@ def test_no_model_transport_is_structurally_possible(monkeypatch):
 
 def test_duplicates_are_eliminated_case_insensitively():
     signal = {**SIGNAL, "INDUSTRY": "never blank"}
-    tags = _tags(signal, mechanism="NEVER BLANK")
+    tags = _tags(signal)
     lowered = [t.casefold() for t in tags]
     assert len(lowered) == len(set(lowered))
     assert lowered.count("#neverblank") == 1
 
 
 @pytest.mark.parametrize(
-    "field,value",
-    [
-        ("INDUSTRY", ""), ("INDUSTRY", "   "), ("INDUSTRY", "###"),
-        ("INDUSTRY", "a"), ("INDUSTRY", 42), ("INDUSTRY", None),
-        ("title", "https://gartner.com/report?id=secret-token-123"),
-        ("mechanism", "x" * 100),
-    ],
+    "value",
+    ["", "   ", "###", "a", 42, None,
+     "https://gartner.com/report?id=secret-token-123", "x" * 100],
     ids=["empty", "whitespace", "punctuation", "too-short", "non-string",
-         "none", "url-shaped-title", "overlong-mechanism"],
+         "none", "url-shaped", "overlong"],
 )
-def test_malformed_candidates_are_refused_deterministically(field, value):
-    if field in ("title", "mechanism"):
-        tags = _tags(**{field: value})
-    else:
-        tags = _tags({**SIGNAL, field: value})
+def test_malformed_industry_is_refused_deterministically(value):
+    tags = _tags({**SIGNAL, "INDUSTRY": value})
     for tag in tags:
         assert tag.startswith("#")
         assert " " not in tag and "\n" not in tag
         assert 2 <= len(tag) <= 41
         assert "http" not in tag.casefold()
         assert "secret" not in tag.casefold()
-    # branded contract survives any field damage
-    assert tags[:3] == list(BRANDED_HASHTAGS)
+    # the fixed tags survive any field damage
+    assert tags == list(BRANDED_HASHTAGS)
 
 
 def test_unicode_input_is_normalized_safely():
     signal = {**SIGNAL, "INDUSTRY": "cafés & pâtisserie"}
-    tags = _tags(signal, mechanism="régulation")
-    for tag in tags:
+    for tag in _tags(signal, article_text="Réglementation et compound presence."):
         assert tag.startswith("#") and " " not in tag
 
 
 @pytest.mark.parametrize("platform,hi", [("linkedin", 6), ("facebook", 6),
                                          ("instagram", 6), ("threads", 2)])
 def test_count_is_bounded_per_platform(platform, hi):
-    tags = _tags(platform=platform)
-    assert len(tags) <= hi
+    assert len(_tags(platform=platform, article_text=CP_ARTICLE)) <= hi
 
 
 def test_prohibited_tags_never_appear():
-    signal = {**SIGNAL, "INDUSTRY": "presence system"}
-    tags = _tags(signal, mechanism="content marketing")
-    assert all(t.casefold() not in PROHIBITED_HASHTAGS for t in tags)
+    for industry in ("presence system", "content marketing"):
+        tags = _tags({**SIGNAL, "INDUSTRY": industry})
+        assert all(t.casefold() not in PROHIBITED_HASHTAGS for t in tags)
 
 
 def test_company_names_never_become_hashtags():
-    tags = _tags()
-    assert "#CornerBakery" not in tags
-    # nor via the published-title keyword path
-    tags = _tags(title="Corner Bakery doubled repeat orders")
-    assert all("corner" not in t.casefold() and "bakery" not in t.casefold()
-               for t in tags)
+    signal = {**SIGNAL, "INDUSTRY": "Corner Bakery"}
+    assert "#CornerBakery" not in _tags(signal)
 
 
 # ===========================================================================
@@ -196,26 +183,25 @@ def test_the_canonical_run_still_calls_hashtags_for_linkedin_only(tmp_path):
 
     assert code == 0
     assert calls == ["linkedin"]        # #175 gate + the deterministic call
-    # the canonical context reached the formatter: the published title (the
-    # composer produced "T") and the mechanism kwarg, never SIGNAL_TYPE
-    assert captured_ctx["linkedin"]["title"] == "T"
-    assert "mechanism" in captured_ctx["linkedin"]
+    # the canonical accepted article reached the formatter — nothing else
+    assert set(captured_ctx["linkedin"]) == {"article_text"}
+    assert captured_ctx["linkedin"]["article_text"].startswith("Blog body text.")
     pkg = json.loads(next(tmp_path.glob("*/runs/*/generated.json")).read_text())
-    # the branded trio leads the hashtag line inside the published artifact
+    # the fixed tags lead the hashtag line inside the published artifact, and
+    # #CompoundPresence is absent: this article never names it
     linkedin = pkg["linkedin_post"]
-    assert "#NeverBlank #CompoundPresence #CustomerTrust" in linkedin
+    assert "#NeverBlank #CustomerTrust" in linkedin
+    assert "#CompoundPresence" not in linkedin
     # and the hashtag line is the final line of the post
     assert linkedin.rstrip().splitlines()[-1].startswith("#NeverBlank")
 
 
 def test_both_streams_share_the_same_hashtag_call_site():
     source = Path("scripts/generate_and_publish.py").read_text()
-    assert source.count('generate_hashtags(\n                signal, "linkedin",') == 1
-    assert source.count('generate_hashtags(\n                    signal, "instagram",') == 1
-    # both call sites pass the canonical context, and SIGNAL_TYPE is not a
-    # hashtag input anywhere
-    assert source.count('mechanism=article.get("pattern", {}).get("mechanism", "")') == 2
-    assert source.count("title=headline") == 2
+    # both call sites pass the canonical accepted article and nothing else;
+    # SIGNAL_TYPE is not a hashtag input anywhere
+    assert source.count('generate_hashtags(signal, "linkedin", article_text=blog_body)') == 1
+    assert source.count('generate_hashtags(signal, "instagram", article_text=blog_body)') == 1
     assert "SIGNAL_TYPE" not in Path("src/publishing/hashtags.py").read_text()
 
 
@@ -239,7 +225,7 @@ def test_cost_safety_contracts_survive(monkeypatch):
     exhausted.spend()
     with activate_call_budget(exhausted):
         tags = _tags()                                 # no charge, no raise
-    assert tags[:3] == list(BRANDED_HASHTAGS)
+    assert tags[:2] == list(BRANDED_HASHTAGS)
     # #172: credentials stripped here
     assert os.environ.get("NB_OPENAI_API_KEY") is None
     # #173: social-model routing no longer has a hashtag consumer; the
@@ -249,45 +235,52 @@ def test_cost_safety_contracts_survive(monkeypatch):
 
 
 # ===========================================================================
-# Correction round: hashtags follow the published article, never discovery
+# Monday preview readiness: no free-text fragments, no forced Compound Presence
 # ===========================================================================
 
 
-def test_hashtags_follow_the_published_article_not_discovery_metadata():
-    # topic A in discovery metadata: a viral social-media story
-    signal = {
-        "SIGNAL_ID": "sig-topic-drift",
-        "HEADLINE": "Bakery goes viral after influencer social media frenzy",
-        "SIGNAL_TYPE": "viral_social_trend",
-        "INDUSTRY": "food service",
-        "REAL_COMPANY_EXAMPLE": "Corner Bakery",
-    }
-    # topic B in what the run actually wrote: a capacity/pricing mechanism
-    tags = generate_hashtags(
-        signal, "linkedin",
-        mechanism="capacity",
-        title="The Queue Was Rationing the Wrong Constraint",
-    )
+def test_the_live_garbage_tags_can_no_longer_be_produced():
+    """Controlled live run 35383199073 produced #WhenPotentialCustomers (the
+    mechanism's first three words) and #Fewer (the title's first long word)."""
+    import inspect
 
-    # the article's topic is what gets tagged…
-    assert "#Capacity" in tags
-    assert any("queue" in t.casefold() or "ration" in t.casefold() for t in tags)
-    # …and the discovery framing never leaks in
-    lowered = " ".join(tags).casefold()
-    for discovery_word in ("viral", "influencer", "social", "frenzy", "trend"):
-        assert discovery_word not in lowered
+    signal = {"SIGNAL_ID": "80725c18fd4ed61c",
+              "INDUSTRY": "Digital marketing & advertising"}
+    article = ("Why Fewer Clicks on Your Ad Could Mean More Sales for Your "
+               "Business. When potential customers must act, intent shows.")
+
+    tags = generate_hashtags(signal, "linkedin", article_text=article)
+
+    assert tags == ["#NeverBlank", "#CustomerTrust", "#DigitalMarketingAdvertising"]
+    assert set(inspect.signature(generate_hashtags).parameters) == {
+        "signal", "platform", "article_text"}
 
 
-def test_each_canonical_field_contributes_its_tag():
-    tags = _tags()
-    assert "#FoodService" in tags                       # industry
-    assert "#Capacity" in tags                          # supported mechanism
-    assert any("queue" in t.casefold() for t in tags)   # published title
+def test_compound_presence_is_never_forced():
+    assert "#CompoundPresence" not in _tags()
+    assert "#CompoundPresence" not in generate_hashtags(dict(SIGNAL), "linkedin")
 
 
-def test_missing_canonical_context_degrades_to_industry_only_never_guesses():
-    # the legacy package publisher has no generation context: it omits the
-    # kwargs and gets the branded trio plus the industry tag — never a
-    # SIGNAL_TYPE or raw-headline substitute
-    tags = generate_hashtags(dict(SIGNAL), "linkedin")
-    assert tags == list(BRANDED_HASHTAGS) + ["#FoodService"]
+@pytest.mark.parametrize("text", [
+    "This is where Compound Presence comes in.",
+    "compound presence, quietly",
+    "COMPOUND PRESENCE",
+], ids=["title-case", "lower", "upper"])
+def test_compound_presence_follows_the_article_when_it_names_it(text):
+    tags = _tags(article_text=f"{ARTICLE} {text}")
+    assert tags[:3] == ["#NeverBlank", "#CompoundPresence", "#CustomerTrust"]
+
+
+def test_a_near_miss_is_not_compound_presence():
+    tags = _tags(article_text="Presence compounds over time; compound interest.")
+    assert "#CompoundPresence" not in tags
+
+
+def test_the_industry_tag_is_the_only_topical_tag():
+    assert _tags() == ["#NeverBlank", "#CustomerTrust", "#FoodService"]
+
+
+def test_missing_article_text_degrades_to_fixed_plus_industry_never_guesses():
+    # the legacy package publisher has no generation context
+    assert generate_hashtags(dict(SIGNAL), "linkedin") == [
+        "#NeverBlank", "#CustomerTrust", "#FoodService"]

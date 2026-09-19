@@ -271,6 +271,9 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "CURRENT_DESIGN_VERSION":    "test-v1",
         "_emit_run_report":          mock.MagicMock(),
     }
+    # social derivation from the final accepted article: the shared stand-in
+    ref = {"patches": kwargs}
+    kwargs["recompose_platform"] = mock.MagicMock(side_effect=legacy._fake_derivation(ref))
     return argv, kwargs
 
 
@@ -292,6 +295,7 @@ def _valid_package(run_id: str = _KNOWN_RUN_ID) -> dict:
         "threads_sequence":    ["A", "B", "C"],
         "telegram_text":       "Telegram text.",
         "echo_line":           "Echo line.",
+        "social_derivation":   "final-accepted-article/1",   # #259 lineage
     }
 
 

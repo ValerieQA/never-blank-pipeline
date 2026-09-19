@@ -1,12 +1,12 @@
 """Publisher-layer hashtag assembly — deterministic, no model call (#176).
 
 Hashtags are platform dressing governed by a written product rule, not an
-editorial judgment: three branded Never Blank tags first, then a bounded
-number of article-specific tags derived from the signal's own descriptive
-fields. A model call whose first three outputs are constants was a
-formatting function wearing a model's price tag — and the prompt it
-replaced violated the actual product rule twice (it asked for the company
-name as a hashtag, and the branded trio appeared nowhere).
+editorial judgment: the fixed Never Blank tags first — #CompoundPresence only
+when the article is actually about it — then the signal's industry tag. A
+model call whose first outputs are constants was a formatting function
+wearing a model's price tag — and the prompt it replaced violated the actual
+product rule twice (it asked for the company name as a hashtag, and the
+branded tags appeared nowhere).
 
 Deterministic by construction: the same normalized input always produces
 the same tags. Kept out of src/editorial/: the Editorial Engine's job is
@@ -31,20 +31,18 @@ _COUNT_RANGE = {
     "threads":   (0, 2),
 }
 
-#: The documented Never Blank rule: these three, in this order, always first.
-BRANDED_HASHTAGS = ("#NeverBlank", "#CompoundPresence", "#CustomerTrust")
+#: Always first, in this order.
+BRANDED_HASHTAGS = ("#NeverBlank", "#CustomerTrust")
+
+#: Conditional, never automatic: carried only when the article itself is about
+#: Compound Presence. The article structure makes that connection conditional
+#: (clients/never_blank/lenses/structure.md, step 9), so a tag asserting it on
+#: every post would claim a connection most articles deliberately do not make.
+COMPOUND_PRESENCE_HASHTAG = "#CompoundPresence"
+_COMPOUND_PRESENCE_PHRASE = "compound presence"
 
 #: Tags the product rule prohibits outright (compared case-insensitively).
 PROHIBITED_HASHTAGS = frozenset({"#presencesystem", "#contentmarketing"})
-
-#: Words that never make a useful topical tag on their own.
-_STOPWORDS = frozenset({
-    "about", "after", "again", "their", "there", "these", "those", "which",
-    "while", "would", "could", "should", "between", "because", "before",
-    "being", "under", "over", "against", "through", "during", "without",
-    "within", "every", "other", "another", "since", "still", "where",
-    "business", "company", "companies", "market", "report", "study",
-})
 
 _URL_SHAPED = re.compile(r"https?|www\.|\.com|\.org|\.net|\.io|://", re.IGNORECASE)
 
@@ -65,53 +63,26 @@ def _camel_tag(text: str) -> str:
     return f"#{joined}"
 
 
-def _title_keyword(title: str, company: str) -> str:
-    """The first substantial word of the published title, never the company."""
-    if not isinstance(title, str):
-        return ""
-    company_words = {
-        w.casefold()
-        for w in re.findall(r"[^\W_]+", unicodedata.normalize("NFKC", company or ""))
-    }
-    for word in re.findall(r"[A-Za-z]{5,}", unicodedata.normalize("NFKC", title)):
-        lowered = word.casefold()
-        if lowered in _STOPWORDS or lowered in company_words:
-            continue
-        return _camel_tag(word)
-    return ""
-
-
-def _mechanism_tag(mechanism: str) -> str:
-    """A tag for the run's supported mechanism (first three words at most)."""
-    if not isinstance(mechanism, str):
-        return ""
-    return _camel_tag(" ".join(mechanism.split()[:3]))
-
-
 def generate_hashtags(
     signal: dict,
     platform: str,
     *,
-    mechanism: str = "",
-    title: str = "",
+    article_text: str = "",
 ) -> list[str]:
-    """Deterministic hashtags for ``platform`` from canonical article context.
+    """Deterministic hashtags for ``platform``.
 
-    Returns [] for platforms that take no hashtags. The documented product
-    rule is applied exactly: the branded trio first, then article-specific
-    tags, case-insensitively deduplicated, prohibited tags and company names
-    excluded, bounded by the platform maximum. No model transport exists on
-    this path.
+    Returns [] for platforms that take no hashtags. Order: ``#NeverBlank``;
+    ``#CompoundPresence`` only when ``article_text`` — the canonical accepted
+    article — actually names Compound Presence; ``#CustomerTrust``; then the
+    signal's industry tag. Case-insensitively deduplicated, prohibited tags
+    and company names excluded, bounded by the platform maximum. No model
+    transport exists on this path.
 
-    The topical half comes from context the run has already paid for — the
-    signal's industry, the supported ``mechanism`` the editorial pipeline
-    produced, and the composed ``title`` actually being published. Discovery
-    metadata is never a substitute for what the article says: raw headlines
-    and classification fields can differ materially from the published
-    piece, so callers pass the canonical values in rather than this module
-    re-deriving editorial meaning from the raw signal. Callers without a
-    generation context (the legacy package publisher) simply omit them and
-    get the branded trio plus the industry tag.
+    Topical tags are no longer derived from free text. The mechanism's first
+    three words and the title's first long word produced tags such as
+    ``#WhenPotentialCustomers`` and ``#Fewer`` (controlled live run
+    35383199073): fragments, not topics. The industry field is a
+    classification value, so it is the only topical tag kept.
     """
     lo, hi = _COUNT_RANGE.get(platform, (0, 0))
     if hi == 0:
@@ -120,10 +91,15 @@ def generate_hashtags(
     company = signal.get("REAL_COMPANY_EXAMPLE") or ""
     company_tag = _camel_tag(company).casefold()
 
-    candidates = list(BRANDED_HASHTAGS) + [
+    about_compound_presence = (
+        isinstance(article_text, str)
+        and _COMPOUND_PRESENCE_PHRASE in unicodedata.normalize("NFKC", article_text).casefold()
+    )
+    candidates = [
+        BRANDED_HASHTAGS[0],
+        COMPOUND_PRESENCE_HASHTAG if about_compound_presence else "",
+        *BRANDED_HASHTAGS[1:],
         _camel_tag(signal.get("INDUSTRY", "")),
-        _mechanism_tag(mechanism),
-        _title_keyword(title, company),
     ]
 
     clean: list[str] = []
