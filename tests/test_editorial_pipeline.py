@@ -42,7 +42,7 @@ from src.editorial.reader_context import build_reader_context
 from src.editorial.discovery_builder import build_discovery
 from src.editorial.story_assembly import assemble_story
 from src.editorial.never_blank_voice import finalize_article
-from src.editorial.platform_composer import compose_platforms, _WORD_RANGE
+from src.editorial.platform_composer import ALL_FORMATS, compose_platforms, _WORD_RANGE
 from src.editorial.pipeline import generate_article, ArticleGenerationError
 
 
@@ -581,7 +581,7 @@ class TestPlatformComposer:
         body = "Some body text that has no echo. " * 10
         with patch("src.editorial.platform_composer.chat", return_value=_json_response({"body": body})):
             result = compose_platforms(article_no_echo)
-        assert set(result.keys()) == set(_WORD_RANGE.keys())
+        assert set(result.keys()) == set(ALL_FORMATS)  # adapters are never first compositions
 
     def _valid_body_response(self) -> str:
         """A body satisfying the accepted echo contract for every format:
@@ -601,7 +601,7 @@ class TestPlatformComposer:
     def test_all_five_formats_present(self):
         with patch("src.editorial.platform_composer.chat", return_value=self._valid_body_response()):
             result = compose_platforms(self.STRUCTURED_ARTICLE)
-        assert set(result.keys()) == set(_WORD_RANGE.keys())
+        assert set(result.keys()) == set(ALL_FORMATS)  # adapters are never first compositions
 
     def test_instagram_cta_mode_diagnostic_adds_cta_note_to_prompt(self):
         """Accepted contract: cta_mode=diagnostic surfaces the CTA in the
@@ -658,7 +658,7 @@ class TestPlatformComposer:
         """compose_platforms must accept cta_mode without error."""
         with patch("src.editorial.platform_composer.chat", return_value=self._valid_body_response()):
             result = compose_platforms(self.STRUCTURED_ARTICLE, cta_mode="diagnostic")
-        assert set(result.keys()) == set(_WORD_RANGE.keys())
+        assert set(result.keys()) == set(ALL_FORMATS)  # adapters are never first compositions
 
 
 # --- generator telegram and stories ---

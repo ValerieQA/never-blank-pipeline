@@ -1,17 +1,22 @@
 """Invariant: every social derivative comes from the FINAL ACCEPTED article.
 
-Never from the pre-review draft, its outline or narrative spine, or a
-composition made before Editorial Acceptance. Controlled live run 35383199073
-broke it: the reviewer removed "total engagement numbers drop" from the
-article as unsupported, and the Threads and Telegram texts — built from the
-draft's structured fields before acceptance — still carried it.
+Never from the pre-review draft, its outline or narrative spine, its Echo or
+CTA, or a composition made before Editorial Acceptance. Controlled live run
+35383199073 broke it: the reviewer removed "total engagement numbers drop"
+from the article as unsupported, and the Threads and Telegram texts — built
+from the draft's structured fields before acceptance — still carried it.
 
-The regression below is exactly that failure class, end to end through the
-real entrypoint, the REAL acceptance boundary (reviewer + reviser transports)
-and the REAL derivation seam and composer (a fake model that writes only from
-what its prompt contains). It runs as the owner-controlled full-content
-preview, so every surface — LinkedIn, Facebook, Instagram, Threads, Telegram
-— is produced and checked.
+Product Owner decisions (#259): Telegram and Threads are Engine/SPE platform
+adaptations of the final accepted article — not deterministic excerpts — that
+carry its headline/hook, observation, evidence, mechanism, implication and
+Echo, never cut a sentence to meet a length target, and never add a fact.
+Channel mechanics are the Engine's; how a client adapts is a future
+onboarding decision, not Never Blank policy.
+
+The regressions below run end to end through the real entrypoint, the REAL
+acceptance boundary (reviewer + reviser transports), and the REAL derivation
+seam and composer — with a fake model that writes only from what its prompt
+contains, so any claim that reaches a prompt reaches the output.
 
 No network, no model.
 """
@@ -22,12 +27,18 @@ import copy
 import json
 import re
 import sys
+from pathlib import Path
 from unittest import mock
 
 import pytest
 
 import scripts.generate_and_publish as gap
 from scripts.generate_and_publish import main
+from src.content.output_guard import (
+    split_threads_posts,
+    validate_telegram_adaptation,
+    validate_threads_adaptation,
+)
 from src.editorial import platform_composer
 from tests import test_generate_and_publish as legacy
 from tests.test_decision_lifecycle import _entry_patches, _evaluator, _model_output
@@ -62,6 +73,8 @@ FINAL_ARTICLE = (
     f"**Never Blank:** {ECHO}"
 )
 
+PREVIEW_FORMATS = {"medium", "reading", "instagram", "telegram", "threads"}
+
 
 def _draft() -> dict:
     article = copy.deepcopy(legacy._FAKE_ARTICLE)
@@ -76,6 +89,7 @@ def _draft() -> dict:
         "reframe": f"The reframe: {CLAIM}.",
         "business_translation": f"The consequence: {CLAIM}.",
         "narrative_spine": f"The spine: {CLAIM}.",
+        "cta_line": f"Ask us how {CLAIM}.",
         "echo_line": ECHO,
         "discovery": {"aha_setup": f"You notice {CLAIM}.",
                       "first_wrong_explanation": f"At first {CLAIM}."},
@@ -86,9 +100,10 @@ def _draft() -> dict:
 class FaithfulComposer:
     """A fake composer model that writes ONLY from what its prompt contains.
 
-    It restates every sentence of the content it was handed. If a claim
-    reaches its prompt by any route, it reaches the output: the fake is built
-    to expose leakage, not to hide it.
+    It restates the content it was handed — the canonical block and anything
+    listed as a required element — so a claim reaching its prompt by any
+    route reaches its output. It honours the format's mechanics (Threads
+    posts separated by '---') and closes with whichever Echo it was given.
     """
 
     def __init__(self) -> None:
@@ -97,7 +112,7 @@ class FaithfulComposer:
     def __call__(self, *, system, user, **kwargs):
         self.prompts.append(user)
         format_key = re.search(r"^FORMAT: (\w+)$", user, re.MULTILINE).group(1)
-        handed = user.split("FORMAT:", 1)[0]          # the canonical content block
+        handed = user.split("FORMAT:", 1)[0]
         outline = user.split("REQUIRED ELEMENTS:", 1)[-1] if (
             "REQUIRED ELEMENTS:" in user) else user.split("STRUCTURED FIELDS:", 1)[-1]
         sentences = [
@@ -105,23 +120,25 @@ class FaithfulComposer:
             if line.strip() and not line.isupper() and "Never Blank" not in line
             and not line.startswith(("FINAL CANONICAL", "ECHO MODE", "Write the",
                                      "- echo", "TARGET", "FORMAT", "CTA"))
-        ]
-        # the Echo it was handed — whichever one reached the prompt
+        ][:4]
         echo = re.search(r"^- echo \[[^\]]*\]: (.+)$", user, re.MULTILINE)
-        body = "\n\n".join(sentences[:6] + (
-            [f"**Never Blank:** {echo.group(1).strip()}"] if echo else []))
+        closing = [f"**Never Blank:** {echo.group(1).strip()}"] if echo else []
+        if format_key == "threads":
+            body = "\n---\n".join([s[:440] for s in sentences] + closing)
+        else:
+            body = "\n\n".join(sentences + closing)
         return json.dumps({"body": body, "echo_included": True,
                            "title": TITLE if format_key == "long" else None})
 
 
-def _run(tmp_path):
+def _run(tmp_path, *, draft=None, revised=FINAL_ARTICLE):
     argv, patches = _entry_patches(tmp_path)          # dry run
     argv = argv + ["--editorial-role", MONDAY_ROLE, "--preview-fresh-images"]
     del patches["run_editorial_acceptance"]           # the REAL acceptance boundary
     del patches["recompose_platform"]                 # the REAL derivation seam
     patches.pop("formatting", None)
     patches.pop("generate_hashtags", None)
-    patches["generate_article"] = mock.MagicMock(return_value=_draft())
+    patches["generate_article"] = mock.MagicMock(return_value=draft or _draft())
     patches["WixPublisher"] = mock.MagicMock()
     patches["LinkedInPublisher"] = mock.MagicMock()
     reviewer = FakeReviewTransport(
@@ -129,7 +146,6 @@ def _run(tmp_path):
                         guidance="Remove the unsupported claim about total engagement."),
         _review_payload(),
     )
-    revisor = FakeRevisionTransport(FINAL_ARTICLE)
     composer = FaithfulComposer()
     evaluator, _ = _evaluator(_model_output())
     with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches), \
@@ -138,7 +154,8 @@ def _run(tmp_path):
                        side_effect=lambda *a, **k: [
                            {"images": {"platform_images": _pimgs(tmp_path)}}]):
         code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator,
-                    editorial_reviewer=reviewer, article_revisor=revisor)
+                    editorial_reviewer=reviewer,
+                    article_revisor=FakeRevisionTransport(revised))
     generated = next(tmp_path.glob(f"{SIG}/runs/*/generated.json"), None)
     return code, patches, composer, reviewer, (
         json.loads(generated.read_text()) if generated else None)
@@ -152,6 +169,11 @@ def _social_outputs(generated: dict) -> dict[str, str]:
         "threads": "\n".join(generated["threads_sequence"]),
         "telegram": generated["telegram_text"],
     }
+
+
+# ===========================================================================
+# The failure class: a claim revision removed reaches no social surface
+# ===========================================================================
 
 
 def test_a_claim_removed_by_revision_reaches_no_social_surface(tmp_path):
@@ -173,9 +195,10 @@ def test_no_derivation_prompt_ever_saw_the_draft(tmp_path):
     _, _, composer, _, _ = _run(tmp_path)
 
     derivations = [p for p in composer.prompts if "FINAL CANONICAL CONTENT" in p]
-    assert len(derivations) == 3                     # medium, reading, instagram
+    formats = {re.search(r"^FORMAT: (\w+)$", p, re.MULTILINE).group(1) for p in derivations}
+    assert formats == PREVIEW_FORMATS
     for prompt in derivations:
-        assert CLAIM not in prompt
+        assert CLAIM not in prompt                    # outline, spine, CTA, Echo
         assert "NARRATIVE SPINE" not in prompt
 
 
@@ -198,119 +221,78 @@ def test_nothing_is_published_or_consumed(tmp_path):
 
 
 # ===========================================================================
-# Threads and Telegram: accepted text only, whole sentences only
-# ===========================================================================
-
-
-def test_no_telegram_or_threads_line_ends_mid_sentence():
-    from scripts.generate_and_publish import _build_telegram, _build_threads
-
-    long_sentence = " ".join(f"word{i}" for i in range(40)) + " ends here."
-    article = (f"{long_sentence}\n\nA short opening. A second short sentence.\n\n"
-               f"**Never Blank:** {ECHO}")
-
-    telegram = _build_telegram(TITLE, article, ECHO)
-    threads = _build_threads(TITLE, article, ECHO)
-
-    for line in telegram.splitlines() + threads:
-        assert re.search(r"[.!?…]$", line.strip()) or line.strip() == TITLE, line
-    # the over-long sentence is skipped, never cut to fit
-    assert "word39" not in telegram
-    assert "A short opening. A second short sentence." in telegram
-
-
-def test_the_live_truncation_cannot_recur():
-    """Run 35383199073: "…and follow through—making your." — a 34-word cut."""
-    from scripts.generate_and_publish import _whole_sentences
-
-    sentence = ("You launch a new ad with an embedded quiz and notice that, although "
-                "total engagement numbers drop, the people who do respond are much "
-                "more likely to leave their information and follow through—making "
-                "your sales calls more productive.")
-    assert _whole_sentences(sentence, 34) == ""        # skipped, never cut
-    assert _whole_sentences(sentence, 60) == sentence
-
-
-def test_telegram_keeps_the_existing_contract():
-    from scripts.generate_and_publish import _build_telegram
-    from src.content.output_guard import validate_telegram
-
-    text = _build_telegram(TITLE, FINAL_ARTICLE, ECHO)
-
-    validate_telegram(text)                            # ≤3 lines, ≤90 words, no '#'
-    assert text.splitlines() == [
-        TITLE,
-        "Every like and comment on your ad can disguise how few people are ready to buy.",
-        ECHO,
-    ]
-
-
-# ===========================================================================
-# #259 review round 2
+# The Echo and CTA come from the accepted article, never the draft
 # ===========================================================================
 
 
 ECHO_CLAIM = "Engagement fell by 90%, which proves the quiz works."
-REVISED_ECHO = "The drop in clicks can be the first sign that your ad is finally working."
 
 
-def test_a_claim_in_the_draft_echo_never_survives_revision(tmp_path, monkeypatch):
-    """The draft's Echo predates acceptance: the accepted article's Echo wins."""
+def test_a_claim_in_the_draft_echo_never_survives_revision(tmp_path):
     draft = _draft()
     draft["structured_article"]["echo_line"] = ECHO_CLAIM
     draft["platforms"]["long"]["body"] = DRAFT_ARTICLE.replace(
         f"**Never Blank:** {ECHO}", f"**Never Blank:** {ECHO_CLAIM}")
 
-    argv, patches = _entry_patches(tmp_path)
-    argv = argv + ["--editorial-role", MONDAY_ROLE, "--preview-fresh-images"]
-    del patches["run_editorial_acceptance"]
-    del patches["recompose_platform"]
-    patches.pop("formatting", None)
-    patches.pop("generate_hashtags", None)
-    patches["generate_article"] = mock.MagicMock(return_value=draft)
-    patches["WixPublisher"] = mock.MagicMock()
-    patches["LinkedInPublisher"] = mock.MagicMock()
-    reviewer = FakeReviewTransport(
-        _review_payload(disposition="revise", failed=["unsupported-claims"],
-                        guidance="The Echo's 90% claim is unsupported."),
-        _review_payload(),
-    )
-    composer = FaithfulComposer()
-    evaluator, _ = _evaluator(_model_output())
-    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches), \
-            mock.patch.object(platform_composer, "chat", side_effect=composer), \
-            mock.patch("scripts.research.prepare_content.prepare_content_packages",
-                       side_effect=lambda *a, **k: [
-                           {"images": {"platform_images": _pimgs(tmp_path)}}]):
-        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator,
-                    editorial_reviewer=reviewer,
-                    article_revisor=FakeRevisionTransport(FINAL_ARTICLE))
+    code, _, composer, _, generated = _run(tmp_path, draft=draft)
 
     assert code == 0
-    generated = json.loads(next(tmp_path.glob(f"{SIG}/runs/*/generated.json")).read_text())
     for surface, text in _social_outputs(generated).items():
         assert "90%" not in text, f"{surface} carried the draft Echo's claim"
     for prompt in composer.prompts:
         if "FINAL CANONICAL CONTENT" in prompt:
             assert ECHO_CLAIM not in prompt
     record = json.loads(next(tmp_path.glob(f"{SIG}/runs/*/accepted_composition.json")).read_text())
-    assert record["content"]["echo"] == REVISED_ECHO
+    assert record["content"]["echo"] == ECHO
 
 
 def test_the_accepted_echo_rule():
     from scripts.generate_and_publish import _accepted_echo
 
-    assert _accepted_echo(f"Body.\n\n**Never Blank:** {REVISED_ECHO}", ECHO_CLAIM) == REVISED_ECHO
-    assert _accepted_echo(f"Body.\n\nNever Blank: {REVISED_ECHO}", "") == REVISED_ECHO
+    assert _accepted_echo(f"Body.\n\n**Never Blank:** {ECHO}", ECHO_CLAIM) == ECHO
+    assert _accepted_echo(f"Body.\n\nNever Blank: {ECHO}", "") == ECHO
     # inside a sentence proves nothing; as the whole closing paragraph it stands
     assert _accepted_echo(f"Body ends with {ECHO_CLAIM}", ECHO_CLAIM) == ""
     assert _accepted_echo(f"Body.\n\n{ECHO_CLAIM}", ECHO_CLAIM) == ECHO_CLAIM
-    assert _accepted_echo("Body without it.", ECHO_CLAIM) == ""       # never the draft's
+    assert _accepted_echo("Body without it.", ECHO_CLAIM) == ""
+
+
+def test_a_negated_echo_is_not_rescued_by_substring():
+    from scripts.generate_and_publish import _accepted_echo
+
+    article = ("Opening paragraph that sets the scene.\n\n"
+               "We cannot conclude that Every click is a buyer.")
+    assert _accepted_echo(article, "Every click is a buyer.") == ""
+
+
+def test_a_wrapped_attributed_echo_is_taken_whole():
+    from scripts.generate_and_publish import _accepted_echo
+
+    article = "Opening paragraph.\n\n**Never Blank:** Only purchases\nshow demand."
+    assert _accepted_echo(article, "") == "Only purchases show demand."
+
+
+def test_no_derivative_receives_the_draft_cta():
+    from src.editorial.platform_composer import _build_user_prompt
+
+    structured = {"hook": "h", "echo_line": ECHO,
+                  "cta_line": "Request the system that doubles conversions."}
+    for fmt in ("medium", "telegram", "threads"):
+        prompt = _build_user_prompt(structured, fmt, "reflection",
+                                    canonical_body=FINAL_ARTICLE)
+        assert "doubles conversions" not in prompt, fmt
+        assert ECHO in prompt
+
+
+# ===========================================================================
+# Every route derives after acceptance; reuse is lineage-gated
+# ===========================================================================
 
 
 def test_the_wednesday_route_also_derives_after_acceptance(tmp_path):
     """No route keeps a pre-acceptance composition, revised or not."""
     from tests.test_monday_stream import _run_with_role
+
     code, patches, _ = _run_with_role(tmp_path, "never-blank-wednesday-golden")
 
     assert code == 0
@@ -345,215 +327,161 @@ def test_every_fresh_run_records_the_lineage_marker(tmp_path):
     assert generated["social_derivation"] == gap.SOCIAL_DERIVATION_LINEAGE
 
 
-@pytest.mark.parametrize("text,limit,expected", [
-    ("We consulted Dr. Smith about the campaign results in detail this week.", 5, ""),
-    ("We consulted Dr. Smith about it. Then we acted.", 7,
-     "We consulted Dr. Smith about it."),
-    ("Acme Inc. grew. Sales rose.", 5, "Acme Inc. grew. Sales rose."),
-    ("Acme Inc. grew. Sales rose.", 4, "Acme Inc. grew."),
-    ("J. Doe ran the test. It worked.", 5, "J. Doe ran the test."),
-], ids=["dr-too-long", "dr-fits", "inc", "inc-partial", "initial"])
-def test_abbreviations_never_end_a_sentence(text, limit, expected):
-    from scripts.generate_and_publish import _whole_sentences
-
-    assert _whole_sentences(text, limit) == expected
+# ===========================================================================
+# Preview surfaces: rules, transparency, and no draft-era excerpts
+# ===========================================================================
 
 
-def test_the_preview_hands_each_surface_its_role_rules(tmp_path):
+def _preview_with_stub_derivation(tmp_path, reading_body=FINAL_ARTICLE):
     argv, patches = _entry_patches(tmp_path)
     argv = argv + ["--editorial-role", MONDAY_ROLE, "--preview-fresh-images"]
     article = copy.deepcopy(_draft())
     article["platforms"]["long"]["body"] = FINAL_ARTICLE
-    article["platforms"]["reading"]["body"] = FINAL_ARTICLE
+    article["platforms"]["reading"]["body"] = reading_body
     patches["generate_article"] = mock.MagicMock(return_value=article)
+
+    def derive(structured, format_key, **kwargs):
+        body = {"reading": reading_body,
+                "threads": f"First post.\n---\n**Never Blank:** {ECHO}"}.get(
+            format_key, f"A {format_key} derivation.\n\n**Never Blank:** {ECHO}")
+        return {"body": body, "word_count": len(body.split()),
+                "echo_included": True, "title": None}
+
+    patches["recompose_platform"] = mock.MagicMock(side_effect=derive)
     evaluator, _ = _evaluator(_model_output())
     with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches), \
             mock.patch("scripts.research.prepare_content.prepare_content_packages",
                        side_effect=lambda *a, **k: [
                            {"images": {"platform_images": _pimgs(tmp_path)}}]):
-        assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 0
+        code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator)
+    return code, patches
 
+
+def test_the_preview_hands_each_surface_its_role_rules(tmp_path):
+    code, patches = _preview_with_stub_derivation(tmp_path)
+
+    assert code == 0
     calls = {c.args[1]: c.kwargs for c in patches["recompose_platform"].call_args_list}
-    assert set(calls) == {"medium", "reading", "instagram"}
-    for fmt in ("reading", "instagram"):
+    assert set(calls) == PREVIEW_FORMATS
+    for fmt in PREVIEW_FORMATS - {"medium"}:
         rules = calls[fmt]["editorial_role_rules"]
         assert isinstance(rules, dict) and set(rules) == {fmt}, fmt
         assert rules[fmt], f"{fmt} lost its role rules"
-    # the Facebook derivation gets the rules that carry the sources of record
     assert "SOURCES OF RECORD" in calls["reading"]["editorial_role_rules"]["reading"]
+    for fmt in PREVIEW_FORMATS:
+        assert calls[fmt]["canonical_body"] == FINAL_ARTICLE, fmt
 
 
 def test_an_unattributed_preview_facebook_post_blocks_the_preview(tmp_path):
-    argv, patches = _entry_patches(tmp_path)
-    argv = argv + ["--editorial-role", MONDAY_ROLE, "--preview-fresh-images"]
-    article = copy.deepcopy(_draft())
-    article["platforms"]["long"]["body"] = FINAL_ARTICLE
-    article["platforms"]["reading"]["body"] = "A Facebook post that cites nothing."
-    patches["generate_article"] = mock.MagicMock(return_value=article)
-    evaluator, _ = _evaluator(_model_output())
-    with mock.patch.object(sys, "argv", argv), mock.patch.multiple(gap, **patches), \
-            mock.patch("scripts.research.prepare_content.prepare_content_packages",
-                       side_effect=lambda *a, **k: []):
-        assert main(research_provider=ReadyProvider(), decision_evaluator=evaluator) == 1
+    code, _ = _preview_with_stub_derivation(
+        tmp_path, reading_body=f"A Facebook post that cites nothing.\n\n**Never Blank:** {ECHO}")
 
+    assert code == 1
     assert not list(tmp_path.glob(f"{SIG}/runs/*/generated.json"))
 
 
+def test_a_normal_run_writes_no_draft_era_telegram_or_threads(tmp_path):
+    """The deterministic excerpts are gone: outside the preview, the non-R1
+    adaptations are simply not composed (#175) — never approximated."""
+    from tests.test_monday_stream import _run_with_role
+
+    code, patches, _ = _run_with_role(tmp_path, MONDAY_ROLE)
+
+    assert code == 0
+    generated = json.loads(next(tmp_path.glob("*/runs/*/generated.json")).read_text())
+    assert generated["telegram_text"] == ""
+    assert generated["threads_sequence"] == []
+    formats = [c.args[1] for c in patches["recompose_platform"].call_args_list]
+    assert formats == ["medium"]
+    source = Path("scripts/generate_and_publish.py").read_text()
+    for gone in ("def _build_telegram", "def _build_threads", "max_words: int = 34"):
+        assert gone not in source
+
+
 # ===========================================================================
-# #259 review round 3
+# Telegram and Threads are Engine platform adapters (PO decision)
 # ===========================================================================
 
 
-def test_a_negated_echo_is_not_rescued_by_substring():
-    from scripts.generate_and_publish import _accepted_echo, _build_telegram
+@pytest.mark.parametrize("fmt", ["telegram", "threads"])
+def test_an_adapter_cannot_be_composed_without_the_final_article(fmt):
+    from src.editorial.platform_composer import ALL_FORMATS, compose_platforms
 
-    article = ("Opening paragraph that sets the scene.\n\n"
-               "We cannot conclude that Every click is a buyer.")
-    assert _accepted_echo(article, "Every click is a buyer.") == ""
-    assert "Every click is a buyer." not in _build_telegram(
-        TITLE, article, _accepted_echo(article, "Every click is a buyer."))
-
-
-def test_the_draft_echo_survives_only_as_the_whole_closing_paragraph():
-    from scripts.generate_and_publish import _accepted_echo
-
-    article = "Opening paragraph.\n\nEvery click is a buyer."
-    assert _accepted_echo(article, "Every click is a buyer.") == "Every click is a buyer."
+    assert fmt not in ALL_FORMATS                     # never a first composition
+    with pytest.raises(ValueError, match="final accepted article"):
+        compose_platforms({"hook": "h", "echo_line": ECHO}, formats=(fmt,))
 
 
-def test_a_wrapped_attributed_echo_is_taken_whole():
-    from scripts.generate_and_publish import _accepted_echo, _build_telegram
+def test_the_telegram_adapter_rules_carry_the_whole_argument():
+    from src.editorial.platform_composer import _WORD_RANGE, _build_user_prompt
 
-    article = "Opening paragraph.\n\n**Never Blank:** Only purchases\nshow demand."
-    echo = _accepted_echo(article, "")
-    assert echo == "Only purchases show demand."
-    assert _build_telegram(TITLE, article, echo).splitlines()[-1] == echo
+    prompt = _build_user_prompt({"echo_line": ECHO}, "telegram", "none",
+                                canonical_body=FINAL_ARTICLE)
+    assert _WORD_RANGE["telegram"] == (180, 300)
+    assert "TARGET LENGTH: 180-300 words" in prompt
+    for element in ("headline/hook", "core observation", "concrete evidence",
+                    "mechanism", "practical business implication", "final Echo"):
+        assert element in prompt, element
+    assert "add no fact" in prompt
+    assert FINAL_ARTICLE in prompt
 
 
-def test_no_derivative_receives_the_draft_cta():
+def test_the_threads_adapter_rules_demand_evidence_not_the_opening():
     from src.editorial.platform_composer import _build_user_prompt
 
-    structured = {"hook": "h", "echo_line": ECHO,
-                  "cta_line": "Request the system that doubles conversions."}
-    prompt = _build_user_prompt(structured, "medium", "reflection",
+    prompt = _build_user_prompt({"echo_line": ECHO}, "threads", "none",
                                 canonical_body=FINAL_ARTICLE)
-    assert "doubles conversions" not in prompt
-    assert ECHO in prompt
+    assert "not merely the opening of the article" in prompt
+    assert "evidence" in prompt and "mechanism" in prompt
+    assert "---" in prompt and "Add no fact" in prompt
 
 
-@pytest.mark.parametrize("text", [
-    "We spoke to Assoc. Prof. Smith about the campaign results before approving any spending.",
-    "Gov. Lee said the rule changes in March for every small shop in the state.",
-    "The U.K. regulator approved it after a long review of the whole market.",
+def test_a_long_telegram_adaptation_is_never_cut():
+    """The target is a target: a 300-word, many-paragraph post passes intact."""
+    paragraphs = ["This is one complete sentence of the adaptation, "
+                  "written in full with no cut at all." for _ in range(20)]
+    text = "\n\n".join(paragraphs)
+    assert len(text.split()) > 250
+
+    validate_telegram_adaptation(text)                # no line or word cap
+
+
+@pytest.mark.parametrize("text,match", [
+    ("x" * 4097, "4096"),
+    ("A post with #hashtags.", "hashtags"),
+    ("Read more on the blog.", "teaser"),
+    ("   ", "empty"),
 ])
-def test_unlisted_abbreviations_never_produce_a_cut(text):
-    from scripts.generate_and_publish import _whole_sentences
-
-    for limit in range(1, len(text.split()) + 1):
-        result = _whole_sentences(text, limit)
-        assert result in ("", text), (limit, result)
+def test_the_telegram_adapter_keeps_telegrams_own_mechanics(text, match):
+    with pytest.raises(ValueError, match=match):
+        validate_telegram_adaptation(text)
 
 
-def test_a_period_followed_by_lowercase_never_ends_a_sentence():
-    """#259 review round 4: "30 min. before …" is one sentence."""
-    from scripts.generate_and_publish import _build_telegram, _whole_sentences
+def test_the_legacy_telegram_signal_contract_is_untouched():
+    from src.content.output_guard import validate_telegram
 
-    sentence = ("The team waited 30 min. before reviewing the campaign results and "
-                "checking whether the new checkout design had changed the number of "
-                "completed purchases among customers who arrived through the paid "
-                "social advertisements that morning.")
-    for limit in range(1, 40):
-        assert _whole_sentences(sentence, limit) in ("", sentence), limit
-    telegram = _build_telegram(TITLE, f"{sentence}\n\nA short second paragraph.", "")
-    assert "30 min." not in telegram
-    assert telegram.splitlines()[-1] == "A short second paragraph."
+    with pytest.raises(ValueError, match="maximum is 3"):
+        validate_telegram("one\ntwo\nthree\nfour")
 
 
-def test_a_numbered_list_marker_never_ends_a_sentence():
-    """#259 review round 5: "steps: 1. Review …" is not "…steps: 1."."""
-    from scripts.generate_and_publish import _build_telegram, _whole_sentences
-
-    text = ("The checklist has three steps: 1. Review every campaign result against "
-            "the purchases it produced, and compare them with the previous month "
-            "before deciding whether the new ad format should replace the old one "
-            "for every product line.")
-    for limit in range(1, 45):
-        assert _whole_sentences(text, limit) in ("", text), limit
-    telegram = _build_telegram("Campaign review", text, "")
-    assert telegram == "Campaign review"                 # skipped, never cut
+def test_threads_mechanics():
+    ok = "First post.\n---\nSecond post.\n---\nThird post."
+    assert split_threads_posts(ok) == ["First post.", "Second post.", "Third post."]
+    validate_threads_adaptation(ok)
+    with pytest.raises(ValueError, match="500"):
+        validate_threads_adaptation("x" * 501 + "\n---\nSecond.")
+    with pytest.raises(ValueError, match="posts"):
+        validate_threads_adaptation("Only one post.")
+    with pytest.raises(ValueError, match="posts"):
+        validate_threads_adaptation("\n---\n".join(f"Post {i}." for i in range(7)))
 
 
-@pytest.mark.parametrize("text", [
-    "The team tested “Ready to buy? Compare all available plans and choose the one "
-    "that best fits your business before you enter your payment details and complete "
-    "your first purchase with us today” against its original checkout message.",
-    'The team tested "Ready to buy? Compare all available plans and choose the one '
-    'that best fits your business before you enter your payment details today" '
-    "against its original checkout message.",
-    "The owner (who asked. Twice. about refunds before signing the contract with the "
-    "new supplier that quarter) finally switched vendors.",
-], ids=["curly-quotes", "straight-quotes", "parentheses"])
-def test_a_boundary_inside_an_open_quote_never_ends_the_sentence(text):
-    """#259 review round 6."""
-    from scripts.generate_and_publish import _build_telegram, _whole_sentences
+def test_a_thread_leads_with_the_title_without_breaking_the_post_limit():
+    from scripts.generate_and_publish import _lead_thread_with_canonical_title
 
-    for limit in range(1, 50):
-        assert _whole_sentences(text, limit) in ("", text), limit
-    # Telegram carries the whole sentence when it fits, and nothing otherwise
-    assert _build_telegram("Checkout test", text, "") in (
-        "Checkout test", f"Checkout test\n{text}")
-
-
-@pytest.mark.parametrize("text", [
-    "The team tested ‘Ready to buy? Compare all available plans and choose the one that "
-    "best fits your business before you enter your payment details and complete your "
-    "first purchase with us today’ against its original checkout message.",
-    "The team tested 'Ready to buy? Compare all available plans and choose the one that "
-    "best fits your business before you enter your payment details and complete your "
-    "first purchase with us today' against its original checkout message.",
-], ids=["curly-single", "straight-single"])
-def test_single_quoted_speech_never_ends_the_outer_sentence(text):
-    """#259 review round 7."""
-    from scripts.generate_and_publish import _build_telegram, _whole_sentences
-
-    for limit in range(1, 50):
-        assert _whole_sentences(text, limit) in ("", text), limit
-    assert _build_telegram("Checkout test", text, "") in (
-        "Checkout test", f"Checkout test\n{text}")
-
-
-@pytest.mark.parametrize("text", [
-    "Owners don’t read every report. They skim the numbers.",
-    "Owners don't read every report. They skim the numbers.",
-    "The customers’ orders doubled. The team noticed.",
-])
-def test_apostrophes_are_not_quotes(text):
-    from scripts.generate_and_publish import _sentences
-
-    assert len(_sentences(text)) == 2
-
-
-@pytest.mark.parametrize("quote_open,quote_close,apostrophe", [
-    ("‘", "’", "’"), ("'", "'", "'"),
-], ids=["curly", "straight"])
-def test_a_possessive_never_cancels_a_later_opening_quote(quote_open, quote_close, apostrophe):
-    """#259 review round 8."""
-    from scripts.generate_and_publish import _build_telegram, _whole_sentences
-
-    text = (f"The customers{apostrophe} feedback led the team to test {quote_open}Ready to "
-            "buy? Compare all available plans and choose the one that best fits your "
-            "business before you enter your payment details and complete your first "
-            f"purchase with us today{quote_close} against its original checkout message.")
-    for limit in range(1, 55):
-        assert _whole_sentences(text, limit) in ("", text), limit
-    assert _build_telegram("Checkout test", text, "") in (
-        "Checkout test", f"Checkout test\n{text}")
-
-
-def test_a_brand_with_an_exclamation_mark_does_not_end_the_sentence():
-    from scripts.generate_and_publish import _whole_sentences
-
-    text = ("The Yahoo! Japan team rebuilt its checkout flow for every small merchant "
-            "that sold through its marketplace during the spring season.")
-    for limit in range(1, 30):
-        assert _whole_sentences(text, limit) in ("", text), limit
+    assert _lead_thread_with_canonical_title(["Hook.", "Echo."], TITLE)[0] == (
+        f"{TITLE}\n\nHook.")
+    long_first = "y" * 480
+    assert _lead_thread_with_canonical_title([long_first, "Echo."], TITLE) == [
+        TITLE, long_first, "Echo."]
+    assert _lead_thread_with_canonical_title(["Hook."], None) == ["Hook."]

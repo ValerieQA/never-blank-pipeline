@@ -158,6 +158,7 @@ from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
 from src.editorial.platform_composer import CLOSING_BRANDED_ECHO_THEN_SOURCES
+from src.content.output_guard import THREADS_POST_MAX_CHARS, split_threads_posts
 from src.editorial.editorial_role import (
     EditorialRoleError,
     render_editorial_role_rules,
@@ -424,163 +425,6 @@ def _slugify(text: str) -> str:
     return canonical_slug(text)
 
 
-_SENTENCE_END = re.compile(r"(?<=[.!?…])[\"'”’)]*\s+")
-
-#: A period after one of these does not end a sentence (#259 review: "We
-#: consulted Dr." is not a sentence). Single capital initials ("J.") too.
-_ABBREVIATIONS = frozenset({
-    "mr", "mrs", "ms", "dr", "prof", "sr", "jr", "st", "mt", "no", "vs",
-    "etc", "inc", "ltd", "co", "corp", "e.g", "i.e", "u.s", "u.k", "a.m",
-    "p.m", "approx", "est", "fig", "jan", "feb", "mar", "apr", "jun", "jul",
-    "aug", "sep", "sept", "oct", "nov", "dec",
-    "min", "mins", "hr", "hrs", "sec", "secs", "mo", "mos", "yr", "yrs",
-    "wk", "wks", "ft", "lb", "lbs", "oz", "pp", "dept", "govt", "misc",
-})
-
-
-def _ends_with_abbreviation(fragment: str) -> bool:
-    """Might this period be an abbreviation rather than a sentence end?
-
-    Conservative by design (#259 review): no finite list covers every
-    abbreviation ("Assoc.", "Gov.", "Rep."…), so any short capitalized token,
-    any token with an internal period, and any single letter is treated as
-    one — and so is a period right after a digit ("steps: 1. Review…").
-    A wrong guess only MERGES two real sentences into one longer unit —
-    which the length budget may then skip — and never cuts one.
-    """
-    words = fragment.rstrip("\"'”’)").split()
-    if not words:
-        return False
-    if words[-1].endswith(("!", "?")):
-        # a brand or name such as "Yahoo!" — a short capitalized token
-        raw = words[-1].rstrip("!?").lstrip("\"'“‘(")
-        return bool(raw) and raw[:1].isupper() and len(raw) <= 6
-    if not words[-1].endswith("."):
-        return False
-    raw = words[-1].rstrip(".").lstrip("\"'“‘(")
-    token = raw.casefold()
-    return (
-        token in _ABBREVIATIONS
-        or (len(token) == 1 and token.isalpha())
-        or "." in raw
-        or (raw[:1].isupper() and len(raw) <= 6)
-        # a period straight after a digit may be a list marker ("1.") or an
-        # ordinal/number — ambiguous, so merge (#259 review round 5)
-        or raw[-1:].isdigit()
-    )
-
-
-def _inside_open_quote(fragment: str) -> bool:
-    """Does ``fragment`` leave a quotation or bracket open?
-
-    A "?" or "." inside quoted or bracketed speech does not end the outer
-    sentence ("The team tested “Ready to buy? Compare …” against …" is one
-    sentence, #259 review), so an open one always merges.
-
-    Scanned in order, so a closing mark only ever closes a quotation that is
-    actually open: an apostrophe ("don’t") or a possessive ("customers’")
-    with nothing open is just an apostrophe and cancels nothing.
-    """
-    def is_letter(ch: str) -> bool:
-        return ch.isalpha()
-
-    double = single = straight_single = paren = 0
-    straight_double = False
-    text = fragment or ""
-    for i, ch in enumerate(text):
-        prev = text[i - 1] if i else ""
-        nxt = text[i + 1] if i + 1 < len(text) else ""
-        if ch == "“":
-            double += 1
-        elif ch == "”" and double:
-            double -= 1
-        elif ch == "‘":
-            single += 1
-        elif ch == "’":
-            if is_letter(prev) and is_letter(nxt):
-                continue                               # apostrophe: don’t
-            if single:
-                single -= 1                            # closes an open ‘
-        elif ch == "'":
-            if is_letter(prev) and is_letter(nxt):
-                continue                               # apostrophe: don't
-            if (not prev or prev.isspace() or prev in "(“[") and is_letter(nxt):
-                straight_single += 1                   # opens: 'Ready
-            elif straight_single and (not nxt or not is_letter(nxt)):
-                straight_single -= 1                   # closes an open '
-        elif ch == '"':
-            straight_double = not straight_double
-        elif ch == "(":
-            paren += 1
-        elif ch == ")" and paren:
-            paren -= 1
-    return bool(double or single or straight_single or paren or straight_double)
-
-
-def _sentences(text: str) -> list[str]:
-    """Whole sentences of one paragraph, markdown emphasis removed."""
-    flat = re.sub(r"\s+", " ", (text or "").replace("*", "")).strip()
-    sentences: list[str] = []
-    for part in (piece.strip() for piece in _SENTENCE_END.split(flat)):
-        if not part:
-            continue
-        # A sentence never begins in lowercase: "30 min. before …" is one
-        # sentence, whatever the token before the period (#259 review).
-        first_letter = next((ch for ch in part if ch.isalpha()), "")
-        continues = bool(first_letter) and first_letter.islower()
-        if sentences and (continues or _ends_with_abbreviation(sentences[-1])
-                          or _inside_open_quote(sentences[-1])):
-            sentences[-1] = f"{sentences[-1]} {part}"
-        else:
-            sentences.append(part)
-    return sentences
-
-
-def _whole_sentences(text: str, max_words: int) -> str:
-    """The longest run of WHOLE opening sentences within ``max_words``.
-
-    Never cuts a sentence: when even the first sentence is longer than the
-    limit, the result is empty and the caller moves on. Controlled live run
-    35383199073 published "…and follow through—making your." — a length
-    limit must never end an output mid-sentence.
-    """
-    kept: list[str] = []
-    used = 0
-    for sentence in _sentences(text):
-        words = len(sentence.split())
-        if used + words > max_words:
-            break
-        kept.append(sentence)
-        used += words
-    # safety net: never hand back a unit that leaves a quotation or bracket
-    # open — whatever the splitter concluded, that unit is unfinished
-    while kept and _inside_open_quote(" ".join(kept)):
-        kept.pop()
-    return " ".join(kept)
-
-
-def _article_paragraphs(article_body: str, echo: str = "") -> list[str]:
-    """The accepted article's own prose paragraphs, in order.
-
-    Stops at the Echo attribution line and at any Sources section; skips
-    headings. Everything returned is text Editorial Acceptance approved.
-    """
-    paragraphs: list[str] = []
-    for block in re.split(r"\n\s*\n", article_body or ""):
-        text = block.strip()
-        if not text:
-            continue
-        plain = text.replace("*", "").strip()
-        if (echo and echo.strip() and echo.strip() in plain) or re.match(
-            r"^(#+\s*)?sources?\s*:?\s*$", plain.splitlines()[0], re.IGNORECASE
-        ):
-            break
-        if plain.startswith("#"):
-            continue
-        paragraphs.append(text)
-    return paragraphs
-
-
 def _accepted_echo(final_article: str, draft_echo: str = "") -> str:
     """The Echo as the FINAL ACCEPTED article carries it.
 
@@ -612,39 +456,6 @@ def _accepted_echo(final_article: str, draft_echo: str = "") -> str:
     return ""
 
 
-def _build_threads(title: str | None, article_body: str, echo: str = "") -> list[str]:
-    """Threads, derived from the FINAL ACCEPTED article only.
-
-    The accepted title leads (Product Owner decision: one canonical headline
-    on every surface), then the opening whole sentences of the article's
-    paragraphs, then the Echo. Existing limits unchanged: at most 5 posts,
-    at most 55 words each — but a post is never cut mid-sentence to fit.
-    """
-    candidates = [title or ""]
-    for paragraph in _article_paragraphs(article_body, echo):
-        lead = _whole_sentences(paragraph, 55)
-        if lead:
-            candidates.append(lead)
-        if len([c for c in candidates if c]) >= 4:
-            break
-    candidates.append(echo or "")
-    sequence: list[str] = []
-    seen: set[str] = set()
-    for value in candidates:
-        post = re.sub(r"\s+", " ", (value or "").strip())
-        key = post.lower()
-        if post and key not in seen:
-            sequence.append(post)
-            seen.add(key)
-    # Never padded and never invented: an accepted article too short for the
-    # 3–5 post target yields what it honestly supports. Threads is not a
-    # Release 1 surface, so a short sequence is reported, never a run stop.
-    if len(sequence) < 3:
-        print(f"  ⚠  threads: the accepted article supports {len(sequence)} "
-              "post(s), fewer than the 3–5 target")
-    return sequence[:5]
-
-
 def _lead_with_canonical_title(body: str, title: str | None) -> str:
     """Open a channel derivative with the article's accepted title.
 
@@ -665,26 +476,20 @@ def _lead_with_canonical_title(body: str, title: str | None) -> str:
     return f"{title.strip()}\n\n{body}"
 
 
-def _build_telegram(title: str | None, article_body: str, echo: str = "",
-                    wix_url: str = "") -> str:
-    """Telegram, derived from the FINAL ACCEPTED article only.
+def _lead_thread_with_canonical_title(posts: list[str], title: str | None) -> list[str]:
+    """Open a Threads sequence with the accepted title (PO: one headline).
 
-    The existing contract is unchanged — one observation and one implication,
-    each at most 34 words (the Telegram length itself awaits a Product Owner
-    decision) — but both now come from accepted text: the observation is the
-    opening whole sentences of the article, the implication is the article's
-    own Echo. The accepted title leads. Never cut mid-sentence.
+    Set on the first post when it fits Threads' per-post limit, otherwise as
+    a post of its own; never duplicated, nothing invented without a title.
     """
-    observation = next(
-        (lead for lead in (_whole_sentences(p, 34)
-                           for p in _article_paragraphs(article_body, echo)) if lead),
-        "",
-    )
-    implication = _whole_sentences(echo, 34)
-    lines = [title or "", observation, implication]
-    if wix_url:
-        lines.append(wix_url.strip())
-    return "\n".join(line.strip() for line in lines if line and line.strip())
+    if not title or not posts:
+        return posts
+    first = _lead_with_canonical_title(posts[0], title)
+    if first == posts[0]:
+        return posts
+    if len(first) <= THREADS_POST_MAX_CHARS:
+        return [first, *posts[1:]]
+    return [title.strip(), *posts]
 
 
 def _save_generated(
@@ -2547,13 +2352,19 @@ def _run(
             return 1
 
         # ── Full-content preview surfaces (owner-controlled, dry run) ────────
-        # Facebook and Instagram are not part of Release 1, so a normal run
-        # does not pay to compose them (#175). The owner-controlled preview
-        # composes them — from the final accepted article, through the same
-        # composer, channel lenses and validators — so every intended surface
-        # can be inspected before any of them is enabled.
+        # Facebook, Instagram, Telegram and Threads are not part of Release 1,
+        # so a normal run does not pay to compose them (#175) and leaves them
+        # empty. The owner-controlled preview composes them — each an Engine
+        # platform adaptation of the FINAL ACCEPTED article, through the same
+        # composer, channel mechanics and validators — so every intended
+        # surface can be inspected before any of them is enabled. None is a
+        # deterministic excerpt: Telegram and Threads carry the article's
+        # evidence and mechanism, not merely its opening (PO decision).
         if args.dry_run and args.preview_fresh_images:
-            for _format_key, _rules_key in (("reading", "long"), ("instagram", "medium")):
+            for _format_key, _rules_key in (
+                ("reading", "long"), ("instagram", "medium"),
+                ("telegram", "medium"), ("threads", "medium"),
+            ):
                 try:
                     _derived = recompose_platform(
                         structured_final,
@@ -2602,15 +2413,16 @@ def _run(
                             state.ended(TerminalStage.EDITORIAL, TerminalDisposition.BLOCKED,
                                         f"preview facebook transparency: {type(exc).__name__}")
                             return 1
-                else:
+                elif _format_key == "instagram":
                     instagram_text = _derived["body"]
+                elif _format_key == "telegram":
+                    telegram_text = _lead_with_canonical_title(
+                        _derived["body"], _composed_title)
+                else:
+                    threads_seq = _lead_thread_with_canonical_title(
+                        split_threads_posts(_derived["body"]), _composed_title)
                 print(f"  ✓  preview {_format_key} composed from the final accepted "
                       f"article ({_derived['word_count']} words)")
-
-        # Threads and Telegram: deterministic derivations of the final
-        # accepted article — accepted text only, whole sentences only.
-        threads_seq   = _build_threads(_composed_title, blog_body, echo_line)
-        telegram_text = _build_telegram(_composed_title, blog_body, echo_line)
 
         # Issue #196: preserve the accepted compositions NOW, before the
         # remaining gates. A run blocked downstream (transparency, images,

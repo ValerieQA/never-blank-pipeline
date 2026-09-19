@@ -77,10 +77,14 @@ def test_future_channel_definitions_remain_configurable():
     assert platform_composer.ALL_FORMATS == (
         "long", "reading", "medium", "instagram", "short",
     )
+    # the tables also define the Engine platform adapters (#259), which exist
+    # only as derivations of a final accepted article
+    assert platform_composer.ADAPTER_FORMATS == ("telegram", "threads")
     for table in (platform_composer._BLOCK_TABLE,
                   platform_composer._WORD_RANGE,
                   platform_composer._FORMAT_CONSTRAINTS):
-        assert set(table) == set(platform_composer.ALL_FORMATS)
+        assert set(table) == set(platform_composer.ALL_FORMATS
+                                 + platform_composer.ADAPTER_FORMATS)
 
 
 def test_an_unknown_format_is_refused_not_ignored(monkeypatch):

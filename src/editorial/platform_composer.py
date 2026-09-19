@@ -39,6 +39,20 @@ _BLOCK_TABLE = {
         "recognition": "full", "evidence_pattern": "skip", "explanation": "skip",
         "reframe": "compressed", "business_meaning": "skip", "cta": "compressed", "echo": "adapt",
     },
+    # Engine platform adapters (#259, Product Owner decision): they
+    # derive from the FINAL ACCEPTED article only (canonical_body) — the
+    # block table matters only for a first composition, which never happens
+    # for these formats.
+    "telegram": {
+        "hook": "full", "reader_context": "skip", "observation": "compressed",
+        "recognition": "compressed", "evidence_pattern": "compressed", "explanation": "compressed",
+        "reframe": "compressed", "business_meaning": "compressed", "cta": "skip", "echo": "adapt",
+    },
+    "threads": {
+        "hook": "full", "reader_context": "skip", "observation": "compressed",
+        "recognition": "compressed", "evidence_pattern": "compressed", "explanation": "compressed",
+        "reframe": "compressed", "business_meaning": "compressed", "cta": "skip", "echo": "adapt",
+    },
     "short": {
         "hook": "compressed", "reader_context": "skip", "observation": "skip",
         "recognition": "skip", "evidence_pattern": "skip", "explanation": "skip",
@@ -52,6 +66,8 @@ _BLOCK_TABLE = {
 _WORD_RANGE = {
     "long": (400, 600), "reading": (350, 600), "medium": (120, 220),
     "instagram": (80, 150), "short": (20, 80),
+    # targets, never truncation boundaries (PO decision)
+    "telegram": (180, 300), "threads": (150, 400),
 }
 
 # Platform identities for output validation. Canonical Release 1 (Issue #93):
@@ -60,6 +76,7 @@ _WORD_RANGE = {
 _PLATFORM_NAMES = {
     "long": "blog", "reading": "facebook", "medium": "linkedin",
     "instagram": "instagram", "short": "short",
+    "telegram": "telegram_adaptation", "threads": "threads_adaptation",
 }
 
 # Version of the LinkedIn-native composition instruction and rule wiring for
@@ -103,6 +120,26 @@ _FORMAT_CONSTRAINTS = {
     "instagram": (
         "Make the reader feel a specific owner situation before explaining it. No research diary, "
         "no stacked evidence, no company-led opening. One sentence per paragraph."
+    ),
+    # Engine platform adapters. Channel mechanics are the Engine's; a client
+    # may later configure or override the adaptation at onboarding.
+    "telegram": (
+        "Adapt the final content into one Telegram post of complete sentences. "
+        "Carry, where the content has them: the headline/hook, the core "
+        "observation, the concrete evidence or example (with its figures exactly "
+        "as given), the mechanism, the practical business implication, and the "
+        "final Echo. Compress and restructure freely, but add no fact, figure, "
+        "name or claim the content does not state. Short paragraphs. No "
+        "hashtags, no links, no 'read more' — the system appends the article link."
+    ),
+    "threads": (
+        "Adapt the final content into a Threads sequence of 3 to 6 posts, each at "
+        "most 450 characters, separated by a line containing only ---. Post 1 "
+        "opens with the headline/hook; the middle posts must carry the concrete "
+        "evidence (figures exactly as given) and the mechanism — not merely the "
+        "opening of the article; the practical implication follows; the final "
+        "post is the Echo line. Every post is complete sentences. Add no fact, "
+        "figure, name or claim the content does not state. No hashtags, no links."
     ),
     "short": (
         "Express one native short-form thought. Do not summarize the article; "
@@ -151,6 +188,11 @@ Return ONLY valid JSON:
 #: Every format the composer knows how to write. Future channels re-enable
 #: by passing their formats to compose_platforms — the tables stay complete.
 ALL_FORMATS = ("long", "reading", "medium", "instagram", "short")
+
+#: Engine platform adapters that exist ONLY as derivations of a final accepted
+#: article: never part of a first composition (ALL_FORMATS), and refused
+#: without canonical content.
+ADAPTER_FORMATS = ("telegram", "threads")
 
 #: How a role's long-form surface closes (#191). "invitation_last" is every
 #: role's existing contract: the verbatim Echo ends the body. A role may
@@ -626,8 +668,13 @@ def compose_platforms(
     """
     result = {}
     for format_key in (ALL_FORMATS if formats is None else formats):
-        if format_key not in ALL_FORMATS:
+        if format_key not in ALL_FORMATS + ADAPTER_FORMATS:
             raise ValueError(f"unknown composer format: {format_key!r}")
+        if format_key in ADAPTER_FORMATS and not canonical_body:
+            raise ValueError(
+                f"{format_key} is an adaptation of a final accepted article; "
+                "it cannot be composed without canonical content"
+            )
         strategy_rules = (
             _wix_rules(wix_strategy)
             if format_key == "long"
