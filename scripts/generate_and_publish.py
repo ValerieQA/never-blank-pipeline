@@ -157,6 +157,7 @@ from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
+from src.editorial.derivation_fidelity import FidelityJudge, ModelFidelityJudge
 from src.editorial.platform_composer import ADAPTER_FORMATS, CLOSING_BRANDED_ECHO_THEN_SOURCES
 from src.content.output_guard import (
     THREADS_POST_MAX_CHARS,
@@ -866,6 +867,7 @@ def main(
     decision_evaluator: DecisionLensEvaluator | None = None,
     editorial_reviewer: EditorialReviewTransport | None = None,
     article_revisor: ArticleRevisionTransport | None = None,
+    derivation_judge: "FidelityJudge | None" = None,
 ) -> int:
     """Run one signal end to end and account for it exactly once.
 
@@ -906,6 +908,7 @@ def main(
                 decision_evaluator=decision_evaluator,
                 editorial_reviewer=editorial_reviewer,
                 article_revisor=article_revisor,
+                derivation_judge=derivation_judge,
             )
     except RunCallBudgetExceededError as exc:
         print(f"  ERROR: {exc}")
@@ -928,6 +931,7 @@ def _run(
     decision_evaluator: DecisionLensEvaluator | None = None,
     editorial_reviewer: EditorialReviewTransport | None = None,
     article_revisor: ArticleRevisionTransport | None = None,
+    derivation_judge: "FidelityJudge | None" = None,
 ) -> int:
     parser = argparse.ArgumentParser(description="Generate + publish one signal end-to-end")
     # #211: Wednesday's fresh-generation runs discover their own signal
@@ -2277,7 +2281,11 @@ def _run(
             )
             return 1
         state.reached(TerminalStage.EDITORIAL)
+        # the reviewed draft, kept only to prove no derivative restores what
+        # review removed from it (#260)
+        _draft_article_body = blog_body
         blog_body = _acceptance.final_article_body
+        _fidelity_judge = derivation_judge or ModelFidelityJudge()
         # Everything downstream derives from the accepted article — its Echo
         # included. ``structured_final`` is the only outline a derivation may
         # see: the draft's narrative fields are withheld by the composer, and
@@ -2340,6 +2348,8 @@ def _run(
             _recomposed = recompose_platform(
                 structured_final,
                 "medium",
+                draft_content=_draft_article_body if _acceptance.revised else None,
+                fidelity_judge=_fidelity_judge,
                 canonical_body=blog_body,
                 cta_mode=cta_mode,
                 linkedin_strategy=strategy_execution.linkedin,
@@ -2451,6 +2461,8 @@ def _run(
                     _derived = recompose_platform(
                         structured_final,
                         _format_key,
+                        draft_content=_draft_article_body if _acceptance.revised else None,
+                        fidelity_judge=_fidelity_judge,
                         canonical_body=blog_body,
                         cta_mode=cta_mode,
                         wix_strategy=strategy_execution.wix,

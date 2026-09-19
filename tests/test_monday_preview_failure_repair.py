@@ -55,6 +55,7 @@ from tests.test_editorial_acceptance import (
 from tests.test_monday_stream import MONDAY_ROLE
 from tests.test_research_artifact_lifecycle import ReadyProvider
 from tests.test_social_derivation_invariant import (
+    RecordingJudge,
     ECHO,
     FINAL_ARTICLE,
     TITLE,
@@ -201,7 +202,8 @@ def _run_until_instagram_fails(tmp_path, *, seen: dict | None = None):
                            {"images": {"platform_images": _pimgs(tmp_path)}}]):
         code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator,
                     editorial_reviewer=reviewer,
-                    article_revisor=FakeRevisionTransport(FINAL_ARTICLE))
+                    article_revisor=FakeRevisionTransport(FINAL_ARTICLE),
+                    derivation_judge=RecordingJudge())
     return code, patches
 
 
@@ -392,7 +394,8 @@ def _run_with_composer(tmp_path, composer):
                            {"images": {"platform_images": _pimgs(tmp_path)}}]):
         code = main(research_provider=ReadyProvider(), decision_evaluator=evaluator,
                     editorial_reviewer=reviewer,
-                    article_revisor=FakeRevisionTransport(ACCEPTED_WITHOUT_CLAIM))
+                    article_revisor=FakeRevisionTransport(ACCEPTED_WITHOUT_CLAIM),
+                    derivation_judge=RecordingJudge())
     generated = next(tmp_path.glob(f"{SIG}/runs/*/generated.json"), None)
     return code, patches, json.loads(generated.read_text()) if generated else None
 

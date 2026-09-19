@@ -497,6 +497,43 @@ def _validate_derived_figures(
         )
 
 
+def _validate_derivation_fidelity(
+    body: str, canonical_body: str, format_key: str,
+    removed: "frozenset | None", fidelity_judge,
+) -> None:
+    """A derivative may not restore removed content or add unsupported claims (#260).
+
+    The non-numeric half of the derivation invariant, enforced rather than
+    requested: (1) deterministic — no phrase the reviewed draft had and the
+    final accepted article removed; (2) semantic — the injected fidelity
+    judge lists anything the derivative states that the final accepted
+    content does not support, and any listed item rejects it. A judge that
+    cannot answer raises, and the derivative is not accepted. Generic: the
+    judge sees only the two texts and the platform.
+    """
+    from src.editorial.derivation_fidelity import resurrected_phrases
+
+    restored = resurrected_phrases(body, removed or frozenset())
+    if restored:
+        raise CompositionRejected(
+            f"Platform Composer ({format_key}): the derivative restores content "
+            "that Editorial Review removed from the article: "
+            + "; ".join(repr(phrase) for phrase in restored[:5]),
+            format_key=format_key, body=body,
+        )
+    if fidelity_judge is None:
+        return
+    unsupported = fidelity_judge.unsupported(
+        final_content=canonical_body, derivative=body, surface=format_key)
+    if unsupported:
+        raise CompositionRejected(
+            f"Platform Composer ({format_key}): the derivative states what the "
+            "final accepted content does not support: "
+            + "; ".join(repr(item) for item in unsupported[:5]),
+            format_key=format_key, body=body,
+        )
+
+
 def _block_content(structured_article: dict, block: str):
     discovery = structured_article.get("discovery", {})
     evidence = [discovery.get("puzzle", "")] + list(discovery.get("investigation_sequence", []) or [])
@@ -656,6 +693,8 @@ def _compose_one(
     source_identities: "tuple[tuple[str, ...], ...]" = (),
     canonical_body: "str | None" = None,
     closing_attribution: "str | None" = None,
+    removed_content: "frozenset | None" = None,
+    fidelity_judge=None,
 ) -> dict:
     # Whose name a branded closing carries. The shared formats keep the
     # composer's constant (#255 scope). An Engine adapter knows no client: the
@@ -722,6 +761,8 @@ def _compose_one(
 
     if canonical_body:
         _validate_derived_figures(body, canonical_body, format_key)
+        _validate_derivation_fidelity(
+            body, canonical_body, format_key, removed_content, fidelity_judge)
     validate_platform_output(_PLATFORM_NAMES[format_key], body)
     word_count = len(body.split())
     lo, hi = _WORD_RANGE[format_key]
@@ -775,6 +816,8 @@ def compose_platforms(
     source_identities: "tuple[tuple[str, ...], ...]" = (),
     canonical_body: "str | None" = None,
     closing_attribution: "str | None" = None,
+    removed_content: "frozenset | None" = None,
+    fidelity_judge=None,
 ) -> dict:
     """Compose one native body per requested format.
 
@@ -827,6 +870,10 @@ def compose_platforms(
             # the client's own name for a branded closing — used by the
             # Engine adapters only (#259 review)
             closing_attribution=closing_attribution,
+            # #260: derivatives are checked against the final accepted
+            # content — removed draft phrases, and the fidelity judge
+            removed_content=removed_content,
+            fidelity_judge=fidelity_judge,
         )
         log.info("Platform Composer: %s -> %d words", format_key, result[format_key]["word_count"])
     return result

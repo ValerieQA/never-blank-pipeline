@@ -29,6 +29,7 @@ from src.editorial.discovery_builder import build_discovery
 from src.editorial.story_assembly import assemble_story
 from src.editorial.never_blank_voice import finalize_article
 from src.run.call_budget import RunCallBudgetExceededError
+from src.editorial.derivation_fidelity import removed_phrases
 from src.editorial.platform_composer import CompositionRejected, compose_platforms
 from src.editorial.sources_of_record import source_citation_values
 from src.strategy.execution_context import (
@@ -225,6 +226,8 @@ def recompose_platform(
     research_artifact=None,
     rejected_sink: "list | None" = None,
     closing_attribution: "str | None" = None,
+    draft_content: "str | None" = None,
+    fidelity_judge=None,
 ) -> dict:
     """Re-compose ONE platform derivative from final accepted content (#197).
 
@@ -270,6 +273,13 @@ def recompose_platform(
             source_identities=_identities,
             canonical_body=canonical_body,
             closing_attribution=closing_attribution,
+            # #260: the derivative may not restore what review removed from
+            # the draft, nor state what the final content does not support
+            removed_content=(
+                removed_phrases(draft_content, canonical_body)
+                if draft_content else None
+            ),
+            fidelity_judge=fidelity_judge,
             **({} if closing_contract is None else {"closing_contract": closing_contract}),
         )
     except ArticleGenerationError:
