@@ -185,7 +185,6 @@ from src.never_blank.wednesday_routing import (
     WEDNESDAY_ROLE_ID,
     generate_for_wednesday,
     is_wednesday_role,
-    unexecutable_lens_routes,
 )
 from src.never_blank.wednesday_supply import (
     WEDNESDAY_SIGNALS_FILE,
@@ -1043,19 +1042,6 @@ def _run(
         except (EditorialRoleError, ClientContractError) as exc:
             print(f"  ERROR: {exc}")
             return 1
-        # #267: a lens the restored Wednesday path cannot execute is refused
-        # here, before any work — never loaded as policy that silently does
-        # nothing. See ``unexecutable_lens_routes`` for what that path runs.
-        if _client_contracts is not None and is_wednesday_role(_editorial_role_identity):
-            _unexecutable = unexecutable_lens_routes(_client_contracts)
-            if _unexecutable:
-                print(
-                    "  ERROR: the restored Wednesday path cannot execute these "
-                    "client lens routes: " + "; ".join(_unexecutable) + ". It "
-                    "carries only conditional lenses routed to writing (through "
-                    "the run's editorial plan)."
-                )
-                return 1
         _writing_lenses = (
             _client_contracts.for_stage("writing") if _client_contracts is not None else ()
         )
@@ -2110,11 +2096,7 @@ def _run(
             # the whole publication lifecycle — is shared and unchanged.
             if is_wednesday_role(_editorial_role_identity):
                 print("  ✓  editorial path: restored July Wednesday pipeline")
-                # the restored path stays verbatim; the plan reaches every
-                # model call it makes through the routing seam (#267)
-                article = generate_for_wednesday(
-                    editorial.to_legacy_dict(), editorial_plan=_editorial_plan
-                )
+                article = generate_for_wednesday(editorial.to_legacy_dict())
             else:
                 article    = generate_article(
                     editorial.to_legacy_dict(),

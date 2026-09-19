@@ -97,11 +97,6 @@ candidate is chosen before any research exists, so nothing could activate it.
 Make it a standing lens to apply it at selection. A condition is decided once
 per run and that one decision serves every stage its lenses name.
 
-The restored Wednesday path executes only conditional lenses routed to
-`writing` (through the plan). A Wednesday stream whose lenses route anywhere
-else — a standing lens, or anything routed to `revision` — is refused before
-the run starts rather than loaded as policy that would never execute.
-
 ## Shared list
 
 A list of strings the client's output may not contain — machine tells, banned

@@ -92,15 +92,13 @@ A run builds a plan whenever its contract needs one (`requires_plan`): a
 `## Plan`, or any conditional lens — a conditional lens applies only through a
 plan, so it needs none of the plan slots to be executable.
 
-**Every generation path carries it.** The shared engine receives the plan as
-`editorial_plan=`. The restored Wednesday path (`src/never_blank/wednesday_july`)
-is pinned verbatim to July (#207), so the routing seam
-(`generate_for_wednesday(signal, editorial_plan=…)`) does not thread the plan
-through its modules: it appends the plan's prompt text to the user message of
-every model call that path makes, for that generation only
-(`llm_client.model_input_addendum`). With no plan the path is exactly July's.
-That carries conditional lenses routed to writing; any other lens route on a
-Wednesday stream is refused before the run starts (`unexecutable_lens_routes`).
+The canonical Editorial v2 path receives the plan as `editorial_plan=` — the
+generation, derivation and composition stages in `src/editorial/`. The restored
+July Wednesday pipeline (`src/never_blank/wednesday_july`) is **not** a plan
+execution path: it is reference material pinned verbatim to July (#207), kept
+until its editorial semantics are extracted into client documents, bound to
+this architecture and proven, and the legacy implementation retired. Nothing
+here adapts it, and a client contract is not executable through it.
 
 Nothing here knows a weekday. A new stream — a different day, a different
 ending, a different lens — is a stream contract bound to a role the business
