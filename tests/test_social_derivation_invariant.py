@@ -707,7 +707,9 @@ def test_the_shared_formats_keep_their_existing_closing_unchanged():
 # ===========================================================================
 
 
-def test_another_clients_accepted_echo_reaches_telegram_and_threads_under_its_name(tmp_path):
+def test_another_clients_accepted_echo_reaches_telegram_and_threads_under_its_name(
+    tmp_path, monkeypatch
+):
     """End to end on the real Monday route with the client replaced: the
     configuration names "Acme Studio", the client's rules are Acme's, and
     the accepted article closes "Acme Studio: <echo>". The accepted Echo is
@@ -715,6 +717,28 @@ def test_another_clients_accepted_echo_reaches_telegram_and_threads_under_its_na
     "Acme Studio: <echo>" — and no Engine code puts "Never Blank" into the
     adapters' model input or output."""
     from src.strategy.business_config import load_business_strategy_configuration
+
+    # the client is replaced whole: Acme's configuration AND Acme's documents.
+    # Leaving Never Blank's documents in place would run one client's contract
+    # under another's name, and its editorial policy would reach the prompts
+    # (#268 gave that contract a plan).
+    acme_client = tmp_path / "acme_client"
+    (acme_client / "streams").mkdir(parents=True)
+    (acme_client / "streams" / "weekly.md").write_text(
+        "---\n"
+        "stream_id: acme-weekly\n"
+        'version: "1"\n'
+        f"role_id: {MONDAY_ROLE}\n"
+        "selection: first_valid\n"
+        "---\n\n"
+        "## Purpose\n\n"
+        "Help independent bakeries decide what to bake this week.\n\n"
+        "## Selection\n\n"
+        "### Useful\n\n"
+        "- The signal concerns a bakery's own costs or customers.\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("NB_CLIENT_DIR", str(acme_client))
 
     real = load_business_strategy_configuration()
     acme = real.model_copy(update={

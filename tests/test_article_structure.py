@@ -1,9 +1,12 @@
-"""#254 D4: Monday's article structure is the client's, and it reaches the writers.
+"""#268: Monday's article structure is the client's, and it reaches the writers.
 
-Product Owner decision D4 (#254): the current 11-step arc is CLIENT: NEVER_BLANK's
-editorial structure — a narrative framework, not 11 visible sections — and step 9,
-Compound Presence Connection, is conditional: never manufactured to satisfy the
-structure. #252 is the future editorial refinement with Sveta.
+Editorial Policy v2 (#268, on the owner's source of truth in
+``clients/never_blank/editorial/reference/12``) replaces the single fixed
+eleven-step arc with three separable things: a frame that never changes, a
+middle chosen per article from a library of patterns, and standing obligations
+whose place in the text is free. The article ends on the Kicker/Echo with
+nothing after it (#266), and "one deliberate deviation" becomes a moment of
+authorial risk — editorial judgement, with no mechanical check.
 
 Under D12 (#240) the structure is client policy, so it lives in the client's
 writing lens ``clients/never_blank/lenses/structure.md``, and the Engine's own
@@ -33,10 +36,19 @@ from tests.test_monday_stream import MONDAY_ROLE, _attributed_article, _entry_pa
 from tests.test_research_artifact_lifecycle import ReadyProvider
 
 STRUCTURE = Path("clients/never_blank/lenses/structure.md")
-STEPS = (
-    "Hook", "Recognition", "Tension", "Market Observation", "Investigation",
-    "Mechanism", "Business Consequence", "Reframe", "Compound Presence Connection",
-    "Echo", "Soft CTA",
+#: The frame's opening, in the order the client fixed it.
+OPENING = ("Dek", "Hook", "Stakes", "Concession")
+
+#: The middle-pattern library: planning tools, never visible in the output.
+PATTERNS = ("Finding", "Post-mortem", "Argument", "Explainer", "Teardown")
+
+#: Present somewhere in every article, in no fixed place.
+OBLIGATIONS = (
+    "A portable noun of our own",
+    "Something the reader can check or touch",
+    "A working link inside the text",
+    "A moment of authorial risk",
+    "Subheads",
 )
 
 
@@ -51,29 +63,50 @@ def _normalised(value: str) -> str:
 # ── the structure is the client's lens, exactly as the owner decided ────────
 
 
-def test_the_structure_lens_names_the_eleven_steps_in_order():
+def test_the_frame_fixes_its_opening_in_order():
     text = _structure_text()
 
-    positions = [text.index(f"{number}. {step}") for number, step in enumerate(STEPS, start=1)]
+    positions = [text.index(f"{n}. **{element}") for n, element in enumerate(OPENING, start=1)]
     assert positions == sorted(positions)
 
 
-def test_the_structure_is_a_narrative_framework_not_visible_sections():
-    assert "this is a narrative framework, not a requirement to manufacture 11 visible sections" in (
-        _normalised(_structure_text())
-    )
-
-
-def test_step_nine_is_conditional_and_never_manufactured():
+def test_the_article_ends_on_the_kicker_with_nothing_after_it():
+    """#266: the Echo is the last editorial line; the CTA moves inside the text."""
     text = _normalised(_structure_text())
 
-    assert "Compound Presence Connection — conditional." in text
-    assert "Include it only when the article genuinely supports a meaningful connection" in text
-    assert ("If that connection would be artificial, generic, promotional, or require "
-            "changing the actual lesson of the signal, omit it.") in text
-    assert ("Never manufacture a Compound Presence connection merely to satisfy the "
-            "structure.") in text
-    assert "Steps 1–8, 10 and 11 form the normal narrative arc." in text
+    assert "This is the last editorial line of the article." in text
+    assert ("Nothing follows it: no call to action, no \"what do you think?\", no banner, "
+            "no sign-off.") in text
+    assert "The working link belongs earlier in the text, as an ordinary inline link." in text
+    # and the old fixed arc is gone, ending included
+    for retired in ("Soft CTA", "11 visible sections", "Compound Presence Connection —"):
+        assert retired not in text, retired
+
+
+def test_the_middle_is_a_library_of_planning_tools_not_a_visible_template():
+    text = _normalised(_structure_text())
+
+    for pattern in PATTERNS:
+        assert f"**{pattern}**" in text, pattern
+    assert "Choose one pattern for the middle before writing" in text
+    assert ("They must never be detectable in the output as a template, and their step "
+            "names must never appear in the text.") in text
+    # front-loading is the default; withholding must be earned
+    assert "Front-loading is the default" in text
+    assert "Withholding is available where the material earns it" in text
+    # and the turn is conditional, not every article
+    assert "The turn — the moment the reading flips — is conditional." in text
+
+
+def test_the_standing_obligations_are_present_with_a_free_place():
+    text = _normalised(_structure_text())
+
+    assert "Present somewhere in every article; the place is free." in text
+    for obligation in OBLIGATIONS:
+        assert obligation in text, obligation
+    # the moment of authorial risk is judgement, never a mechanical check (#268)
+    assert "This is editorial judgement and nothing checks it mechanically." in text
+    assert "deliberate deviation" not in text.casefold()
 
 
 def test_the_structure_reaches_the_writers_and_nothing_else():

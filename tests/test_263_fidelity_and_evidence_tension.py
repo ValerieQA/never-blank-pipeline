@@ -350,7 +350,19 @@ class ScriptedDecider:
 
     def decide(self, request):
         self.requests.append(json.loads(json.dumps(request)))
-        return self.answer if isinstance(self.answer, str) else json.dumps(self.answer)
+        if isinstance(self.answer, str):
+            return self.answer
+        answer = dict(self.answer)
+        # every open slot gets an answer — the Engine refuses a slot nobody
+        # chose, and these tests are about activation, not slot choice
+        chosen = {entry["slot"] for entry in answer.get("selections", [])}
+        answer["selections"] = [
+            *answer.get("selections", []),
+            *({"slot": slot["slot"], "value": slot["permitted"][0],
+               "evidence_refs": [], "reason": "test: the first permitted value"}
+              for slot in request["slots"] if slot["slot"] not in chosen),
+        ]
+        return json.dumps(answer)
 
 
 def _decision(condition: str, *, met: bool, finding: str = "", refs=("evidence-1",)):
@@ -379,6 +391,9 @@ def _nb_plan(*, active: bool, finding: str = FINDING):
         contracts,
         central_claim=Claim(text="The source's figures do not support its conclusion."),
         activation_evidence={TENSION: finding} if active else {},
+        # the one slot the contract leaves to the run (#268)
+        reader_verifiable_artifact=contracts.stream.plan_values(
+            "reader_verifiable_artifact")[0],
     )
 
 
@@ -486,9 +501,24 @@ def test_the_evidence_tension_lens_is_a_conditional_never_blank_client_lens():
     assert lens.lens_id == "never-blank-evidence-tension"
     assert not lens.is_standing and set(lens.stages) == {"writing", "revision"}
     assert lens.activates_on == (TENSION,)
+    # #268: all four activation conditions, and only together
+    assert "All four of these must hold. Any one missing" in lens.text
+    for condition in (
+        "The mismatch is inside one source",
+        "The source is named and linkable",
+        "The mismatch survives the most charitable reading",
+        "The mismatch is material to the source's headline claim",
+    ):
+        assert condition in lens.text, condition
+    # never a selection rule, and never from our own writing (#268)
+    assert "This is never a reason to select a signal." in lens.text
+    assert "by our own unsupported writing is a generation error" in " ".join(
+        lens.text.split()
+    )
+    assert "may suggest the Argument pattern for the middle, and never requires it" in (
+        " ".join(lens.text.split())
+    )
     for rule in (
-        "material tension or",
-        "contradiction",
         "Do not activate to make an article more interesting",
         "inside the research evidence",
         "central hook",
@@ -565,7 +595,7 @@ def test_an_inactive_lens_changes_nothing(tmp_path):
         "finding": "",
         "evidence_refs": [],
         "reason": "decided from the research evidence",
-        "declared_by": ["never-blank-evidence-tension/1"],
+        "declared_by": ["never-blank-evidence-tension/2"],
         "stages": ["writing", "revision"],
     }
     assert [entry for entry in record["active_by_stage"]["writing"]
@@ -597,7 +627,7 @@ def test_the_client_document_reaches_the_stages_that_build_the_argument(
     for stage in ("writing", "revision"):
         assert [entry for entry in record["active_by_stage"][stage]
                 if entry["activation"]] == [
-            {"identity": "never-blank-evidence-tension/1", "activation": TENSION}
+            {"identity": "never-blank-evidence-tension/2", "activation": TENSION}
         ]
 
     # …and that same plan reaches every stage that shapes the argument

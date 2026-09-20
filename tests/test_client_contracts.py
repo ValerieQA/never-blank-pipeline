@@ -280,14 +280,24 @@ Warm, practical, never alarmist. No sourcing requirement.
 # ── CLIENT: NEVER_BLANK's current documents ─────────────────────────────────
 
 
-def test_never_blank_monday_is_governed_by_its_contract_and_four_lenses():
+def test_never_blank_monday_is_governed_by_its_contract_and_six_lenses():
     contracts = contracts_for_role(MONDAY_ROLE, NEVER_BLANK)
 
     assert contracts.stream.identity == "never-blank-monday/1"
     assert contracts.stream.selection == "first_valid"
     assert sorted(lens.lens_id for lens in contracts.lenses) == [
-        "never-blank-article-structure", "never-blank-evidence",
-        "never-blank-evidence-tension", "never-blank-revision",
+        "never-blank-article-structure", "never-blank-concession",
+        "never-blank-evidence", "never-blank-evidence-tension",
+        "never-blank-portable-noun", "never-blank-revision",
+    ]
+    # #268: the policy the run executes the contract as, and the client's own
+    # banned constructions
+    assert [slot for slot, _ in contracts.stream.plan_slots] == [
+        "ending_mode", "reader_verifiable_artifact", "factual_restrictions",
+        "acknowledged_limits",
+    ]
+    assert [identity for _, identity in contracts.banned_entries][:1] == [
+        "never-blank-machine-tells/1"
     ]
     # #263: exactly one of them is conditional, and it declares its condition
     conditional = [lens for lens in contracts.lenses if not lens.is_standing]
