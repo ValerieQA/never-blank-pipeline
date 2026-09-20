@@ -20,6 +20,15 @@ before any packaging/publication effect:
 Maximum automatic revisions: **one**. There is no open-ended self-revision
 loop, no generalized scoring platform, and no rubric registry.
 
+Since #269 a run that carries an `EditorialPlan` passes a **factual gate**
+first, reviewed against that plan rather than against the rubric: a factual
+finding forces the one controlled revision even where the reviewer accepted,
+and an article still carrying one after it is not accepted. The same #269
+change tells the editorial reviewer, in its own request, that execution is not
+a template. Both are documented in
+[docs/engine/FACTUAL_REVIEW.md](engine/FACTUAL_REVIEW.md); a run that built no
+plan keeps exactly the lifecycle above.
+
 Story #12 remains authoritative upstream: only a canonical `PROCEED` Decision
 Lens run reaches article generation and Story #13 at all. Editorial
 acceptance never re-runs or modifies the Decision Lens.

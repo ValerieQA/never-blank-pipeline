@@ -239,6 +239,13 @@ from src.editorial.editorial_plan import (
     build_editorial_plan,
     evidence_package_from_artifact,
 )
+from src.editorial.factual_review import (
+    FactualGate,
+    FactualReviewError,
+    FactualReviewTransport,
+    LlmChatFactualReviewTransport,
+)
+from src.editorial.machine_tells import MachineTellList
 from src.editorial.plan_decisions import (
     ModelPlanDecider,
     PlanDecider,
@@ -876,6 +883,29 @@ def _build_legacy_research_context(
     return rc
 
 
+def _build_factual_gate(
+    editorial_plan, reviewer: FactualReviewTransport | None
+) -> FactualGate | None:
+    """The factual boundary this run is reviewed against, or None (#269).
+
+    Factual integrity is reviewed against the run's own ``EditorialPlan``: its
+    authoritative claim, the ceiling the contract set, the evidence package
+    including what this run may not use, and the shared machine-tell list. A
+    run that built no plan has none of that, and inventing a substitute would
+    be the opposite of what the boundary is for — so it keeps exactly the
+    lifecycle it had before.
+    """
+    if editorial_plan is None:
+        return None
+    return FactualGate(
+        plan=editorial_plan,
+        reviewer=(
+            reviewer if reviewer is not None else LlmChatFactualReviewTransport()
+        ),
+        machine_tells=MachineTellList.load(),
+    )
+
+
 def main(
     *,
     research_provider: ResearchProvider | None = None,
@@ -885,6 +915,7 @@ def main(
     article_revisor: ArticleRevisionTransport | None = None,
     derivation_judge: "FidelityJudge | None" = None,
     plan_decider: PlanDecider | None = None,
+    factual_reviewer: FactualReviewTransport | None = None,
 ) -> int:
     """Run one signal end to end and account for it exactly once.
 
@@ -927,6 +958,7 @@ def main(
                 article_revisor=article_revisor,
                 derivation_judge=derivation_judge,
                 plan_decider=plan_decider,
+                factual_reviewer=factual_reviewer,
             )
     except RunCallBudgetExceededError as exc:
         print(f"  ERROR: {exc}")
@@ -951,6 +983,7 @@ def _run(
     article_revisor: ArticleRevisionTransport | None = None,
     derivation_judge: "FidelityJudge | None" = None,
     plan_decider: PlanDecider | None = None,
+    factual_reviewer: FactualReviewTransport | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(description="Generate + publish one signal end-to-end")
     # #211: Wednesday's fresh-generation runs discover their own signal
@@ -2273,7 +2306,7 @@ def _run(
                         # standing revision lenses, then the conditional
                         # ones this run's plan activated for revision (#267)
                         lenses=(
-(
+                            (
                                 *_client_contracts.for_stage("revision"),
                                 *(
                                     _editorial_plan.activated_lens_texts("revision")
@@ -2281,6 +2314,15 @@ def _run(
                                 ),
                             )
                             if _client_contracts is not None else ()
+                        ),
+                        # #269: the same authoritative plan the article was
+                        # written under — its claim, its ceiling, its
+                        # restrictions and both sides of its evidence
+                        # package. A reviser fixing a factual finding needs
+                        # to see what it may fix it with.
+                        plan=(
+                            _editorial_plan.as_prompt_text()
+                            if _editorial_plan is not None else ""
                         ),
                     )
                     if _role is not None
@@ -2297,8 +2339,19 @@ def _run(
                     if article_revisor is not None
                     else LlmChatArticleRevisionTransport()
                 ),
+                # #269: factual integrity, reviewed against this run's plan
+                # and separately from editorial execution, so an article that
+                # executes well cannot trade an invented number for ACCEPT.
+                # Wednesday is paused and keeps its own acceptance.
+                factual_gate=(
+                    _build_factual_gate(_editorial_plan, factual_reviewer)
+                    if not is_wednesday_role(_editorial_role_identity)
+                    else None
+                ),
             )
-        except (EditorialAcceptanceError, ValueError, OSError) as exc:
+        except (
+            EditorialAcceptanceError, FactualReviewError, ValueError, OSError,
+        ) as exc:
             print(f"  ERROR: editorial acceptance blocked publication: {exc}")
             state.ended(TerminalStage.EDITORIAL, TerminalDisposition.BLOCKED,
                         f"editorial acceptance: {type(exc).__name__}")
@@ -2323,6 +2376,23 @@ def _run(
         print(f"  ✓  editorial audit: {run_dir / 'editorial_acceptance.json'}")
         if not _acceptance.accepted:
             _final = _acceptance.final_review or _acceptance.initial_review
+            # #269: a factual block is its own reason, reported as one. An
+            # article can execute well and still state what its evidence does
+            # not; saying only "disposition=accept" about a run stopped for
+            # that would hide why it stopped.
+            _final_factual = (
+                _acceptance.final_factual_review
+                or _acceptance.initial_factual_review
+                or {}
+            )
+            _factual_kinds = sorted({
+                str(finding.get("kind"))
+                for finding in _final_factual.get("findings", [])
+            } | {
+                str(found.get("kind"))
+                for found in _final_factual.get("mechanical", {}).get("findings", [])
+                if found.get("outcome") == "gate"
+            })
             # Issue #134: preserve what this run produced so a human can read
             # the article the reviewer refused. Review-only, never a
             # publication input, and never a reason to continue: the block
@@ -2339,6 +2409,7 @@ def _run(
                             "final_disposition": _final.disposition.value,
                             "failed_criterion_ids": list(_final.failed_criterion_ids),
                             "revised": _acceptance.revised,
+                            "factual_findings": _factual_kinds,
                         },
                         "content": {
                             "article_as_generated": blog_body,
@@ -2360,12 +2431,17 @@ def _run(
                 # Losing the review copy must not change the verdict or hide
                 # the real reason the run stopped.
                 print(f"  ⚠  produced content could not be preserved: {exc}")
-            state.ended(TerminalStage.EDITORIAL, TerminalDisposition.BLOCKED,
-                        f"editorial disposition={_final.disposition.value}")
+            state.ended(
+                TerminalStage.EDITORIAL, TerminalDisposition.BLOCKED,
+                f"factual review: {', '.join(_factual_kinds)}"
+                if _factual_kinds
+                else f"editorial disposition={_final.disposition.value}",
+            )
             print(
                 "  ERROR: editorial acceptance blocked publication: "
                 f"disposition={_final.disposition.value!r} "
                 f"failed_criteria={list(_final.failed_criterion_ids)} "
+                f"factual_findings={_factual_kinds} "
                 f"[{_acceptance_rubric.identity}] — the article does not "
                 "continue toward packaging or publication"
             )
@@ -2408,6 +2484,13 @@ def _run(
 
         # #196/#197: one record of the accepted compositions and how the
         # social derivative relates to the revision, filled in below.
+        #
+        # #269: an accepted article records the plan and the contract lineage
+        # it was executed under — the exact stream, lens and list digests, the
+        # lenses that were active and what activated them, what the run
+        # decided that the contract left open, and the factual verdict it
+        # survived. Without it, "this article was accepted" says nothing about
+        # which version of the editorial policy accepted it.
         _accepted_record = {
             "run_id": run_ctx.run_id,
             "signal_id": signal_id,
@@ -2415,7 +2498,23 @@ def _run(
             "editorial": {
                 "rubric": _acceptance_rubric.identity,
                 "revised": _acceptance.revised,
+                "factual_review": (
+                    _acceptance.final_factual_review
+                    or _acceptance.initial_factual_review
+                ),
             },
+            "editorial_plan": (
+                {
+                    "lineage": dict(_editorial_plan.lineage),
+                    "active_lenses": [
+                        lens.as_evidence() for lens in _editorial_plan.active_lenses
+                    ],
+                    "active_by_stage": _editorial_plan.as_evidence()["active_by_stage"],
+                    "claim_strength_ceiling": _editorial_plan.claim_strength_ceiling,
+                    "run_decisions": dict(_editorial_plan.run_decisions),
+                }
+                if _editorial_plan is not None else None
+            ),
         }
         _social_recomposed = False
 

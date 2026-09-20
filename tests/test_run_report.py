@@ -164,6 +164,9 @@ def test_editorial_rejection_is_a_valid_partial_terminal_report(
             accepted=False, revised=False, final_review=review,
             initial_review=review,
             final_article_body=kwargs["article_body"],
+            # #269: a run with no plan has no factual boundary to report, and
+            # the blocked branch reports the editorial disposition as before
+            initial_factual_review=None, final_factual_review=None,
             audit={"accepted": False, "final_disposition": "reject"},
         )
 

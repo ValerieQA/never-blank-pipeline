@@ -159,3 +159,13 @@ breaking — is the client's to decide in its own documents.
 including the withdrawn ones and why, which lenses were active and what
 activated them, and the lineage — the same digests `client_contracts.json`
 carries, from the same snapshot.
+
+## How the plan is executed
+
+Building the plan is half of it; the other half is what refuses an article
+that is not true to it. Factual integrity is reviewed separately from
+editorial execution, against this plan rather than against a rubric, and it
+rejects rather than annotates; a shared versioned machine-tell scan runs
+beside it, in evidence tiers that are never flattened into one hard rule; and
+the accepted article records the plan and contract lineage it ran under.
+See [FACTUAL_REVIEW.md](FACTUAL_REVIEW.md) (#269).

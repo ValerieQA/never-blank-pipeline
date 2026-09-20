@@ -1,8 +1,8 @@
 """Issue #171: one run has a deterministic ceiling on paid text-model calls.
 
 The ceiling is derived from the audited canonical call graph (normal Monday
-~18 in-run calls, Wednesday ~19, legitimate worst case with every stage
-retry and one revision round = 34; default and hard maximum 40). These
+~19 in-run calls, Wednesday ~19, legitimate worst case with every stage
+retry and one revision round = 36; default and hard maximum 40). These
 scenarios prove the legitimate shapes fit, the call after the ceiling is
 refused before any transport is invoked, budget state cannot leak between
 runs or contexts, the configuration refuses invalid ceilings rather than
@@ -44,11 +44,17 @@ from tests.test_decision_lifecycle import _entry_patches, _evaluator, _model_out
 
 # In-run call counts from the Issue #171 derivation (the pre-run eligibility
 # selector is a separate process with its own bounds and is not budgeted).
-MONDAY_NORMAL = 1 + 8 + 5 + 1 + 2            # evidence, engine, composer, accept, hashtags = 17
-MONDAY_WITH_PACKAGE = MONDAY_NORMAL + 1       # + content-package chat = 18
-WEDNESDAY_NORMAL = MONDAY_WITH_PACKAGE + 1    # + Decision Lens evaluator = 19
-REVISION_ROUND = 2                            # revision + recheck
-WORST_LEGITIMATE = 1 + 1 + 1 + 16 + 10 + 1 + REVISION_ROUND + 2   # = 34
+FACTUAL_REVIEW = 1                            # #269: one factual review per reviewed body
+MONDAY_NORMAL = 1 + 8 + 5 + 1 + FACTUAL_REVIEW + 2  # evidence, engine, composer,
+                                              # accept, factual, hashtags = 18
+MONDAY_WITH_PACKAGE = MONDAY_NORMAL + 1       # + content-package chat = 19
+# Wednesday is paused and keeps its own acceptance, so it has no factual
+# review; it pays a Decision Lens evaluator call the Monday shape does not.
+WEDNESDAY_NORMAL = MONDAY_WITH_PACKAGE - FACTUAL_REVIEW + 1       # = 19
+REVISION_ROUND = 2 + FACTUAL_REVIEW           # revision + recheck + factual recheck
+WORST_LEGITIMATE = (
+    1 + 1 + 1 + 16 + 10 + 1 + FACTUAL_REVIEW + REVISION_ROUND + 2  # = 36
+)
 
 
 @pytest.mark.parametrize(
@@ -68,7 +74,7 @@ def test_every_legitimate_canonical_shape_fits_the_default_ceiling(calls):
 
 
 def test_the_derivation_arithmetic_is_what_the_module_documents():
-    assert WORST_LEGITIMATE == 34
+    assert WORST_LEGITIMATE == 36
     assert DEFAULT_CEILING == R1_MAX_CEILING == 40
     assert WORST_LEGITIMATE < DEFAULT_CEILING
 

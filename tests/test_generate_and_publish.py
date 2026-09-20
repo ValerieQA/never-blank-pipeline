@@ -240,7 +240,10 @@ def _fake_preflight(**kwargs):
 
 
 # ACCEPT-shaped stand-in for the editorial acceptance gate (Issue #89): the
-# entrypoint reads .accepted, .final_article_body, .revised, and .audit.
+# entrypoint reads .accepted, .final_article_body, .revised, .audit and — since
+# #269 — the two factual verdicts. ``None`` is the shape a run that built no
+# plan produces, which is exactly this harness: `_build_factual_gate` is
+# stubbed to None below, so the real outcome would carry None here too.
 def _fake_acceptance(**kwargs):
     return SimpleNamespace(
         accepted=True,
@@ -248,6 +251,8 @@ def _fake_acceptance(**kwargs):
         final_article_body=kwargs["article_body"],
         initial_review=None,
         final_review=None,
+        initial_factual_review=None,
+        final_factual_review=None,
         audit={
             "rubric": "never-blank-editorial-acceptance/1.0",
             "accepted": True,
@@ -255,6 +260,8 @@ def _fake_acceptance(**kwargs):
             "final_disposition": "accept",
             "initial_review": {"disposition": "accept"},
             "final_review": None,
+            "factual_review": None,
+            "final_factual_review": None,
         },
     )
 
@@ -522,6 +529,12 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         # conditional lens stays inactive. The real decision path is covered
         # by tests/test_plan_decisions.py.
         "ModelPlanDecider": mock.MagicMock(return_value=_UnmetPlanDecider()),
+        # #269: the factual boundary reviews the article against the run's
+        # plan and would reach a live model. The harness runs without one, so
+        # every suite here keeps the acceptance lifecycle it was written for;
+        # the real boundary is covered by tests/test_269_plan_execution.py,
+        # which deletes this patch.
+        "_build_factual_gate": mock.MagicMock(return_value=None),
     }
     kwargs_ref["patches"] = kwargs
     return argv, kwargs

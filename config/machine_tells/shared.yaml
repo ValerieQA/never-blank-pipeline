@@ -1,0 +1,130 @@
+# The shared machine-tell list — ENGINE, not Never Blank taste (#269).
+#
+# Consumed by src/editorial/machine_tells.py. The list identity
+# "<list_id>/<version>" is recorded in every factual review record. Changing
+# what the gate matches requires bumping `version` in a reviewed commit.
+#
+# Shared means shared across clients: everything here is a tell of machine
+# authorship or of an untraceable figure, never an editorial preference. A
+# client extends this list with its own `lists/*.md` documents
+# (docs/engine/CLIENT_CONTRACTS.md); a client entry never edits this one.
+#
+# Every entry declares the EVIDENCE TIER behind it, and the tier decides what a
+# match does — hard evidence gates, directional warns, observed practice
+# suggests, and an editorial judgement goes to the owner. Tiers are never
+# flattened into one hard rule: a rule we merely suspect must not stop a run.
+#
+#   text             a literal, matched whatever its spacing or line breaks
+#   pattern          a regular expression; never MULTILINE, so a start-of-string
+#                    anchor anchors the SCOPE rather than a line
+#   scope            article (default) | lede — the first paragraph only
+#   max_occurrences  a finding only above this count (default 0: never allowed)
+#
+# Every entry is matched case-insensitively.
+
+list_id: engine-machine-tells
+version: "1"
+
+entries:
+  # ── banned LLM constructions ──────────────────────────────────────────────
+  - id: fast-paced-world
+    kind: llm_construction
+    tier: hard_evidence
+    text: "in today's fast-paced world"
+  - id: ever-evolving-landscape
+    kind: llm_construction
+    tier: hard_evidence
+    text: "in the ever-evolving landscape"
+  - id: increasingly-digital-world
+    kind: llm_construction
+    tier: hard_evidence
+    text: "in an increasingly digital world"
+  - id: delve-into
+    kind: llm_construction
+    tier: hard_evidence
+    text: "delve into"
+  - id: navigate-the-complexities
+    kind: llm_construction
+    tier: hard_evidence
+    text: "navigate the complexities"
+  - id: unlock-the-potential
+    kind: llm_construction
+    tier: hard_evidence
+    text: "unlock the potential"
+  - id: important-to-note
+    kind: llm_construction
+    tier: hard_evidence
+    text: "it's important to note that"
+
+  # ── banned transitions ────────────────────────────────────────────────────
+  - id: moreover
+    kind: transition
+    tier: hard_evidence
+    text: "moreover,"
+  - id: furthermore
+    kind: transition
+    tier: hard_evidence
+    text: "furthermore,"
+  - id: in-conclusion
+    kind: transition
+    tier: hard_evidence
+    text: "in conclusion,"
+  - id: at-the-end-of-the-day
+    kind: transition
+    tier: directional
+    text: "at the end of the day"
+    note: >
+      Common in human copy too; strong enough to flag, not strong enough to
+      stop a run on its own.
+
+  # ── banned lede moves: the opening paragraph only ─────────────────────────
+  - id: imagine-opening
+    kind: lede_move
+    tier: hard_evidence
+    scope: lede
+    pattern: '\A\s*(?:#+\s*)?(?:now\s+)?imagine\b'
+  - id: picture-this-opening
+    kind: lede_move
+    tier: hard_evidence
+    scope: lede
+    pattern: '\A\s*picture this\b'
+  - id: in-an-age-where-opening
+    kind: lede_move
+    tier: hard_evidence
+    scope: lede
+    text: "in an age where"
+  - id: rhetorical-question-opening
+    kind: lede_move
+    tier: directional
+    scope: lede
+    pattern: '\A[^.!?\n]{0,200}\?'
+    note: >
+      A first sentence that asks rather than states. Sometimes the right
+      opening, often the machine's default one.
+
+  # ── repeated fragment and triad patterns ──────────────────────────────────
+  - id: not-just-but
+    kind: repeated_pattern
+    tier: directional
+    pattern: '\bnot (?:just|only|merely)\b[^.!?]{0,120}\bbut\b'
+    max_occurrences: 1
+  - id: three-beat-fragments
+    kind: repeated_pattern
+    tier: observed_practice
+    # three short sentences in a row; entries are matched case-insensitively,
+    # so the letter class is written as one rather than pretending otherwise
+    pattern: '(?:(?<=[.!?])|\A)\s*[A-Za-z][^.!?]{0,40}\.\s+[A-Za-z][^.!?]{0,40}\.\s+[A-Za-z][^.!?]{0,40}\.'
+    max_occurrences: 1
+  - id: asyndetic-triad
+    kind: repeated_pattern
+    tier: observed_practice
+    pattern: '\b\w+, \w+, \w+\.'
+    max_occurrences: 1
+  - id: em-dash-aside
+    kind: repeated_pattern
+    tier: owner_judgement
+    pattern: '—[^—]{1,80}—'
+    max_occurrences: 2
+    note: >
+      Whether the house voice carries this many asides is an editorial
+      judgement, so the owner reads it; the Engine never decides it.
