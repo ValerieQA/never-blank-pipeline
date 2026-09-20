@@ -512,7 +512,7 @@ def _validate_derivation_fidelity(
     rejection on its own, because revision may reword a claim it kept (#262
     review). Generic: the judge sees only the texts and the platform.
     """
-    from src.editorial.derivation_fidelity import resurrected_phrases
+    from src.editorial.derivation_fidelity import item_text, resurrected_phrases
 
     if fidelity_judge is None:
         return
@@ -521,13 +521,14 @@ def _validate_derivation_fidelity(
         final_content=canonical_body, derivative=body, surface=format_key,
         removed_by_review=restored)
     if unsupported:
+        quotes = [item_text(item) for item in unsupported]
         reused = [phrase for phrase in restored
-                  if any(phrase in item.casefold() or item.casefold() in phrase
-                         for item in unsupported)]
+                  if any(phrase in quote.casefold() or quote.casefold() in phrase
+                         for quote in quotes)]
         raise CompositionRejected(
             f"Platform Composer ({format_key}): the derivative states what the "
             "final accepted content does not support: "
-            + "; ".join(repr(item) for item in unsupported[:5])
+            + "; ".join(repr(quote) for quote in quotes[:5])
             + (" — wording Editorial Review removed from the article: "
                + "; ".join(repr(phrase) for phrase in reused[:5]) if reused else ""),
             format_key=format_key, body=body,

@@ -62,6 +62,11 @@ DO_NOT_USE_EVIDENCE: Final[str] = "do_not_use_evidence"
 #: names — the writing stage and the reviser never decide it twice.
 PLAN_STAGES: Final[tuple[str, ...]] = CONDITIONAL_STAGES
 
+#: The key the enriched signal carries the plan under, so every stage that
+#: shapes the writing reads one authority (#263). The Engine writes the plan's
+#: own text here and nothing else; a stage reads it through ``plan_block``.
+PLAN_SIGNAL_KEY: Final[str] = "EDITORIAL_PLAN"
+
 
 class EditorialPlanError(ValueError):
     """A plan cannot be built, or is not the plan the contract requires."""
@@ -375,6 +380,27 @@ class EditorialPlan:
             "lineage": dict(self.lineage),
             "run_decisions": dict(self.run_decisions),
         }
+
+
+def plan_block(signal: Mapping[str, object]) -> str:
+    """The plan a writing stage appends to its prompt, or ``""`` when none.
+
+    The route by which an ``EditorialPlan`` reaches the stages that BUILD the
+    argument — the spine, the hook, the voice — rather than only the composer
+    that dresses it. An obligation delivered after the article is shaped is
+    applied cosmetically, which is the failure #263 reports from a live run.
+
+    Generic: the Engine knows no client, no condition and no lens. Whatever a
+    contract routes to ``writing`` travels this one way, and a run with no
+    plan changes nothing.
+    """
+    plan = signal.get(PLAN_SIGNAL_KEY) or ""
+    if not isinstance(plan, str) or not plan.strip():
+        return ""
+    return ("\n\nThe plan below is this run's editorial contract, already "
+            "validated against the evidence. Build what you write from it — it "
+            "binds this stage as much as the final composition:\n"
+            + plan.strip() + "\n")
 
 
 def _block(label: str, values: Sequence[str]) -> list[str]:

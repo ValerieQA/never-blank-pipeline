@@ -84,7 +84,12 @@ the writer's message.
 the decision records every stage its lenses route to (`stages`);
 `active_by_stage` in `editorial_plan.json` lists what reached each stage.
 `as_prompt_text()` is the writing stage's input and carries the conditional
-lenses routed to writing; `activated_lens_texts("revision")` is what the
+lenses routed to writing. It reaches the stages that BUILD the argument, not
+only the composer that dresses it: the pipeline puts it in the enriched signal
+under `PLAN_SIGNAL_KEY` and the narrative spine, hook engine and Never Blank
+voice read it through `plan_block` (#263 — an obligation applied after the
+article is shaped is applied cosmetically). The same route serves any client
+lens declaratively; the Engine adds nothing of its own to it. `activated_lens_texts("revision")` is what the
 reviser receives beside the standing revision lenses. A conditional lens
 cannot route to `selection` — see [CLIENT_CONTRACTS.md](CLIENT_CONTRACTS.md#lens).
 

@@ -157,7 +157,11 @@ from src.run import ExecutionMode, RunContext
 from src.analytics.blog import BlogCollector
 from src.analytics.linkedin import LinkedInCollector
 from src.analytics.orchestrator import run_analytics_pipeline
-from src.editorial.derivation_fidelity import FidelityJudge, ModelFidelityJudge
+from src.editorial.derivation_fidelity import (
+    FidelityJudge,
+    ModelFidelityJudge,
+    RecordedFidelityJudge,
+)
 from src.editorial.platform_composer import ADAPTER_FORMATS, CLOSING_BRANDED_ECHO_THEN_SOURCES
 from src.content.output_guard import (
     THREADS_POST_MAX_CHARS,
@@ -304,6 +308,7 @@ from src.artifacts import (
     write_linkedin_composition_json,
     write_linkedin_final_preflight_json,
     write_preview_compositions_json,
+    write_fidelity_check_json,
     write_visual_assets_json,
     write_business_strategy_snapshot,
     write_preflight_result_json,
@@ -2010,6 +2015,7 @@ def _run(
         # #191: diagnostic sink for compositions rejected by local validation.
         _rejected_compositions: list = []
 
+
         # ── 3b. Generate content via LLM ─────────────────────────────────────
         print(f"\n[3/6] Generating content (LLM — Editorial Engine V2)…")
         print(f"  strategy context injected: strategy_id={strategy_id}")
@@ -2267,7 +2273,7 @@ def _run(
                         # standing revision lenses, then the conditional
                         # ones this run's plan activated for revision (#267)
                         lenses=(
-                            (
+(
                                 *_client_contracts.for_stage("revision"),
                                 *(
                                     _editorial_plan.activated_lens_texts("revision")
@@ -2369,7 +2375,23 @@ def _run(
         # review removed from it (#260)
         _draft_article_body = blog_body
         blog_body = _acceptance.final_article_body
-        _fidelity_judge = derivation_judge or ModelFidelityJudge()
+        # #263: every fidelity check is recorded, one diagnostic file each —
+        # never a publication input, never allowed to change the outcome.
+        _fidelity_sequence = [0]
+
+        def _record_fidelity_check(record: dict) -> None:
+            _fidelity_sequence[0] += 1
+            try:
+                write_fidelity_check_json(
+                    run_dir, _fidelity_sequence[0], record.get("surface", "surface"), record)
+            except (ArtifactCollisionError, OSError) as exc:
+                print(f"  ⚠  fidelity check could not be recorded: {exc}")
+
+        _fidelity_judge = RecordedFidelityJudge(
+            derivation_judge or ModelFidelityJudge(),
+            sink=_record_fidelity_check,
+            identity={"run_id": run_ctx.run_id, "signal_id": signal_id},
+        )
         # Everything downstream derives from the accepted article — its Echo
         # included. ``structured_final`` is the only outline a derivation may
         # see: the draft's narrative fields are withheld by the composer, and

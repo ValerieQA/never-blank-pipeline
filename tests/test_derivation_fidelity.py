@@ -327,14 +327,22 @@ def test_connective_words_alone_never_count_as_removed_content():
 
 @pytest.mark.parametrize("raw,expected", [
     ('{"unsupported": []}', []),
-    ('{"unsupported": ["the same lesson holds"]}', ["the same lesson holds"]),
+    (('{"unsupported": [{"quote": "the same lesson holds", '
+      '"kind": "broader_generalization", "reason": "extends the case"}]}'),
+     [{"quote": "the same lesson holds", "kind": "broader_generalization",
+       "reason": "extends the case"}]),
 ])
 def test_a_judgment_is_read_strictly(raw, expected):
     assert parse_judgment(raw) == expected
 
 
-@pytest.mark.parametrize("raw", ["not json", '{"unsupported": "x"}', '{"other": []}',
-                                 '{"unsupported": [1]}', "[]"])
+@pytest.mark.parametrize("raw", [
+    "not json", '{"unsupported": "x"}', '{"other": []}', '{"unsupported": [1]}', "[]",
+    # #263: a bare string, an unknown kind, or an empty quote is not an answer
+    '{"unsupported": ["a phrase"]}',
+    '{"unsupported": [{"quote": "x", "kind": "different_wording", "reason": ""}]}',
+    '{"unsupported": [{"quote": " ", "kind": "new_fact", "reason": ""}]}',
+])
 def test_an_unreadable_judgment_is_an_error_never_a_pass(raw):
     with pytest.raises(FidelityJudgeError):
         parse_judgment(raw)
@@ -364,10 +372,12 @@ def test_the_production_judge_knows_no_client():
             final_content="Final.", derivative="Adapted.", surface="instagram",
             removed_by_review=("without changing the ad",))
     assert captured["user"]["REMOVED BY REVIEW"] == ["without changing the ad"]
-    assert "Treat each as unsupported unless FINAL CONTENT" in FIDELITY_INSTRUCTIONS
+    assert "report it only if its meaning is not stated or reasonably entailed" in (
+        FIDELITY_INSTRUCTIONS)
 
 
 def test_production_runs_always_have_a_judge():
     source = __import__("pathlib").Path("scripts/generate_and_publish.py").read_text()
-    assert "_fidelity_judge = derivation_judge or ModelFidelityJudge()" in source
+    assert "derivation_judge or ModelFidelityJudge()," in source
+    assert "_fidelity_judge = RecordedFidelityJudge(" in source      # #263: every check recorded
     assert source.count("fidelity_judge=_fidelity_judge") == 2      # LinkedIn + preview

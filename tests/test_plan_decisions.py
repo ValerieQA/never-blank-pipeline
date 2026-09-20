@@ -653,21 +653,39 @@ def test_production_stops_before_writing_when_the_decision_is_not_made(
     assert record is None
 
 
-def test_never_blank_declares_nothing_open_and_its_run_makes_no_decider_call(
-    tmp_path,
-    monkeypatch,
-):
+def test_never_blank_leaves_exactly_one_condition_to_its_run(tmp_path, monkeypatch):
+    """Never Blank declares no plan values, so its run chooses nothing — and
+    one conditional lens (#263), so its run decides exactly that condition."""
+    decider = ScriptedDecider(
+        {
+            "activations": [
+                {
+                    "condition": "evidence_tension",
+                    "met": False,
+                    "finding": "",
+                    "evidence_refs": [],
+                    "reason": "no tension in this evidence",
+                }
+            ],
+            "selections": [],
+        }
+    )
+
     code, generate, _, record = _entrypoint(
         tmp_path,
         monkeypatch,
         client=Path("clients/never_blank"),
         role=MONDAY_ROLE,
-        decider=ExplodingDecider(),
+        decider=decider,
     )
 
     assert code == 0
-    assert generate.call_args.kwargs["editorial_plan"] is None
-    assert record is None
+    assert [c["condition"] for c in decider.requests[0]["conditions"]] == [
+        "evidence_tension"
+    ]
+    assert decider.requests[0]["slots"] == []
+    assert record["run_decisions"]["activations"][0]["met"] is False
+    assert generate.call_args.kwargs["editorial_plan"] is not None
 
 
 # ── a new stream/day policy, introduced by documents alone ──────────────────

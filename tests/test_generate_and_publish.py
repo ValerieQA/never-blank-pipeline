@@ -516,9 +516,32 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
             side_effect=lambda assignment, raw_signal, run_ctx: _make_rc_mock(run_ctx.run_id)
         ),
         "_emit_run_report": mock.MagicMock(),
+        # #267: the client's contract may leave decisions to the run. The
+        # harness evidence meets no client condition and its clients declare
+        # no multi-value slot, so the run decides nothing and every
+        # conditional lens stays inactive. The real decision path is covered
+        # by tests/test_plan_decisions.py.
+        "ModelPlanDecider": mock.MagicMock(return_value=_UnmetPlanDecider()),
     }
     kwargs_ref["patches"] = kwargs
     return argv, kwargs
+
+
+class _UnmetPlanDecider:
+    """Decides every client condition unmet — the harness default (#267)."""
+
+    identity = "test:harness-unmet"
+
+    def decide(self, request):
+        return json.dumps({
+            "activations": [
+                {"condition": condition["condition"], "met": False, "finding": "",
+                 "evidence_refs": [],
+                 "reason": "harness evidence meets no client condition"}
+                for condition in request["conditions"]
+            ],
+            "selections": [],
+        })
 
 
 def _fake_derivation(ref: dict):
@@ -557,7 +580,9 @@ def _make_rc_mock(run_id: str):
     """Return a ResearchContext-like mock with run_id and article_ready set."""
     ec_mock = mock.MagicMock()
     ec_mock.run_id = run_id
-    ec_mock.to_legacy_dict.return_value = {}
+    # the editorial context carries the signal it was built from — the run's
+    # own claim, which #267 builds the editorial plan's central claim from
+    ec_mock.to_legacy_dict.return_value = dict(_RAW_SIGNAL)
 
     rc_mock = mock.MagicMock()
     rc_mock.run_id = run_id

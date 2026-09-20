@@ -558,12 +558,18 @@ def test_every_value_in_the_rendered_plan_is_the_clients_own_text():
 # ── and Never Blank's own run is untouched until its contract says so ───────
 
 
-def test_never_blank_declares_no_plan_and_therefore_runs_as_before():
+def test_never_blank_declares_no_plan_slots_and_one_conditional_lens():
+    """Never Blank states no ``## Plan`` values and keeps no banned list, and
+    its one conditional lens (#263) is why its runs still build a plan: that
+    lens reaches a stage no other way."""
     contracts = contracts_for_role(MONDAY_ROLE, DEFAULT_CLIENT_DIR)
 
     assert contracts.stream.plan_slots == ()
     assert contracts.banned_entries == ()
-    assert all(lens.is_standing for lens in contracts.lenses)
+    assert [lens.lens_id for lens in contracts.lenses if not lens.is_standing] == [
+        "never-blank-evidence-tension"
+    ]
+    assert contracts.requires_plan
 
 
 def test_the_fixture_client_reaches_the_same_engine_stages_never_blank_does(monkeypatch):

@@ -20,7 +20,7 @@ not publish a generic article to fill the gap.
 from typing import Callable, Mapping
 from src.research.evidence import NormalizedResearchArtifact
 
-from src.editorial.editorial_plan import EditorialPlan
+from src.editorial.editorial_plan import PLAN_SIGNAL_KEY, EditorialPlan
 from src.editorial.pattern_extractor import extract_pattern, SignalRejectedError
 from src.editorial.decision_lens_lite import generate_decision_lens
 from src.editorial.narrative_spine import build_narrative_spine
@@ -112,8 +112,10 @@ def generate_article(
         wix_strategy: Declared Wix composition view for controlled R1.
         linkedin_strategy: Declared LinkedIn composition view for controlled R1.
         editorial_plan: The validated plan this run executes the client's
-            editorial contract as (#267). Rendered into the composition
-            messages; a run without one composes exactly as before.
+            editorial contract as (#267). Carried into the stages that shape
+            the argument — spine, hook, voice — before anything is written,
+            and into the composition messages; a run without one runs exactly
+            as before.
 
     Returns:
         {
@@ -143,6 +145,12 @@ def generate_article(
     # Merge pattern fields into signal so downstream stages receive owner-centered fields.
     # Pattern fields override same-named signal fields.
     enriched = {**signal, **pattern}
+    # #267/#263: the plan reaches the stages that build the argument, not only
+    # the composer — an obligation applied after the article is shaped is
+    # applied cosmetically. One key, read by every stage through
+    # ``plan_block``; the Engine adds nothing of its own to it.
+    if editorial_plan is not None:
+        enriched[PLAN_SIGNAL_KEY] = editorial_plan.as_prompt_text()
     typed_strategy = (
         strategy_context
         if isinstance(strategy_context, DecisionLensEditorialStrategyView)

@@ -11,6 +11,7 @@ A single hook generated first is almost never the strongest one.
 
 import json
 
+from src.editorial.editorial_plan import plan_block
 from src.utils.llm_client import chat, model_article
 from src.utils.logger import get_logger
 
@@ -127,7 +128,7 @@ CORE_FACT: {signal.get('CORE_FACT', '')}
 CORE_TENSION: {signal.get('CORE_TENSION', '')}
 
 HARD REQUIREMENT: Hooks must create recognition for the owner, not summarize a corporate
-event. A hook that requires knowing the company name to make sense has failed.
+event. A hook that requires knowing the company name to make sense has failed.{plan_block(signal)}
 
 Produce the Hook Engine JSON."""
 

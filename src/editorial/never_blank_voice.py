@@ -21,6 +21,7 @@ import re
 from src.strategy.business_config import CallToAction
 from src.strategy.execution_context import AudienceSelection, DecisionLensEditorialStrategyView
 
+from src.editorial.editorial_plan import plan_block
 from src.utils.llm_client import chat, model_article
 from src.utils.logger import get_logger
 
@@ -155,7 +156,7 @@ aha_setup: {discovery.get('aha_setup', '')}
 surviving_explanation: {story.get('surviving_explanation', '')}
 reframe: {story.get('reframe', '')}
 business_translation: {story.get('business_translation', '')}
-{strategy_section}
+{strategy_section}{plan_block(signal)}
 
 Produce the Never Blank Voice JSON. Follow cta_mode exactly."""
 
