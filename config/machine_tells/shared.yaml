@@ -17,9 +17,12 @@
 # (docs/engine/CLIENT_CONTRACTS.md); a client entry never edits this one, and
 # an entry that already exists here is not repeated there.
 #
-# Tiers are load-bearing (#269 review): `hard_evidence` blocks publication, so
-# it is reserved for text a human editor would not pass in any house. Anything
-# we merely find suspicious is `directional` and warns.
+# Tiers are load-bearing (#269 review): `hard_evidence` blocks publication, and
+# a literal match cannot carry that weight here, because this matcher sees only
+# occurrence — never whether the article committed the tell or quoted it. So
+# every shared entry is `directional` and warns. A client list is where an
+# absolute prohibition belongs: there the client is speaking about its own
+# prose, and a client entry gates.
 #
 # Every entry declares the EVIDENCE TIER behind it, and the tier decides what a
 # match does — hard evidence gates, directional warns, observed practice
@@ -35,26 +38,33 @@
 # Every entry is matched case-insensitively.
 
 list_id: engine-machine-tells
-version: "2"
+version: "3"
 
 entries:
-  # ── machine-authorship boilerplate: no house publishes these ──────────────
+  # ── strongly associated with generated text ───────────────────────────────
+  # Every entry here is directional, and that is the architecture rather than
+  # timidity (#269 review). This matcher sees occurrence, not use: it cannot
+  # tell an article that commits one of these from an article that quotes one,
+  # tears down the marketing copy containing one, or analyses generated
+  # language. Occurrence therefore cannot prove the article committed a
+  # publication-blocking tell, so nothing here blocks a publication.
+  #
+  # A client that wants one of these refused outright in its own prose says so
+  # in its own list (clients/<client>/lists/*.md), where a client entry does
+  # gate — that is one client's choice about its own writing, not a rule every
+  # future client inherits.
   - id: fast-paced-world
     kind: llm_construction
-    tier: hard_evidence
+    tier: directional
     text: "in today's fast-paced world"
   - id: ever-evolving-landscape
     kind: llm_construction
-    tier: hard_evidence
+    tier: directional
     text: "in the ever-evolving landscape"
   - id: increasingly-digital-world
     kind: llm_construction
-    tier: hard_evidence
+    tier: directional
     text: "in an increasingly digital world"
-
-  # ── strongly associated with generated text, but a human may write them ───
-  # Directional on purpose: each of these appears in ordinary human prose, so
-  # a match is a signal to look, never a reason to stop a publication.
   - id: delve-into
     kind: llm_construction
     tier: directional

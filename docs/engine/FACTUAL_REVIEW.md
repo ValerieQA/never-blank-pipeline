@@ -97,9 +97,14 @@ Separate from anybody's taste: `config/machine_tells/shared.yaml` is a
 versioned Engine document. It is deliberately short, and the test each entry
 has to pass is not "does this look AI-ish to us" but "would we impose this on
 a client whose house style we have never seen" (#269 review). What survives
-that test is machine-authorship boilerplate no house publishes — which gates —
-and a few constructions strongly associated with generated text that a human
-may still legitimately write, which only warn. Lede moves are matched in the
+that test is a short set of constructions strongly associated with generated
+text — and every one of them only warns. That is the architecture, not
+timidity (#269 review): this matcher sees occurrence, not use, so it cannot
+tell an article that commits a tell from one that quotes it, tears apart the
+marketing copy containing it, or analyses generated language. Occurrence
+cannot prove the article committed the tell, so nothing shared blocks a
+publication. An absolute prohibition belongs in a client list, where the
+client is speaking about its own prose and a client entry does gate. Lede moves are matched in the
 opening paragraph only, and a repeated pattern carries a `max_occurrences` so
 "repeated" means repeated. Changing what it matches means bumping its
 `version` in a reviewed commit, and its identity is recorded in every factual
@@ -128,6 +133,12 @@ behind it, and the tier decides what a match does:
 Turning a rule we merely suspect into a rule that stops a run is the failure
 this ordering prevents; so is the opposite, quietly downgrading a proven tell
 to advice.
+
+The shared list currently uses `directional` for every entry, and
+`hard_evidence` is reached only through a client's own list. That is not a
+statement about how bad the shared phrases are — it is that a literal match
+cannot establish the article committed one, and a tier that blocks has to be
+able to (#269 review).
 
 ## The reviser
 

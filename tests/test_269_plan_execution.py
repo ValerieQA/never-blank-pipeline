@@ -555,7 +555,7 @@ def test_no_rubric_criterion_asks_for_a_structural_element():
 def test_the_shared_list_is_versioned_and_engine_owned():
     tells = MachineTellList.load()
 
-    assert tells.identity == "engine-machine-tells/2"
+    assert tells.identity == "engine-machine-tells/3"
     assert DEFAULT_MACHINE_TELLS_PATH.name == "shared.yaml"
     assert all(entry.tier in TIER_OUTCOMES for entry in tells.entries)
 
@@ -569,12 +569,12 @@ def test_each_evidence_tier_keeps_its_own_outcome(tier, outcome):
     assert TIER_OUTCOMES[tier] == outcome
 
 
-def test_only_hard_evidence_can_block():
-    """One text carrying both tiers the Engine list keeps; only hard blocks.
+def test_no_shared_entry_blocks_a_publication_on_occurrence_alone():
+    """#269 review: this matcher sees occurrence, not use.
 
-    #269 review: the Engine list no longer carries house taste, so the tiers
-    are demonstrated with what remains — boilerplate no house publishes, and
-    a construction a human might legitimately write.
+    An article may quote one of these phrases, take apart the marketing copy
+    containing one, or analyse generated language. Occurrence cannot prove the
+    article committed the tell, so no shared entry may block a publication.
     """
     tells = MachineTellList.load()
     text = (
@@ -585,10 +585,47 @@ def test_only_hard_evidence_can_block():
 
     found = scan(text, tells=tells)
 
-    assert [tell.entry_id for tell in found.gated] == ["fast-paced-world"]
-    assert found.blocks is True
-    assert sorted(tell.entry_id for tell in found.warnings) == ["delve-into"]
-    assert found.suggestions == () and found.owner_review == ()
+    assert found.gated == ()
+    assert found.blocks is False
+    assert sorted(tell.entry_id for tell in found.warnings) == [
+        "delve-into", "fast-paced-world",
+    ]
+    assert all(entry.tier != "hard_evidence" for entry in tells.entries)
+
+
+def test_a_quotation_of_a_shared_phrase_is_not_a_publication_blocker():
+    """The case the hard gate could not tell apart: the article is about the
+    phrase rather than written in it."""
+    tells = MachineTellList.load()
+
+    found = scan(
+        'The vendor\'s own page opens "in today\'s fast-paced world", which is '
+        "how you know nobody read it.",
+        tells=tells,
+    )
+
+    assert found.blocks is False
+    assert [tell.entry_id for tell in found.warnings] == ["fast-paced-world"]
+
+
+def test_a_client_may_still_refuse_the_same_phrase_outright():
+    """Client taste keeps its teeth: a client entry gates the same string the
+    shared list only warns about."""
+    from src.strategy.client_contracts import contracts_for_role
+
+    entries = contracts_for_role(
+        MONDAY_ROLE, Path("clients/never_blank")
+    ).banned_entries
+    text = "In today's fast-paced world the shop decides."
+
+    shared_only = scan(text, tells=MachineTellList.load())
+    with_client = scan(text, tells=MachineTellList.load(), client_entries=entries)
+
+    assert shared_only.blocks is False
+    assert with_client.blocks is True
+    assert [tell.source for tell in with_client.gated] == [
+        "never-blank-machine-tells/1"
+    ]
 
 
 def test_the_engine_list_keeps_no_client_taste():
@@ -605,11 +642,8 @@ def test_the_engine_list_keeps_no_client_taste():
                   "at-the-end-of-the-day", "rhetorical-question-opening",
                   "asyndetic-triad", "three-beat-fragments", "em-dash-aside"):
         assert taste not in entries, taste
-    # what stays is defensible for every client, and only boilerplate gates
-    hard = {entry.id for entry in tells.entries if entry.tier == "hard_evidence"}
-    assert hard == {
-        "fast-paced-world", "ever-evolving-landscape", "increasingly-digital-world",
-    }
+    # and nothing shared blocks: only a client speaking about its own prose does
+    assert {entry.tier for entry in tells.entries} == {"directional"}
 
 
 def test_never_blank_keeps_its_own_taste_client_side_without_duplicating():
@@ -622,9 +656,10 @@ def test_never_blank_keeps_its_own_taste_client_side_without_duplicating():
     engine = {entry.id for entry in MachineTellList.load().entries}
 
     assert {"moreover,", "furthermore,", "in conclusion"} <= entries
-    for engine_gated in ("in today's fast-paced", "in the ever-evolving",
-                         "in an increasingly"):
-        assert engine_gated not in entries, engine_gated
+    # the shared list only warns about these, so the client bans them itself
+    for shared_warning in ("in today's fast-paced", "in the ever-evolving",
+                           "in an increasingly"):
+        assert shared_warning in entries, shared_warning
     assert "fast-paced-world" in engine
 
 
@@ -668,7 +703,7 @@ def test_a_client_extends_the_shared_list_and_its_own_entries_gate():
 
     assert [tell.source for tell in found.gated] == ["gearworks-machine-tells/1"]
     assert found.as_evidence()["lists"] == [
-        "engine-machine-tells/2", "gearworks-machine-tells/1",
+        "engine-machine-tells/3", "gearworks-machine-tells/1",
     ]
 
 
@@ -844,7 +879,9 @@ def test_never_blank_keeps_the_shared_list_whatever_its_own_list_says():
     )
 
     assert tells.identity in found.as_evidence()["lists"]
-    assert [tell.entry_id for tell in found.gated] == ["fast-paced-world"]
+    # the shared list warns; what blocks is this client's own entry
+    assert [tell.entry_id for tell in found.warnings] == ["fast-paced-world"]
+    assert [tell.source for tell in found.gated] == ["never-blank-machine-tells/1"]
     assert all(identity != tells.identity for _, identity in contracts.banned_entries)
 
 
