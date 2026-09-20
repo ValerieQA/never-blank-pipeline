@@ -344,6 +344,69 @@ class EditorialPlan:
         lines.append("")
         return "\n".join(lines)
 
+    def as_review_text(self) -> str:
+        """The projection an editorial reviewer judges execution against (#269).
+
+        The same authority the article was written under — one plan per run —
+        reduced to what a reviewer may hold an article to: the claim it had to
+        be true to, the ceiling it could not exceed, the ending and artifact
+        its contract decided, the restrictions and limits it accepted, and the
+        client obligations that were active for this run. The activated
+        conditional lenses matter most here: nothing else would tell the
+        reviewer that a lens governed this article's writing.
+
+        It is not the writing projection. The evidence package belongs to the
+        factual boundary, and the banned list is matched mechanically — a
+        reviewer asked to re-run either would be re-deciding what has already
+        been decided.
+
+        What this text is *not* is a checklist. It says what the article was
+        asked to do; whether each obligation was owed at all is stated by the
+        client's own lenses, and what a reviewer may never fail an article on
+        is stated in its own request.
+        """
+        lines = [
+            "",
+            "EDITORIAL PLAN — the authority this article was written under. "
+            "Judge whether the article does what this asked of it. Do not "
+            "check it off: an obligation the client's own lens states as "
+            "optional is not a defect when the article does without it.",
+            "",
+            f"Central claim: {self.central_claim.text}",
+        ]
+        for label, value in (
+            ("Claim strength ceiling — the article may not state the claim more "
+             "strongly than this", self.claim_strength_ceiling),
+            ("Ending mode", self.ending_mode),
+            ("Reader-verifiable artifact", self.reader_verifiable_artifact),
+            ("Audience currency", self.audience_currency),
+        ):
+            if value:
+                lines.append(f"{label}: {value}")
+        if self.portable_noun is not None:
+            lines.append(
+                f"Portable noun — {self.portable_noun.decision}: "
+                f"{self.portable_noun.noun}"
+            )
+        lines.extend(_block("Factual restrictions", self.factual_restrictions))
+        lines.extend(_block("Acknowledged limits", self.acknowledged_limits))
+        for lens in self.lenses_for("writing"):
+            if lens.is_standing:
+                lines.extend(["", "Client obligation, standing for every article "
+                              "of this stream:", lens.text])
+            else:
+                lines.extend([
+                    "",
+                    f"Client obligation, active for THIS article ({lens.activation}) "
+                    "— it governed the writing and you are judging whether the "
+                    "article did what it asks:",
+                    lens.text,
+                    f"What activated it in this run's evidence: "
+                    f"{lens.activation_evidence}",
+                ])
+        lines.append("")
+        return "\n".join(lines)
+
     def as_evidence(self) -> dict:
         """What the run persists: the plan, and the exact documents behind it."""
         return {
