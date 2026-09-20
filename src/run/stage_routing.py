@@ -37,12 +37,25 @@ from typing import Final
 
 @dataclass(frozen=True, slots=True)
 class RoutedLens:
-    """One client obligation a run routed to a stage."""
+    """One client obligation a run routed to a stage.
+
+    ``text`` is the whole obligation, in memory only: containment is checked
+    against all of it, because a prefix proves nothing about the rest (#280
+    review). An article's opening rule can sit in the last paragraph of a
+    lens, and a record that called a lens delivered on its first eighty
+    characters would vouch for exactly the delivery #279 exists to prove.
+
+    ``as_evidence`` deliberately omits it: the artifact carries identity,
+    digest and result, never the client's text.
+    """
 
     identity: str
     digest: str
-    #: A short, stable fragment of the lens text, used to test the request.
-    probe: str
+    text: str
+
+    @property
+    def normalized(self) -> str:
+        return " ".join((self.text or "").split()).casefold()
 
     def as_evidence(self) -> dict:
         return {"lens": self.identity, "digest": self.digest}
@@ -106,8 +119,10 @@ class StageRouting:
     def observe(self, stage: str, system: str = "", user: str = "") -> StageRequest:
         """Measure one outgoing request against what ``stage`` was routed.
 
-        The surface measured is both messages (``request_surface``), and the
-        digest covers exactly what the containment check read.
+        The surface measured is both messages (``request_surface``), the
+        digest covers exactly what the containment check read, and an
+        obligation counts as contained only when the request carries ALL of
+        it — whitespace normalized, nothing else forgiven.
         """
         expected = self.routed.get(stage, ())
         surface = request_surface(system, user)
@@ -115,8 +130,8 @@ class StageRouting:
         contained: list[str] = []
         missing: list[str] = []
         for lens in expected:
-            probe = " ".join(lens.probe.split()).casefold()
-            (contained if probe and probe in haystack else missing).append(lens.identity)
+            whole = lens.normalized
+            (contained if whole and whole in haystack else missing).append(lens.identity)
         record = StageRequest(
             stage=stage,
             request_sha256=hashlib.sha256(surface.encode("utf-8")).hexdigest(),

@@ -2161,35 +2161,38 @@ def _run(
                 print("  ✓  editorial path: restored July Wednesday pipeline")
                 article = generate_for_wednesday(editorial.to_legacy_dict())
             else:
+              # #279/#280 review: once recording starts, the routing evidence
+              # is written on EVERY exit from generation — a provider failure
+              # that never becomes an ArticleGenerationError is exactly when
+              # the record matters most. `finally` only writes; it changes no
+              # outcome, swallows no exception and retries nothing.
               with stage_routing.recording(_stage_routing):
-                article    = generate_article(
-                    editorial.to_legacy_dict(),
-                    cta_mode=cta_mode,
-                    strategy_context=strategy_execution.decision_lens_editorial,
-                    wix_strategy=strategy_execution.wix,
-                    linkedin_strategy=strategy_execution.linkedin,
-                    audience_selection=audience_selection,
-                    research_artifact=research_artifact,
-                    editorial_role_rules=_editorial_role_rules,
-                    composer_formats=_R1_COMPOSER_FORMATS,
-                    # #191: how this role closes its long-form surface. Roles
-                    # that declare nothing keep the existing contract.
-                    closing_contract=(
-                        _role.closing_contract if _role is not None else None
-                    ),
-                    # #191: compositions our own validator refuses are
-                    # preserved for diagnosis instead of dying with the runner.
-                    rejected_sink=_rejected_compositions,
-                    editorial_plan=_editorial_plan,
-                )
-            # #279: what each stage was routed, and what its requests carried.
-            # Written whether or not generation succeeded above, because a run
-            # that failed mid-way is exactly the one whose routing matters.
-            _persist_stage_routing(run_dir, _stage_routing)
+                try:
+                    article    = generate_article(
+                        editorial.to_legacy_dict(),
+                        cta_mode=cta_mode,
+                        strategy_context=strategy_execution.decision_lens_editorial,
+                        wix_strategy=strategy_execution.wix,
+                        linkedin_strategy=strategy_execution.linkedin,
+                        audience_selection=audience_selection,
+                        research_artifact=research_artifact,
+                        editorial_role_rules=_editorial_role_rules,
+                        composer_formats=_R1_COMPOSER_FORMATS,
+                        # #191: how this role closes its long-form surface. Roles
+                        # that declare nothing keep the existing contract.
+                        closing_contract=(
+                            _role.closing_contract if _role is not None else None
+                        ),
+                        # #191: compositions our own validator refuses are
+                        # preserved for diagnosis instead of dying with the runner.
+                        rejected_sink=_rejected_compositions,
+                        editorial_plan=_editorial_plan,
+                    )
+                finally:
+                    _persist_stage_routing(run_dir, _stage_routing)
             platforms  = article["platforms"]
             structured = article["structured_article"]
         except (ArticleGenerationError, WednesdayGenerationError) as exc:
-            _persist_stage_routing(run_dir, _stage_routing)
             _persist_rejected_compositions(run_dir, _rejected_compositions)
             if exc.stage == "pattern_extractor" and isinstance(exc.original, SignalRejectedError):
                 # Editorially unsuitable, not broken: recorded, never consumed,

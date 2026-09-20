@@ -185,8 +185,7 @@ def generate_article(
         if _routing is not None:
             _routed = tuple(
                 stage_routing.RoutedLens(
-                    identity=lens.identity, digest=lens.digest,
-                    probe=" ".join(lens.text.split())[:80],
+                    identity=lens.identity, digest=lens.digest, text=lens.text,
                 )
                 for lens in editorial_plan.lenses_for(WRITING_STAGE)
             )

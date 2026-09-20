@@ -201,7 +201,7 @@ def test_the_shared_client_measures_what_actually_went_out(monkeypatch):
         create=lambda **kwargs: answer)))
     routing = stage_routing.StageRouting(run_id="r-2", plan_stage="writing")
     routing.route("hook_engine", [stage_routing.RoutedLens(
-        identity=BENCH_LENS, digest="sha256:abc", probe=BENCH_CANARY)])
+        identity=BENCH_LENS, digest="sha256:abc", text=BENCH_CANARY)])
 
     with (
         mock.patch.object(llm_client, "_get_client", return_value=fake),
@@ -224,12 +224,12 @@ def _record(tmp_path) -> dict:
     plan = _plan()
     routed = [
         stage_routing.RoutedLens(identity=lens.identity, digest=lens.digest,
-                                 probe=" ".join(lens.text.split())[:80])
+                                 text=lens.text)
         for lens in plan.lenses_for("writing")
     ]
     for stage in BUILDERS:
         routing.route(stage, routed)
-        routing.observe(stage, user=f"PROMPT {' '.join(l.probe for l in routed)}")
+        routing.observe(stage, user=f"PROMPT {' '.join(l.text for l in routed)}")
     gap._persist_stage_routing(tmp_path, routing)
     return json.loads((tmp_path / "stage_routing.json").read_text())
 
@@ -340,7 +340,7 @@ def test_a_request_without_the_routed_lens_is_recorded_as_missing():
     obligation is written down as missing, not as routed-and-therefore-fine."""
     routing = stage_routing.StageRouting(run_id="r1", plan_stage="writing")
     routing.route("hook_engine", [stage_routing.RoutedLens(
-        identity=BENCH_LENS, digest="sha256:abc", probe=BENCH_CANARY)])
+        identity=BENCH_LENS, digest="sha256:abc", text=BENCH_CANARY)])
 
     carried = routing.observe("hook_engine", user=f"PROMPT… {BENCH_CANARY} …rest")
     absent = routing.observe("hook_engine", user="PROMPT with no obligation in it")
@@ -380,7 +380,7 @@ def test_a_call_the_budget_refuses_is_never_recorded_as_sent(monkeypatch):
 
     routing = stage_routing.StageRouting(run_id="r-budget", plan_stage="writing")
     routing.route("hook_engine", [stage_routing.RoutedLens(
-        identity=BENCH_LENS, digest="sha256:abc", probe=BENCH_CANARY)])
+        identity=BENCH_LENS, digest="sha256:abc", text=BENCH_CANARY)])
     exploding = mock.MagicMock(side_effect=AssertionError("provider was reached"))
 
     with (
@@ -406,7 +406,7 @@ def test_the_digest_and_the_check_cover_the_same_request_surface():
     checked would vouch for a request nobody measured."""
     routing = stage_routing.StageRouting(run_id="r-surface", plan_stage="writing")
     routing.route("hook_engine", [stage_routing.RoutedLens(
-        identity=BENCH_LENS, digest="sha256:abc", probe=BENCH_CANARY)])
+        identity=BENCH_LENS, digest="sha256:abc", text=BENCH_CANARY)])
 
     in_system = routing.observe("hook_engine", system=f"rules: {BENCH_CANARY}", user="u")
     in_user = routing.observe("hook_engine", system="rules", user=f"u {BENCH_CANARY}")
@@ -426,7 +426,7 @@ def test_the_record_says_not_routed_without_cross_referencing(tmp_path):
     pass, and the reader needs no other section to see it."""
     routing = stage_routing.StageRouting(run_id="r-states", plan_stage="writing")
     routing.route("hook_engine", [stage_routing.RoutedLens(
-        identity=BENCH_LENS, digest="sha256:abc", probe=BENCH_CANARY)])
+        identity=BENCH_LENS, digest="sha256:abc", text=BENCH_CANARY)])
 
     routing.observe("hook_engine", user=f"carries {BENCH_CANARY}")
     routing.observe("hook_engine", user="carries nothing")
@@ -453,7 +453,7 @@ def test_every_provider_bound_entry_point_is_observed(entry):
 
     routing = stage_routing.StageRouting(run_id="r-entry", plan_stage="writing")
     routing.route("hook_engine", [stage_routing.RoutedLens(
-        identity=BENCH_LENS, digest="sha256:abc", probe=BENCH_CANARY)])
+        identity=BENCH_LENS, digest="sha256:abc", text=BENCH_CANARY)])
     client = mock.MagicMock()
     plain = mock.MagicMock()
     plain.choices = [mock.MagicMock(message=mock.MagicMock(content='{"ok": true}'))]
@@ -483,3 +483,122 @@ def test_one_observation_mechanism_not_three():
     assert source.count("observe_request(system, user)") == 3
     assert source.count("def observe_request") == 0        # defined once, elsewhere
     assert "from src.run.stage_routing import observe_request" in source
+
+
+# ── #280 re-review: the artifact survives failure, and proves the whole lens ─
+
+
+def test_a_provider_failure_still_leaves_the_routing_record(tmp_path, monkeypatch):
+    """Finding 1. A transport error never becomes an ArticleGenerationError,
+    so the `except` clause could not have caught it. The record is written on
+    every exit from the recorded generation — which is when a forensic needs
+    it most — and the original failure is unchanged."""
+    routing = stage_routing.StageRouting(run_id="r-fail", plan_stage="writing")
+    routing.route("hook_engine", [stage_routing.RoutedLens(
+        identity=BENCH_LENS, digest="sha256:abc", text=BENCH_CANARY)])
+
+    class ProviderDown(RuntimeError):
+        """Rate limit, auth, connection — none of them a ValueError."""
+
+    def failing_generation():
+        with stage_routing.recording(routing):
+            try:
+                with stage_routing.stage("hook_engine"):
+                    routing.observe("hook_engine", user=f"a request {BENCH_CANARY}")
+                    raise ProviderDown("429 from the provider")
+            finally:
+                gap._persist_stage_routing(tmp_path, routing)
+
+    with pytest.raises(ProviderDown, match="429 from the provider"):
+        failing_generation()
+
+    record = json.loads((tmp_path / "stage_routing.json").read_text())
+    assert record["run_id"] == "r-fail"
+    assert record["requests"], "evidence accumulated before the failure is kept"
+    assert record["requests"][0]["state"] == stage_routing.COMPLETE
+    assert BENCH_LENS in record["delivered"]["hook_engine"]
+
+
+def test_the_entrypoint_persists_on_every_exit_not_on_a_list_of_exceptions():
+    """Finding 1, at the seam: a `finally` inside the recorded block, rather
+    than a growing list of exception types — and no retry was added."""
+    source = Path("scripts/generate_and_publish.py").read_text(encoding="utf-8")
+    recorded = source.split("with stage_routing.recording(_stage_routing):")[1]
+    block = recorded.split("platforms  = article")[0]
+
+    assert "try:" in block and "finally:" in block
+    assert "_persist_stage_routing(run_dir, _stage_routing)" in block
+    # written once, from the finally — not again in an exception clause
+    assert source.count("_persist_stage_routing(run_dir, _stage_routing)") == 1
+    # the finally only writes: it returns nothing and raises nothing
+    finally_body = block.split("finally:")[1]
+    assert "return" not in finally_body and "raise" not in finally_body
+    for retry in ("retry", "attempt", "again"):
+        assert retry not in finally_body.casefold()
+
+
+def _routed(text: str) -> stage_routing.StageRouting:
+    routing = stage_routing.StageRouting(run_id="r-whole", plan_stage="writing")
+    routing.route("hook_engine", [stage_routing.RoutedLens(
+        identity=BENCH_LENS, digest="sha256:abc", text=text)])
+    return routing
+
+
+#: A lens whose operative rule is at the END — the shape that made the
+#: 80-character probe unsafe (#280 re-review, Finding 2).
+LONG_LENS = (
+    "Write to a shop owner standing at a bench, not to a reader at a desk. "
+    "Plain trade language, no encouragement, no narrative arc. "
+    "Open on one checkable thing: a part number, a tolerance or a date."
+)
+
+
+def test_the_whole_routed_lens_must_be_present(tmp_path):
+    """Finding 2.1: the complete obligation in the request reads complete."""
+    routing = _routed(LONG_LENS)
+
+    record = routing.observe("hook_engine", user=f"PROMPT\n{LONG_LENS}\nEND")
+
+    assert record.state == stage_routing.COMPLETE
+    assert record.contained == (BENCH_LENS,)
+
+
+def test_a_truncated_lens_is_incomplete_not_complete(tmp_path):
+    """Finding 2.2: the first eighty characters are not the obligation. The
+    operative rule here — open on one checkable thing — is what went missing,
+    which is exactly what #279 exists to prove reached the stage."""
+    routing = _routed(LONG_LENS)
+
+    record = routing.observe("hook_engine", user=f"PROMPT\n{LONG_LENS[:80]}\nEND")
+
+    assert record.state == stage_routing.INCOMPLETE
+    assert record.missing == (BENCH_LENS,)
+    assert "Open on one checkable thing" not in LONG_LENS[:80]
+
+
+def test_whitespace_reflowing_is_still_complete(tmp_path):
+    """Finding 2.3: a prompt that wraps the lens differently still carries it."""
+    import textwrap
+
+    # only the line breaks differ; every word survives
+    reflowed = textwrap.fill(LONG_LENS, width=28)
+    assert reflowed != LONG_LENS and reflowed.split() == LONG_LENS.split()
+    routing = _routed(LONG_LENS)
+
+    record = routing.observe("hook_engine", system="rules:", user=f"a\n\n{reflowed}\n\nb")
+
+    assert record.state == stage_routing.COMPLETE
+
+
+def test_the_persisted_record_carries_no_lens_text_or_prompt(tmp_path):
+    """Finding 2.4: the whole text is compared in memory and never written."""
+    routing = _routed(LONG_LENS)
+    routing.observe("hook_engine", user=f"PROMPT\n{LONG_LENS}\nEND")
+    gap._persist_stage_routing(tmp_path, routing)
+
+    flattened = (tmp_path / "stage_routing.json").read_text(encoding="utf-8")
+
+    assert LONG_LENS not in flattened
+    assert "Open on one checkable thing" not in flattened
+    assert "PROMPT" not in flattened
+    assert BENCH_LENS in flattened and "sha256:abc" in flattened
