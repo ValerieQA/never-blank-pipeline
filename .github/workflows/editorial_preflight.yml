@@ -8,6 +8,10 @@ on:
       - "src/editorial/**"
       - "src/content/output_guard.py"
       - "tests/test_output_guard.py"
+      # how pytest is configured, and what CI installs, decide whether this
+      # job can import anything at all
+      - "pytest.ini"
+      - "requirements.txt"
       - ".github/workflows/editorial_preflight.yml"
   workflow_dispatch:
 
@@ -21,7 +25,9 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install test dependencies
-        run: pip install --quiet pytest openai PyYAML requests Pillow cloudinary
+        # the declared dependencies, exactly as the PR gate installs them:
+        # a hand-picked subset silently drifts from what the code imports
+        run: pip install --quiet -r requirements.txt pytest pydantic
       - name: Compile publishing path
         run: |
           python -m py_compile scripts/research/run_daily_research.py
