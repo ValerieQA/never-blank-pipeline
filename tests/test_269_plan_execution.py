@@ -1,0 +1,902 @@
+"""#269: the plan is executed, and what is not true to it is refused.
+
+#267 built an ``EditorialPlan`` and proved it reaches the composer. This suite
+is about the other half: the run that *executes* it. Three things have to be
+true at once, and each is proven against the real production path rather than
+described.
+
+* **Reachability.** The selected plan and this run's active lenses reach the
+  Composer, the Factual Reviewer and the Reviser — one run, canary strings
+  planted in a fixture client's own documents, read back out of the exact
+  messages each of those models receives. Every one has its mutation twin: cut
+  the wiring and the canaries disappear.
+* **Factual integrity is separate, and it rejects.** The factual boundary is
+  reviewed against the plan — the claim, the ceiling, the evidence package,
+  the restrictions — never against a rubric, and a finding blocks rather than
+  annotating. It fails closed on an unreadable verdict.
+* **Execution is not a template.** The editorial reviewer is told, in its own
+  request, the six things it may not mechanically enforce.
+
+Plus the mechanical gate, whose evidence tiers are not flattened into one hard
+rule, and the accepted article, which records the plan and contract lineage it
+ran under.
+
+The client here is ``tests/fixtures/client_gearworks``, supplied only as
+documents (#240 D12). No Engine code knows any of it, and no network or model
+is involved: every transport is a deterministic fake.
+"""
+
+from __future__ import annotations
+
+import json
+import shutil
+import sys
+from pathlib import Path
+from unittest import mock
+
+import pytest
+
+import scripts.generate_and_publish as gap
+from scripts.generate_and_publish import main
+from src.editorial import platform_composer
+from src.editorial.editorial_acceptance import (
+    EXECUTION_REVIEW_SCOPE,
+    EditorialAcceptanceRubric,
+)
+from src.editorial.editorial_plan import EditorialPlan
+from src.editorial.factual_review import (
+    FACTUAL_FINDING_KINDS,
+    UNSUPPORTED_CLAIM,
+    UNTRACEABLE_NUMBER,
+    FactualReviewError,
+    parse_factual_findings,
+)
+from src.editorial.machine_tells import (
+    DEFAULT_MACHINE_TELLS_PATH,
+    GATE,
+    OWNER_REVIEW,
+    SUGGESTION,
+    TIER_OUTCOMES,
+    WARNING,
+    MachineTellList,
+    figures,
+    figures_to_verify,
+    scan,
+)
+from tests.test_decision_lifecycle import _entry_patches, _evaluator, _model_output
+from tests.test_editorial_acceptance import (
+    FakeReviewTransport,
+    FakeRevisionTransport,
+    _review_payload,
+)
+from tests.test_monday_stream import MONDAY_ROLE
+from tests.test_plan_decisions import (
+    FIXTURE_CLIENT,
+    ScriptedDecider,
+    _revision_client,
+    _run_answer,
+)
+from tests.test_research_artifact_lifecycle import ReadyProvider
+from tests.test_social_derivation_invariant import (
+    FINAL_ARTICLE,
+    FaithfulComposer,
+    RecordingJudge,
+    _draft,
+)
+from tests.test_visual_contract import _pimgs
+
+#: The proven end-to-end article with its one untraceable figure removed. The
+#: evidence package this run carries states no number at all, so "28%" is a
+#: figure that traces to nothing — which is the point of the gated twin below.
+TRACEABLE_ARTICLE = FINAL_ARTICLE.replace("rose 28%", "rose in the same period")
+
+#: Every canary the fixture client's own documents carry into this run.
+PLAN_CANARIES = (
+    "GEARWORKS-ENDING-CANARY",       # ## Plan → ending_mode
+    "GEARWORKS-ARTIFACT-CANARY",     # ## Plan → reader_verifiable_artifact
+    "GEARWORKS-RESTRICTION-CANARY",  # ## Plan → factual_restrictions
+    "GEARWORKS-LENS-CANARY",         # the conditional lens this run activated
+)
+
+
+class FakeFactualReviewer:
+    """Returns scripted answers in sequence; records every request.
+
+    The last answer repeats, so a test that scripts one verdict gets it for
+    the recheck too without restating it.
+    """
+
+    def __init__(self, *payloads: object) -> None:
+        self.payloads = list(payloads) or [{"findings": []}]
+        self.calls: list[dict] = []
+
+    def complete(self, *, instructions: str, request: str) -> str:
+        self.calls.append({"instructions": instructions, "request": request})
+        payload = (
+            self.payloads.pop(0) if len(self.payloads) > 1 else self.payloads[0]
+        )
+        if isinstance(payload, Exception):
+            raise payload
+        if isinstance(payload, str):
+            return payload
+        return json.dumps(payload)
+
+
+def _finding(kind: str = UNSUPPORTED_CLAIM, quote: str = "rose in the same period") -> dict:
+    return {
+        "findings": [
+            {"kind": kind, "quote": quote,
+             "detail": "the evidence package does not contain it"}
+        ]
+    }
+
+
+def _entrypoint(
+    tmp_path,
+    monkeypatch,
+    *,
+    client: Path | None = None,
+    article: str | None = None,
+    decider=None,
+    reviewer=None,
+    revisor=None,
+    factual=None,
+):
+    """Drive the canonical entrypoint under ``client``'s documents.
+
+    The REAL acceptance boundary, the REAL derivation seam and composer, and —
+    unlike every other suite — the REAL factual gate: the harness patch that
+    switches it off is deleted here, which is the only place it is.
+    """
+    monkeypatch.setenv("NB_CLIENT_DIR", str(client or FIXTURE_CLIENT))
+    draft = _draft()
+    draft["platforms"]["long"]["body"] = article or TRACEABLE_ARTICLE
+    argv, patches = _entry_patches(tmp_path)  # dry run
+    argv = argv + ["--editorial-role", MONDAY_ROLE, "--preview-fresh-images"]
+    del patches["run_editorial_acceptance"]  # the REAL acceptance boundary
+    del patches["recompose_platform"]  # the REAL derivation seam
+    del patches["_build_factual_gate"]  # the REAL factual boundary (#269)
+    patches.pop("formatting", None)
+    patches.pop("generate_hashtags", None)
+    del patches["_build_legacy_research_context"]  # the REAL research context
+    patches["generate_article"] = mock.MagicMock(return_value=draft)
+    patches["WixPublisher"] = mock.MagicMock()
+    patches["LinkedInPublisher"] = mock.MagicMock()
+    composer = FaithfulComposer()
+    factual = factual if factual is not None else FakeFactualReviewer()
+    evaluator, _ = _evaluator(_model_output())
+    with (
+        mock.patch.object(sys, "argv", argv),
+        mock.patch.multiple(gap, **patches),
+        mock.patch.object(platform_composer, "chat", side_effect=composer),
+        mock.patch(
+            "scripts.research.prepare_content.prepare_content_packages",
+            side_effect=lambda *a, **k: [
+                {"images": {"platform_images": _pimgs(tmp_path)}}
+            ],
+        ),
+    ):
+        code = main(
+            research_provider=ReadyProvider(),
+            decision_evaluator=evaluator,
+            editorial_reviewer=reviewer or FakeReviewTransport(
+                _review_payload(), _review_payload()
+            ),
+            article_revisor=revisor or FakeRevisionTransport(TRACEABLE_ARTICLE),
+            derivation_judge=RecordingJudge(),
+            plan_decider=decider or ScriptedDecider(_run_answer(recall_met=True)),
+            factual_reviewer=factual,
+        )
+    return code, composer, factual
+
+
+def _artifact(tmp_path, name: str) -> dict | None:
+    found = next(tmp_path.glob(f"*/runs/*/{name}"), None)
+    return None if found is None else json.loads(found.read_text())
+
+
+def _request(transport) -> dict:
+    assert transport.calls, "the run never reached this model"
+    return json.loads(transport.calls[0]["request"])
+
+
+# ── 1. reachability: the plan reaches composer, reviewer and reviser ────────
+
+
+def test_the_selected_plan_and_active_lenses_reach_the_composer(tmp_path, monkeypatch):
+    code, composer, _ = _entrypoint(tmp_path, monkeypatch)
+
+    assert code == 0
+    composed = "\n".join(composer.prompts)
+    for canary in PLAN_CANARIES:
+        assert canary in composed, canary
+
+
+def test_the_selected_plan_reaches_the_factual_reviewer(tmp_path, monkeypatch):
+    """The factual boundary judges against the plan, not against a rubric."""
+    code, _, factual = _entrypoint(tmp_path, monkeypatch)
+
+    assert code == 0
+    request = _request(factual)
+    assert request["article"] == TRACEABLE_ARTICLE
+    assert any(
+        "GEARWORKS-RESTRICTION-CANARY" in restriction
+        for restriction in request["factual_restrictions"]
+    )
+    # the ceiling this run chose, on the ladder the client's contract declares
+    assert request["claim_strength_ceiling"] == "confirmed by the manufacturer"
+    assert request["claim_strength_ladder"][0] == "observed on one shop floor"
+    # the evidence boundaries, both sides of them
+    assert [item["evidence_id"] for item in request["evidence_package"]] == [
+        "evidence-1"
+    ]
+    assert "do_not_use" in request
+
+
+def test_the_selected_plan_and_findings_reach_the_reviser(tmp_path, monkeypatch):
+    """A reviser fixing a factual finding sees the plan it may fix it with."""
+    revisor = FakeRevisionTransport(TRACEABLE_ARTICLE)
+
+    code, _, _ = _entrypoint(
+        tmp_path, monkeypatch,
+        client=_revision_client(tmp_path),
+        revisor=revisor,
+        factual=FakeFactualReviewer(_finding(), {"findings": []}),
+    )
+
+    assert code == 0
+    request = _request(revisor)
+    for canary in PLAN_CANARIES:
+        assert canary in request["editorial_plan"], canary
+    # the conditional lens this run activated for revision, and the finding
+    assert any(
+        "GEARWORKS-REVISION-CANARY" in lens for lens in request["client_lenses"]
+    )
+    assert request["factual_findings"] == [
+        (f"{UNSUPPORTED_CLAIM}: rose in the same period — "
+         "the evidence package does not contain it")
+    ]
+    assert "Every factual finding in this request must be resolved" in request["note"]
+
+
+def test_the_reviser_is_told_to_stay_surgical(tmp_path, monkeypatch):
+    revisor = FakeRevisionTransport(TRACEABLE_ARTICLE)
+
+    _entrypoint(
+        tmp_path, monkeypatch, revisor=revisor,
+        factual=FakeFactualReviewer(_finding(), {"findings": []}),
+    )
+
+    note = _request(revisor)["note"]
+    assert "Revision is surgical" in note
+    assert "explicitly requires the article to be written again" in note
+
+
+def test_unwiring_the_plan_removes_it_from_every_stage(tmp_path, monkeypatch):
+    """The mutation twin: the plan is the only route to any of the three.
+
+    Same client, same contract, same run — only ``as_prompt_text`` stops
+    producing the plan. If a canary survived that, it would be reaching a
+    model by some route this suite is not watching.
+    """
+    monkeypatch.setattr(EditorialPlan, "as_prompt_text", lambda self: "")
+    revisor = FakeRevisionTransport(TRACEABLE_ARTICLE)
+
+    code, composer, _ = _entrypoint(
+        tmp_path, monkeypatch, revisor=revisor,
+        factual=FakeFactualReviewer(_finding(), {"findings": []}),
+    )
+
+    assert code == 0
+    assert "GEARWORKS-ENDING-CANARY" not in "\n".join(composer.prompts)
+    assert not _request(revisor).get("editorial_plan")
+
+
+def test_without_the_gate_no_factual_review_happens(tmp_path, monkeypatch):
+    """The other mutation twin: the gate is the factual reviewer's only route."""
+    factual = FakeFactualReviewer()
+
+    with mock.patch.object(gap, "_build_factual_gate", return_value=None):
+        code, _, _ = _entrypoint(tmp_path, monkeypatch, factual=factual)
+
+    assert code == 0
+    assert factual.calls == []
+    assert _artifact(tmp_path, "editorial_acceptance.json")["factual_review"] is None
+
+
+# ── 2. the factual reviewer rejects, and fails closed ───────────────────────
+
+
+def test_a_factual_finding_blocks_the_article_rather_than_annotating_it(
+    tmp_path, monkeypatch
+):
+    code, _, _ = _entrypoint(
+        tmp_path, monkeypatch,
+        factual=FakeFactualReviewer(_finding()),  # still found after the revision
+    )
+
+    assert code == 1
+    audit = _artifact(tmp_path, "editorial_acceptance.json")
+    assert audit["accepted"] is False
+    # the editorial reviewer accepted it; the factual one did not, and that
+    # is not a trade the editorial verdict gets to win
+    assert audit["final_disposition"] == "accept"
+    assert audit["final_factual_review"]["findings"][0]["kind"] == UNSUPPORTED_CLAIM
+    assert not list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+def test_a_resolved_finding_costs_exactly_one_revision(tmp_path, monkeypatch):
+    factual = FakeFactualReviewer(_finding(), {"findings": []})
+
+    code, _, _ = _entrypoint(tmp_path, monkeypatch, factual=factual)
+
+    assert code == 0
+    assert len(factual.calls) == 2  # the draft, then the revision. No loop.
+    audit = _artifact(tmp_path, "editorial_acceptance.json")
+    assert audit["revised"] is True
+    assert audit["factual_review"]["passed"] is False
+    assert audit["final_factual_review"]["passed"] is True
+
+
+def test_an_unreadable_factual_verdict_stops_the_run(tmp_path, monkeypatch):
+    code, _, _ = _entrypoint(
+        tmp_path, monkeypatch, factual=FakeFactualReviewer("not json at all")
+    )
+
+    assert code == 1
+    assert not list(tmp_path.glob("*/runs/*/generated.json"))
+
+
+def test_a_factual_transport_failure_stops_the_run(tmp_path, monkeypatch):
+    code, _, _ = _entrypoint(
+        tmp_path, monkeypatch,
+        factual=FakeFactualReviewer(RuntimeError("transport down")),
+    )
+
+    assert code == 1
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        '{"findings": {}}',
+        '{"findings": [{"kind": "badly_written", "quote": "q", "detail": "d"}]}',
+        '{"findings": [{"kind": "unsupported_claim", "quote": "", "detail": "d"}]}',
+        '["unsupported_claim"]',
+    ],
+    ids=["not-a-list", "unknown-kind", "no-quote", "not-an-object"],
+)
+def test_every_unusable_verdict_shape_fails_closed(answer):
+    with pytest.raises(FactualReviewError):
+        parse_factual_findings(answer)
+
+
+def test_the_enforced_kinds_are_the_ones_the_issue_names():
+    assert FACTUAL_FINDING_KINDS == {
+        "unsupported_claim", "invented_causality", "claim_strength_escalation",
+        "invented_entity", "invented_attribution", "untraceable_number",
+        "factual_restriction_breach", "provenance_breach",
+    }
+
+
+def test_the_reviewer_is_told_to_reject_and_to_judge_nothing_else():
+    from src.editorial.factual_review import FACTUAL_REVIEW_INSTRUCTIONS
+
+    instructions = FACTUAL_REVIEW_INSTRUCTIONS
+    for kind in FACTUAL_FINDING_KINDS:
+        assert kind in instructions, kind
+    assert "You do NOT judge writing, structure, paragraph order" in instructions
+    assert "Stating a number is not the same as tracing one" in instructions
+
+
+# ── 3. the editorial reviewer evaluates execution, not a template ───────────
+
+#: Generic: structure is the Engine's to refuse enforcing, for any client.
+TEMPLATE_MOVES = ("the order its paragraphs or sections appear in",)
+
+#: A particular client's elements. The Engine must name none of them (#268):
+#: which of these are optional is said by that client's own lenses.
+CLIENT_ELEMENTS = (
+    "portable noun", "authorial-risk moment", "a Turn", "middle pattern",
+)
+
+
+def test_the_reviewer_is_forbidden_from_enforcing_the_template():
+    """Execution, not conformity — and stated without naming any client's
+    elements, which is the client's own text to state (#268 invariant)."""
+    assert "Do not enforce a template." in EXECUTION_REVIEW_SCOPE
+    assert "Presence is not compliance and absence is not a defect" in (
+        EXECUTION_REVIEW_SCOPE
+    )
+    assert "leaves an element to the article's judgement" in EXECUTION_REVIEW_SCOPE
+    assert "possible template defect" in EXECUTION_REVIEW_SCOPE
+    assert "Factual integrity is reviewed separately" in EXECUTION_REVIEW_SCOPE
+    for move in TEMPLATE_MOVES:
+        assert move in EXECUTION_REVIEW_SCOPE, move
+    # the Engine names no client's vocabulary here
+    for client_element in CLIENT_ELEMENTS:
+        assert client_element not in EXECUTION_REVIEW_SCOPE, client_element
+
+
+def test_the_optional_elements_are_named_by_the_client_not_the_engine():
+    """Where the reviewer learns an element is optional: the client's lens,
+    delivered in the same request, says so in its own words."""
+    from src.strategy.client_contracts import contracts_for_role
+
+    writing = contracts_for_role(MONDAY_ROLE, Path("clients/never_blank")).for_stage(
+        "writing"
+    )
+    joined = " ".join(" ".join(text.split()) for text in writing)
+
+    assert "the decision may be that this article has none" in joined
+    assert "Never invent one to fill the slot." in joined
+
+
+def test_the_scope_reaches_the_real_editorial_reviewer(tmp_path, monkeypatch):
+    reviewer = FakeReviewTransport(_review_payload(), _review_payload())
+
+    code, _, _ = _entrypoint(tmp_path, monkeypatch, reviewer=reviewer)
+
+    assert code == 0
+    assert _request(reviewer)["review_scope"] == EXECUTION_REVIEW_SCOPE
+
+
+def test_the_same_authoritative_plan_reaches_the_editorial_reviewer(
+    tmp_path, monkeypatch
+):
+    """The seam the first review of this PR found missing.
+
+    The reviewer judges an article written under a plan; if the plan never
+    reaches it, a conditional lens can govern the writing while the reviewer
+    has never heard of it. This asserts the payload, not that a constant
+    exists — the previous version of this test passed while the plan was
+    absent.
+    """
+    reviewer = FakeReviewTransport(_review_payload(), _review_payload())
+
+    code, _, _ = _entrypoint(tmp_path, monkeypatch, reviewer=reviewer)
+    request = _request(reviewer)
+
+    assert code == 0
+    plan_text = request["editorial_plan"]
+    assert "EDITORIAL PLAN" in plan_text
+    # the run's own authority: its claim, and the client values it executed
+    assert "Central claim:" in plan_text
+    assert "GEARWORKS-ENDING-CANARY" in plan_text
+    assert "GEARWORKS-RESTRICTION-CANARY" in plan_text
+    # the factual boundary keeps the evidence package; the reviewer does not
+    # re-decide it
+    assert "Evidence you may rely on" not in plan_text
+    obligations = request["active_client_obligations"]
+    assert obligations, "the reviewer receives the obligations it judges against"
+    assert all({"lens", "activated_by", "text"} == set(o) for o in obligations)
+    # and the clause that keeps a visible plan from becoming a checklist
+    assert "not so you can check the article against them item by item" in (
+        request["plan_scope"]
+    )
+    assert "'none' is a legitimate outcome" in request["plan_scope"]
+
+
+def test_an_activated_lens_is_named_to_the_editorial_reviewer(tmp_path, monkeypatch):
+    """A conditional lens that governed the writing is named as active, with
+    what activated it — the reviewer cannot judge execution of an obligation
+    nobody told it about."""
+    reviewer = FakeReviewTransport(_review_payload(), _review_payload())
+
+    code, _, _ = _entrypoint(tmp_path, monkeypatch, reviewer=reviewer)
+    request = _request(reviewer)
+
+    assert code == 0
+    activated = [o for o in request["active_client_obligations"]
+                 if o["activated_by"] != "standing for this stream"]
+    assert [o["lens"] for o in activated] == ["gearworks-recall/1"]
+    assert activated[0]["activated_by"] == "manufacturer_recall"
+    assert "GEARWORKS-LENS-CANARY" in activated[0]["text"]
+    assert "active for THIS article (manufacturer_recall)" in request["editorial_plan"]
+
+
+def test_a_lens_this_run_did_not_activate_is_not_named_to_the_reviewer(
+    tmp_path, monkeypatch
+):
+    """The twin: the same client, the condition unmet, and the reviewer is not
+    told to judge an obligation that never governed this article."""
+    reviewer = FakeReviewTransport(_review_payload(), _review_payload())
+
+    code, _, _ = _entrypoint(
+        tmp_path, monkeypatch, reviewer=reviewer,
+        decider=ScriptedDecider(_run_answer(recall_met=False)),
+    )
+    request = _request(reviewer)
+
+    assert code == 0
+    assert all(o["activated_by"] == "standing for this stream"
+               for o in request["active_client_obligations"])
+    assert "GEARWORKS-LENS-CANARY" not in json.dumps(request)
+
+
+def test_unwiring_the_plan_removes_it_from_the_editorial_reviewer(
+    tmp_path, monkeypatch
+):
+    """The mutation twin for the seam that was missing: cut the plan out of
+    the acceptance call and the reviewer's payload loses it."""
+    import src.editorial.editorial_acceptance as acceptance
+
+    original = acceptance.run_editorial_acceptance
+
+    def without_plan(**kwargs):
+        kwargs["editorial_plan"] = None
+        return original(**kwargs)
+
+    monkeypatch.setattr(gap, "run_editorial_acceptance", without_plan)
+    reviewer = FakeReviewTransport(_review_payload(), _review_payload())
+
+    code, _, _ = _entrypoint(tmp_path, monkeypatch, reviewer=reviewer)
+    request = _request(reviewer)
+
+    assert code == 0
+    assert "editorial_plan" not in request
+    assert "active_client_obligations" not in request
+    assert "plan_scope" not in request
+
+
+def test_no_rubric_criterion_asks_for_a_structural_element():
+    """The rubric judges execution too: nothing in it is a checklist item."""
+    rubric = EditorialAcceptanceRubric.load()
+    described = " ".join(c.description for c in rubric.criteria).casefold()
+
+    for banned in ("portable noun", "paragraph order", "the turn",
+                   "authorial risk", "middle pattern"):
+        assert banned not in described, banned
+
+
+# ── 4. the mechanical gate, in tiers that are not flattened ─────────────────
+
+
+def test_the_shared_list_is_versioned_and_engine_owned():
+    tells = MachineTellList.load()
+
+    assert tells.identity == "engine-machine-tells/3"
+    assert DEFAULT_MACHINE_TELLS_PATH.name == "shared.yaml"
+    assert all(entry.tier in TIER_OUTCOMES for entry in tells.entries)
+
+
+@pytest.mark.parametrize(
+    "tier,outcome",
+    [("hard_evidence", GATE), ("directional", WARNING),
+     ("observed_practice", SUGGESTION), ("owner_judgement", OWNER_REVIEW)],
+)
+def test_each_evidence_tier_keeps_its_own_outcome(tier, outcome):
+    assert TIER_OUTCOMES[tier] == outcome
+
+
+def test_no_shared_entry_blocks_a_publication_on_occurrence_alone():
+    """#269 review: this matcher sees occurrence, not use.
+
+    An article may quote one of these phrases, take apart the marketing copy
+    containing one, or analyse generated language. Occurrence cannot prove the
+    article committed the tell, so no shared entry may block a publication.
+    """
+    tells = MachineTellList.load()
+    text = (
+        "In today's fast-paced world the shop sees it. "
+        "We delve into the bench data, and it is not just the collet but the "
+        "holder that moved."
+    )
+
+    found = scan(text, tells=tells)
+
+    assert found.gated == ()
+    assert found.blocks is False
+    assert sorted(tell.entry_id for tell in found.warnings) == [
+        "delve-into", "fast-paced-world",
+    ]
+    assert all(entry.tier != "hard_evidence" for entry in tells.entries)
+
+
+def test_a_quotation_of_a_shared_phrase_is_not_a_publication_blocker():
+    """The case the hard gate could not tell apart: the article is about the
+    phrase rather than written in it."""
+    tells = MachineTellList.load()
+
+    found = scan(
+        'The vendor\'s own page opens "in today\'s fast-paced world", which is '
+        "how you know nobody read it.",
+        tells=tells,
+    )
+
+    assert found.blocks is False
+    assert [tell.entry_id for tell in found.warnings] == ["fast-paced-world"]
+
+
+def test_a_client_may_still_refuse_the_same_phrase_outright():
+    """Client taste keeps its teeth: a client entry gates the same string the
+    shared list only warns about."""
+    from src.strategy.client_contracts import contracts_for_role
+
+    entries = contracts_for_role(
+        MONDAY_ROLE, Path("clients/never_blank")
+    ).banned_entries
+    text = "In today's fast-paced world the shop decides."
+
+    shared_only = scan(text, tells=MachineTellList.load())
+    with_client = scan(text, tells=MachineTellList.load(), client_entries=entries)
+
+    assert shared_only.blocks is False
+    assert with_client.blocks is True
+    assert [tell.source for tell in with_client.gated] == [
+        "never-blank-machine-tells/1"
+    ]
+
+
+def test_the_engine_list_keeps_no_client_taste():
+    """#269 review: a normal human construction is not a universal blocker.
+
+    Transitions, rhetorical-question openings, triads and em-dash asides are
+    house taste and live in the client's own list; nothing here imposes them
+    on a client whose style we have never seen.
+    """
+    tells = MachineTellList.load()
+    entries = {entry.id for entry in tells.entries}
+
+    for taste in ("moreover", "furthermore", "in-conclusion",
+                  "at-the-end-of-the-day", "rhetorical-question-opening",
+                  "asyndetic-triad", "three-beat-fragments", "em-dash-aside"):
+        assert taste not in entries, taste
+    # and nothing shared blocks: only a client speaking about its own prose does
+    assert {entry.tier for entry in tells.entries} == {"directional"}
+
+
+def test_never_blank_keeps_its_own_taste_client_side_without_duplicating():
+    """The transitions the Engine stopped imposing are Never Blank's own, and
+    what the Engine already gates is not repeated in the client list."""
+    from src.strategy.client_contracts import contracts_for_role
+
+    contracts = contracts_for_role(MONDAY_ROLE, Path("clients/never_blank"))
+    entries = {entry.casefold() for entry, _ in contracts.banned_entries}
+    engine = {entry.id for entry in MachineTellList.load().entries}
+
+    assert {"moreover,", "furthermore,", "in conclusion"} <= entries
+    # the shared list only warns about these, so the client bans them itself
+    for shared_warning in ("in today's fast-paced", "in the ever-evolving",
+                           "in an increasingly"):
+        assert shared_warning in entries, shared_warning
+    assert "fast-paced-world" in engine
+
+
+def test_a_directional_tell_alone_never_stops_an_article():
+    found = scan("We delve into the bench data.", tells=MachineTellList.load())
+
+    assert found.findings and found.blocks is False
+
+
+def test_a_lede_move_is_only_a_lede_move_in_the_lede():
+    tells = MachineTellList.load()
+
+    opening = scan("Imagine a shop floor at six.", tells=tells)
+    later = scan(
+        "The notice landed on Tuesday morning.\n\nImagine a shop floor at six.",
+        tells=tells,
+    )
+
+    assert [tell.entry_id for tell in opening.warnings] == ["imagine-opening"]
+    assert later.findings == ()
+    # a lede move is a signal, not a blocker: a human opens this way too
+    assert opening.blocks is False
+
+
+def test_a_repeated_pattern_is_a_finding_only_when_it_repeats():
+    tells = MachineTellList.load()
+    once = "It is not just the tolerance but the sheet behind it."
+
+    assert scan(once, tells=tells).findings == ()
+    assert [tell.entry_id for tell in scan(f"{once} {once}", tells=tells).findings] == [
+        "not-just-but"
+    ]
+
+
+def test_a_client_extends_the_shared_list_and_its_own_entries_gate():
+    found = scan(
+        "This tool is a game changer for the bench.",
+        tells=MachineTellList.load(),
+        client_entries=(("game changer", "gearworks-machine-tells/1"),),
+    )
+
+    assert [tell.source for tell in found.gated] == ["gearworks-machine-tells/1"]
+    assert found.as_evidence()["lists"] == [
+        "engine-machine-tells/3", "gearworks-machine-tells/1",
+    ]
+
+
+def test_a_client_list_entry_is_matched_whatever_the_spacing_and_case():
+    found = scan(
+        "In Today's   Fast-Paced\nManufacturing Landscape, this ships.",
+        client_entries=(
+            ("in today's fast-paced manufacturing landscape",
+             "gearworks-machine-tells/1"),
+        ),
+    )
+
+    assert len(found.gated) == 1
+
+
+# ── 5. quantities: faithful rephrase clears, changed meaning does not ───────
+#
+# Owner decision (#269 review): a token mismatch is a question for the semantic
+# reviewer, never a hard rejection. Deterministic code clears what it can prove
+# equivalent and hands on what it cannot.
+
+
+@pytest.mark.parametrize("article, evidence", [
+    ("The recall covers 1.2 million collets.", "R-114 covers 1,200,000 collets."),
+    ("R-114 covers 1,200,000 collets.", "The recall covers 1.2 million collets."),
+    ("Form submissions rose 28%.", "A 28 percent rise in form submissions."),
+    ("The lead time is 14 weeks.", "Lead time is now 14-week from order."),
+], ids=["millions-to-digits", "digits-to-millions", "percent-spelling", "unit-spacing"])
+def test_a_faithful_rephrase_of_a_supported_quantity_clears_mechanically(
+    article, evidence
+):
+    assert figures_to_verify(article, evidence) == ()
+
+
+def test_a_numbered_list_marker_is_not_a_quantity():
+    """`1.` opening a line is a marker; the article states no such figure."""
+    assert figures("1. First the notice.\n2. Then the sheet.") == set()
+    assert figures_to_verify(
+        "1. First the notice.\n2. Then the sheet.", "A verified claim"
+    ) == ()
+
+
+def test_an_address_is_not_a_quantity():
+    """A Sources line citing a dated URL states no figure."""
+    assert figures_to_verify(
+        "Source: Verified report (https://source.example/2026/07/report).",
+        "A verified claim",
+    ) == ()
+
+
+@pytest.mark.parametrize("article, evidence, expected", [
+    ("The recall covers 1.8 million collets.", "R-114 covers 1.2 million collets.",
+     ("1800000",)),
+    ("Form submissions rose 28%.", "Form submissions rose in the same period.",
+     ("28",)),
+], ids=["different-quantity", "quantity-the-evidence-never-states"])
+def test_a_quantity_the_evidence_does_not_support_goes_to_the_reviewer(
+    article, evidence, expected
+):
+    """Not a verdict: the question reaches the semantic reviewer, which is the
+    only party that can weigh meaning and provenance."""
+    assert figures_to_verify(article, evidence) == expected
+
+
+def test_the_open_questions_reach_the_factual_reviewer(tmp_path, monkeypatch):
+    """End to end: the article's unmatched figure is handed to the reviewer as
+    a question, with the client's own instruction that a faithful rephrase is
+    supported — and the mechanical scan gates nothing on it."""
+    code, _, factual = _entrypoint(
+        tmp_path, monkeypatch,
+        article=FINAL_ARTICLE,
+        revisor=FakeRevisionTransport(FINAL_ARTICLE),
+    )
+    request = _request(factual)
+
+    assert request["figures_to_verify"] == ["28"]
+    assert "is a question, not a finding" in request["figures_note"]
+    assert "1.2 million" in request["figures_note"]
+    # nothing gated on a token: the scan carries no finding for that figure
+    audit = _artifact(tmp_path, "editorial_acceptance.json")
+    assert audit is not None, "the run reached editorial acceptance"
+    review = audit["final_factual_review"] or audit["factual_review"]
+    assert review["mechanical"]["findings"] == []
+    assert code == 0
+
+
+def test_a_reviewer_that_rejects_the_quantity_still_stops_the_article(
+    tmp_path, monkeypatch
+):
+    """The other half: mechanics ask, the reviewer answers, and an unsupported
+    quantity still fails closed — on a reading rather than a token."""
+    factual = FakeFactualReviewer(_finding(UNTRACEABLE_NUMBER, "rose 28%"))
+
+    code, _, _ = _entrypoint(
+        tmp_path, monkeypatch,
+        article=FINAL_ARTICLE,
+        revisor=FakeRevisionTransport(FINAL_ARTICLE),
+        factual=factual,
+    )
+
+    assert code == 1
+    audit = _artifact(tmp_path, "editorial_acceptance.json")
+    assert audit["accepted"] is False
+    assert [f["kind"] for f in audit["final_factual_review"]["findings"]] == [
+        UNTRACEABLE_NUMBER
+    ]
+
+
+# ── 6. the accepted article records what it was executed under ──────────────
+
+
+def test_the_accepted_article_records_its_plan_and_contract_lineage(
+    tmp_path, monkeypatch
+):
+    code, _, _ = _entrypoint(tmp_path, monkeypatch)
+
+    assert code == 0
+    record = _artifact(tmp_path, "accepted_composition.json")
+    plan = record["editorial_plan"]
+    assert plan["lineage"]["stream"]["identity"] == "gearworks-weekly/2"
+    assert plan["lineage"]["stream"]["digest"].startswith("sha256:")
+    assert plan["lineage"]["lists"][0]["identity"] == "gearworks-machine-tells/1"
+    assert plan["claim_strength_ceiling"] == "confirmed by the manufacturer"
+    assert {
+        "identity": "gearworks-recall/1", "activation": "manufacturer_recall",
+    } in plan["active_by_stage"]["writing"]
+    assert plan["run_decisions"]["activations"][0]["met"] is True
+    assert record["editorial"]["factual_review"]["passed"] is True
+
+
+def test_a_blocked_run_still_records_the_factual_verdict(tmp_path, monkeypatch):
+    code, _, _ = _entrypoint(
+        tmp_path, monkeypatch, factual=FakeFactualReviewer(_finding())
+    )
+
+    assert code == 1
+    preserved = _artifact(tmp_path, "editorial_review_content.json")
+    assert preserved["editorial"]["factual_findings"] == [UNSUPPORTED_CLAIM]
+    assert preserved["publishable"] is False
+
+
+# ── 7. and none of it taught the Engine a client ────────────────────────────
+
+
+def test_no_engine_module_and_no_shared_list_knows_this_client():
+    shared = DEFAULT_MACHINE_TELLS_PATH.read_text(encoding="utf-8")
+
+    assert "earworks" not in shared.casefold()
+    for module in Path("src").rglob("*.py"):
+        text = module.read_text(encoding="utf-8")
+        assert "earworks" not in text.casefold(), module
+        for canary in PLAN_CANARIES:
+            assert canary not in text, module
+
+
+def test_never_blank_keeps_the_shared_list_whatever_its_own_list_says():
+    """The shared list runs for Never Blank; its own list only extends it.
+
+    What this client bans is its own policy and moves with its documents —
+    #268 gave it a list where it had none — so nothing here pins that. What
+    does not move is the Engine's side: the shared list is scanned for every
+    client, it still gates, and no client entry is ever one of its entries.
+    """
+    from src.strategy.client_contracts import DEFAULT_CLIENT_DIR, contracts_for_role
+
+    contracts = contracts_for_role(MONDAY_ROLE, DEFAULT_CLIENT_DIR)
+    tells = MachineTellList.load()
+
+    found = scan(
+        "In today's fast-paced world the bench decides.",
+        tells=tells,
+        client_entries=contracts.banned_entries,
+    )
+
+    assert tells.identity in found.as_evidence()["lists"]
+    # the shared list warns; what blocks is this client's own entry
+    assert [tell.entry_id for tell in found.warnings] == ["fast-paced-world"]
+    assert [tell.source for tell in found.gated] == ["never-blank-machine-tells/1"]
+    assert all(identity != tells.identity for _, identity in contracts.banned_entries)
+
+
+def test_the_fixture_client_is_still_only_documents(tmp_path):
+    """Edit the document, and what the gate refuses changes with it."""
+    client = tmp_path / "client"
+    shutil.copytree(FIXTURE_CLIENT, client)
+    shared = client / "lists" / "machine_tells.md"
+    shared.write_text(
+        shared.read_text(encoding="utf-8").replace("game changer", "paradigm shift"),
+        encoding="utf-8",
+    )
+    from src.strategy.client_contracts import contracts_for_role
+
+    entries = contracts_for_role(MONDAY_ROLE, client).banned_entries
+
+    assert scan("A real paradigm shift.", client_entries=entries).blocks is True
+    assert scan("A real game changer.", client_entries=entries).blocks is False

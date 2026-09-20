@@ -1,0 +1,93 @@
+# The shared machine-tell list — ENGINE, not Never Blank taste (#269).
+#
+# Consumed by src/editorial/machine_tells.py. The list identity
+# "<list_id>/<version>" is recorded in every factual review record. Changing
+# what the gate matches requires bumping `version` in a reviewed commit.
+#
+# Shared means defensible for EVERY client, present and future: a tell of
+# machine authorship, never an editorial preference. The test each entry has
+# to pass is not "does this look AI-ish to us" but "would we impose this on a
+# client whose house style we have never seen". A normal human construction
+# does not become a universal publication blocker because one client dislikes
+# it: transitions like `moreover,`, rhetorical-question openings, triads and
+# em-dash asides are house taste and live in client documents
+# (clients/never_blank/lists/machine_tells.md), which is why they are not here.
+#
+# A client extends this list with its own `lists/*.md` documents
+# (docs/engine/CLIENT_CONTRACTS.md); a client entry never edits this one, and
+# an entry that already exists here is not repeated there.
+#
+# Tiers are load-bearing (#269 review): `hard_evidence` blocks publication, and
+# a literal match cannot carry that weight here, because this matcher sees only
+# occurrence — never whether the article committed the tell or quoted it. So
+# every shared entry is `directional` and warns. A client list is where an
+# absolute prohibition belongs: there the client is speaking about its own
+# prose, and a client entry gates.
+#
+# Every entry declares the EVIDENCE TIER behind it, and the tier decides what a
+# match does — hard evidence gates, directional warns, observed practice
+# suggests, and an editorial judgement goes to the owner. Tiers are never
+# flattened into one hard rule: a rule we merely suspect must not stop a run.
+#
+#   text             a literal, matched whatever its spacing or line breaks
+#   pattern          a regular expression; never MULTILINE, so a start-of-string
+#                    anchor anchors the SCOPE rather than a line
+#   scope            article (default) | lede — the first paragraph only
+#   max_occurrences  a finding only above this count (default 0: never allowed)
+#
+# Every entry is matched case-insensitively.
+
+list_id: engine-machine-tells
+version: "3"
+
+entries:
+  # ── strongly associated with generated text ───────────────────────────────
+  # Every entry here is directional, and that is the architecture rather than
+  # timidity (#269 review). This matcher sees occurrence, not use: it cannot
+  # tell an article that commits one of these from an article that quotes one,
+  # tears down the marketing copy containing one, or analyses generated
+  # language. Occurrence therefore cannot prove the article committed a
+  # publication-blocking tell, so nothing here blocks a publication.
+  #
+  # A client that wants one of these refused outright in its own prose says so
+  # in its own list (clients/<client>/lists/*.md), where a client entry does
+  # gate — that is one client's choice about its own writing, not a rule every
+  # future client inherits.
+  - id: fast-paced-world
+    kind: llm_construction
+    tier: directional
+    text: "in today's fast-paced world"
+  - id: ever-evolving-landscape
+    kind: llm_construction
+    tier: directional
+    text: "in the ever-evolving landscape"
+  - id: increasingly-digital-world
+    kind: llm_construction
+    tier: directional
+    text: "in an increasingly digital world"
+  - id: delve-into
+    kind: llm_construction
+    tier: directional
+    text: "delve into"
+  - id: important-to-note
+    kind: llm_construction
+    tier: directional
+    text: "it's important to note that"
+  - id: not-just-but
+    kind: repeated_pattern
+    tier: directional
+    pattern: '\bnot (?:just|only|merely)\b[^.!?]{0,120}\bbut\b'
+    # one is ordinary English; the tell is the rhythm repeating
+    max_occurrences: 1
+
+  # ── ledes: the openings a generated article reaches for ───────────────────
+  - id: imagine-opening
+    kind: lede_move
+    tier: directional
+    scope: lede
+    pattern: '\A\s*(?:#+\s*)?(?:now\s+)?imagine\b'
+  - id: picture-this-opening
+    kind: lede_move
+    tier: directional
+    scope: lede
+    pattern: '\A\s*picture this\b'

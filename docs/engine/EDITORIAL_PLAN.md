@@ -79,6 +79,15 @@ selection with its value, its position among the permitted values, the
 evidence ids and the reason. An activated lens also carries its finding into
 the writer's message.
 
+**One plan, every consumer (#269).** The run builds exactly one
+`EditorialPlan`, and every downstream stage executes or judges against that
+same object: the composer and the argument-building stages through
+`as_prompt_text()`, the editorial reviewer through `as_review_text()` plus the
+obligations active for the run, the factual boundary through `FactualGate`,
+and the reviser through `RevisionContext`. No stage builds a second plan, and
+no stage decides authority of its own — build once, execute everywhere,
+review against the same authority, revise against the same authority.
+
 **Stages.** A plan routes lenses to every stage that runs after research —
 `writing` and `revision` (`PLAN_STAGES`). Each condition is decided once, and
 the decision records every stage its lenses route to (`stages`);
@@ -159,3 +168,13 @@ breaking — is the client's to decide in its own documents.
 including the withdrawn ones and why, which lenses were active and what
 activated them, and the lineage — the same digests `client_contracts.json`
 carries, from the same snapshot.
+
+## How the plan is executed
+
+Building the plan is half of it; the other half is what refuses an article
+that is not true to it. Factual integrity is reviewed separately from
+editorial execution, against this plan rather than against a rubric, and it
+rejects rather than annotates; a shared versioned machine-tell scan runs
+beside it, in evidence tiers that are never flattened into one hard rule; and
+the accepted article records the plan and contract lineage it ran under.
+See [FACTUAL_REVIEW.md](FACTUAL_REVIEW.md) (#269).

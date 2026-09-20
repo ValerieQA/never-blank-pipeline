@@ -17,7 +17,12 @@ feeds the second:
    accepted content does not contain. Numbers compare mechanically;
 2. support — an injected fidelity judge lists anything in the derivative the
    accepted content does not state or directly support; any listed item, or
-   an unreadable answer, rejects the derivative;
+   an unreadable answer, rejects the derivative. It judges what each sentence
+   of the derivative CLAIMS, never how similar its tokens are to the source
+   (#269): a faithful rephrase, a question, an imperative, an evaluation,
+   reader-facing stakes and platform-native framing all pass, while a claim
+   that is merely stated more strongly fails even though every word of it
+   came from the article;
 3. removed-by-review evidence — deterministic, here: the phrases the
    reviewed draft had, the final accepted article no longer has, and the
    derivative reuses. Wording is not meaning — revision may reword a claim
@@ -112,33 +117,50 @@ class FidelityJudgeError(RuntimeError):
     """The judge could not give a usable answer — the derivative is not proven faithful."""
 
 
-#: What makes a derivative item unsupported — materially NEW meaning (#263).
-#: Anything else — paraphrase, compression, restructuring, a restatement of
-#: what the article says or reasonably entails — is faithful.
+#: What makes a derivative item unsupported — materially NEW meaning (#263),
+#: extended by #269 with the ways a claim is not new but *stronger*. Anything
+#: else — paraphrase, compression, restructuring, a question, an imperative,
+#: an evaluation, reader-facing stakes, a restatement of what the article says
+#: or reasonably entails — is faithful.
+#:
+#: Whether a derivative may carry an author-experience fact the article does
+#: not state is an open Product Owner decision (#266). Until it is made such a
+#: sentence is ``new_fact``, which fails closed; if it is permitted it needs
+#: its own provenance channel rather than a hole in this list.
 UNSUPPORTED_KINDS = frozenset({
-    "new_fact", "new_number", "new_cause", "new_condition",
-    "broader_generalization", "new_conclusion",
+    "new_fact", "new_number", "new_entity", "new_timeframe", "new_cause",
+    "new_condition", "broader_generalization", "new_conclusion",
+    "strengthened_claim", "invented_attribution",
 })
 
 FIDELITY_INSTRUCTIONS = """You check a platform adaptation against the FINAL CONTENT it was adapted from.
 
-The adaptation may freely paraphrase, compress, reorder, restructure, change emphasis, address
-the reader directly and follow platform formatting. Different wording is NOT a problem: you are
-not checking wording. A sentence that says in other words what FINAL CONTENT says, or what FINAL
-CONTENT reasonably entails, is faithful — including restatements of its mechanism, its
+The adaptation may freely paraphrase, compress, reorder, restructure, change emphasis, ask a
+question, address the reader directly, give an instruction, offer an evaluation, name what is at
+stake for the reader and follow platform formatting. Different wording is NOT a problem: you are
+not checking wording, and you are not comparing texts token by token — you are judging what each
+sentence of ADAPTATION claims. A sentence that says in other words what FINAL CONTENT says, or
+what FINAL CONTENT reasonably entails, is faithful — including restatements of its mechanism, its
 conclusions and its advice.
 
-Report an item ONLY when it adds materially new meaning that FINAL CONTENT neither states nor
-reasonably entails, and only of one of these kinds:
+Report an item ONLY when it adds materially new meaning, or states an existing claim more
+strongly, than FINAL CONTENT states or reasonably entails — and only of one of these kinds:
 - new_fact: a fact FINAL CONTENT does not establish;
-- new_number: a figure FINAL CONTENT does not contain;
+- new_number: a figure, quantity, share or rate FINAL CONTENT does not contain;
+- new_entity: a company, product, person, institution, place or law FINAL CONTENT does not name;
+- new_timeframe: a date, period, deadline or duration FINAL CONTENT does not state;
 - new_cause: a causal relationship FINAL CONTENT does not claim;
 - new_condition: a condition, scope limit or qualifier FINAL CONTENT does not state
   ("without...", "only if...", "regardless of...");
 - broader_generalization: a claim extended to a wider group, market or situation than FINAL
   CONTENT covers;
 - new_conclusion: a conclusion, business implication or recommendation FINAL CONTENT does not
-  draw or reasonably entail.
+  draw or reasonably entail;
+- strengthened_claim: the same claim stated more strongly than FINAL CONTENT states it — in
+  modality (may becomes does, often becomes always), scope, direction, or causality (a link
+  FINAL CONTENT reports as association presented as cause);
+- invented_attribution: words, a finding or a position attributed to a source, a company or a
+  study that FINAL CONTENT does not attribute to it.
 
 REMOVED BY REVIEW, when present, lists wording an earlier draft had that FINAL CONTENT no longer
 has and that ADAPTATION reuses. The reviewer may have removed the claim or only reworded it:

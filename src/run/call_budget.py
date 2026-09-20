@@ -22,11 +22,13 @@ retry catches ``ValueError``, and retrying an exhausted budget would be a
 guaranteed second refusal.
 
 Release 1 default ceiling — derived from the audited shared call graph, not guessed:
-normal Monday ≈ 18 in-run calls, Wednesday ≈ 19, and the legitimate worst
-case (every stage retried once, one authorized revision round, package
-regeneration, both hashtag calls) is 34. The default and hard maximum is 40:
-every legitimate shared-path run fits with headroom under 20%, and a runaway
-loop stops within about twice a normal run's cost. Wednesday's restored July
+normal Monday ≈ 19 in-run calls (18 before the #269 factual review, which adds
+one per reviewed body and does not run for Wednesday), Wednesday ≈ 19, and the
+legitimate worst case (every stage retried once, one authorized revision round
+with both its factual rechecks, package regeneration, both hashtag calls) is
+36. The default and hard maximum is 40:
+every legitimate shared-path run still fits, and a runaway loop stops within
+about twice a normal run's cost. Wednesday's restored July
 path is the single explicit exception: its historical per-candidate research
 and five-surface composer require a finite role-scoped ceiling of 56 (#217).
 """

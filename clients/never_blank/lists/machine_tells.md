@@ -15,15 +15,26 @@ it here rather than in code.
 
 Entries are matched case-insensitively and whitespace-insensitively as
 substrings, so keep each one to the recognisable core of the phrase.
+
+This list is Never Blank's taste, and it is the only place a phrase is refused
+outright. The Engine keeps a short shared list of constructions associated with
+generated text (config/machine_tells/shared.yaml), but every entry there only
+warns: that matcher sees occurrence, not use, and cannot tell an article that
+commits a tell from one that quotes it or takes apart the copy containing it
+(#269 review). Never Blank does not publish these phrases in its own prose, so
+they are banned here — where the client is speaking about its own writing.
 -->
 
 - it's not about
 - is not about the
-- in today's fast-paced
-- in an increasingly
 - game changer
 - game-changer
 - the bottom line is
+- moreover,
+- furthermore,
+- in today's fast-paced
+- in an increasingly
+- in the ever-evolving
 - at the end of the day
 - what do you think?
 - let us know in the comments
@@ -32,7 +43,6 @@ substrings, so keep each one to the recognisable core of the phrase.
 - in conclusion
 - it's worth noting that
 - when it comes to
-- in the ever-evolving
 - landscape of small business
 - unlock the power
 - take your business to the next level

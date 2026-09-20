@@ -86,14 +86,23 @@ def test_the_judge_is_told_paraphrase_is_faithful_and_what_counts_as_new():
         "new_conclusion",
     ):
         assert kind in text and kind in UNSUPPORTED_KINDS
+    # #269 extends the list with the ways a claim is not new but stronger, and
+    # with the entities, timeframes and attributions a derivative may invent
     assert UNSUPPORTED_KINDS == {
         "new_fact",
         "new_number",
+        "new_entity",
+        "new_timeframe",
         "new_cause",
         "new_condition",
         "broader_generalization",
         "new_conclusion",
+        "strengthened_claim",
+        "invented_attribution",
     }
+    for kind in ("new_entity", "new_timeframe", "strengthened_claim",
+                 "invented_attribution"):
+        assert kind in text, kind
 
 
 def test_the_judge_knows_no_client():
