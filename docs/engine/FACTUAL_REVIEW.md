@@ -49,12 +49,22 @@ not readable as a verdict, or a finding of a kind the Engine does not carry
 raises `FactualReviewError` and stops the run: an unreadable factual review is
 not a clean one.
 
-**Consequence traceability.** A figure earns its place by appearing in the
-evidence behind it. Presence of a number is not compliance, so the figures are
-checked mechanically — `untraceable_figures` — whatever the reviewer says
-about them. The check is article-wide and client-neutral by design: the Engine
-does not know which paragraph a client calls its Consequence, and a rule that
-held only there would be a rule about someone's section names.
+**Quantities: meaning and provenance, not string equality.** A faithful
+rephrase is allowed; a new or strengthened quantity is not (owner decision,
+#269 review). String comparison can answer neither question, so the boundary
+is hybrid. Deterministic code extracts the quantities and clears what it can
+*prove* equivalent — `1,200,000` and `1.2 million` are one value, `28%` and
+`28 percent` are one value, a numbered list marker and an identifier like
+`R-114` are not quantities at all. Whatever it cannot vouch for goes to the
+semantic reviewer as `figures_to_verify`: a question, never a verdict, and the
+request says so in as many words. A quantity the evidence does not support, or
+one carrying a changed meaning, fails there — on a reading rather than a
+token. Nothing hard-rejects on spelling, and `figures_to_verify` is recorded
+with the review so a later reader can see what was asked.
+
+The check is article-wide and client-neutral by design: the Engine does not
+know which paragraph a client calls its Consequence, and a rule that held only
+there would be a rule about someone's section names.
 
 ## What the editorial reviewer may not do
 
@@ -64,24 +74,42 @@ rubric rather than being restated in each. The reviewer may never pass or fail
 an article on:
 
 - the order its paragraphs or sections appear in;
-- the presence of a portable noun;
-- the presence of an authorial-risk moment;
-- the presence of a Turn;
-- a concession, where no real objection exists to concede to;
-- which middle pattern it used.
+- which of the client's optional elements it happens to contain;
+- which shape it chose where the client's own rules offer several.
 
-If a repeated middle pattern can be reconstructed from the output, that is a
-possible template defect to report as one — never evidence that the article is
-correct.
+The Engine names no client's elements here (#268): which of them are optional
+is stated by that client's own lenses, which travel in the same request. If a
+repeated shape can be reconstructed from the output, that is a possible
+template defect to report as one — never evidence that the article is correct.
+
+**What the reviewer receives.** The same authoritative `EditorialPlan` the
+article was written under, as `plan.as_review_text()`, plus
+`active_client_obligations` — every lens routed to writing, with the condition
+that activated a conditional one. Without them a lens can govern the writing
+while the reviewer judging that writing has never heard of it (#269 review).
+`PLAN_REVIEW_SCOPE` travels beside it: the plan is there to judge execution
+against, not to check off, and an element the client's own text leaves to the
+article is not a defect when the article does without it.
 
 ## The mechanical gate
 
 Separate from anybody's taste: `config/machine_tells/shared.yaml` is a
-versioned Engine document — banned LLM constructions and transitions, banned
-lede moves (matched in the opening paragraph only), and repeated fragment and
-triad patterns the list approves, each with a `max_occurrences` so "repeated"
-means repeated. Changing what it matches means bumping its `version` in a
-reviewed commit, and its identity is recorded in every factual review.
+versioned Engine document. It is deliberately short, and the test each entry
+has to pass is not "does this look AI-ish to us" but "would we impose this on
+a client whose house style we have never seen" (#269 review). What survives
+that test is machine-authorship boilerplate no house publishes — which gates —
+and a few constructions strongly associated with generated text that a human
+may still legitimately write, which only warn. Lede moves are matched in the
+opening paragraph only, and a repeated pattern carries a `max_occurrences` so
+"repeated" means repeated. Changing what it matches means bumping its
+`version` in a reviewed commit, and its identity is recorded in every factual
+review.
+
+House taste is not here. Transitions like `moreover,`, rhetorical-question
+openings, triads and em-dash asides are ordinary human writing that one client
+may not want, so they live in that client's own list — a normal construction
+must not become a universal publication blocker. An entry the Engine list
+already carries is not repeated client-side.
 
 A client extends it with its own `lists/*.md` documents. A client entry says
 "this client never publishes these words" — an explicit prohibition rather

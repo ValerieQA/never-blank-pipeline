@@ -30,9 +30,10 @@ article carrying an invented number cannot trade its way to ACCEPT. A run
 supplies it as ``factual_gate``; a run that built no plan has none and behaves
 exactly as before. The editorial reviewer keeps the other question — execution
 — and is told, in its own request, that execution is not a template: it may
-not pass or fail an article on paragraph order, on the presence of a portable
-noun, an authorial-risk moment or a Turn, on a concession where no objection
-exists, or on which middle pattern was used.
+not pass or fail an article on paragraph order, on which of the client's
+optional elements it contains, or on which shape it chose where the client's
+rules offer several. Which elements are optional is stated by the client's own
+lenses, which travel in the same request; the Engine names none of them.
 
 Reviewer and revision providers are narrow injectable transports (the same
 pattern as the Issue #59 Decision Lens transport); deterministic tests inject
@@ -43,23 +44,22 @@ only (exception class names, never messages).
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from enum import Enum
 from pathlib import Path
 from typing import Protocol, Self
 
-import json
-
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
+from src.editorial.editorial_plan import EditorialPlan
 from src.editorial.factual_review import (
     FactualGate,
     FactualReview,
     run_factual_review,
 )
 from src.research.evidence import NormalizedResearchArtifact
-
 
 DEFAULT_RUBRIC_PATH = (
     Path(__file__).resolve().parents[2]
@@ -152,7 +152,7 @@ class EditorialAcceptanceRubric(_AcceptanceModel):
         return self
 
     @classmethod
-    def load(cls, path: Path | str = DEFAULT_RUBRIC_PATH) -> "EditorialAcceptanceRubric":
+    def load(cls, path: Path | str = DEFAULT_RUBRIC_PATH) -> EditorialAcceptanceRubric:
         data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             raise ValueError(f"rubric artifact {path} is not a mapping")
@@ -224,17 +224,40 @@ _ALLOWED_REVIEW_KEYS = frozenset({
 #: for every client rubric rather than being restated in each one.
 EXECUTION_REVIEW_SCOPE = (
     "Judge editorial EXECUTION: whether this article does what it set out to "
-    "do, for this reader, on this evidence. Do not enforce a template. "
-    "Specifically, never pass or fail this article on: the order its "
-    "paragraphs or sections appear in; whether it contains a portable noun; "
-    "whether it contains an authorial-risk moment; whether it contains a Turn; "
-    "whether it concedes something, when no real objection exists to concede "
-    "to; or which middle pattern it used. None of those is required and none "
-    "of them is compliance. If you could reconstruct one repeated middle "
-    "pattern from articles like this one, that is a possible template defect "
-    "to report as such — never evidence that the article is correct. Factual "
-    "integrity is reviewed separately against the run's evidence package and "
-    "is not your verdict to trade against execution."
+    "do, for this reader, on this evidence. Do not enforce a template. Never "
+    "pass or fail this article on the order its paragraphs or sections appear "
+    "in, on which of the client's optional elements it happens to contain, or "
+    "on which shape it chose where its own rules offer several. Presence is "
+    "not compliance and absence is not a defect: where the client's own text "
+    "leaves an element to the article's judgement, an article that does "
+    "without it is correct. If you could reconstruct one repeated shape from "
+    "articles like this one, that is a possible template defect to report as "
+    "such — never evidence that the article is correct. Factual integrity is "
+    "reviewed separately against the run's evidence package and is not your "
+    "verdict to trade against execution."
+)
+
+
+#: The clause that keeps a visible plan from becoming a checklist (#269).
+#: The reviewer now sees the obligations the article was written under, and an
+#: obligation the client wrote as a decision must not become a thing to tick
+#: merely because it is legible. Execution is judged against what the plan
+#: asked; conformity to its vocabulary is not execution. The Engine names no
+#: client's elements here — which are optional is said by the client's own
+#: lenses, in the request beside this clause (#268).
+PLAN_REVIEW_SCOPE = (
+    "The editorial_plan and active_client_obligations in this request are the "
+    "authority this article was written under, given to you so you can judge "
+    "whether the article did what they asked — not so you can check the "
+    "article against them item by item. Several of those obligations are "
+    "decisions the client leaves to each article, and the client's own text "
+    "says so: where a lens states that 'none' is a legitimate outcome, an "
+    "article without that element is correct, not deficient. Never report a "
+    "finding whose substance is that a plan element is absent; report one when "
+    "the article does not do what the plan asked of it, contradicts it, or "
+    "states its claim more strongly than the ceiling allows. Where a "
+    "conditional obligation is listed as active for this article, judge the "
+    "article against it: it governed the writing."
 )
 
 
@@ -245,13 +268,32 @@ def _review_article(
     article_body: str,
     research: NormalizedResearchArtifact,
     run_id: str,
+    plan: EditorialPlan | None = None,
 ) -> EditorialReview:
-    """Run one editorial review; fail closed on any untrustworthy output."""
+    """Run one editorial review; fail closed on any untrustworthy output.
+
+    ``plan`` (#269) is the run's one authoritative ``EditorialPlan`` — the same
+    object the composer wrote under and the reviser will revise under. The
+    reviewer receives its review projection, which carries the obligations
+    that were active for this article, including a conditional lens this run
+    activated. Without it a lens can govern the writing while the reviewer
+    judging that writing has never heard of it. A run that built no plan
+    reviews exactly as it did before.
+    """
 
     request = json.dumps(
         {
             "run_id": run_id,
             "article": article_body,
+            **({} if plan is None else {
+                "editorial_plan": plan.as_review_text(),
+                "active_client_obligations": [
+                    {"lens": lens.identity,
+                     "activated_by": lens.activation or "standing for this stream",
+                     "text": lens.text}
+                    for lens in plan.lenses_for("writing")
+                ],
+            }),
             "rubric": {
                 "rubric_id": rubric.rubric_id,
                 "version": rubric.version,
@@ -269,13 +311,14 @@ def _review_article(
                 "grounded in the accepted evidence above; never invent support."
             ),
             "review_scope": EXECUTION_REVIEW_SCOPE,
+            **({} if plan is None else {"plan_scope": PLAN_REVIEW_SCOPE}),
         },
         ensure_ascii=False,
         sort_keys=True,
     )
     try:
         raw = reviewer.complete(instructions=rubric.instructions, request=request)
-    except Exception as exc:  # noqa: BLE001 — boundary normalizes transport errors
+    except Exception as exc:
         raise EditorialAcceptanceError(
             f"editorial reviewer transport failed ({type(exc).__name__})"
         ) from exc
@@ -345,7 +388,7 @@ def _revise_article(
         for c in rubric.criteria
         if c.criterion_id in review.failed_criterion_ids
     ]
-    payload = {
+    payload: dict[str, object] = {
         "run_id": run_id,
         "article": article_body,
         "failed_criteria": failed,
@@ -361,7 +404,7 @@ def _revise_article(
     }
     if factual_findings:
         payload["factual_findings"] = list(factual_findings)
-        payload["note"] += (
+        payload["note"] = str(payload["note"]) + (
             " Every factual finding in this request must be resolved: remove "
             "or correct the words it quotes so the article states only what "
             "the evidence supports. Never add support for them."
@@ -369,26 +412,26 @@ def _revise_article(
     if revision_context is not None:
         payload["editorial_role"] = revision_context.role_rules
         payload["voice"] = list(revision_context.voice)
-        payload["note"] += (
+        payload["note"] = str(payload["note"]) + (
             " The editorial_role and voice in this request bind the revision "
             "exactly as they bound the draft."
         )
         if revision_context.plan:
             payload["editorial_plan"] = revision_context.plan
-            payload["note"] += (
+            payload["note"] = str(payload["note"]) + (
                 " The editorial_plan in this request is the same plan the "
                 "draft was written under, including the evidence you may rely "
                 "on and the evidence you may not: it binds the revision too."
             )
         if revision_context.lenses:
             payload["client_lenses"] = list(revision_context.lenses)
-            payload["note"] += (
+            payload["note"] = str(payload["note"]) + (
                 " Follow every client lens in this request; they are the "
                 "client's own rules for this revision."
             )
     if sources_of_record:
         payload["sources_of_record"] = sources_of_record
-        payload["note"] += (
+        payload["note"] = str(payload["note"]) + (
             " Keep the article's source attribution intact: the sources of "
             "record below are the only ones that may appear, and the article "
             "must still name them after your revision."
@@ -402,7 +445,7 @@ def _revise_article(
         revised = revisor.complete(
             instructions=rubric.revision_instructions, request=request
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise EditorialAcceptanceError(
             f"article revision transport failed ({type(exc).__name__})"
         ) from exc
@@ -425,6 +468,7 @@ def run_editorial_acceptance(
     sources_of_record: str | None = None,
     revision_context: RevisionContext | None = None,
     factual_gate: FactualGate | None = None,
+    editorial_plan: EditorialPlan | None = None,
 ) -> EditorialAcceptanceOutcome:
     """Run the complete Release 1 acceptance lifecycle for one generated article.
 
@@ -432,6 +476,13 @@ def run_editorial_acceptance(
     failures and malformed output. Returns an outcome with ``accepted=False``
     for honest editorial stops (REJECT, or a revision that still fails
     review); both reviews are preserved whenever a revision occurred.
+
+    ``editorial_plan`` (#269) is the run's one authoritative plan, and every
+    stage of this lifecycle judges against that same object: the editorial
+    reviewer receives its review projection and the obligations active for
+    this article, the reviser receives it through ``revision_context``, and
+    the factual boundary reviews against it through ``factual_gate``. No stage
+    here builds a plan of its own.
 
     ``factual_gate`` (#269) reviews factual integrity against the run's own
     ``EditorialPlan``, separately from the editorial verdict and before it is
@@ -445,7 +496,8 @@ def run_editorial_acceptance(
 
     factual = _factual_review(factual_gate, article_body=article_body, run_id=run_id)
     initial = _review_article(
-        reviewer, rubric, article_body=article_body, research=research, run_id=run_id
+        reviewer, rubric, article_body=article_body, research=research, run_id=run_id,
+        plan=editorial_plan,
     )
 
     def _audit(
@@ -498,7 +550,8 @@ def run_editorial_acceptance(
         factual_gate, article_body=revised_body, run_id=run_id
     )
     final = _review_article(
-        reviewer, rubric, article_body=revised_body, research=research, run_id=run_id
+        reviewer, rubric, article_body=revised_body, research=research, run_id=run_id,
+        plan=editorial_plan,
     )
     accepted = final.disposition is EditorialDisposition.ACCEPT and (
         final_factual is None or final_factual.passed

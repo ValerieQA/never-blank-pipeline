@@ -47,6 +47,7 @@ evidence — all of it the client's text or this run's findings.
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Final, Protocol
 
@@ -185,16 +186,48 @@ Return ONLY valid JSON, no text outside it:
 Use an empty list when the article is true to its evidence."""
 
 
-def factual_review_request(plan: EditorialPlan, *, article_body: str, run_id: str) -> str:
+def factual_review_request(
+    plan: EditorialPlan,
+    *,
+    article_body: str,
+    run_id: str,
+    figures_to_verify: Sequence[str] = (),
+    active_lenses: Sequence[str] = (),
+) -> str:
     """The reviewer's request: the article, the plan's values, the evidence.
 
     Every value here is the client's own text or this run's own findings. The
     Engine adds the field names and the note, and nothing else.
+
+    ``figures_to_verify`` (#269) are the quantities deterministic extraction
+    could not match to the evidence in any equivalent spelling. They are
+    questions, not findings: a faithful rephrase belongs here and must clear,
+    and only this reviewer can tell one from a quantity whose meaning changed.
+
+    ``active_lenses`` are the client obligations this run activated that bear
+    on factual judgement — routed from the same ``EditorialPlan`` the rest of
+    the run executes, never decided here.
     """
     return json.dumps(
         {
             "run_id": run_id,
             "article": article_body,
+            **({} if not figures_to_verify else {
+                "figures_to_verify": list(figures_to_verify),
+                "figures_note": (
+                    "These quantities appear in the article and were not matched "
+                    "to the evidence by exact or provably equivalent spelling. "
+                    "That is a question, not a finding. A figure the evidence "
+                    "states in another faithful form — 1,200,000 written as 1.2 "
+                    "million, a percentage or unit written differently, the same "
+                    "quantity rounded as the evidence itself rounds it — is "
+                    "supported: report nothing. Report a finding only where the "
+                    "evidence does not support the quantity, or supports a "
+                    "different one, or where the article uses a supported number "
+                    "for a claim the evidence does not make."
+                ),
+            }),
+            **({} if not active_lenses else {"active_client_obligations": list(active_lenses)}),
             "central_claim": {
                 "text": plan.central_claim.text,
                 "strength": plan.central_claim.strength,
@@ -248,10 +281,18 @@ def run_factual_review(
         raw = gate.reviewer.complete(
             instructions=FACTUAL_REVIEW_INSTRUCTIONS,
             request=factual_review_request(
-                gate.plan, article_body=article_body, run_id=run_id
+                gate.plan, article_body=article_body, run_id=run_id,
+                figures_to_verify=mechanical.figures_to_verify,
+                # the same plan's obligations, routed by stage — the factual
+                # boundary is told what governed the writing, and decides
+                # nothing of its own (#269)
+                active_lenses=[
+                    lens.text for lens in gate.plan.lenses_for("writing")
+                    if not lens.is_standing
+                ],
             ),
         )
-    except Exception as exc:  # noqa: BLE001 — boundary normalizes transport errors
+    except Exception as exc:
         raise FactualReviewError(
             f"factual reviewer transport failed ({type(exc).__name__})"
         ) from exc

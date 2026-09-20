@@ -2348,6 +2348,15 @@ def _run(
                     if not is_wednesday_role(_editorial_role_identity)
                     else None
                 ),
+                # #269: the editorial reviewer judges execution against the
+                # same plan the article was written under — including the
+                # conditional lenses this run activated, which nothing else
+                # would tell it about. One plan per run, every stage.
+                editorial_plan=(
+                    _editorial_plan
+                    if not is_wednesday_role(_editorial_role_identity)
+                    else None
+                ),
             )
         except (
             EditorialAcceptanceError, FactualReviewError, ValueError, OSError,

@@ -34,6 +34,7 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Final, Self
 
@@ -163,7 +164,7 @@ class MachineTellList(BaseModel):
         return self
 
     @classmethod
-    def load(cls, path: Path | str = DEFAULT_MACHINE_TELLS_PATH) -> "MachineTellList":
+    def load(cls, path: Path | str = DEFAULT_MACHINE_TELLS_PATH) -> MachineTellList:
         try:
             data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
         except OSError as exc:
@@ -208,6 +209,11 @@ class MachineTellScan:
     findings: tuple[MachineTell, ...] = ()
     #: Every list the scan ran, so a record says what it was scanned against.
     sources: tuple[str, ...] = ()
+    #: Quantities this article states that the evidence does not provably
+    #: state in any equivalent spelling (#269). Questions for the semantic
+    #: factual reviewer, never findings: mechanics cannot tell a faithful
+    #: rephrase from a changed meaning, and must not pretend to.
+    figures_to_verify: tuple[str, ...] = ()
 
     def of(self, outcome: str) -> tuple[MachineTell, ...]:
         return tuple(found for found in self.findings if found.outcome == outcome)
@@ -294,18 +300,9 @@ def scan(
             source=list_identity,
             detail="the client's own list says this is never published",
         ))
-    for figure in untraceable_figures(text, traceable):
-        findings.append(MachineTell(
-            entry_id=f"figure:{figure}", kind=UNTRACEABLE_FIGURE,
-            tier="hard_evidence", outcome=GATE, quote=figure, occurrences=1,
-            source="run evidence package",
-            detail=(
-                f"the article states {figure}, which nothing in this run's "
-                "evidence package contains — stating a figure is not the same "
-                "as tracing one"
-            ),
-        ))
-    return MachineTellScan(tuple(findings), tuple(sources))
+    return MachineTellScan(
+        tuple(findings), tuple(sources), figures_to_verify(text, traceable)
+    )
 
 
 # ── matching ────────────────────────────────────────────────────────────────
@@ -337,36 +334,99 @@ def _lede(text: str) -> str:
     return ""
 
 
-# ── figures, which are traceable or they are not ────────────────────────────
+# ── figures: a quantity is faithful, ambiguous, or neither ──────────────────
+#
+# Owner decision (#269): a faithful rephrase is allowed, new or strengthened
+# meaning is not. String equality answers neither question. What deterministic
+# code can honestly do is extract the quantities and recognise the
+# normalizations that provably preserve one — 1,200,000 and 1.2 million are the
+# same quantity, and no judgement is involved in saying so. Everything past
+# that is meaning, which belongs to the semantic factual reviewer: a token the
+# evidence does not spell the same way is a question to ask, never a verdict.
 
-#: A figure as a reader meets it: a run of digits with optional thousands or
-#: decimal separators. Units and currency stay outside the match — the
-#: question is the number, not how it is dressed.
-_FIGURE: Final[re.Pattern[str]] = re.compile(r"\d+(?:[.,]\d+)*")
+#: A figure as a reader meets it, with the scale word that belongs to it.
+#: Digits hanging off a word are an identifier rather than a quantity — the
+#: 114 in recall notice `R-114` is a name, and an article that repeats the
+#: name states no number. Digits *followed* by letters are a measurement
+#: (`8mm`, `14-week`) and stay.
+_FIGURE: Final[re.Pattern[str]] = re.compile(
+    r"(?<![A-Za-z0-9.,\-])(\d+(?:[.,]\d+)*)\s*"
+    r"(thousand|million|billion|trillion)?",
+    re.IGNORECASE,
+)
 
 #: An address is not a quantity. A Sources line citing `.../2026/07/report`
 #: states no number, and a gate that said it did would be unusable.
 _ADDRESS: Final[re.Pattern[str]] = re.compile(r"https?://\S+|\bwww\.\S+", re.IGNORECASE)
 
+#: `1.` or `2)` opening a line is a list marker, not a quantity the article states.
+_LIST_MARKER: Final[re.Pattern[str]] = re.compile(r"^[ \t]*\d+[.)](?=\s)", re.MULTILINE)
+
+_SCALES: Final[dict[str, int]] = {
+    "thousand": 1000, "million": 1_000_000,
+    "billion": 1_000_000_000, "trillion": 1_000_000_000_000,
+}
+
+
+def _value(digits: str, scale: str | None) -> Decimal | None:
+    """One figure as a number, or ``None`` when it is not one.
+
+    ``1,200`` and ``1200`` are one value; so are ``1.2 million`` and
+    ``1,200,000``. A separator that is neither a thousands group nor a decimal
+    point — a date, a version, an address fragment — has no single value and
+    gets none.
+    """
+    text = digits.strip()
+    try:
+        if "," in text and "." in text:
+            normalized = text.replace(",", "")
+        elif "," in text:
+            parts = text.split(",")
+            # 1,200,000 is a thousands group; 1,2 is not a number we can read
+            if all(len(part) == 3 for part in parts[1:]) and parts[0]:
+                normalized = "".join(parts)
+            else:
+                return None
+        else:
+            normalized = text
+        if normalized.count(".") > 1:
+            return None
+        value = Decimal(normalized)
+    except (InvalidOperation, ValueError):
+        return None
+    if scale:
+        value *= _SCALES[scale.casefold()]
+    return value
+
 
 def figures(text: str) -> set[str]:
-    """Every figure in the text, normalized so 1,200 and 1200 are one figure."""
+    """Every quantity the text states, as canonical values.
+
+    List markers and addresses are not quantities. Whatever survives is
+    returned in one spelling, so equivalent representations meet as one value.
+    """
+    cleaned = _LIST_MARKER.sub(" ", _ADDRESS.sub(" ", text or ""))
     found: set[str] = set()
-    for match in _FIGURE.finditer(_ADDRESS.sub(" ", text or "")):
-        value = match.group(0).replace(",", "")
-        if "." in value:
-            value = value.rstrip("0").rstrip(".")
-        found.add(value or "0")
+    for match in _FIGURE.finditer(cleaned):
+        value = _value(match.group(1), match.group(2))
+        if value is None:
+            continue
+        found.add(format(value.normalize(), "f"))
     return found
 
 
-def untraceable_figures(text: str, traceable: str) -> tuple[str, ...]:
-    """The figures ``text`` states that ``traceable`` does not contain.
+def figures_to_verify(text: str, traceable: str) -> tuple[str, ...]:
+    """Quantities in ``text`` the evidence does not provably state (#269).
 
-    Presence of a number is not compliance (#269): a figure earns its place by
-    appearing in the evidence behind it, and one that appears nowhere in that
-    evidence is untraceable however confidently the sentence carries it.
+    Not a verdict. A value the evidence states in any equivalent spelling
+    clears here and is never asked about again; what remains is what
+    deterministic code cannot vouch for, and that goes to the semantic factual
+    reviewer, which can weigh meaning and provenance as string comparison
+    never could. A quantity the evidence does not support, or one carrying a
+    changed meaning, fails there — on a reading, not on a token.
     """
     if not traceable.strip():
         return ()
-    return tuple(sorted(figures(text) - figures(traceable), key=lambda v: (len(v), v)))
+    return tuple(sorted(
+        figures(text) - figures(traceable), key=lambda v: (len(v), v)
+    ))

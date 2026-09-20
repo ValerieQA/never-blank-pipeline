@@ -15,15 +15,22 @@ it here rather than in code.
 
 Entries are matched case-insensitively and whitespace-insensitively as
 substrings, so keep each one to the recognisable core of the phrase.
+
+This list is Never Blank's taste. The Engine keeps a much shorter list of
+machine-authorship boilerplate that holds for every client
+(config/machine_tells/shared.yaml); what it already gates is not repeated here.
+Transitions like `moreover,` and `furthermore,` are here rather than there
+because they are ordinary human writing that this house does not want, which is
+not the same as a rule every future client should inherit (#269 review).
 -->
 
 - it's not about
 - is not about the
-- in today's fast-paced
-- in an increasingly
 - game changer
 - game-changer
 - the bottom line is
+- moreover,
+- furthermore,
 - at the end of the day
 - what do you think?
 - let us know in the comments
@@ -32,7 +39,6 @@ substrings, so keep each one to the recognisable core of the phrase.
 - in conclusion
 - it's worth noting that
 - when it comes to
-- in the ever-evolving
 - landscape of small business
 - unlock the power
 - take your business to the next level
