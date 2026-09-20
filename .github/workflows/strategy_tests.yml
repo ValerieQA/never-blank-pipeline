@@ -19,8 +19,10 @@ on:
       - "strategy/current/strategy.md"
       - "tests/strategy/**"
       - "tests/analytics/**"
-      # how pytest is configured decides whether this job can import `src`
+      # how pytest is configured, and what CI installs, decide whether this
+      # job can import anything at all
       - "pytest.ini"
+      - "requirements.txt"
       - ".github/workflows/strategy_tests.yml"
   pull_request:
     branches: [main]
@@ -47,7 +49,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --quiet pytest pydantic openai PyYAML requests
+          # the declared dependencies, exactly as the PR gate installs them:
+          # a hand-picked subset silently drifts from what the code imports
+          pip install --quiet -r requirements.txt pytest pydantic
 
       - name: Compile strategy modules
         run: |
