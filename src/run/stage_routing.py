@@ -32,6 +32,7 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
+from typing import Final
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,23 +48,46 @@ class RoutedLens:
         return {"lens": self.identity, "digest": self.digest}
 
 
+#: Not routed, routed and carried, routed and not carried. A reader must be
+#: able to tell these apart from the record alone (#280 review, MEDIUM-3).
+NOT_ROUTED: Final[str] = "not_routed"
+COMPLETE: Final[str] = "complete"
+INCOMPLETE: Final[str] = "incomplete"
+
+
+def request_surface(system: str, user: str) -> str:
+    """The request material routing is verified against (#280 review).
+
+    Both messages, in a deterministic shape. The digest and the containment
+    check read this same surface: a digest over less than what was checked
+    would describe a different request than the one the record vouches for,
+    and routed material placed in a system prompt would read as missing.
+    """
+    return f"SYSTEM:\n{system or ''}\n\nUSER:\n{user or ''}"
+
+
 @dataclass(frozen=True, slots=True)
 class StageRequest:
     """One model request a stage issued, and whether it carried the routing."""
 
     stage: str
+    #: SHA-256 over ``request_surface`` — system and user together.
     request_sha256: str
     contained: tuple[str, ...]
     missing: tuple[str, ...]
+    #: Whether anything was routed to this stage at all.
+    routed: bool = True
 
     @property
-    def complete(self) -> bool:
-        return not self.missing
+    def state(self) -> str:
+        if not self.routed:
+            return NOT_ROUTED
+        return INCOMPLETE if self.missing else COMPLETE
 
     def as_evidence(self) -> dict:
         return {"stage": self.stage, "request_sha256": self.request_sha256,
-                "contained": list(self.contained), "missing": list(self.missing),
-                "complete": self.complete}
+                "routed": self.routed, "state": self.state,
+                "contained": list(self.contained), "missing": list(self.missing)}
 
 
 @dataclass
@@ -79,10 +103,15 @@ class StageRouting:
         """Declare what this run routed to ``stage`` before it runs."""
         self.routed[stage] = tuple(lenses)
 
-    def observe(self, stage: str, request: str) -> StageRequest:
-        """Measure one outgoing request against what ``stage`` was routed."""
+    def observe(self, stage: str, system: str = "", user: str = "") -> StageRequest:
+        """Measure one outgoing request against what ``stage`` was routed.
+
+        The surface measured is both messages (``request_surface``), and the
+        digest covers exactly what the containment check read.
+        """
         expected = self.routed.get(stage, ())
-        haystack = " ".join((request or "").split()).casefold()
+        surface = request_surface(system, user)
+        haystack = " ".join(surface.split()).casefold()
         contained: list[str] = []
         missing: list[str] = []
         for lens in expected:
@@ -90,8 +119,9 @@ class StageRouting:
             (contained if probe and probe in haystack else missing).append(lens.identity)
         record = StageRequest(
             stage=stage,
-            request_sha256=hashlib.sha256((request or "").encode("utf-8")).hexdigest(),
+            request_sha256=hashlib.sha256(surface.encode("utf-8")).hexdigest(),
             contained=tuple(contained), missing=tuple(missing),
+            routed=bool(expected),
         )
         self.requests.append(record)
         return record
@@ -159,13 +189,16 @@ def current() -> StageRouting | None:
     return _ROUTING.get()
 
 
-def observe_request(request: str) -> None:
+def observe_request(system: str = "", user: str = "") -> None:
     """Hook for the shared model client: measure one outgoing request.
 
-    A no-op unless a run is recording and a stage is named, so nothing outside
-    a recorded generation pays for it.
+    Called after the run's call budget has accepted the call and before the
+    provider is dispatched, so a call the budget refused is never written down
+    as one that went out (#280 review, MEDIUM-1). A no-op unless a run is
+    recording and a stage is named, so nothing outside a recorded generation
+    pays for it.
     """
     routing, name = _ROUTING.get(), _STAGE.get()
     if routing is None or not name:
         return
-    routing.observe(name, request)
+    routing.observe(name, system, user)

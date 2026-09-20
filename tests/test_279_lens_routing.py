@@ -22,6 +22,8 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
+import pytest
+
 import scripts.generate_and_publish as gap
 from src.editorial.editorial_plan import (
     Claim,
@@ -210,9 +212,9 @@ def test_the_shared_client_measures_what_actually_went_out(monkeypatch):
         llm_client.chat(system="s", user="a prompt that carries nothing")
 
     carried, absent = routing.requests
-    assert carried.stage == "hook_engine" and carried.complete is True
+    assert carried.stage == "hook_engine" and carried.state == stage_routing.COMPLETE
     assert carried.contained == (BENCH_LENS,)
-    assert absent.complete is False and absent.missing == (BENCH_LENS,)
+    assert absent.state == stage_routing.INCOMPLETE and absent.missing == (BENCH_LENS,)
     assert len({carried.request_sha256, absent.request_sha256}) == 2
 
 
@@ -227,7 +229,7 @@ def _record(tmp_path) -> dict:
     ]
     for stage in BUILDERS:
         routing.route(stage, routed)
-        routing.observe(stage, f"PROMPT {' '.join(l.probe for l in routed)}")
+        routing.observe(stage, user=f"PROMPT {' '.join(l.probe for l in routed)}")
     gap._persist_stage_routing(tmp_path, routing)
     return json.loads((tmp_path / "stage_routing.json").read_text())
 
@@ -245,7 +247,8 @@ def test_the_run_persists_a_record_that_proves_stage_delivery(tmp_path):
         assert BENCH_LENS in record["delivered"][stage], stage
     for request in record["requests"]:
         assert len(request["request_sha256"]) == 64
-        assert request["complete"] is True
+        assert request["routed"] is True
+        assert request["state"] == stage_routing.COMPLETE
 
 
 def test_the_record_stores_no_prompt_and_no_secret(tmp_path):
@@ -339,23 +342,144 @@ def test_a_request_without_the_routed_lens_is_recorded_as_missing():
     routing.route("hook_engine", [stage_routing.RoutedLens(
         identity=BENCH_LENS, digest="sha256:abc", probe=BENCH_CANARY)])
 
-    carried = routing.observe("hook_engine", f"PROMPT… {BENCH_CANARY} …rest")
-    absent = routing.observe("hook_engine", "PROMPT with no obligation in it")
+    carried = routing.observe("hook_engine", user=f"PROMPT… {BENCH_CANARY} …rest")
+    absent = routing.observe("hook_engine", user="PROMPT with no obligation in it")
 
-    assert carried.complete is True and carried.contained == (BENCH_LENS,)
-    assert absent.complete is False and absent.missing == (BENCH_LENS,)
+    assert carried.state == stage_routing.COMPLETE
+    assert carried.contained == (BENCH_LENS,)
+    assert absent.state == stage_routing.INCOMPLETE and absent.missing == (BENCH_LENS,)
     assert routing.as_evidence()["delivered"]["hook_engine"] == [BENCH_LENS]
 
 
 def test_the_probe_is_inert_outside_a_recorded_run():
     """Nothing outside a recorded generation pays for the observability."""
     assert stage_routing.current() is None
-    stage_routing.observe_request("anything at all")      # must not raise
+    stage_routing.observe_request(user="anything at all")      # must not raise
 
     routing = stage_routing.StageRouting()
     with stage_routing.recording(routing), stage_routing.stage("hook_engine"):
-        stage_routing.observe_request("inside")
-    stage_routing.observe_request("outside again")
+        stage_routing.observe_request(user="inside")
+    stage_routing.observe_request(user="outside again")
 
     assert len(routing.requests) == 1
     assert stage_routing.current() is None
+
+
+# ── #280 review repairs: the record only claims what it can support ─────────
+
+
+def test_a_call_the_budget_refuses_is_never_recorded_as_sent(monkeypatch):
+    """MEDIUM-1. The budget gate runs first, so a refused call reaches no
+    provider — and must not appear in the record as one that went out."""
+    from src.run.call_budget import (
+        RunCallBudget,
+        RunCallBudgetExceededError,
+        activate_call_budget,
+    )
+    from src.utils import llm_client
+
+    routing = stage_routing.StageRouting(run_id="r-budget", plan_stage="writing")
+    routing.route("hook_engine", [stage_routing.RoutedLens(
+        identity=BENCH_LENS, digest="sha256:abc", probe=BENCH_CANARY)])
+    exploding = mock.MagicMock(side_effect=AssertionError("provider was reached"))
+
+    with (
+        mock.patch.object(llm_client, "_get_client", return_value=exploding),
+        activate_call_budget(RunCallBudget(limit=1, hard_max=40)),
+        stage_routing.recording(routing),
+        stage_routing.stage("hook_engine"),
+    ):
+        answer = mock.MagicMock()
+        answer.choices = [mock.MagicMock(message=mock.MagicMock(content="{}"))]
+        exploding.chat.completions.create.side_effect = None
+        exploding.chat.completions.create.return_value = answer
+        llm_client.chat(system="s", user=f"first call {BENCH_CANARY}")
+        with pytest.raises(RunCallBudgetExceededError):
+            llm_client.chat(system="s", user=f"refused call {BENCH_CANARY}")
+
+    assert len(routing.requests) == 1, "the refused call was recorded as sent"
+    assert routing.requests[0].state == stage_routing.COMPLETE
+
+
+def test_the_digest_and_the_check_cover_the_same_request_surface():
+    """MEDIUM-2. Both messages, one surface: a digest over less than what was
+    checked would vouch for a request nobody measured."""
+    routing = stage_routing.StageRouting(run_id="r-surface", plan_stage="writing")
+    routing.route("hook_engine", [stage_routing.RoutedLens(
+        identity=BENCH_LENS, digest="sha256:abc", probe=BENCH_CANARY)])
+
+    in_system = routing.observe("hook_engine", system=f"rules: {BENCH_CANARY}", user="u")
+    in_user = routing.observe("hook_engine", system="rules", user=f"u {BENCH_CANARY}")
+    same_user_other_system = routing.observe("hook_engine", system="other", user="u")
+
+    # routed material is found wherever it travels in the request
+    assert in_system.state == stage_routing.COMPLETE
+    assert in_user.state == stage_routing.COMPLETE
+    # and the digest distinguishes requests that differ only in the system half
+    assert in_system.request_sha256 != in_user.request_sha256
+    assert same_user_other_system.request_sha256 != routing.observe(
+        "hook_engine", system="rules", user="u").request_sha256
+
+
+def test_the_record_says_not_routed_without_cross_referencing(tmp_path):
+    """MEDIUM-3. A stage nothing was routed to reads as `not_routed`, not as a
+    pass, and the reader needs no other section to see it."""
+    routing = stage_routing.StageRouting(run_id="r-states", plan_stage="writing")
+    routing.route("hook_engine", [stage_routing.RoutedLens(
+        identity=BENCH_LENS, digest="sha256:abc", probe=BENCH_CANARY)])
+
+    routing.observe("hook_engine", user=f"carries {BENCH_CANARY}")
+    routing.observe("hook_engine", user="carries nothing")
+    routing.observe("platform_composer", user="a stage with no routing")
+
+    states = [r["state"] for r in routing.as_evidence()["requests"]]
+    assert states == [
+        stage_routing.COMPLETE, stage_routing.INCOMPLETE, stage_routing.NOT_ROUTED,
+    ]
+    unrouted = routing.as_evidence()["requests"][2]
+    assert unrouted["routed"] is False
+    assert unrouted["contained"] == [] and unrouted["missing"] == []
+
+
+@pytest.mark.parametrize("entry", ["chat", "chat_qc", "chat_parsed"])
+def test_every_provider_bound_entry_point_is_observed(entry):
+    """LOW-1. One hook, called wherever a request reaches a provider."""
+    from pydantic import BaseModel
+
+    from src.utils import llm_client
+
+    class Answer(BaseModel):
+        ok: bool
+
+    routing = stage_routing.StageRouting(run_id="r-entry", plan_stage="writing")
+    routing.route("hook_engine", [stage_routing.RoutedLens(
+        identity=BENCH_LENS, digest="sha256:abc", probe=BENCH_CANARY)])
+    client = mock.MagicMock()
+    plain = mock.MagicMock()
+    plain.choices = [mock.MagicMock(message=mock.MagicMock(content='{"ok": true}'))]
+    client.chat.completions.create.return_value = plain
+    parsed = mock.MagicMock()
+    parsed.choices = [mock.MagicMock(message=mock.MagicMock(parsed=Answer(ok=True)))]
+    client.beta.chat.completions.parse.return_value = parsed
+
+    with (
+        mock.patch.object(llm_client, "_get_client", return_value=client),
+        stage_routing.recording(routing),
+        stage_routing.stage("hook_engine"),
+    ):
+        if entry == "chat_parsed":
+            llm_client.chat_parsed(f"sys {BENCH_CANARY}", "user", Answer)
+        else:
+            getattr(llm_client, entry)(system=f"sys {BENCH_CANARY}", user="user")
+
+    assert len(routing.requests) == 1, f"{entry} was not observed"
+    assert routing.requests[0].state == stage_routing.COMPLETE
+
+
+def test_one_observation_mechanism_not_three():
+    """The seam is shared: each entry point calls the same hook once."""
+    source = Path("src/utils/llm_client.py").read_text(encoding="utf-8")
+
+    assert source.count("observe_request(system, user)") == 3
+    assert source.count("def observe_request") == 0        # defined once, elsewhere
+    assert "from src.run.stage_routing import observe_request" in source
