@@ -4,6 +4,7 @@ from typing import Any, TypeVar
 from pydantic import BaseModel as PydanticBaseModel
 from openai import OpenAI, BadRequestError
 from src.run.call_budget import charge_active_call_budget
+from src.run.stage_routing import observe_request
 from src.utils.logger import get_logger
 
 _T = TypeVar("_T", bound=PydanticBaseModel)
@@ -132,6 +133,9 @@ def chat(system: str, user: str, json_mode: bool = False, model: str | None = No
         kwargs["response_format"] = {"type": "json_object"}
 
     log.debug("chat() model=%s temp=%s json_mode=%s", model, _temperature(), json_mode)
+    # #279: measure what actually went out, against what this stage was routed.
+    # A no-op outside a recorded run; stores a digest, never the prompt.
+    observe_request(user)
     charge_active_call_budget()  # #171: one logical call, refused before any paid transport
     try:
         response = client.chat.completions.create(**kwargs)

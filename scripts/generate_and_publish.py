@@ -246,6 +246,7 @@ from src.editorial.factual_review import (
     LlmChatFactualReviewTransport,
 )
 from src.editorial.machine_tells import MachineTellList
+from src.run import stage_routing
 from src.editorial.plan_decisions import (
     ModelPlanDecider,
     PlanDecider,
@@ -593,6 +594,24 @@ _R1_COMPOSER_FORMATS = ("long",)
 #: it could put draft-derived social copy beside a corrected article.
 SOCIAL_DERIVATION_LINEAGE = "final-accepted-article/1"
 _R1_IMAGE_PLATFORMS = ["blog", "linkedin"]
+
+
+def _persist_stage_routing(run_dir: Path, routing: stage_routing.StageRouting) -> None:
+    """Write what each stage was routed and what its requests carried (#279).
+
+    Diagnostic evidence, never a publication input: no prompt, credential or
+    article text is stored, only identities, digests and a SHA per request.
+    A failure to preserve evidence never rewrites the run's outcome.
+    """
+    if not routing.routed and not routing.requests:
+        return
+    try:
+        (run_dir / "stage_routing.json").write_text(
+            json.dumps(routing.as_evidence(), indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        print(f"  ⚠  stage routing record could not be preserved: {exc}")
 
 
 def _persist_rejected_compositions(run_dir: Path, rejected: list) -> None:
@@ -1070,6 +1089,9 @@ def _run(
     #: has a signal and its research, and only where the client's stream
     #: contract declares a plan; a client that declares none runs as before.
     _editorial_plan = None
+    #: What this run routed to each stage, and what the stages' requests
+    #: actually carried (#279). Persisted as ``stage_routing.json``.
+    _stage_routing = stage_routing.StageRouting()
     if args.editorial_role:
         try:
             # One snapshot per run: the texts that shape it are the texts it records.
@@ -2082,6 +2104,8 @@ def _run(
             # anything is written, and recorded in the plan with the evidence
             # ids and the decider behind each answer. A contract that leaves
             # nothing open makes no call.
+            _stage_routing.run_id = run_ctx.run_id
+            _stage_routing.plan_stage = "writing"
             if _client_contracts is not None and _client_contracts.requires_plan:
                 _planned_signal = editorial.to_legacy_dict()
                 _plan_claim = Claim(text=str(
@@ -2137,6 +2161,7 @@ def _run(
                 print("  ✓  editorial path: restored July Wednesday pipeline")
                 article = generate_for_wednesday(editorial.to_legacy_dict())
             else:
+              with stage_routing.recording(_stage_routing):
                 article    = generate_article(
                     editorial.to_legacy_dict(),
                     cta_mode=cta_mode,
@@ -2157,9 +2182,14 @@ def _run(
                     rejected_sink=_rejected_compositions,
                     editorial_plan=_editorial_plan,
                 )
+            # #279: what each stage was routed, and what its requests carried.
+            # Written whether or not generation succeeded above, because a run
+            # that failed mid-way is exactly the one whose routing matters.
+            _persist_stage_routing(run_dir, _stage_routing)
             platforms  = article["platforms"]
             structured = article["structured_article"]
         except (ArticleGenerationError, WednesdayGenerationError) as exc:
+            _persist_stage_routing(run_dir, _stage_routing)
             _persist_rejected_compositions(run_dir, _rejected_compositions)
             if exc.stage == "pattern_extractor" and isinstance(exc.original, SignalRejectedError):
                 # Editorially unsuitable, not broken: recorded, never consumed,

@@ -88,6 +88,28 @@ and the reviser through `RevisionContext`. No stage builds a second plan, and
 no stage decides authority of its own — build once, execute everywhere,
 review against the same authority, revise against the same authority.
 
+**Which consumers see a stage's obligations (#279).** A client document
+declares contract stages (`selection`/`writing`/`revision`); the Engine decides
+which of its own stages consume each. For `writing` that is the stages which
+*build* the argument — narrative spine, hook engine, Never Blank voice — and
+then the composer. They read `lens_text_for(stage)` through the enriched
+signal; the composer keeps receiving standing obligations with the role's
+rendered rules, and the reviser keeps its revision route. One projection, no
+second authority.
+
+Forensic #278 is why this exists: standing obligations reached the composer
+alone, so the stage that wrote the opening had never been given the client's
+rule about openings. The article obeyed the ending (a plan slot, which did
+reach those stages) and ignored the opening (lens text, which did not).
+
+**Proving it afterwards.** Each run writes `stage_routing.json`
+(`src/run/stage_routing.py`): per stage, the lens identities and digests it was
+routed, a SHA-256 per outgoing request, and `contained` — computed from the
+request itself rather than from the intention to send it. No prompt, credential
+or article text is stored. A stage that was routed an obligation and issued a
+request without it is recorded as `missing`, which is the fact #278 had to read
+source code to establish.
+
 **Stages.** A plan routes lenses to every stage that runs after research —
 `writing` and `revision` (`PLAN_STAGES`). Each condition is decided once, and
 the decision records every stage its lenses route to (`stages`);
