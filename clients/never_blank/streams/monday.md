@@ -42,3 +42,40 @@ category the signal belongs to.
 - A generic advice or listicle source with no new mechanism, observation,
   tension, or practical value is not useful merely because it is about small
   business.
+
+## Plan
+
+<!--
+The run's editorial contract (#267/#268). The Engine carries these slots; every
+value here is Never Blank's. A slot with one value is decided by this contract;
+a slot with several is chosen per run from what this run's evidence supports,
+and the choice is recorded in editorial_plan.json.
+-->
+
+### ending_mode
+
+- Close on the Kicker/Echo: return to the image or fact from the hook with a
+  new meaning, and end the article on that line. Nothing follows it — no call
+  to action, no question to the reader, no sign-off.
+
+### reader_verifiable_artifact
+
+- a link to the published source the figures come from
+- a live example the reader can look up for themselves
+- a procedure stated plainly enough that the reader can repeat the measurement
+
+### factual_restrictions
+
+- State a consequence with the evidence's own number where one exists;
+  otherwise state a concrete, falsifiable consequence. Never a vague benefit.
+- Never present another publication's coined term as Never Blank's own.
+- Social and platform derivatives carry only what the accepted article
+  establishes. They may reframe, shorten and rephrase; they may not add a fact,
+  a figure, a cause or an author's experience the article does not contain.
+
+### acknowledged_limits
+
+- One documented case is evidence of a mechanism, never proof of what the
+  reader's own outcome will be.
+- Where a figure comes from a single vendor, a single sample or a self-reported
+  measurement, say so beside the figure.

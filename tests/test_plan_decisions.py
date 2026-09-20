@@ -654,8 +654,11 @@ def test_production_stops_before_writing_when_the_decision_is_not_made(
 
 
 def test_never_blank_leaves_exactly_one_condition_to_its_run(tmp_path, monkeypatch):
-    """Never Blank declares no plan values, so its run chooses nothing — and
-    one conditional lens (#263), so its run decides exactly that condition."""
+    """Never Blank's contract decided its ending and left one condition and one
+    slot to the run (#263, #268)."""
+    artifacts = contracts_for_role(
+        MONDAY_ROLE, Path("clients/never_blank")
+    ).stream.plan_values("reader_verifiable_artifact")
     decider = ScriptedDecider(
         {
             "activations": [
@@ -667,7 +670,14 @@ def test_never_blank_leaves_exactly_one_condition_to_its_run(tmp_path, monkeypat
                     "reason": "no tension in this evidence",
                 }
             ],
-            "selections": [],
+            "selections": [
+                {
+                    "slot": "reader_verifiable_artifact",
+                    "value": artifacts[1],
+                    "evidence_refs": [],
+                    "reason": "the source publishes the figures itself",
+                }
+            ],
         }
     )
 
@@ -683,8 +693,11 @@ def test_never_blank_leaves_exactly_one_condition_to_its_run(tmp_path, monkeypat
     assert [c["condition"] for c in decider.requests[0]["conditions"]] == [
         "evidence_tension"
     ]
-    assert decider.requests[0]["slots"] == []
+    assert [slot["slot"] for slot in decider.requests[0]["slots"]] == [
+        "reader_verifiable_artifact"
+    ]
     assert record["run_decisions"]["activations"][0]["met"] is False
+    assert record["run_decisions"]["selections"][0]["value"] == artifacts[1]
     assert generate.call_args.kwargs["editorial_plan"] is not None
 
 

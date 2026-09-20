@@ -7,14 +7,23 @@ voice and under which sourcing policy. Edit these files to change it.
 
 | File | What it decides |
 |---|---|
-| `streams/monday.md` | What Monday is for, and what makes a signal usable for it (D1, D8) |
+| `streams/monday.md` | What Monday is for, what makes a signal usable for it (D1, D8), and the `## Plan` the run executes the contract as (#267, #268) |
 | `lenses/evidence.md` | Never Blank's evidence and source-integrity policy |
-| `lenses/structure.md` | The article structure: the 11-step arc, step 9 conditional (D4, until #252) |
+| `lenses/structure.md` | Editorial Policy v2 (#268): the fixed frame, the middle-pattern library, the standing obligations, and the ending that stops at the Kicker |
+| `lenses/concession.md` | When an article concedes, and when it says nothing (#268) |
+| `lenses/portable_noun.md` | Mint our own, reuse our own, or none — and the cut test (#268) |
+| `lists/machine_tells.md` | Constructions Never Blank never publishes (#268) |
 | `lenses/revision.md` | How a revision may change an article (D10, temporary until #253) |
 | `lenses/evidence_tension_lens.md` | **Conditional**, `activates_on: [evidence_tension]` (#263): what Never Blank does when a signal's own research evidence contradicts the source's claim — the Evidence Tension Lens |
 
 How the Engine reads these files is Engine documentation:
-`docs/engine/CLIENT_CONTRACTS.md`.
+`docs/engine/CLIENT_CONTRACTS.md` and `docs/engine/EDITORIAL_PLAN.md`.
+
+The editorial source of truth these policies were written from is in
+`editorial/reference/`. Two points there are deliberately superseded by the
+owner decisions in #266 and #268: the article no longer ends with a CTA after
+the Kicker, and "one deliberate deviation" is now the moment of authorial
+risk — editorial judgement, with nothing checking it mechanically.
 
 Old Never Blank editorial documents elsewhere in the repository
 (`config/brand_voice.md`, `docs/NEVER_BLANK_EDITORIAL_*.md`,
