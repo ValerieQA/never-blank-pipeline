@@ -343,3 +343,104 @@ def test_the_client_documents_are_the_only_place_the_policy_lives(tmp_path):
     assert any("A REWRITTEN OBLIGATION" in text for text in writing)
     assert not any("A moment of authorial risk" in text for text in writing)
     assert load_lens(client / "lenses" / "structure.md").version == "2"
+
+
+# ── decided every time, and "none" is a real answer ─────────────────────────
+
+
+def test_the_obligations_that_may_be_none_say_so_where_the_writer_reads_them():
+    """Review of 6c68678: one document may not say "every article" while
+    another says "none is a valid decision" — the model receives both."""
+    structure = " ".join(load_lens(NB / "lenses" / "structure.md").text.split())
+    portable = " ".join(load_lens(NB / "lenses" / "portable_noun.md").text.split())
+
+    # the portable noun and the moment of authorial risk are decided, not owed
+    assert (
+        "Two are decided every time, and the decision may be that this article "
+        "has none"
+    ) in structure
+    assert "mint, reuse, or none" in structure
+    assert "Never invent one to fill the slot." in structure
+    assert "Where the material gives the writer nothing to risk, write none" in structure
+    # and the portable-noun lens still says the same thing
+    assert "None is a legitimate outcome" in portable
+    # what is genuinely always there is stated separately
+    assert "**Always present**" in structure
+    assert "Something the reader can check or touch" in structure
+    # no text tells the writer every article must carry a portable noun
+    assert "portable noun" not in structure.split("**Always present**")[1].split(
+        "**Always decided"
+    )[0]
+
+
+def test_activation_conditions_are_decidable_before_the_article_exists():
+    """Review of 6c68678: condition 3 required something "visible in the
+    finished article", which does not exist when activation is decided."""
+    lens = " ".join(load_lens(NB / "lenses" / "evidence_tension_lens.md").text.split())
+    conditions, behaviour = lens.split("What to do when it is active")
+
+    # the precondition is about the evidence, which exists now
+    assert "The mismatch survives the most charitable reading of the evidence." in (
+        conditions
+    )
+    assert "using the research evidence alone" in conditions
+    assert "The condition is met only if that attempt was actually made" in conditions
+    assert "finished article" not in conditions
+    # showing the attempt is an obligation of the article, once active
+    assert "Show the charitable reading that failed." in behaviour
+    assert "the article is where the reader sees it" in behaviour
+
+
+# ── the portfolio record: counted, never enforced ───────────────────────────
+
+
+def test_the_portfolio_counts_activations_across_real_runs(tmp_path):
+    """Three real runs, two with the condition met: the count comes from the
+    editorial_plan.json each run persisted, not from a test fixture."""
+    from scripts.portfolio_activation import plan_records
+    from src.editorial.editorial_plan import activation_rates
+
+    for index, met in enumerate((True, False, True)):
+        code, _, _ = _run(tmp_path / f"run{index}", decider=_decider(tension_met=met))
+        assert code == 0
+
+    records = [record for index in range(3)
+               for record in plan_records(tmp_path / f"run{index}")]
+    observed = activation_rates(records)
+
+    assert len(records) == 3
+    assert [o.condition for o in observed] == ["evidence_tension"]
+    assert observed[0].eligible == 3 and observed[0].activated == 2
+    assert round(observed[0].rate, 2) == 0.67
+    assert len(observed[0].runs) == 2            # traceable to the runs themselves
+
+
+def test_the_engine_holds_no_activation_threshold_anywhere():
+    """Observation, by product decision: a cap in code would make the next
+    activation a way to satisfy a metric."""
+    from src.editorial.editorial_plan import ActivationObservation
+
+    source = Path("src/editorial/editorial_plan.py").read_text(encoding="utf-8")
+    report = Path("scripts/portfolio_activation.py").read_text(encoding="utf-8")
+
+    assert "no threshold" in ActivationObservation.__doc__.casefold().replace(
+        "no rate threshold", "no threshold"
+    )
+    for forbidden in ("max_activation", "activation_limit", "MAX_RATE", "threshold ="):
+        assert forbidden not in source, forbidden
+        assert forbidden not in report, forbidden
+    # and the report reads the portfolio without writing to it
+    assert "write_text" not in report and "mkdir" not in report
+
+
+def test_a_portfolio_with_no_decisions_reports_nothing_rather_than_failing(tmp_path):
+    from scripts.portfolio_activation import plan_records
+    from src.editorial.editorial_plan import activation_rates
+
+    assert plan_records(tmp_path / "empty") == []
+    assert activation_rates([]) == ()
+    # a damaged record is skipped, not fatal
+    broken = tmp_path / "p" / "sig" / "runs" / "r1"
+    broken.mkdir(parents=True)
+    (broken / "editorial_plan.json").write_text("{not json", encoding="utf-8")
+    assert plan_records(tmp_path / "p") == []

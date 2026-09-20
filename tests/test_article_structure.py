@@ -98,12 +98,18 @@ def test_the_middle_is_a_library_of_planning_tools_not_a_visible_template():
     assert "The turn — the moment the reading flips — is conditional." in text
 
 
-def test_the_standing_obligations_are_present_with_a_free_place():
+def test_the_standing_obligations_separate_what_is_owed_from_what_is_decided():
+    """Two are always in the article; two are decided every time, and "none"
+    is a real answer there — the portable-noun lens says the same (#268)."""
     text = _normalised(_structure_text())
 
-    assert "Present somewhere in every article; the place is free." in text
     for obligation in OBLIGATIONS:
         assert obligation in text, obligation
+    assert "**Always present**" in text
+    assert ("Two are decided every time, and the decision may be that this article "
+            "has none") in text
+    assert "Never invent one to fill the slot." in text
+    assert "Where the material gives the writer nothing to risk, write none" in text
     # the moment of authorial risk is judgement, never a mechanical check (#268)
     assert "This is editorial judgement and nothing checks it mechanically." in text
     assert "deliberate deviation" not in text.casefold()

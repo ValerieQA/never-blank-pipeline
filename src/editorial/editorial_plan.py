@@ -219,6 +219,35 @@ class RegularityObservation:
 
 
 @dataclass(frozen=True, slots=True)
+class ActivationObservation:
+    """How often one condition was decided, and how often its evidence met it.
+
+    The portfolio-level record #268 asks for, and only that: eligible runs,
+    activated runs, and which runs those were. No rate threshold, no cap, no
+    verdict — a limit enforced here would make the next activation a way to
+    satisfy a metric, which is exactly what a conditional lens must never
+    become. What a rate means is the client's to read in its own documents.
+    """
+
+    condition: str
+    #: Runs whose contract left this condition to the run to decide.
+    eligible: int
+    #: Of those, the runs whose evidence met it.
+    activated: int
+    runs: tuple[str, ...] = ()
+
+    @property
+    def rate(self) -> float:
+        """Activated share of eligible runs; 0.0 when nothing was eligible."""
+        return self.activated / self.eligible if self.eligible else 0.0
+
+    def as_evidence(self) -> dict:
+        return {"condition": self.condition, "eligible": self.eligible,
+                "activated": self.activated, "rate": round(self.rate, 4),
+                "runs": list(self.runs)}
+
+
+@dataclass(frozen=True, slots=True)
 class EditorialPlan:
     """What this run must be true to, and where every part of it came from."""
 
@@ -699,6 +728,50 @@ def portfolio_regularity(
             runs=tuple(run for run in runs if run),
         )
         for value, runs in sorted(counts.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+    )
+
+
+def activation_rates(
+    records: Sequence[Mapping[str, object]],
+) -> tuple[ActivationObservation, ...]:
+    """How often each condition activated across persisted plan records (#268).
+
+    ``records`` are ``as_evidence()`` dicts — the ``editorial_plan.json`` files
+    a portfolio of runs wrote. Every condition a run was asked to decide counts
+    as eligible; the ones its evidence met count as activated, and the runs are
+    named so any number here can be traced back to the decision that produced
+    it.
+
+    Counting is all this does. The Engine holds no threshold and refuses no
+    activation on a rate: see ``ActivationObservation``.
+    """
+    eligible: dict[str, int] = {}
+    activated: dict[str, list[str]] = {}
+    for record in records:
+        decisions = record.get("run_decisions")
+        if not isinstance(decisions, Mapping):
+            continue
+        run_id = str(record.get("run_id", "") or "")
+        entries = decisions.get("activations")
+        for entry in entries if isinstance(entries, list) else ():
+            if not isinstance(entry, Mapping):
+                continue
+            condition = str(entry.get("condition", "") or "").strip()
+            if not condition:
+                continue
+            eligible[condition] = eligible.get(condition, 0) + 1
+            runs = activated.setdefault(condition, [])
+            if entry.get("met") is True and run_id:
+                runs.append(run_id)
+            elif entry.get("met") is True:
+                runs.append("")
+    return tuple(
+        ActivationObservation(
+            condition=condition, eligible=count,
+            activated=len(activated.get(condition, [])),
+            runs=tuple(run for run in activated.get(condition, []) if run),
+        )
+        for condition, count in sorted(eligible.items())
     )
 
 

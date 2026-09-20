@@ -35,12 +35,14 @@ All four of these must hold. Any one missing and the condition is not met.
    different sources is not this lens; that is ordinary conflicting evidence.
 2. **The source is named and linkable.** We say whose figures these are, and
    the reader can go and look.
-3. **The mismatch survives the most charitable reading**, and that attempt is
-   visible in the finished article. Try the reconciliation that would make the
-   source right — a different denominator, a stated scope, a time window, a
-   definition — and show the reader that we tried it and it did not close the
-   gap. A mismatch we never tried to reconcile is not a finding, it is a
-   reading error.
+3. **The mismatch survives the most charitable reading of the evidence.**
+   Before activating, try the reconciliation that would make the source right —
+   a different denominator, a stated scope, a time window, a definition — using
+   the research evidence alone. The condition is met only if that attempt was
+   actually made and the gap remained. A mismatch nobody tried to reconcile is
+   not a finding, it is a reading error. (What the article must then *show* of
+   that attempt is below, under what to do when it is active: this condition is
+   about the evidence, which exists now, not about an article that does not.)
 4. **The mismatch is material to the source's headline claim.** Rounding,
    noise, a typo, or a detail the source never leaned on do not qualify.
 
@@ -58,14 +60,21 @@ Do not activate to make an article more interesting. If there is no material
 contradiction, this lens does not apply and the normal Never Blank article path
 continues unchanged. It is a lens we use when the evidence earns it, not a
 house posture: if it were active week after week, the skepticism would read as
-a tic rather than a finding, and the portfolio record of how often it activates
-is there to be looked at.
+a tic rather than a finding. How often it has actually activated is recorded
+per run and can be read across the portfolio at any time
+(`scripts/portfolio_activation.py`). That number is there to be
+looked at by people. Nothing enforces it, and it is never a reason to activate
+or to hold back on a given week — each run is decided on its own evidence.
 
 ## What to do when it is active
 
 The research for this signal contains a material tension between what the source claims
 and what its evidence establishes. Keep the signal and write from that tension:
 
+- Show the charitable reading that failed. Name the reconciliation we tried —
+  the denominator, the scope, the window, the definition — and why it did not
+  close the gap. This is what condition 3 tested on the evidence; the article
+  is where the reader sees it.
 - Make the tension itself part of the central hook.
 - Show plainly what the source claims and, beside it, what the evidence actually
   establishes. Keep fact and inference visibly apart.

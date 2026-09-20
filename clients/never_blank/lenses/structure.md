@@ -15,7 +15,8 @@ mixing three different kinds of thing. This version separates them:
 
 * a frame that never changes — the opening and the ending;
 * a middle chosen per article from a library of patterns;
-* standing obligations that must be present somewhere, in no fixed place.
+* standing obligations: some always in the text, some decided every time —
+  and for those, "none" is a real answer rather than a gap to fill.
 
 Two points where #266/#268 correct reference/12 deliberately: the article ends
 on the Kicker/Echo with no call to action after it, and "one deliberate
@@ -83,20 +84,33 @@ evidence produces one, not in every article.
 
 ## Standing obligations
 
-Present somewhere in every article; the place is free.
+Two of these are always in the article. Two are decided every time, and the
+decision may be that this article has none — that is a real answer, not a gap
+to fill. Where the place in the text is free, it is free.
 
-1. **A portable noun of our own.** See the portable-noun lens: evaluated every
-   time, never forced.
-2. **Something the reader can check or touch.** A source link, a live example,
+**Always present**
+
+1. **Something the reader can check or touch.** A source link, a live example,
    or a procedure stated plainly enough to repeat.
-3. **A working link inside the text**, as an ordinary inline link in a
-   sentence — never a panel, never in the first screen.
+2. **Subheads.** They buy reading time cheaply.
+
+**Always decided, and sometimes the answer is none**
+
+3. **A portable noun of our own.** See the portable-noun lens: mint, reuse, or
+   none. A noun minted to satisfy this list is a machine tell, and none is
+   better than a weak coinage. Never invent one to fill the slot.
 4. **A moment of authorial risk.** One place where the text does not behave
-   like a template: an admission, a sharp sentence, a reservation, a stop. This
-   is editorial judgement and nothing checks it mechanically. It exists because
-   readers penalise the *feel* of machine text regardless of its quality, and
-   what they recognise is evenness.
-5. **Subheads.** They buy reading time cheaply.
+   like a template: an admission, a sharp sentence, a reservation, a stop.
+   Where the material gives the writer nothing to risk, write none — a
+   manufactured swerve is the evenness it was meant to break. This is editorial
+   judgement and nothing checks it mechanically. It exists because readers
+   penalise the *feel* of machine text regardless of its quality, and what they
+   recognise is evenness.
+
+**Always present, and placed, not floating**
+
+5. **A working link inside the text**, as an ordinary inline link in a
+   sentence — never a panel, never in the first screen.
 
 ## Consequence
 
