@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "74dc5511f6666093",
+  "HEADLINE": "Google Adds Local Businesses To EEA Search Result Units via @sejournal, @MattGSouthern",
+  "prepared_at": "2026-09-20 13:00 UTC",
+  "content": {
+    "blog": {
+      "headline": "Google’s New EEA Search Units Shift Local Business Visibility — What Founders Must Do Now",
+      "angle": "Google’s update to include local businesses in EEA search units exposes founders’ reliance on third-party platforms, forcing a rethink of digital presence control and SEO agility to maintain visibility."
+    },
+    "linkedin": {
+      "headline": "One Google update, and your local business is invisible — unless you saw it coming.",
+      "angle": "Google’s changing search formats in the EEA reveal how fragile local business visibility is when dependent on external platforms."
+    },
+    "facebook": {
+      "headline": "Google just changed how local businesses show up in search results across Europe.",
+      "angle": "Google’s new local business units in EEA search results disrupt visibility — how prepared is your business to adapt?"
+    },
+    "instagram": {
+      "headline": "When Google Moves The Goalposts",
+      "angle": "Local business visibility depends on owning your digital presence, not renting it from search engines."
+    },
+    "threads": {
+      "thread_hook": "Google’s latest update in the EEA just rewrote the rules for local business search visibility.",
+      "angle": "This thread breaks down why relying on Google’s search formats is a risk and how founders can regain control over their digital presence."
+    },
+    "stories": {
+      "story_question": "Is your local business ready if Google changes the search game again?",
+      "angle": "Exploring the tension between dependence on Google’s platforms and the need to own your digital presence to stay visible."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909199/never-blank/posts/research/74dc5511f6666093/blog/1789909199.png",
+        "path": "reports/content_packages/images/74dc5511f6666093_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909202/never-blank/posts/research/74dc5511f6666093/linkedin/1789909202.png",
+        "path": "reports/content_packages/images/74dc5511f6666093_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909206/never-blank/posts/research/74dc5511f6666093/facebook/1789909206.png",
+        "path": "reports/content_packages/images/74dc5511f6666093_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909212/never-blank/posts/research/74dc5511f6666093/instagram/1789909212.png",
+        "path": "reports/content_packages/images/74dc5511f6666093_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909217/never-blank/posts/research/74dc5511f6666093/threads/1789909217.png",
+        "path": "reports/content_packages/images/74dc5511f6666093_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909225/never-blank/posts/research/74dc5511f6666093/stories/1789909225.png",
+        "path": "reports/content_packages/images/74dc5511f6666093_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "constellation_networks",
+    "hook_text": "Local businesses now shine brighter in search results."
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "cf00fa8af7ba5b79",
+  "HEADLINE": "Amazon Proposes Minimal Impact Facility to Power Transatlantic Cable",
+  "prepared_at": "2026-09-20 12:59 UTC",
+  "content": {
+    "blog": {
+      "headline": "When Restraint Drives Infrastructure: Amazon’s Minimal Impact Transatlantic Cable",
+      "angle": "Amazon’s proposal for a low-impact cable facility highlights the tension between digital growth and environmental responsibility, showing that sustainable infrastructure can redefine industry standards and open new commercial frontiers."
+    },
+    "linkedin": {
+      "headline": "Every new cable promises connection. Few promise not to scar the planet.",
+      "angle": "Amazon’s move to power a transatlantic cable with minimal environmental impact signals a shift where sustainable infrastructure becomes a competitive business asset."
+    },
+    "facebook": {
+      "headline": "Amazon wants to build a transatlantic cable that doesn’t wreck the environment. Can tech growth and green goals coexist?",
+      "angle": "Amazon’s minimal impact facility proposal challenges the usual trade-off between infrastructure expansion and ecological damage—what does this mean for future business models?"
+    },
+    "instagram": {
+      "headline": "Building Connection Without the Carbon",
+      "angle": "Amazon’s sustainable transatlantic cable shows that digital infrastructure can grow without leaving a heavy environmental footprint."
+    },
+    "threads": {
+      "thread_hook": "Not every infrastructure build needs to bulldoze the planet. Amazon’s new cable proposal proves it.",
+      "angle": "This thread breaks down how Amazon’s minimal impact approach to powering a transatlantic cable challenges the default growth-at-any-cost mindset and what it means for founders eyeing sustainable tech investments."
+    },
+    "stories": {
+      "story_question": "Can digital growth happen without environmental damage?",
+      "angle": "Exploring the tension between expanding global connectivity and protecting the planet through Amazon’s new cable proposal."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909128/never-blank/posts/research/cf00fa8af7ba5b79/blog/1789909127.png",
+        "path": "reports/content_packages/images/cf00fa8af7ba5b79_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909132/never-blank/posts/research/cf00fa8af7ba5b79/linkedin/1789909131.png",
+        "path": "reports/content_packages/images/cf00fa8af7ba5b79_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909135/never-blank/posts/research/cf00fa8af7ba5b79/facebook/1789909135.png",
+        "path": "reports/content_packages/images/cf00fa8af7ba5b79_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909141/never-blank/posts/research/cf00fa8af7ba5b79/instagram/1789909141.png",
+        "path": "reports/content_packages/images/cf00fa8af7ba5b79_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909146/never-blank/posts/research/cf00fa8af7ba5b79/threads/1789909146.png",
+        "path": "reports/content_packages/images/cf00fa8af7ba5b79_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909154/never-blank/posts/research/cf00fa8af7ba5b79/stories/1789909154.png",
+        "path": "reports/content_packages/images/cf00fa8af7ba5b79_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "gpt-image-1"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "gpt-image-1",
+    "reuse_source": "n/a",
+    "visual_family": "contrast_waves",
+    "hook_text": "Sustainable energy powers the future of global connectivity."
+  }
+}

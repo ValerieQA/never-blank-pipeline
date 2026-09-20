@@ -1163,5 +1163,35 @@
     "visual_family": "focus_rings",
     "design_version": "3",
     "hook_text": "Three steps to validate new markets before expansion."
+  },
+  "cf00fa8af7ba5b79": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909128/never-blank/posts/research/cf00fa8af7ba5b79/blog/1789909127.png",
+    "signal_type": "platform reach change for small business",
+    "headline": "Amazon Proposes Minimal Impact Facility to Power Transatlantic Cable",
+    "created_at": "2026-09-20",
+    "method": "gpt-image-1",
+    "visual_family": "contrast_waves",
+    "design_version": "3",
+    "hook_text": "Sustainable energy powers the future of global connectivity."
+  },
+  "74dc5511f6666093": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909199/never-blank/posts/research/74dc5511f6666093/blog/1789909199.png",
+    "signal_type": "presence maintenance failure",
+    "headline": "Google Adds Local Businesses To EEA Search Result Units via @sejournal, @MattGSouthern",
+    "created_at": "2026-09-20",
+    "method": "gpt-image-1",
+    "visual_family": "constellation_networks",
+    "design_version": "3",
+    "hook_text": "Local businesses now shine brighter in search results."
+  },
+  "01157e2509b3a5c5": {
+    "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909229/never-blank/posts/research/01157e2509b3a5c5/blog/1789909229.png",
+    "signal_type": "referral and word-of-mouth mechanism",
+    "headline": "Google’s AI Payment Pilot Vs. Cloudflare & Microsoft Models via @sejournal, @MattGSouthern",
+    "created_at": "2026-09-20",
+    "method": "quote_card",
+    "visual_family": "sand_pause_card",
+    "design_version": "3",
+    "hook_text": "Google’s AI is writing checks—Cloudflare and Microsoft are rewriting the contracts."
   }
 }

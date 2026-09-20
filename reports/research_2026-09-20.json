@@ -1,0 +1,505 @@
+{
+  "date": "2026-09-20",
+  "candidates_found": 10,
+  "duplicates_skipped": 0,
+  "new_signals_added": 10,
+  "selected_for_content": 3,
+  "sheet_sync": "success",
+  "archived": 0,
+  "top_signals": [
+    "Amazon Proposes Minimal Impact Facility to Power Transatlantic Cable",
+    "Google Adds Local Businesses To EEA Search Result Units via @sejournal, @MattGSo",
+    "Google\u2019s AI Payment Pilot Vs. Cloudflare & Microsoft Models via @sejournal, @Mat"
+  ],
+  "publish_reports": [
+    {
+      "signal_id": "cf00fa8af7ba5b79",
+      "headline": "Amazon Proposes Minimal Impact Facility to Power Transatlantic Cable",
+      "published_at": "2026-09-20 13:00 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/cf00fa8af7ba5b79_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909128/never-blank/posts/research/cf00fa8af7ba5b79/blog/1789909127.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909132/never-blank/posts/research/cf00fa8af7ba5b79/linkedin/1789909131.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909135/never-blank/posts/research/cf00fa8af7ba5b79/facebook/1789909135.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909141/never-blank/posts/research/cf00fa8af7ba5b79/instagram/1789909141.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909146/never-blank/posts/research/cf00fa8af7ba5b79/threads/1789909146.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909154/never-blank/posts/research/cf00fa8af7ba5b79/stories/1789909154.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "Sustainable energy powers the future of global connectivity.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "gpt-image-1"
+    }
+  ],
+  "_classification": "discovery-preparation-only",
+  "force_overrides": [],
+  "content_packages": 3,
+  "images_new": 3,
+  "images_reused": 0,
+  "publish_failures": [
+    "wix: 'DraftPackage' object has no attribute 'title'",
+    "linkedin: 'DraftPackage' object has no attribute 'linkedin_body'"
+  ],
+  "_content_packages": [
+    {
+      "SIGNAL_ID": "cf00fa8af7ba5b79",
+      "HEADLINE": "Amazon Proposes Minimal Impact Facility to Power Transatlantic Cable",
+      "prepared_at": "2026-09-20 12:59 UTC",
+      "content": {
+        "blog": {
+          "headline": "When Restraint Drives Infrastructure: Amazon\u2019s Minimal Impact Transatlantic Cable",
+          "angle": "Amazon\u2019s proposal for a low-impact cable facility highlights the tension between digital growth and environmental responsibility, showing that sustainable infrastructure can redefine industry standards and open new commercial frontiers."
+        },
+        "linkedin": {
+          "headline": "Every new cable promises connection. Few promise not to scar the planet.",
+          "angle": "Amazon\u2019s move to power a transatlantic cable with minimal environmental impact signals a shift where sustainable infrastructure becomes a competitive business asset."
+        },
+        "facebook": {
+          "headline": "Amazon wants to build a transatlantic cable that doesn\u2019t wreck the environment. Can tech growth and green goals coexist?",
+          "angle": "Amazon\u2019s minimal impact facility proposal challenges the usual trade-off between infrastructure expansion and ecological damage\u2014what does this mean for future business models?"
+        },
+        "instagram": {
+          "headline": "Building Connection Without the Carbon",
+          "angle": "Amazon\u2019s sustainable transatlantic cable shows that digital infrastructure can grow without leaving a heavy environmental footprint."
+        },
+        "threads": {
+          "thread_hook": "Not every infrastructure build needs to bulldoze the planet. Amazon\u2019s new cable proposal proves it.",
+          "angle": "This thread breaks down how Amazon\u2019s minimal impact approach to powering a transatlantic cable challenges the default growth-at-any-cost mindset and what it means for founders eyeing sustainable tech investments."
+        },
+        "stories": {
+          "story_question": "Can digital growth happen without environmental damage?",
+          "angle": "Exploring the tension between expanding global connectivity and protecting the planet through Amazon\u2019s new cable proposal."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909128/never-blank/posts/research/cf00fa8af7ba5b79/blog/1789909127.png",
+            "path": "reports/content_packages/images/cf00fa8af7ba5b79_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909132/never-blank/posts/research/cf00fa8af7ba5b79/linkedin/1789909131.png",
+            "path": "reports/content_packages/images/cf00fa8af7ba5b79_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909135/never-blank/posts/research/cf00fa8af7ba5b79/facebook/1789909135.png",
+            "path": "reports/content_packages/images/cf00fa8af7ba5b79_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909141/never-blank/posts/research/cf00fa8af7ba5b79/instagram/1789909141.png",
+            "path": "reports/content_packages/images/cf00fa8af7ba5b79_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909146/never-blank/posts/research/cf00fa8af7ba5b79/threads/1789909146.png",
+            "path": "reports/content_packages/images/cf00fa8af7ba5b79_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909154/never-blank/posts/research/cf00fa8af7ba5b79/stories/1789909154.png",
+            "path": "reports/content_packages/images/cf00fa8af7ba5b79_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "contrast_waves",
+        "hook_text": "Sustainable energy powers the future of global connectivity."
+      }
+    },
+    {
+      "SIGNAL_ID": "74dc5511f6666093",
+      "HEADLINE": "Google Adds Local Businesses To EEA Search Result Units via @sejournal, @MattGSouthern",
+      "prepared_at": "2026-09-20 13:00 UTC",
+      "content": {
+        "blog": {
+          "headline": "Google\u2019s New EEA Search Units Shift Local Business Visibility \u2014 What Founders Must Do Now",
+          "angle": "Google\u2019s update to include local businesses in EEA search units exposes founders\u2019 reliance on third-party platforms, forcing a rethink of digital presence control and SEO agility to maintain visibility."
+        },
+        "linkedin": {
+          "headline": "One Google update, and your local business is invisible \u2014 unless you saw it coming.",
+          "angle": "Google\u2019s changing search formats in the EEA reveal how fragile local business visibility is when dependent on external platforms."
+        },
+        "facebook": {
+          "headline": "Google just changed how local businesses show up in search results across Europe.",
+          "angle": "Google\u2019s new local business units in EEA search results disrupt visibility \u2014 how prepared is your business to adapt?"
+        },
+        "instagram": {
+          "headline": "When Google Moves The Goalposts",
+          "angle": "Local business visibility depends on owning your digital presence, not renting it from search engines."
+        },
+        "threads": {
+          "thread_hook": "Google\u2019s latest update in the EEA just rewrote the rules for local business search visibility.",
+          "angle": "This thread breaks down why relying on Google\u2019s search formats is a risk and how founders can regain control over their digital presence."
+        },
+        "stories": {
+          "story_question": "Is your local business ready if Google changes the search game again?",
+          "angle": "Exploring the tension between dependence on Google\u2019s platforms and the need to own your digital presence to stay visible."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909199/never-blank/posts/research/74dc5511f6666093/blog/1789909199.png",
+            "path": "reports/content_packages/images/74dc5511f6666093_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909202/never-blank/posts/research/74dc5511f6666093/linkedin/1789909202.png",
+            "path": "reports/content_packages/images/74dc5511f6666093_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909206/never-blank/posts/research/74dc5511f6666093/facebook/1789909206.png",
+            "path": "reports/content_packages/images/74dc5511f6666093_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909212/never-blank/posts/research/74dc5511f6666093/instagram/1789909212.png",
+            "path": "reports/content_packages/images/74dc5511f6666093_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909217/never-blank/posts/research/74dc5511f6666093/threads/1789909217.png",
+            "path": "reports/content_packages/images/74dc5511f6666093_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909225/never-blank/posts/research/74dc5511f6666093/stories/1789909225.png",
+            "path": "reports/content_packages/images/74dc5511f6666093_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "gpt-image-1"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "gpt-image-1",
+        "reuse_source": "n/a",
+        "visual_family": "constellation_networks",
+        "hook_text": "Local businesses now shine brighter in search results."
+      }
+    },
+    {
+      "SIGNAL_ID": "01157e2509b3a5c5",
+      "HEADLINE": "Google\u2019s AI Payment Pilot Vs. Cloudflare & Microsoft Models via @sejournal, @MattGSouthern",
+      "prepared_at": "2026-09-20 13:00 UTC",
+      "content": {
+        "blog": {
+          "headline": "Google, Cloudflare, Microsoft: Who\u2019s Really Paying for AI Content?",
+          "angle": "As AI rapidly taps into original content, companies face the tension of compensating creators fairly; the response is distinct payment pilots, teaching founders that early, transparent deals with content owners are non-negotiable for sustainable AI growth."
+        },
+        "linkedin": {
+          "headline": "Google\u2019s AI is writing checks\u2014Cloudflare and Microsoft are rewriting the contracts.",
+          "angle": "AI\u2019s rise forces a reckoning over content rights; how companies handle compensation models will define who wins trust and avoids costly backlash."
+        },
+        "facebook": {
+          "headline": "Google, Cloudflare, and Microsoft are testing new ways to pay publishers for AI content use.",
+          "angle": "With AI pulling from vast content pools, these giants pilot payment models\u2014will this set the standard or spark more disputes?"
+        },
+        "instagram": {
+          "headline": "AI\u2019s New Price Tag: Content Compensation",
+          "angle": "When AI disrupts value chains, the smartest companies don\u2019t just pay up\u2014they rewrite the rules of access and trust."
+        },
+        "threads": {
+          "thread_hook": "AI isn\u2019t just stealing content\u2014it\u2019s forcing a new economy of payment and rights.",
+          "angle": "This thread breaks down how Google, Cloudflare, and Microsoft\u2019s payment pilots reveal the future of AI content licensing and why founders must rethink creator relationships."
+        },
+        "stories": {
+          "story_question": "Can AI growth survive without fair pay for creators?",
+          "angle": "Exploring the tension between rapid AI advances and the need for transparent compensation models to avoid legal and reputational risks."
+        }
+      },
+      "images": {
+        "platform_images": {
+          "blog": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909229/never-blank/posts/research/01157e2509b3a5c5/blog/1789909229.png",
+            "path": "reports/content_packages/images/01157e2509b3a5c5_blog.png",
+            "size": "1920x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "linkedin": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909230/never-blank/posts/research/01157e2509b3a5c5/linkedin/1789909229.png",
+            "path": "reports/content_packages/images/01157e2509b3a5c5_linkedin.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "facebook": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909230/never-blank/posts/research/01157e2509b3a5c5/facebook/1789909230.png",
+            "path": "reports/content_packages/images/01157e2509b3a5c5_facebook.png",
+            "size": "1200x628",
+            "reused": false,
+            "upload_failed": false
+          },
+          "instagram": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909231/never-blank/posts/research/01157e2509b3a5c5/instagram/1789909231.png",
+            "path": "reports/content_packages/images/01157e2509b3a5c5_instagram.png",
+            "size": "1080x1350",
+            "reused": false,
+            "upload_failed": false
+          },
+          "threads": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909233/never-blank/posts/research/01157e2509b3a5c5/threads/1789909233.png",
+            "path": "reports/content_packages/images/01157e2509b3a5c5_threads.png",
+            "size": "1080x1080",
+            "reused": false,
+            "upload_failed": false
+          },
+          "stories": {
+            "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909233/never-blank/posts/research/01157e2509b3a5c5/stories/1789909233.png",
+            "path": "reports/content_packages/images/01157e2509b3a5c5_stories.png",
+            "size": "1080x1920",
+            "reused": false,
+            "upload_failed": false
+          },
+          "_design_version": "3",
+          "_method": "quote_card"
+        },
+        "new_images": 1,
+        "reused_images": 0,
+        "reuse_rate": "0%",
+        "image_method": "quote_card",
+        "reuse_source": "n/a",
+        "visual_family": "sand_pause_card",
+        "hook_text": "Google\u2019s AI is writing checks\u2014Cloudflare and Microsoft are rewriting the contracts."
+      }
+    }
+  ],
+  "_publish_reports": [
+    {
+      "signal_id": "cf00fa8af7ba5b79",
+      "headline": "Amazon Proposes Minimal Impact Facility to Power Transatlantic Cable",
+      "published_at": "2026-09-20 13:00 UTC",
+      "mode": "live",
+      "results": {
+        "facebook": {
+          "platform": "facebook",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "instagram": {
+          "platform": "instagram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "threads": {
+          "platform": "threads",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "telegram": {
+          "platform": "telegram",
+          "status": "SKIPPED",
+          "url": null,
+          "external_id": null,
+          "error_message": "outside the Release 1 publishing scope (#227)",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "wix": {
+          "platform": "wix",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'title'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "status": "FAILED",
+          "url": null,
+          "external_id": null,
+          "error_message": "'DraftPackage' object has no attribute 'linkedin_body'",
+          "raw_response_path": null,
+          "run_id": "",
+          "url_provenance": "unavailable",
+          "reused_from_run_id": null
+        }
+      },
+      "wix_url": "",
+      "generated_file": "reports/content_packages/cf00fa8af7ba5b79_generated.json",
+      "platform_images": {
+        "blog": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909128/never-blank/posts/research/cf00fa8af7ba5b79/blog/1789909127.png",
+          "size": "1920x1080"
+        },
+        "linkedin": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909132/never-blank/posts/research/cf00fa8af7ba5b79/linkedin/1789909131.png",
+          "size": "1200x628"
+        },
+        "facebook": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909135/never-blank/posts/research/cf00fa8af7ba5b79/facebook/1789909135.png",
+          "size": "1200x628"
+        },
+        "instagram": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909141/never-blank/posts/research/cf00fa8af7ba5b79/instagram/1789909141.png",
+          "size": "1080x1350"
+        },
+        "threads": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909146/never-blank/posts/research/cf00fa8af7ba5b79/threads/1789909146.png",
+          "size": "1080x1080"
+        },
+        "stories": {
+          "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909154/never-blank/posts/research/cf00fa8af7ba5b79/stories/1789909154.png",
+          "size": "1080x1920"
+        }
+      },
+      "instagram_signature": false,
+      "telegram_signature": true,
+      "wix_cover_image_attached": true,
+      "image_design_version": "",
+      "image_hook_text": "Sustainable energy powers the future of global connectivity.",
+      "image_visual_family": "contrast_waves",
+      "image_method": "gpt-image-1"
+    }
+  ]
+}

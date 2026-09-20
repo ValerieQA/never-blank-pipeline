@@ -1,0 +1,86 @@
+{
+  "SIGNAL_ID": "01157e2509b3a5c5",
+  "HEADLINE": "Google’s AI Payment Pilot Vs. Cloudflare & Microsoft Models via @sejournal, @MattGSouthern",
+  "prepared_at": "2026-09-20 13:00 UTC",
+  "content": {
+    "blog": {
+      "headline": "Google, Cloudflare, Microsoft: Who’s Really Paying for AI Content?",
+      "angle": "As AI rapidly taps into original content, companies face the tension of compensating creators fairly; the response is distinct payment pilots, teaching founders that early, transparent deals with content owners are non-negotiable for sustainable AI growth."
+    },
+    "linkedin": {
+      "headline": "Google’s AI is writing checks—Cloudflare and Microsoft are rewriting the contracts.",
+      "angle": "AI’s rise forces a reckoning over content rights; how companies handle compensation models will define who wins trust and avoids costly backlash."
+    },
+    "facebook": {
+      "headline": "Google, Cloudflare, and Microsoft are testing new ways to pay publishers for AI content use.",
+      "angle": "With AI pulling from vast content pools, these giants pilot payment models—will this set the standard or spark more disputes?"
+    },
+    "instagram": {
+      "headline": "AI’s New Price Tag: Content Compensation",
+      "angle": "When AI disrupts value chains, the smartest companies don’t just pay up—they rewrite the rules of access and trust."
+    },
+    "threads": {
+      "thread_hook": "AI isn’t just stealing content—it’s forcing a new economy of payment and rights.",
+      "angle": "This thread breaks down how Google, Cloudflare, and Microsoft’s payment pilots reveal the future of AI content licensing and why founders must rethink creator relationships."
+    },
+    "stories": {
+      "story_question": "Can AI growth survive without fair pay for creators?",
+      "angle": "Exploring the tension between rapid AI advances and the need for transparent compensation models to avoid legal and reputational risks."
+    }
+  },
+  "images": {
+    "platform_images": {
+      "blog": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909229/never-blank/posts/research/01157e2509b3a5c5/blog/1789909229.png",
+        "path": "reports/content_packages/images/01157e2509b3a5c5_blog.png",
+        "size": "1920x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "linkedin": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909230/never-blank/posts/research/01157e2509b3a5c5/linkedin/1789909229.png",
+        "path": "reports/content_packages/images/01157e2509b3a5c5_linkedin.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "facebook": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909230/never-blank/posts/research/01157e2509b3a5c5/facebook/1789909230.png",
+        "path": "reports/content_packages/images/01157e2509b3a5c5_facebook.png",
+        "size": "1200x628",
+        "reused": false,
+        "upload_failed": false
+      },
+      "instagram": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909231/never-blank/posts/research/01157e2509b3a5c5/instagram/1789909231.png",
+        "path": "reports/content_packages/images/01157e2509b3a5c5_instagram.png",
+        "size": "1080x1350",
+        "reused": false,
+        "upload_failed": false
+      },
+      "threads": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909233/never-blank/posts/research/01157e2509b3a5c5/threads/1789909233.png",
+        "path": "reports/content_packages/images/01157e2509b3a5c5_threads.png",
+        "size": "1080x1080",
+        "reused": false,
+        "upload_failed": false
+      },
+      "stories": {
+        "url": "https://res.cloudinary.com/df0lt7izx/image/upload/v1789909233/never-blank/posts/research/01157e2509b3a5c5/stories/1789909233.png",
+        "path": "reports/content_packages/images/01157e2509b3a5c5_stories.png",
+        "size": "1080x1920",
+        "reused": false,
+        "upload_failed": false
+      },
+      "_design_version": "3",
+      "_method": "quote_card"
+    },
+    "new_images": 1,
+    "reused_images": 0,
+    "reuse_rate": "0%",
+    "image_method": "quote_card",
+    "reuse_source": "n/a",
+    "visual_family": "sand_pause_card",
+    "hook_text": "Google’s AI is writing checks—Cloudflare and Microsoft are rewriting the contracts."
+  }
+}
