@@ -613,14 +613,28 @@ def test_no_engine_module_and_no_shared_list_knows_this_client():
             assert canary not in text, module
 
 
-def test_never_blank_keeps_the_shared_list_and_adds_none_of_its_own():
-    """Never Blank ships no banned list; the shared one still applies to it."""
+def test_never_blank_keeps_the_shared_list_whatever_its_own_list_says():
+    """The shared list runs for Never Blank; its own list only extends it.
+
+    What this client bans is its own policy and moves with its documents —
+    #268 gave it a list where it had none — so nothing here pins that. What
+    does not move is the Engine's side: the shared list is scanned for every
+    client, it still gates, and no client entry is ever one of its entries.
+    """
     from src.strategy.client_contracts import DEFAULT_CLIENT_DIR, contracts_for_role
 
     contracts = contracts_for_role(MONDAY_ROLE, DEFAULT_CLIENT_DIR)
+    tells = MachineTellList.load()
 
-    assert contracts.banned_entries == ()
-    assert MachineTellList.load().entries
+    found = scan(
+        "Moreover, the bench decides.",
+        tells=tells,
+        client_entries=contracts.banned_entries,
+    )
+
+    assert tells.identity in found.as_evidence()["lists"]
+    assert "moreover" in [tell.entry_id for tell in found.gated]
+    assert all(identity != tells.identity for _, identity in contracts.banned_entries)
 
 
 def test_the_fixture_client_is_still_only_documents(tmp_path):
