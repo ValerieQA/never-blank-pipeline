@@ -19,6 +19,8 @@ on:
       - "strategy/current/strategy.md"
       - "tests/strategy/**"
       - "tests/analytics/**"
+      # how pytest is configured decides whether this job can import `src`
+      - "pytest.ini"
       - ".github/workflows/strategy_tests.yml"
   pull_request:
     branches: [main]
@@ -27,6 +29,8 @@ on:
       - "src/analytics/**"
       - "tests/strategy/**"
       - "tests/analytics/**"
+      - "pytest.ini"
+      - ".github/workflows/strategy_tests.yml"
   workflow_dispatch:
 
 jobs:
