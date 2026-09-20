@@ -528,7 +528,13 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
 
 
 class _UnmetPlanDecider:
-    """Decides every client condition unmet — the harness default (#267)."""
+    """The harness stand-in for the run's plan decider (#267).
+
+    Decides every client condition unmet, and answers every open slot with the
+    contract's first permitted value. That is this fake model's answer, not an
+    Engine default: the Engine has no fallback and refuses a slot nobody chose.
+    Suites that care which value was chosen inject their own decider.
+    """
 
     identity = "test:harness-unmet"
 
@@ -540,7 +546,11 @@ class _UnmetPlanDecider:
                  "reason": "harness evidence meets no client condition"}
                 for condition in request["conditions"]
             ],
-            "selections": [],
+            "selections": [
+                {"slot": slot["slot"], "value": slot["permitted"][0],
+                 "evidence_refs": [], "reason": "harness default: the first permitted value"}
+                for slot in request["slots"]
+            ],
         })
 
 

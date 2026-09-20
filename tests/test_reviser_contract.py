@@ -40,6 +40,7 @@ from src.editorial.editorial_acceptance import (
 )
 from src.editorial.editorial_role import render_editorial_role_rules, resolve_editorial_role
 from src.strategy.business_config import load_business_strategy_configuration
+from src.strategy.client_contracts import contracts_for_role
 from tests import test_editorial_acceptance as acceptance_fixtures
 from tests.test_decision_lifecycle import _evaluator, _model_output
 from tests.test_monday_stream import (
@@ -156,7 +157,12 @@ def test_the_rubric_is_unchanged_because_the_policy_is_the_clients():
 def test_a_monday_revision_request_carries_the_clients_revision_lens(tmp_path):
     request, _ = _run_entrypoint(tmp_path, role=MONDAY_ROLE)
 
-    assert request["client_lenses"] == [_revision_lens_text()]
+    # every standing lens the client routes to revision — #268 added the
+    # concession and portable-noun policies to the reviser's inheritance
+    assert request["client_lenses"] == list(
+        contracts_for_role(MONDAY_ROLE).for_stage("revision")
+    )
+    assert _revision_lens_text() in request["client_lenses"]
     assert "Follow every client lens in this request" in request["note"]
 
 

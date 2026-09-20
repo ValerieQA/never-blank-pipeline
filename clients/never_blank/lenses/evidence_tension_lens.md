@@ -1,6 +1,6 @@
 ---
 lens_id: never-blank-evidence-tension
-version: "1"
+version: "2"
 applies_to: [never-blank-monday]
 stages: [writing, revision]
 activates_on: [evidence_tension]
@@ -28,25 +28,53 @@ Format: docs/engine/CLIENT_CONTRACTS.md.
 
 ## When `evidence_tension` holds
 
-The condition is met only when the research evidence itself shows a material tension or
-contradiction between what a source claims, concludes, frames or implies and what the
-facts or data it relies on actually establish — for example, a source that presents a
-stronger conclusion than its own figures support, or figures that point the other way
-from the story told about them.
+All four of these must hold. Any one missing and the condition is not met.
 
-The tension must be inside the research evidence: between a source's claim and the
-evidence recorded for it. A mismatch that exists only in how an article might be
-written about the evidence is not a trigger.
+1. **The mismatch is inside one source** — figure against figure, or figure
+   against that source's own stated conclusion. A disagreement between two
+   different sources is not this lens; that is ordinary conflicting evidence.
+2. **The source is named and linkable.** We say whose figures these are, and
+   the reader can go and look.
+3. **The mismatch survives the most charitable reading of the evidence.**
+   Before activating, try the reconciliation that would make the source right —
+   a different denominator, a stated scope, a time window, a definition — using
+   the research evidence alone. The condition is met only if that attempt was
+   actually made and the gap remained. A mismatch nobody tried to reconcile is
+   not a finding, it is a reading error. (What the article must then *show* of
+   that attempt is below, under what to do when it is active: this condition is
+   about the evidence, which exists now, not about an article that does not.)
+4. **The mismatch is material to the source's headline claim.** Rounding,
+   noise, a typo, or a detail the source never leaned on do not qualify.
+
+The tension must be inside the research evidence, between a source's claim and
+the evidence recorded for it. A mismatch that exists only in how an article
+might be written about the evidence is not a trigger, and a mismatch produced
+by our own unsupported writing is a generation error for editorial acceptance
+to reject — never a reason to activate this lens.
+
+This is never a reason to select a signal. Signals are chosen by the stream's
+own selection rules; this lens only changes how an already-chosen signal is
+written.
 
 Do not activate to make an article more interesting. If there is no material
 contradiction, this lens does not apply and the normal Never Blank article path
-continues unchanged.
+continues unchanged. It is a lens we use when the evidence earns it, not a
+house posture: if it were active week after week, the skepticism would read as
+a tic rather than a finding. How often it has actually activated is recorded
+per run and can be read across the portfolio at any time
+(`scripts/portfolio_activation.py`). That number is there to be
+looked at by people. Nothing enforces it, and it is never a reason to activate
+or to hold back on a given week — each run is decided on its own evidence.
 
 ## What to do when it is active
 
 The research for this signal contains a material tension between what the source claims
 and what its evidence establishes. Keep the signal and write from that tension:
 
+- Show the charitable reading that failed. Name the reconciliation we tried —
+  the denominator, the scope, the window, the definition — and why it did not
+  close the gap. This is what condition 3 tested on the evidence; the article
+  is where the reader sees it.
 - Make the tension itself part of the central hook.
 - Show plainly what the source claims and, beside it, what the evidence actually
   establishes. Keep fact and inference visibly apart.
@@ -62,6 +90,10 @@ and what its evidence establishes. Keep the signal and write from that tension:
   rather than a verdict.
 - The Never Blank Echo takes the same evidence-tension perspective — never a generic
   educational closing line.
+- This may suggest the Argument pattern for the middle, and never requires it:
+  write the middle the material supports.
+- Everything the structure lens forbids still holds. A sharper subject is not
+  licence for a machine tell, a template rhythm, or a closing question.
 - This is not licence to add claims of our own. Every statement about the source's
   evidence must match the research evidence exactly; state no figure, cause or
   conclusion the evidence does not contain.
