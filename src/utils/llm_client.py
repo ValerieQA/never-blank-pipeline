@@ -4,6 +4,7 @@ from typing import Any, TypeVar
 from pydantic import BaseModel as PydanticBaseModel
 from openai import OpenAI, BadRequestError
 from src.run.call_budget import charge_active_call_budget
+from src.run.stage_routing import observe_request
 from src.utils.logger import get_logger
 
 _T = TypeVar("_T", bound=PydanticBaseModel)
@@ -133,6 +134,11 @@ def chat(system: str, user: str, json_mode: bool = False, model: str | None = No
 
     log.debug("chat() model=%s temp=%s json_mode=%s", model, _temperature(), json_mode)
     charge_active_call_budget()  # #171: one logical call, refused before any paid transport
+    # #279: measure what actually goes out, against what this stage was routed.
+    # After the budget gate on purpose: a call the budget refuses never
+    # reaches a provider, so it must not appear as one that did. A no-op
+    # outside a recorded run; stores a digest, never the prompt.
+    observe_request(system, user)
     try:
         response = client.chat.completions.create(**kwargs)
     except BadRequestError as exc:
@@ -182,6 +188,7 @@ def chat_qc(system: str, user: str, json_mode: bool = False, model: str | None =
 
     log.debug("chat_qc() model=%s temp=%s", model, _qc_temperature())
     charge_active_call_budget()  # #171: one logical call, refused before any paid transport
+    observe_request(system, user)                                            # #279
     try:
         response = client.chat.completions.create(**kwargs)
     except BadRequestError as exc:
@@ -233,6 +240,7 @@ def chat_parsed(
     model = model or _model()
     log.debug("chat_parsed() model=%s response_model=%s", model, response_model.__name__)
     charge_active_call_budget()  # #171: one logical call, refused before any paid transport
+    observe_request(system, user)                                            # #279
     try:
         response = client.beta.chat.completions.parse(
             model=model,

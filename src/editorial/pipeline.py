@@ -17,10 +17,15 @@ Per the specs' own principle: a failed generation should skip publishing that si
 not publish a generic article to fill the gap.
 """
 
-from typing import Callable, Mapping
+from typing import Callable, Final, Mapping
 from src.research.evidence import NormalizedResearchArtifact
 
-from src.editorial.editorial_plan import PLAN_SIGNAL_KEY, EditorialPlan
+from src.editorial.editorial_plan import (
+    PLAN_SIGNAL_KEY,
+    STAGE_LENSES_SIGNAL_KEY,
+    EditorialPlan,
+)
+from src.run import stage_routing
 from src.editorial.pattern_extractor import extract_pattern, SignalRejectedError
 from src.editorial.decision_lens_lite import generate_decision_lens
 from src.editorial.narrative_spine import build_narrative_spine
@@ -42,6 +47,19 @@ from src.strategy.execution_context import (
 from src.utils.logger import get_logger
 
 log = get_logger("editorial.pipeline")
+
+#: The contract stage these consumers execute. Client documents declare stages
+#: (``selection``/``writing``/``revision``); the Engine decides which of its own
+#: stages are consumers of each, and every consumer below builds the article
+#: before composition (#279).
+WRITING_STAGE: Final[str] = "writing"
+
+#: The stages that SHAPE the argument. They run before the composer, which is
+#: why a rule delivered only to the composer arrives after the decisions it
+#: governs have been made (forensic #278).
+ARGUMENT_STAGES: Final[tuple[str, ...]] = (
+    "narrative_spine", "hook_engine", "never_blank_voice",
+)
 
 
 class ArticleGenerationError(Exception):
@@ -72,6 +90,11 @@ def _record_rejection(sink, stage_name: str, attempt: int, exc: Exception) -> No
 
 
 def _run_stage(stage_name: str, fn: Callable, *args, rejected_sink=None, **kwargs):
+    with stage_routing.stage(stage_name):
+        return _attempt_stage(stage_name, fn, *args, rejected_sink=rejected_sink, **kwargs)
+
+
+def _attempt_stage(stage_name: str, fn: Callable, *args, rejected_sink=None, **kwargs):
     try:
         return fn(*args, **kwargs)
     except ValueError as exc:
@@ -151,6 +174,23 @@ def generate_article(
     # ``plan_block``; the Engine adds nothing of its own to it.
     if editorial_plan is not None:
         enriched[PLAN_SIGNAL_KEY] = editorial_plan.as_prompt_text()
+        # #279: the client's obligations for THIS stage, routed because the
+        # documents declare the stage — the composer is not the first consumer
+        # of a writing lens, the stages that build the argument are.
+        # standing only: the plan text above already renders every conditional
+        # obligation this run activated, and these stages read both
+        _writing_lenses = editorial_plan.lens_text_for(WRITING_STAGE, standing_only=True)
+        enriched[STAGE_LENSES_SIGNAL_KEY] = "\n\n".join(_writing_lenses)
+        _routing = stage_routing.current()
+        if _routing is not None:
+            _routed = tuple(
+                stage_routing.RoutedLens(
+                    identity=lens.identity, digest=lens.digest, text=lens.text,
+                )
+                for lens in editorial_plan.lenses_for(WRITING_STAGE)
+            )
+            for consumer in ARGUMENT_STAGES:
+                _routing.route(consumer, _routed)
     typed_strategy = (
         strategy_context
         if isinstance(strategy_context, DecisionLensEditorialStrategyView)

@@ -67,6 +67,12 @@ PLAN_STAGES: Final[tuple[str, ...]] = CONDITIONAL_STAGES
 #: own text here and nothing else; a stage reads it through ``plan_block``.
 PLAN_SIGNAL_KEY: Final[str] = "EDITORIAL_PLAN"
 
+#: The key the enriched signal carries this stage's client obligations under
+#: (#279). Separate from the plan's own text because the two answer different
+#: questions: the plan says what the article must be true to, the obligations
+#: say what the client asked of the stage reading them.
+STAGE_LENSES_SIGNAL_KEY: Final[str] = "EDITORIAL_STAGE_LENSES"
+
 
 class EditorialPlanError(ValueError):
     """A plan cannot be built, or is not the plan the contract requires."""
@@ -436,6 +442,42 @@ class EditorialPlan:
         lines.append("")
         return "\n".join(lines)
 
+    def lens_text_for(self, stage: str, *, standing_only: bool = False) -> tuple[str, ...]:
+        """Every client obligation this run carries to ``stage``, as text (#279).
+
+        Standing obligations and the conditional ones this run activated, in
+        the contract's own order, each rendered with what put it there. The
+        one stage-aware projection of the one plan: a caller asks for the
+        stage it is about to run, and a lens reaches it because its own
+        document declares that stage — never because the Engine knows which
+        client, stream or day this is.
+
+        Forensic #278: before this, standing obligations reached the composer
+        alone, so the stages that BUILD the argument — spine, hook, voice —
+        shaped an article under rules they had never been given, and the one
+        the client wrote about openings was among them.
+
+        ``standing_only`` leaves out the conditional obligations for a caller
+        that already carries them another way. ``as_prompt_text`` renders an
+        activated lens, so a consumer of both would otherwise receive it twice.
+        """
+        rendered: list[str] = []
+        for lens in self.lenses_for(stage):
+            if standing_only and not lens.is_standing:
+                continue
+            if lens.is_standing:
+                rendered.append(
+                    f"Client obligation ({lens.identity}), standing for every "
+                    f"article of this stream:\n{lens.text}"
+                )
+            else:
+                rendered.append(
+                    f"Client obligation ({lens.identity}), active for THIS "
+                    f"article because this run's evidence met `{lens.activation}`:"
+                    f"\n{lens.text}\n\nWhat activated it: {lens.activation_evidence}"
+                )
+        return tuple(rendered)
+
     def as_evidence(self) -> dict:
         """What the run persists: the plan, and the exact documents behind it."""
         return {
@@ -487,12 +529,24 @@ def plan_block(signal: Mapping[str, object]) -> str:
     plan changes nothing.
     """
     plan = signal.get(PLAN_SIGNAL_KEY) or ""
-    if not isinstance(plan, str) or not plan.strip():
+    lenses = signal.get(STAGE_LENSES_SIGNAL_KEY) or ""
+    if not isinstance(plan, str):
+        plan = ""
+    if not isinstance(lenses, str):
+        lenses = ""
+    if not plan.strip() and not lenses.strip():
         return ""
-    return ("\n\nThe plan below is this run's editorial contract, already "
-            "validated against the evidence. Build what you write from it — it "
-            "binds this stage as much as the final composition:\n"
-            + plan.strip() + "\n")
+    block = ""
+    if plan.strip():
+        block += ("\n\nThe plan below is this run's editorial contract, already "
+                  "validated against the evidence. Build what you write from it — "
+                  "it binds this stage as much as the final composition:\n"
+                  + plan.strip() + "\n")
+    if lenses.strip():
+        block += ("\n\nThe client's own obligations for this stage follow, in "
+                  "the client's words. They govern what you produce here, not "
+                  "only how it is dressed later:\n" + lenses.strip() + "\n")
+    return block
 
 
 def _block(label: str, values: Sequence[str]) -> list[str]:

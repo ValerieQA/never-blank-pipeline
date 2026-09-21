@@ -246,6 +246,7 @@ from src.editorial.factual_review import (
     LlmChatFactualReviewTransport,
 )
 from src.editorial.machine_tells import MachineTellList
+from src.run import stage_routing
 from src.editorial.plan_decisions import (
     ModelPlanDecider,
     PlanDecider,
@@ -593,6 +594,24 @@ _R1_COMPOSER_FORMATS = ("long",)
 #: it could put draft-derived social copy beside a corrected article.
 SOCIAL_DERIVATION_LINEAGE = "final-accepted-article/1"
 _R1_IMAGE_PLATFORMS = ["blog", "linkedin"]
+
+
+def _persist_stage_routing(run_dir: Path, routing: stage_routing.StageRouting) -> None:
+    """Write what each stage was routed and what its requests carried (#279).
+
+    Diagnostic evidence, never a publication input: no prompt, credential or
+    article text is stored, only identities, digests and a SHA per request.
+    A failure to preserve evidence never rewrites the run's outcome.
+    """
+    if not routing.routed and not routing.requests:
+        return
+    try:
+        (run_dir / "stage_routing.json").write_text(
+            json.dumps(routing.as_evidence(), indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        print(f"  ⚠  stage routing record could not be preserved: {exc}")
 
 
 def _persist_rejected_compositions(run_dir: Path, rejected: list) -> None:
@@ -1070,6 +1089,9 @@ def _run(
     #: has a signal and its research, and only where the client's stream
     #: contract declares a plan; a client that declares none runs as before.
     _editorial_plan = None
+    #: What this run routed to each stage, and what the stages' requests
+    #: actually carried (#279). Persisted as ``stage_routing.json``.
+    _stage_routing = stage_routing.StageRouting()
     if args.editorial_role:
         try:
             # One snapshot per run: the texts that shape it are the texts it records.
@@ -2082,6 +2104,8 @@ def _run(
             # anything is written, and recorded in the plan with the evidence
             # ids and the decider behind each answer. A contract that leaves
             # nothing open makes no call.
+            _stage_routing.run_id = run_ctx.run_id
+            _stage_routing.plan_stage = "writing"
             if _client_contracts is not None and _client_contracts.requires_plan:
                 _planned_signal = editorial.to_legacy_dict()
                 _plan_claim = Claim(text=str(
@@ -2137,26 +2161,35 @@ def _run(
                 print("  ✓  editorial path: restored July Wednesday pipeline")
                 article = generate_for_wednesday(editorial.to_legacy_dict())
             else:
-                article    = generate_article(
-                    editorial.to_legacy_dict(),
-                    cta_mode=cta_mode,
-                    strategy_context=strategy_execution.decision_lens_editorial,
-                    wix_strategy=strategy_execution.wix,
-                    linkedin_strategy=strategy_execution.linkedin,
-                    audience_selection=audience_selection,
-                    research_artifact=research_artifact,
-                    editorial_role_rules=_editorial_role_rules,
-                    composer_formats=_R1_COMPOSER_FORMATS,
-                    # #191: how this role closes its long-form surface. Roles
-                    # that declare nothing keep the existing contract.
-                    closing_contract=(
-                        _role.closing_contract if _role is not None else None
-                    ),
-                    # #191: compositions our own validator refuses are
-                    # preserved for diagnosis instead of dying with the runner.
-                    rejected_sink=_rejected_compositions,
-                    editorial_plan=_editorial_plan,
-                )
+              # #279/#280 review: once recording starts, the routing evidence
+              # is written on EVERY exit from generation — a provider failure
+              # that never becomes an ArticleGenerationError is exactly when
+              # the record matters most. `finally` only writes; it changes no
+              # outcome, swallows no exception and retries nothing.
+              with stage_routing.recording(_stage_routing):
+                try:
+                    article    = generate_article(
+                        editorial.to_legacy_dict(),
+                        cta_mode=cta_mode,
+                        strategy_context=strategy_execution.decision_lens_editorial,
+                        wix_strategy=strategy_execution.wix,
+                        linkedin_strategy=strategy_execution.linkedin,
+                        audience_selection=audience_selection,
+                        research_artifact=research_artifact,
+                        editorial_role_rules=_editorial_role_rules,
+                        composer_formats=_R1_COMPOSER_FORMATS,
+                        # #191: how this role closes its long-form surface. Roles
+                        # that declare nothing keep the existing contract.
+                        closing_contract=(
+                            _role.closing_contract if _role is not None else None
+                        ),
+                        # #191: compositions our own validator refuses are
+                        # preserved for diagnosis instead of dying with the runner.
+                        rejected_sink=_rejected_compositions,
+                        editorial_plan=_editorial_plan,
+                    )
+                finally:
+                    _persist_stage_routing(run_dir, _stage_routing)
             platforms  = article["platforms"]
             structured = article["structured_article"]
         except (ArticleGenerationError, WednesdayGenerationError) as exc:
