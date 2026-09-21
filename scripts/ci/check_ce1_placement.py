@@ -14,13 +14,17 @@ Two rules, over every module of the editorial core (S-00 … S-13):
 ``CE1-CLOCK``
     No module may read the weekday or the clock. Weekday, rubric and lens are
     configuration and scheduling inputs: they are handed to the engine, and a
-    stage that reads the calendar instead is deciding by the day. Timestamps
+    stage that reads the calendar instead is deciding by the day. Renaming the
+    clock on the way in does not move it out of the core, so an import alias
+    or a local binding is followed back to what it stands for. Timestamps
     belong to the run harness (``src/run/``), which is outside the core and is
     not checked.
 
 ``CE1-DESTINATION``
     No module may select stages by destination: a branch on a destination, or
-    a table keyed by destination, may not decide which stages run.
+    a table keyed by destination, may not decide which stages run. The stages
+    may be named outright (``"S-10"``) or reached through a name that holds
+    them (``stages``, ``CANONICAL_TOPOLOGY.stage_ids``); both are selection.
     Destination-specific *behaviour* is legitimate and untouched — it lives in
     destination knowledge (``K-DST-*``), in adaptation (S-10), in check
     records and in the publishers. What is forbidden is a destination choosing
@@ -69,6 +73,16 @@ _WEEKDAY_WORDS = re.compile(
 
 _STAGE_LITERAL = re.compile(r"^S-(?:0\d|1[0-5])$")
 _STAGE_MEMBER = re.compile(r"^S_(?:0\d|1[0-5])$")
+
+#: Identifiers that hold the stage sequence rather than one stage. A branch
+#: returning ``stages[:2]`` selects stages exactly as one returning
+#: ``("S-10", "S-12")`` does, and code is free to reach the topology through
+#: an ordinary variable.
+_STAGE_SEQUENCE = re.compile(
+    r"(?i)(?:^|_)"
+    r"(?:stages|stage_ids|stage_order|stage_sequence|topology|pipeline)"
+    r"(?:_|$)"
+)
 
 
 class Violation(NamedTuple):
@@ -119,19 +133,24 @@ def check_module(path: Path) -> list[Violation]:
 def _clock_violations(path: Path, tree: ast.Module) -> list[Violation]:
     violations: list[Violation] = []
     reported: set[tuple[int, int]] = set()
+    aliases = _clock_aliases(tree)
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         name = _called_name(node)
-        if name is None or name not in _CLOCK_CALLS:
+        if name is None:
             continue
+        original = name if name in _CLOCK_CALLS else aliases.get(name)
+        if original is None:
+            continue
+        bound = "" if original == name else f", which is bound to {original}()"
         reported.add((node.func.lineno, node.func.col_offset))
         violations.append(Violation(
             path, node.lineno, "CE1-CLOCK",
-            f"editorial-core code calls {name}(): a stage is given its inputs. "
-            "The weekday and the clock are scheduling inputs, and timestamps "
-            "are stamped by the run harness in src/run/",
+            f"editorial-core code calls {name}(){bound}: a stage is given its "
+            "inputs. The weekday and the clock are scheduling inputs, and "
+            "timestamps are stamped by the run harness in src/run/",
         ))
 
     prose = _prose_nodes(tree)
@@ -157,6 +176,49 @@ def _called_name(node: ast.Call) -> Optional[str]:
         return node.func.attr
     if isinstance(node.func, ast.Name):
         return node.func.id
+    return None
+
+
+def _clock_aliases(tree: ast.Module) -> dict[str, str]:
+    """Local names that stand for a clock reader, as ``alias -> original``.
+
+    A call site is a spelling, and a spelling can be chosen: ``from time
+    import time as read_clock`` renames the clock on the way in and
+    ``read_clock = time.time`` renames it afterwards, both leaving a call the
+    vocabulary alone would not recognise. Following the binding is what makes
+    the rule about what a name refers to rather than how it is typed.
+    """
+
+    aliases: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            for imported in node.names:
+                if imported.asname and imported.name in _CLOCK_CALLS:
+                    aliases[imported.asname] = imported.name
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            if node.value is None:
+                continue
+            original = _clock_reference(node.value, aliases)
+            if original is None:
+                continue
+            targets: list[ast.expr] = (
+                node.targets if isinstance(node, ast.Assign) else [node.target]
+            )
+            for target in targets:
+                if isinstance(target, ast.Name):
+                    aliases[target.id] = original
+    return aliases
+
+
+def _clock_reference(node: ast.expr, aliases: dict[str, str]) -> Optional[str]:
+    """The clock reader this expression names, directly or through an alias."""
+
+    if isinstance(node, ast.Attribute) and node.attr in _CLOCK_CALLS:
+        return node.attr
+    if isinstance(node, ast.Name):
+        if node.id in _CLOCK_CALLS:
+            return node.id
+        return aliases.get(node.id)
     return None
 
 
@@ -247,11 +309,11 @@ def _selection_violations(
         found = _first_stage_reference(branch)
         if found is None:
             continue
-        line, stage = found
+        line, reference = found
         violations.append(Violation(
             path, line, "CE1-DESTINATION",
-            f"a branch on the destination {destination!r} decides whether "
-            f"{stage} runs: a destination may not select stages. "
+            f"a branch on the destination {destination!r} selects {reference}: "
+            "a destination may not decide which stages run. "
             "Destination-specific behaviour belongs in destination knowledge "
             "(K-DST-*), adaptation (S-10), check records and the publishers",
         ))
@@ -295,17 +357,30 @@ def _destination_name(node: Optional[ast.AST]) -> Optional[str]:
 
 
 def _first_stage_reference(nodes: Iterable[Any]) -> Optional[tuple[int, str]]:
-    """The first stage identifier mentioned in these nodes, as (line, ``S-nn``)."""
+    """The first stage selection in these nodes, as (line, what it named).
+
+    Either a stage named outright (``"S-10"``, ``Stage.S_10``) or a name that
+    holds the stage sequence (``stages``, ``CANONICAL_TOPOLOGY.stage_ids``).
+    Reaching the topology through a variable is still reaching the topology:
+    ``return stages[:2]`` under a destination branch cuts the engine in two as
+    surely as a list of stage identifiers does.
+    """
 
     for root in nodes:
         for child in ast.walk(root):
             if isinstance(child, ast.Constant) and isinstance(child.value, str):
                 if _STAGE_LITERAL.match(child.value):
                     return child.lineno, child.value
-            elif isinstance(child, ast.Attribute) and _STAGE_MEMBER.match(child.attr):
-                return child.lineno, child.attr.replace("_", "-")
-            elif isinstance(child, ast.Name) and _STAGE_MEMBER.match(child.id):
-                return child.lineno, child.id.replace("_", "-")
+            elif isinstance(child, ast.Attribute):
+                if _STAGE_MEMBER.match(child.attr):
+                    return child.lineno, child.attr.replace("_", "-")
+                if _STAGE_SEQUENCE.search(child.attr):
+                    return child.lineno, child.attr
+            elif isinstance(child, ast.Name):
+                if _STAGE_MEMBER.match(child.id):
+                    return child.lineno, child.id.replace("_", "-")
+                if _STAGE_SEQUENCE.search(child.id):
+                    return child.lineno, child.id
     return None
 
 

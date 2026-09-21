@@ -37,12 +37,31 @@ def stages_for_signal(signal):
     return ("S-00", "S-01", "S-02")
 '''
 
+#: The same clock, renamed on the way in.
+_ALIASED_CLOCK = '''\
+from time import time as read_clock
+
+
+def freshness(signal):
+    if read_clock() > signal.seen_at:
+        return "stale"
+    return "fresh"
+'''
+
 #: A destination that decides which stages run.
 _DESTINATION_PIPELINE = '''\
 def stages_for_destination(destination):
     if destination == "telegram":
         return ("S-10", "S-12")
     return ("S-08", "S-09", "S-10", "S-11", "S-12", "S-13")
+'''
+
+#: The same destination pipeline, reaching the stages through a variable.
+_DESTINATION_SLICE = '''\
+def stages_for_destination(destination, stages):
+    if destination == "telegram":
+        return stages[:2]
+    return stages
 '''
 
 #: The same breach as a table instead of a branch.
@@ -110,6 +129,23 @@ def test_a_stage_table_keyed_by_destination_fails_the_check(tmp_path):
     violations = _planted(tmp_path, "destination_table.py", _DESTINATION_TABLE)
 
     assert _rules(violations) == {"CE1-DESTINATION"}
+
+
+def test_a_renamed_clock_is_still_the_clock(tmp_path):
+    # the call site spells it read_clock(); the import says what it is
+    violations = _planted(tmp_path, "aliased_clock.py", _ALIASED_CLOCK)
+
+    assert _rules(violations) == {"CE1-CLOCK"}
+    assert any("time()" in violation.message for violation in violations)
+
+
+def test_stages_reached_through_a_variable_are_still_selected(tmp_path):
+    # no stage identifier appears in the branch, and it still cuts the
+    # canonical sequence down to a destination's own pipeline
+    violations = _planted(tmp_path, "destination_slice.py", _DESTINATION_SLICE)
+
+    assert _rules(violations) == {"CE1-DESTINATION"}
+    assert any("telegram" in violation.message for violation in violations)
 
 
 # ===========================================================================
