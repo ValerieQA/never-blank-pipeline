@@ -118,3 +118,25 @@ def _run_artifacts_stay_out_of_the_tracked_tree(tmp_path_factory, monkeypatch):
         if module is not None and hasattr(module, "PACKAGES_DIR"):
             monkeypatch.setattr(module, "PACKAGES_DIR", root)
     yield
+
+
+@pytest.fixture(autouse=True)
+def _publication_markers_stay_out_of_the_tracked_tree(tmp_path_factory, monkeypatch):
+    """No test writes publication idempotency evidence into the tracked tree.
+
+    The publication marker store (NB-00a) is committed on purpose — losing a
+    marker could cause a double publication — so an unredirected test run would
+    leave real markers in ``data/editorial/publication_markers/`` and, worse,
+    let one test's marker suppress another test's publication. Each test gets
+    its own root, already created: a missing root is itself an answer (the
+    authority is unavailable, so nothing publishes), which makes creating it
+    here part of the redirection rather than an afterthought.
+
+    A test that redirects the root itself is unaffected: its own patch runs
+    after this fixture and wins.
+    """
+
+    monkeypatch.setenv(
+        "NB_PUBLICATION_MARKERS_DIR", str(tmp_path_factory.mktemp("markers"))
+    )
+    yield

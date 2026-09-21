@@ -23,6 +23,12 @@ data/research/*
 !data/research/published_signal_ids.txt
 data/research/archive/*
 !data/research/archive/.gitkeep
+# The publication idempotency authority is committed evidence, not runtime
+# scratch (NB-00a, invariant S3-I1): losing a marker could cause a double
+# publication, so it must survive the runner that wrote it.
+!data/editorial/
+data/editorial/*
+!data/editorial/publication_markers/
 # PNG images are already on Cloudinary — do not store in Git
 reports/content_packages/images/
 # logo and fonts are tracked assets — must NOT be ignored
