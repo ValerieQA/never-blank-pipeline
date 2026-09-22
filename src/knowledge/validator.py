@@ -706,6 +706,9 @@ class _Identified:
     version: Optional[int]
     document: Document
     change_log_versions: tuple[int, ...]
+    #: What the file says, which may be nothing — or ``None`` for a check record,
+    #: whose front matter has no `supersedes` at all (§3).
+    supersedes: Optional[str]
 
 
 def _identity(
@@ -721,6 +724,7 @@ def _identity(
                 version=record.version_number,
                 document=record.document,
                 change_log_versions=record.change_log_versions,
+                supersedes=record.supersedes or "",
             )
             for record in knowledge
         ),
@@ -731,6 +735,7 @@ def _identity(
                 version=check.version_number,
                 document=check.document,
                 change_log_versions=check.change_log_versions,
+                supersedes=None,
             )
             for check in checks
         ),
@@ -795,18 +800,23 @@ def _version_story(entry: _Identified) -> tuple[Finding, ...]:
             f"{version} it has one line per version, newest first: "
             f"{', '.join(str(number) for number in expected)}"
         )
-    supersedes = (entry.document.field("supersedes") or "").strip()
-    if version == 1 and supersedes:
-        problems.append(
-            f"`supersedes` is {supersedes!r}, and version 1 supersedes nothing"
-        )
-    if version > 1:
-        wanted = record_format.expected_supersedes(identity, version)
-        if supersedes != wanted:
+    # `supersedes` is a knowledge record's field (§2.2). A check record's front
+    # matter (§3) does not have one, and the record format refuses the field
+    # outright, so at every version its lineage is the change log alone —
+    # demanding one here would make a second version of a check unwritable.
+    if entry.supersedes is not None:
+        supersedes = entry.supersedes.strip()
+        if version == 1 and supersedes:
             problems.append(
-                f"`supersedes` is {supersedes!r}; version {version} supersedes "
-                f"`{wanted}`"
+                f"`supersedes` is {supersedes!r}, and version 1 supersedes nothing"
             )
+        if version > 1:
+            wanted = record_format.expected_supersedes(identity, version)
+            if supersedes != wanted:
+                problems.append(
+                    f"`supersedes` is {supersedes!r}; version {version} supersedes "
+                    f"`{wanted}`"
+                )
     return _findings(KR_IDENTITY, path, problems)
 
 

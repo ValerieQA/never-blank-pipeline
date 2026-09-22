@@ -273,6 +273,27 @@ def test_an_unchanged_record_at_the_same_version_is_accepted(tmp_path):
     assert findings == ()
 
 
+def test_a_check_may_reach_a_second_version(tmp_path):
+    """A check's lineage is its change log: §3 gives it no `supersedes` to fill."""
+
+    built = build_register(tmp_path)
+    check = built.register / "checks" / "V-S10.md"
+    check.write_text(
+        check.read_text(encoding="utf-8")
+        .replace("version: 1", "version: 2", 1)
+        .replace(
+            "## Change log\n",
+            "## Change log\n- v2, 2026-09-22: the criterion was reworded.\n",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    findings = validate_register(built.register, client_rule_paths=built.client_paths)
+
+    assert [finding.render() for finding in findings] == []
+
+
 def test_without_a_baseline_the_version_half_is_not_invented(tmp_path):
     """A changed body at the same version passes only because nothing compared it."""
 
@@ -485,6 +506,10 @@ def test_a_sound_client_ladder_has_no_problems():
         (
             ("observed once → universal level 2", "measured twice → universal level 9"),
             "never reach past it",
+        ),
+        (
+            ("said once → universal level 0", "observed once → universal level 1"),
+            "starts at 1",
         ),
         (("observed once → universal level 2",), "at least 2"),
     ],

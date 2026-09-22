@@ -26,9 +26,10 @@ a ladder that breaks any of them:
 2. **the mappings increase.** The ladder is written weakest first, so its levels
    must map to strictly increasing universal levels. Two client levels mapping to
    one universal level are not two strengths;
-3. **no mapping is above the universal top.** With 1 and 2 this also fixes each
-   level's position: the top client level may map to level 4, the one below it to
-   at most 3, and a ladder with more levels than the universal one cannot be
+3. **every mapping names a level the universal ladder has**, so neither above its
+   top nor below level 1, which is where it starts. With 1 and 2 this also fixes
+   each level's position: the top client level may map to level 4, the one below
+   it to at most 3, and a ladder with more levels than the universal one cannot be
    written at all — a client restricts this ladder, it does not extend it.
 
 An **unannotated** ladder is a ladder from before this format. `level_names` passes
@@ -51,6 +52,10 @@ CLIENT_LADDER_SLOT: Final[str] = "claim_strength_ceiling"
 #: How many levels the universal ladder has (§7). Mirrored against
 #: `knowledge/ladders/default.md`, which is the authority a person edits.
 UNIVERSAL_TOP_LEVEL: Final[int] = 4
+
+#: The ladder is numbered from 1 upwards, weakest first, so there is no level 0
+#: for a client level to be capped at.
+UNIVERSAL_BOTTOM_LEVEL: Final[int] = 1
 
 #: A client ladder has at least two levels; one level is not a ladder.
 MINIMUM_CLIENT_LEVELS: Final[int] = 2
@@ -163,18 +168,24 @@ def client_ladder_problems(
         )
 
     problems: list[str] = []
-    above = [
-        level
-        for level in levels
-        if level.universal_level is not None and level.universal_level > universal_top
-    ]
-    for level in above:
-        problems.append(
-            f"{where}: {level.name!r} maps to universal level "
-            f"{level.universal_level}, and the universal ladder stops at "
-            f"{universal_top}. A client ladder may restrict the universal ladder, "
-            "never reach past it"
-        )
+    for level in levels:
+        universal = level.universal_level
+        if universal is None:  # pragma: no cover - unmapped levels returned above
+            continue
+        if universal > universal_top:
+            problems.append(
+                f"{where}: {level.name!r} maps to universal level "
+                f"{universal}, and the universal ladder stops at "
+                f"{universal_top}. A client ladder may restrict the universal "
+                "ladder, never reach past it"
+            )
+        elif universal < UNIVERSAL_BOTTOM_LEVEL:
+            problems.append(
+                f"{where}: {level.name!r} maps to universal level {universal}, and "
+                f"the universal ladder starts at {UNIVERSAL_BOTTOM_LEVEL}. A level "
+                "the universal ladder does not have is no ceiling to be the lower "
+                "of, so the mapping would cap nothing"
+            )
     if len(levels) > universal_top:
         problems.append(
             f"{where} declares {len(levels)} levels, and the universal ladder has "
