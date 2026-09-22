@@ -265,6 +265,7 @@ from src.publishing.idempotency import (
     LinkedInPublicationIdentity,
     WixPublicationIdentity,
     find_prior_linkedin_publication,
+    find_prior_publication,
     find_prior_wix_publication,
 )
 from src.publishing.publication_markers import (
@@ -3406,6 +3407,8 @@ def _run(
     # makes: the authority S-14 consults before an irreversible call and writes
     # to immediately after one succeeds. Losing a learning record loses
     # information; losing this could publish the same article twice.
+    # Its store is the one find_prior_* below ask (NB-00b), so the lookup and
+    # the intent it authorizes can never be answered by two different stores.
     _markers = PublicationGuard(source_signal_ids=[signal_id], run_id=run_ctx.run_id)
     # §3.6 point 5: keys whose post exists but whose marker could not be made
     # durable. The run ends normally and says so; the next run skips them.
@@ -3578,78 +3581,75 @@ def _run(
                     "canonical_article_url": _canonical_url,
                 }
 
-            # ── Publication marker authority (NB-00a, invariant S3-I1) ───────
-            # Consulted BEFORE any external call and before the run-directory
-            # scan below, because this is the authority that survives a fresh
-            # checkout: an earlier run that published Wix and then failed
-            # LinkedIn must never republish Wix, whatever the other evidence
-            # in this working tree says. Re-pointing find_prior_* onto this
-            # store is NB-00b; until then the two run in series and either one
-            # alone can suppress a call, never authorize one.
-            _decision = _markers.check(name)
-            if not _decision.proceed:
-                _refused = refused_result(_decision, run_id=run_ctx.run_id)
-                if _refused.status is PublishStatus.REUSED:
-                    print(
-                        f"  ↺  {name:<12} REUSED — publication marker from run "
-                        f"{_refused.reused_from_run_id or '—'} "
-                        f"(post {_refused.external_id}); no duplicate created"
-                    )
-                    _record_reuse(
-                        name,
-                        _refused,
-                        site_id=getattr(_package.target, "site_id", ""),
-                    )
-                else:
-                    print(f"  ○  {name:<12} SKIPPED — {_refused.error_message}")
-                    results[name] = _refused.to_dict()
-                continue
-
-            # ── Wix retry idempotency (Issue #105 / Story #18) ───────────────
-            # Runs only after this channel received preflight ALLOW and only on
-            # the exact authorized package, so it can suppress an authorized
-            # call but never bypass any gate. A proven earlier PUBLISHED result
-            # for the same (signal, accepted article, Wix site) means this run
-            # creates no second post: no media import, no draft, no publish.
-            _scan = None
+            # ── Has this publication already happened? (NB-00b, S3-I1) ───────
+            # ONE lookup, before any external call, and it runs only after this
+            # channel received preflight ALLOW on the exact authorized package:
+            # it can suppress an authorized call, never bypass a gate.
+            #
+            # find_prior_* now ask the durable marker store first — the
+            # authority that survives a fresh checkout, so an earlier run that
+            # published Wix and then failed LinkedIn can never republish Wix,
+            # whatever the evidence in this working tree says. Only when the
+            # authority has proven nothing was published do they read this
+            # checkout's run directories, which can still recognise a
+            # sequential retry (#105/#109). A marker is REUSED with its
+            # canonical URL re-established from the provider; an intent with no
+            # marker, or a store that cannot answer, is a fail-closed SKIP
+            # carrying its ARP reason (§3.6 rules 2 and 6).
             if name == "wix":
                 _scan = find_prior_wix_publication(
                     PACKAGES_DIR,
                     WixPublicationIdentity.from_package(_package),
                     current_run_id=run_ctx.run_id,
+                    store=_markers.store,
                 )
             elif name == "linkedin":
-                # Issue #109: the same discipline for LinkedIn — the duplicate
-                # identity is the accepted LinkedIn body, not the article, so a
-                # different composition of the same article publishes normally.
                 _scan = find_prior_linkedin_publication(
                     PACKAGES_DIR,
                     LinkedInPublicationIdentity.from_package(_package),
                     current_run_id=run_ctx.run_id,
+                    store=_markers.store,
                 )
-            if _scan is not None:
-                _note = _scan.evidence_note()
-                if _note is not None:
-                    _unusable_prior_evidence = _note
-                if _scan.match is not None:
-                    print(
-                        f"  ↺  {name:<12} REUSED — already published by run "
-                        f"{_scan.match.run_id} (post {_scan.match.post_id}); "
-                        "no duplicate created"
-                    )
-                    _record_reuse(
-                        name,
-                        PublishResult(
-                            platform=name,
-                            status=PublishStatus.REUSED,
-                            external_id=_scan.match.post_id,
-                            url=_scan.match.url or None,
-                            url_provenance=_scan.match.url_provenance,
-                            reused_from_run_id=_scan.match.run_id,
-                        ),
-                        site_id=getattr(_package.target, "site_id", ""),
-                    )
-                    continue
+            else:
+                # Every other destination has no run-directory evidence reader
+                # of its own, and needs none: the authority keys all six.
+                _scan = find_prior_publication(
+                    name,
+                    source_signal_ids=[signal_id],
+                    store=_markers.store,
+                )
+            _note = _scan.evidence_note()
+            if _note is not None:
+                _unusable_prior_evidence = _note
+            if _scan.refusal is not None:
+                _refused = PublishResult(
+                    platform=name,
+                    status=PublishStatus.SKIPPED,
+                    error_message=_scan.refusal,
+                    run_id=run_ctx.run_id,
+                )
+                print(f"  ○  {name:<12} SKIPPED — {_scan.refusal}")
+                results[name] = _refused.to_dict()
+                continue
+            if _scan.match is not None:
+                print(
+                    f"  ↺  {name:<12} REUSED — already published by run "
+                    f"{_scan.match.run_id} (post {_scan.match.post_id}); "
+                    "no duplicate created"
+                )
+                _record_reuse(
+                    name,
+                    PublishResult(
+                        platform=name,
+                        status=PublishStatus.REUSED,
+                        external_id=_scan.match.post_id,
+                        url=_scan.match.url or None,
+                        url_provenance=_scan.match.url_provenance,
+                        reused_from_run_id=_scan.match.run_id,
+                    ),
+                    site_id=getattr(_package.target, "site_id", ""),
+                )
+                continue
 
             # ── Intent before the irreversible step (§3.6 point 3) ───────────
             # No durable intent, no external call: a call nobody recorded is

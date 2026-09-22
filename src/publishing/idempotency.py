@@ -1,9 +1,26 @@
-"""Wix publication idempotency (Issue #105 / Story #18).
+"""Has this publication already happened? (Issue #105 / Story #18, NB-00b.)
 
 Never Blank must not put the exact same accepted article on the same Wix site
 twice merely because a run was retried. A retry deliberately creates a new
-``run_id``, so run identity is not publication identity. For Release 1 the
-same Wix publication is::
+``run_id``, so run identity is not publication identity.
+
+**The authority is the marker store** (NB-00b, invariant S3-I1). Every lookup
+here asks :mod:`src.publishing.publication_markers` first — the committed,
+per-destination store that survives a fresh checkout — and its answer is
+final: a marker is a proven publication to reuse, an intent with no marker or
+a store that cannot answer is a refusal the caller records as a ``SKIP``. The
+identity key it decides on is ``(client, destination, sorted source signal
+IDs)``, with no article digest, so one signal set is one publication per
+destination however often the article is rewritten (Step 5 §1.1). The same
+lookup therefore answers for all six destinations, not only the two that have
+a run-directory evidence reader below.
+
+The run-directory scan this module used to be is kept *behind* that authority.
+It reads only ``packages_dir/<signal_id>/runs/*``, which a GitHub-hosted
+runner's checkout does not have (Step 5 §1.1: ``find_prior_*`` finds nothing
+in a fresh CI checkout), so it can still recognise a sequential retry inside
+one working tree and it can never authorize a call. For Release 1 the Wix
+publication it recognises is::
 
     (signal_id, source_article_digest, wix_site_id)
 
@@ -27,11 +44,14 @@ reported as typed sanitized reason codes so the current run's evidence can
 say that unusable prior evidence was encountered, without a corrupt
 historical file being able to suppress publication forever.
 
-**Concurrency**: this provides deterministic *sequential* retry idempotency
-only. Two runs started concurrently can both observe "no prior success" and
-both publish; per-run create-once artifacts give no mutual exclusion, and the
-Wix Blog v3 calls this adapter makes expose no provider-native idempotency
-key. That limitation is deliberate and documented, not solved.
+**Concurrency**: the run-directory scan below provides deterministic
+*sequential* retry idempotency only — two runs started concurrently can both
+observe "no prior success" in it, because per-run create-once artifacts give
+no mutual exclusion and the Wix Blog v3 calls this adapter makes expose no
+provider-native idempotency key. Simultaneous runs are arbitrated by the
+authority instead, whose claim is an exclusive create decided before any
+external call (see :mod:`src.publishing.publication_markers` and
+:mod:`src.publishing.shared_claim`).
 """
 
 from __future__ import annotations
@@ -39,11 +59,18 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional
 
 from src.artifacts import resolve_run_dir
 from src.editorial.linkedin_composition import article_digest
-from src.publishing.result import UrlProvenance
+from src.publishing.publication_markers import (
+    AUTHORITY_UNAVAILABLE,
+    DESTINATIONS,
+    MarkerStore,
+    PublicationGuard,
+    refused_result,
+)
+from src.publishing.result import PublishStatus, UrlProvenance
 
 #: Typed, sanitized reasons why a candidate could not be interpreted. Raw
 #: artifact content never leaves this module.
@@ -99,19 +126,16 @@ class LinkedInPublicationIdentity:
 
 
 @dataclass(frozen=True)
-class PriorLinkedInPublication:
-    """A proven earlier publication of the exact same body to the same account."""
+class PriorPublication:
+    """A proven earlier publication of this identity to this destination.
 
-    run_id: str
-    post_id: str
-    url: str
-    url_provenance: UrlProvenance
+    One shape for all six destinations (NB-00b), because what a ``REUSED``
+    result needs is the same everywhere: which run published it, the
+    provider's own ID for the publication, and the URL with the provenance it
+    was established by.
+    """
 
-
-@dataclass(frozen=True)
-class PriorWixPublication:
-    """A proven earlier publication of the exact same article to the same site."""
-
+    destination: str
     run_id: str
     post_id: str
     url: str
@@ -122,8 +146,14 @@ class PriorWixPublication:
 class PriorEvidenceScan:
     """Outcome of looking for a proven prior publication."""
 
-    match: Optional[object] = None      # PriorWixPublication | PriorLinkedInPublication
+    match: Optional[PriorPublication] = None
     unusable_reasons: tuple[str, ...] = ()
+    #: Set when the authority refused the call instead of proving a
+    #: publication: an intent with no marker (``publication_possibly_exists``)
+    #: or a store that could not answer (``idempotency_authority_unavailable``).
+    #: The caller records a ``SKIP`` carrying this reason and publishes
+    #: nothing — at most once, and never a wait (§3.6 rules 2 and 6).
+    refusal: Optional[str] = None
 
     @property
     def unusable_count(self) -> int:
@@ -411,13 +441,13 @@ def _validated_reuse_url(entry: dict) -> tuple[Optional[str], object, Optional[s
     return url, provenance, None
 
 
-def find_prior_linkedin_publication(
+def _scan_runs_for_linkedin(
     packages_dir: Path,
     identity: LinkedInPublicationIdentity,
     *,
     current_run_id: str,
 ) -> PriorEvidenceScan:
-    """Look for a proven earlier publication of this exact LinkedIn publication.
+    """Look in this checkout's run directories for the same LinkedIn post.
 
     The same acceptance discipline the Wix scan established (Issue #105):
     only a literal ``PUBLISHED`` result with a real provider publication ID
@@ -429,6 +459,12 @@ def find_prior_linkedin_publication(
 
     ``PROVIDER_DUPLICATE`` never suppresses: a 409 proves a duplicate exists
     but never which post, so it is not evidence of a publication (Issue #108).
+
+    Subordinate to the marker authority since NB-00b, and reached only when
+    the authority has said nothing was published. Its identity carries the
+    composed LinkedIn body, which the canonical entrypoint has already
+    enriched with the published article's link by the time it looks — see
+    ``docs/PUBLICATION_MARKER_LOOKUP.md`` for the tested result.
     """
 
     runs_dir = Path(packages_dir) / identity.signal_id / "runs"
@@ -505,7 +541,8 @@ def find_prior_linkedin_publication(
             unusable.append(reason)
             continue
         return PriorEvidenceScan(
-            match=PriorLinkedInPublication(
+            match=PriorPublication(
+                destination="linkedin",
                 run_id=str(data.get("run_id") or run_dir.name),
                 post_id=post_id,
                 url=url,
@@ -517,18 +554,21 @@ def find_prior_linkedin_publication(
     return PriorEvidenceScan(unusable_reasons=tuple(unusable))
 
 
-def find_prior_wix_publication(
+def _scan_runs_for_wix(
     packages_dir: Path,
     identity: WixPublicationIdentity,
     *,
     current_run_id: str,
 ) -> PriorEvidenceScan:
-    """Look for a proven earlier publication of this exact Wix publication.
+    """Look in this checkout's run directories for the same Wix publication.
 
     Returns the first proven match plus the typed reasons for any candidate
     whose evidence could not be interpreted. A candidate that is simply
     *different* — another site, another article, a non-``PUBLISHED`` status —
     is a plain non-match and is never reported as unusable evidence.
+
+    Subordinate to the marker authority since NB-00b, and reached only when
+    the authority has said nothing was published.
     """
 
     runs_dir = Path(packages_dir) / identity.signal_id / "runs"
@@ -612,7 +652,8 @@ def find_prior_wix_publication(
             # established, so it is never promoted to provider-confirmed.
             provenance = UrlProvenance.UNAVAILABLE
         return PriorEvidenceScan(
-            match=PriorWixPublication(
+            match=PriorPublication(
+                destination="wix",
                 run_id=str(data.get("run_id") or run_dir.name),
                 post_id=post_id,
                 url=url if isinstance(url, str) else "",
@@ -622,3 +663,177 @@ def find_prior_wix_publication(
         )
 
     return PriorEvidenceScan(unusable_reasons=tuple(unusable))
+
+
+# ── The authority: one marker-backed lookup for all six destinations ─────────
+
+
+def find_prior_publication(
+    destination: str,
+    *,
+    source_signal_ids: Iterable[str],
+    client: Optional[str] = None,
+    store: Optional[MarkerStore] = None,
+) -> PriorEvidenceScan:
+    """Ask the marker authority whether this publication already happened.
+
+    The durable, committed store is what S-14 must consult before any
+    irreversible call (§3.6 rule 2), and it is keyed by ``(client,
+    destination, sorted source signal IDs)`` — so this one lookup answers for
+    every destination, including the four that never had a run-directory
+    evidence reader of their own.
+
+    Exactly three answers, and no fourth:
+
+    - a marker — the publication exists, and the match is the evidence a
+      ``REUSED`` result is built from;
+    - a ``refusal`` — an intent with no marker means *possibly published*, and
+      a store that cannot answer means the authority is unavailable. Both are
+      a ``SKIP``, fail-closed, at most once, never a wait (rule 6);
+    - nothing — this publication has never been attempted.
+
+    The marker is converted through the authority's own ``refused_result``, so
+    a lookup here and a guard check inside a publishing path can never
+    disagree about what a marker means.
+    """
+
+    guard = PublicationGuard(
+        source_signal_ids=source_signal_ids,
+        # Lookup only: nothing here records an intent or a marker, so there is
+        # no run for this guard to attribute one to.
+        run_id="",
+        client=client,
+        store=store,
+    )
+    decision = guard.check(destination)
+    if decision.proceed:
+        return PriorEvidenceScan()
+    reused = refused_result(decision)
+    if reused.status is PublishStatus.REUSED:
+        return PriorEvidenceScan(
+            match=PriorPublication(
+                destination=decision.destination,
+                run_id=reused.reused_from_run_id or "",
+                post_id=reused.external_id or "",
+                url=reused.url or "",
+                url_provenance=reused.url_provenance,
+            )
+        )
+    return PriorEvidenceScan(refusal=reused.error_message or AUTHORITY_UNAVAILABLE)
+
+
+@dataclass(frozen=True)
+class SignalPublicationState:
+    """What the authority knows about one signal set, across all destinations."""
+
+    published: tuple[str, ...] = ()
+    possibly_published: tuple[str, ...] = ()
+    #: The store could not answer at all. Never read as "nothing was
+    #: published": that confusion is exactly what turns a fresh checkout into
+    #: a second publication.
+    unavailable: bool = False
+
+    @property
+    def consumed(self) -> bool:
+        """Has this signal already been spent — or possibly been spent?"""
+
+        return bool(self.published or self.possibly_published)
+
+    def as_audit_dict(self) -> dict:
+        """Sanitized record for a selection audit. No path ever appears here."""
+
+        return {
+            "published": list(self.published),
+            "possibly_published": list(self.possibly_published),
+            "unavailable": self.unavailable,
+        }
+
+
+def signal_publication_state(
+    source_signal_ids: Iterable[str],
+    *,
+    client: Optional[str] = None,
+    store: Optional[MarkerStore] = None,
+) -> SignalPublicationState:
+    """Ask the authority about one signal set at every destination (NB-00b).
+
+    Selection reads this beside ``data/research/published_signal_ids.txt``.
+    That file is a signal-level summary committed only when a whole job
+    succeeded, so a run that published Wix and then failed LinkedIn leaves it
+    untouched and the signal still looks unused — the partial-success hole in
+    Step 5 §1.1. A marker for any destination proves otherwise, and an intent
+    without one proves it may.
+
+    A store that cannot answer stops the question rather than answering it:
+    the state is ``unavailable`` and the caller must select nothing.
+    """
+
+    ids = tuple(source_signal_ids)
+    store = store if store is not None else MarkerStore()
+    published: list[str] = []
+    possibly: list[str] = []
+    for destination in DESTINATIONS:
+        scan = find_prior_publication(
+            destination, source_signal_ids=ids, client=client, store=store
+        )
+        if scan.refusal == AUTHORITY_UNAVAILABLE:
+            return SignalPublicationState(unavailable=True)
+        if scan.match is not None:
+            published.append(destination)
+        elif scan.refusal is not None:
+            possibly.append(destination)
+    return SignalPublicationState(tuple(published), tuple(possibly))
+
+
+def find_prior_wix_publication(
+    packages_dir: Path,
+    identity: WixPublicationIdentity,
+    *,
+    current_run_id: str,
+    store: Optional[MarkerStore] = None,
+) -> PriorEvidenceScan:
+    """Has this Wix publication already happened? (Authority first, NB-00b.)
+
+    The marker store decides. Its key ignores the article digest this
+    identity carries, which is deliberate and stricter: one signal set is one
+    Wix publication however often the article is rewritten (Step 5 §1.1).
+    Only when the authority has proven nothing was published is this
+    checkout's run-directory evidence read, which can still recognise a
+    sequential retry in a working tree that holds the earlier run.
+    """
+
+    authority = find_prior_publication(
+        "wix", source_signal_ids=(identity.signal_id,), store=store
+    )
+    if authority.match is not None or authority.refusal is not None:
+        return authority
+    return _scan_runs_for_wix(
+        packages_dir, identity, current_run_id=current_run_id
+    )
+
+
+def find_prior_linkedin_publication(
+    packages_dir: Path,
+    identity: LinkedInPublicationIdentity,
+    *,
+    current_run_id: str,
+    store: Optional[MarkerStore] = None,
+) -> PriorEvidenceScan:
+    """Has this LinkedIn publication already happened? (Authority first.)
+
+    The same rebuild as the Wix lookup, and it matters more here: the marker
+    key does not contain the accepted body digest, so binding the published
+    article's link into the package before the lookup — which the canonical
+    entrypoint does — can no longer move the identity out from under the
+    prior evidence (Step 5 §1.1, tested in ``tests/test_288_marker_lookup.py``
+    and recorded in ``docs/PUBLICATION_MARKER_LOOKUP.md``).
+    """
+
+    authority = find_prior_publication(
+        "linkedin", source_signal_ids=(identity.signal_id,), store=store
+    )
+    if authority.match is not None or authority.refusal is not None:
+        return authority
+    return _scan_runs_for_linkedin(
+        packages_dir, identity, current_run_id=current_run_id
+    )

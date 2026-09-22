@@ -378,6 +378,7 @@ def test_a_reused_wix_publication_still_feeds_linkedin_its_url(tmp_path):  # 18
                 url=CANONICAL_URL,
                 url_provenance=UrlProvenance.PROVIDER_CONFIRMED,
             ),
+            refusal=None,                      # NB-00b: a match, not a refusal
             evidence_note=lambda: None,
         )
     )

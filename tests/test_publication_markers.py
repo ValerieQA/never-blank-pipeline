@@ -38,8 +38,19 @@ from src.publishing.publication_markers import (
     proves_publication,
     refused_result,
 )
+from src.publishing.idempotency import (
+    find_prior_linkedin_publication,
+    find_prior_wix_publication,
+)
 from src.publishing.result import PublishResult, PublishStatus, UrlProvenance
 from tests.test_publish_packages import _PACKAGE, _SIGNAL, _setup_common
+
+#: The entrypoint asks the authority through these (NB-00b), so a test of the
+#: authority on that path has to let the real ones run.
+_REAL_LOOKUPS = {
+    "find_prior_wix_publication": find_prior_wix_publication,
+    "find_prior_linkedin_publication": find_prior_linkedin_publication,
+}
 
 
 def _store(tmp_path) -> MarkerStore:
@@ -493,6 +504,10 @@ def test_the_canonical_entrypoint_does_not_republish_after_a_partial_failure(
     for real. Here the real, shared authority is wired back in — the way the
     Wix scan is in ``tests/test_wix_idempotency.py`` — so the one thing that
     can suppress the second run's Wix call is the marker written by the first.
+
+    The real ``find_prior_*`` come with it: since NB-00b they are how the
+    entrypoint asks the authority, so a harness that stubs them out would be
+    asking nothing.
     """
 
     # These paths build their own store. This suite is the single-filesystem
@@ -527,6 +542,7 @@ def test_the_canonical_entrypoint_does_not_republish_after_a_partial_failure(
     _, wix_first, _, _ = _live_run(
         tmp_path,
         PublicationGuard=PublicationGuard,
+        **_REAL_LOOKUPS,
         LinkedInPublisher=mock.MagicMock(return_value=failing),
     )
     assert wix_first.publish.call_count == 1
@@ -537,7 +553,7 @@ def test_the_canonical_entrypoint_does_not_republish_after_a_partial_failure(
 
     # Run two: neither destination may be called again.
     _, wix_second, linkedin_second, _ = _live_run(
-        tmp_path, PublicationGuard=PublicationGuard
+        tmp_path, PublicationGuard=PublicationGuard, **_REAL_LOOKUPS
     )
     wix_second.publish.assert_not_called()
     linkedin_second.publish.assert_not_called()
