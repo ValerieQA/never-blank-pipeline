@@ -45,7 +45,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -472,6 +472,29 @@ class StageRecord(_Record):
 # ===========================================================================
 
 
+def uncovered_writer_stages(
+    entities: Sequence[EntityIndexEntry], trace: Sequence[TraceIndexEntry]
+) -> tuple[str, ...]:
+    """Stages that produced an entity and left no StageRecord (§4.1).
+
+    An entity is evidence a stage ran; a StageRecord is how the run says it
+    did, and with what. A manifest sealed over entities with an empty trace
+    makes the run readable as a verified source with no execution record
+    behind its artifacts (#327 review).
+
+    Per stage, not per entity, and never the reverse: a stage that recorded a
+    `SKIP` or was reached by a `REPLAN` writes a record and may write no
+    entity at all, which is legitimate and stays legitimate. A run that wrote
+    nothing has nothing to cover. ``write_entity`` already refuses every path
+    §2.3 gives to the run harness, so each ``writer_stage`` here is a stage
+    execution and nothing else — no record is ever invented to satisfy this.
+    """
+
+    recorded = {entry.stage for entry in trace}
+    missing = {entry.writer_stage for entry in entities} - recorded
+    return tuple(sorted(missing))
+
+
 class RunWorkspace:
     """One run's workspace, and the only thing that writes into it.
 
@@ -486,7 +509,14 @@ class RunWorkspace:
         self.run_id = run_id
         self._entities: list[EntityIndexEntry] = []
         self._trace: list[TraceIndexEntry] = []
-        self._sealed = False
+        # The seal is a fact about the workspace, not about this object.
+        # ``create`` refuses an existing directory, but the constructor is
+        # public, and one built over a finished run used to start unsealed —
+        # so a completed run could be reopened and written to after its
+        # manifest, which is exactly what §4.3 forbids (#327 review). Reading
+        # it from disk is the whole fix: no second lifecycle, just a flag that
+        # tells the truth about what it is attached to.
+        self._sealed = (run_dir / MANIFEST_NAME).is_file()
 
     @classmethod
     def create(cls, runs_root: Path, run_id: str) -> "RunWorkspace":
@@ -611,6 +641,15 @@ class RunWorkspace:
         """
 
         self._refuse_when_sealed("write the manifest")
+        uncovered = uncovered_writer_stages(self._entities, self._trace)
+        if uncovered:
+            raise RunWorkspaceError(
+                "cannot write the manifest: "
+                + ", ".join(uncovered)
+                + " wrote entities and left no StageRecord, so the run would "
+                "become a verified source whose artifacts have no execution "
+                "record (§4.1). Record the stage, or do not claim its output"
+            )
         if run_context.run_id != self.run_id:
             raise RunWorkspaceError(
                 f"run context belongs to run {run_context.run_id!r}, not to "
@@ -756,6 +795,14 @@ def _verified_workspace(
         )
     verify_topology_digest(manifest)
     verify_run_digest(manifest)
+    uncovered = uncovered_writer_stages(manifest.entities, manifest.trace)
+    if uncovered:
+        raise WorkspaceVerificationError(
+            f"the run at {run_dir} indexes entities written by "
+            + ", ".join(uncovered)
+            + " with no StageRecord for them: its artifacts have no execution "
+            "record, so it is not a verified source (§4.1)"
+        )
 
     indexed: set[str] = {MANIFEST_NAME}
     for entry in manifest.entities:

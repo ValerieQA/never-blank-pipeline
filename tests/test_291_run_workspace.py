@@ -54,6 +54,7 @@ from src.run.run_workspace import (
     is_complete,
     load_source_run,
     owner_of,
+    resolve_editorial_run_dir,
     verify_run_workspace,
     version_in_name,
     versioned_name,
@@ -576,9 +577,14 @@ def test_a_stage_claiming_a_file_another_stage_wrote_is_detected(tmp_path):
         entity_id="str-291",
         payload={"id": "str-291"},
     )
+    # S-08 records its own execution, so the run is not short a StageRecord —
+    # this test is about the false claim below, not about missing coverage.
+    workspace.write_stage_record(
+        _stage_record(run_id, 0, "S-08", "unit-291/linkedin", _refs([entry]))
+    )
     # the write was legitimate; the claim about who made it is not
     workspace.write_stage_record(
-        _stage_record(run_id, 0, "S-12", "unit-291/linkedin", _refs([entry]))
+        _stage_record(run_id, 1, "S-12", "unit-291/linkedin", _refs([entry]))
     )
     workspace.write_manifest(_run_context(run_id))
 
@@ -842,3 +848,187 @@ def test_verify_run_provenance_refuses_a_workspace_that_does_not_verify(tmp_path
         verify_run_provenance(
             packages, SIG, runs[0], editorial_runs_root=run.runs_root
         )
+
+
+# ===========================================================================
+# §4.3 — a sealed workspace stays sealed, whoever opens it (#327 review)
+# ===========================================================================
+
+
+def _sealed_run(tmp_path) -> tuple[Path, str, EntityIndexEntry]:
+    """One completed run: an entity, its stage record, and the manifest."""
+
+    runs_root, run_id = tmp_path / "editorial_runs", create_run_id()
+    workspace = RunWorkspace.create(runs_root, run_id)
+    entry = workspace.write_entity(
+        stage="S-08",
+        relative_path=f"{_DEST}/strategies/cs-327/str-327.json",
+        entity_type="E-13",
+        entity_id="str-327",
+        payload={"id": "str-327"},
+    )
+    workspace.write_stage_record(
+        _stage_record(run_id, 0, "S-08", "unit-291/linkedin", _refs([entry]))
+    )
+    workspace.write_manifest(_run_context(run_id))
+    return runs_root, run_id, entry
+
+
+def test_a_finished_run_reopened_through_the_public_path_is_already_sealed(tmp_path):
+    """`create` refuses an existing directory, but the constructor is public.
+
+    One built over a finished run used to start unsealed, so a completed run
+    could be written to after its manifest — the thing §4.3 forbids.
+    """
+
+    runs_root, run_id, _ = _sealed_run(tmp_path)
+
+    reopened = RunWorkspace(resolve_editorial_run_dir(runs_root, run_id), run_id)
+
+    assert reopened.sealed is True
+
+
+def test_a_reopened_run_refuses_a_new_entity(tmp_path):
+    runs_root, run_id, _ = _sealed_run(tmp_path)
+    reopened = RunWorkspace(resolve_editorial_run_dir(runs_root, run_id), run_id)
+
+    with pytest.raises(RunWorkspaceError, match="nothing follows"):
+        reopened.write_entity(
+            stage="S-08",
+            relative_path=f"{_DEST}/strategies/cs-327/str-later.json",
+            entity_type="E-13",
+            entity_id="str-later",
+            payload={"id": "str-later"},
+        )
+
+
+def test_a_reopened_run_refuses_a_new_stage_record(tmp_path):
+    runs_root, run_id, _ = _sealed_run(tmp_path)
+    reopened = RunWorkspace(resolve_editorial_run_dir(runs_root, run_id), run_id)
+
+    with pytest.raises(RunWorkspaceError, match="nothing follows"):
+        reopened.write_stage_record(
+            _stage_record(run_id, 9, "S-12", "unit-291/linkedin", ())
+        )
+
+
+def test_a_reopened_run_refuses_a_second_manifest(tmp_path):
+    runs_root, run_id, _ = _sealed_run(tmp_path)
+    reopened = RunWorkspace(resolve_editorial_run_dir(runs_root, run_id), run_id)
+
+    with pytest.raises(RunWorkspaceError, match="nothing follows"):
+        reopened.write_manifest(_run_context(run_id))
+
+
+def test_reopening_a_finished_run_leaves_it_verifiable(tmp_path):
+    """Sealing on open must not disturb what the run already proved."""
+
+    runs_root, run_id, entry = _sealed_run(tmp_path)
+    RunWorkspace(resolve_editorial_run_dir(runs_root, run_id), run_id)
+
+    report = verify_run_workspace(runs_root, run_id)
+    _, manifest = load_source_run(runs_root, run_id)
+
+    assert report.run_id == run_id
+    assert [item.path for item in manifest.entities] == [entry.path]
+    assert [item.stage for item in manifest.trace] == ["S-08"]
+
+
+def test_a_new_workspace_is_not_sealed(tmp_path):
+    """The flag reads the workspace, so a fresh one must still be writable."""
+
+    runs_root, run_id = tmp_path / "editorial_runs", create_run_id()
+
+    assert RunWorkspace.create(runs_root, run_id).sealed is False
+
+
+# ===========================================================================
+# §4.1 — artifacts need an execution record (#327 review)
+# ===========================================================================
+
+
+def test_a_stage_that_wrote_an_entity_and_no_record_cannot_seal_the_run(tmp_path):
+    """Otherwise the run becomes a verified source with no execution behind it."""
+
+    runs_root, run_id = tmp_path / "editorial_runs", create_run_id()
+    workspace = RunWorkspace.create(runs_root, run_id)
+    workspace.write_entity(
+        stage="S-08",
+        relative_path=f"{_DEST}/strategies/cs-327/str-327.json",
+        entity_type="E-13",
+        entity_id="str-327",
+        payload={"id": "str-327"},
+    )
+
+    with pytest.raises(RunWorkspaceError, match="S-08 wrote entities"):
+        workspace.write_manifest(_run_context(run_id))
+
+
+def test_verification_rejects_a_manifest_whose_artifacts_have_no_record(tmp_path):
+    """The same rule on the reading side.
+
+    The manifest is rebuilt through ``RunManifest.for_run`` rather than edited,
+    so its run digest matches its own contents: this has to fail on the
+    missing coverage, not on tampering the digest check would catch anyway.
+    A writer that never went through ``write_manifest`` — an older run, another
+    tool — is exactly the case the reading side has to answer for itself.
+    """
+
+    runs_root, run_id, entry = _sealed_run(tmp_path)
+    run_dir = resolve_editorial_run_dir(runs_root, run_id)
+    untraced = RunManifest.for_run(
+        _run_context(run_id), None, entities=(entry,), trace=()
+    )
+    (run_dir / MANIFEST_NAME).write_text(
+        json.dumps(untraced.to_dict()), encoding="utf-8"
+    )
+
+    with pytest.raises(WorkspaceVerificationError, match="no StageRecord"):
+        verify_run_workspace(runs_root, run_id)
+
+
+def test_a_run_that_wrote_nothing_still_seals(tmp_path):
+    """Nothing produced is nothing to account for — not an error."""
+
+    runs_root, run_id = tmp_path / "editorial_runs", create_run_id()
+    workspace = RunWorkspace.create(runs_root, run_id)
+
+    assert workspace.write_manifest(_run_context(run_id)).run_context.run_id == run_id
+
+
+def test_a_recorded_stage_that_produced_nothing_is_legitimate(tmp_path):
+    """SKIP and REPLAN write a record and may write no entity at all."""
+
+    runs_root, run_id = tmp_path / "editorial_runs", create_run_id()
+    workspace = RunWorkspace.create(runs_root, run_id)
+    workspace.write_stage_record(
+        _stage_record(run_id, 0, "S-08", "unit-291/linkedin", ())
+    )
+
+    workspace.write_manifest(_run_context(run_id))
+
+    assert verify_run_workspace(runs_root, run_id).run_id == run_id
+
+
+def test_coverage_is_per_stage_not_per_entity(tmp_path):
+    """One record covers every entity that stage wrote — no record per file."""
+
+    runs_root, run_id = tmp_path / "editorial_runs", create_run_id()
+    workspace = RunWorkspace.create(runs_root, run_id)
+    first = workspace.write_entity(
+        stage="S-08",
+        relative_path=f"{_DEST}/strategies/cs-327/str-a.json",
+        entity_type="E-13", entity_id="str-a", payload={"id": "str-a"},
+    )
+    second = workspace.write_entity(
+        stage="S-08",
+        relative_path=f"{_DEST}/strategies/cs-327/str-b.json",
+        entity_type="E-13", entity_id="str-b", payload={"id": "str-b"},
+    )
+    workspace.write_stage_record(
+        _stage_record(run_id, 0, "S-08", "unit-291/linkedin", _refs([first, second]))
+    )
+
+    workspace.write_manifest(_run_context(run_id))
+
+    assert verify_run_workspace(runs_root, run_id).run_id == run_id
