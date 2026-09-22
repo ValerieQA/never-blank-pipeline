@@ -62,6 +62,8 @@ from src.artifacts import (
     _validate_path_component,
     atomic_write_json,
 )
+from src.editorial_core.arp import ArpOutcome, OutcomeRecord, PrecedenceApplication
+from src.editorial_core.topology import CANONICAL_TOPOLOGY
 from src.run.code_identity import CodeIdentity
 from src.run.run_context import RunContext
 from src.run.run_manifest import (
@@ -90,8 +92,11 @@ TRACE_STAGE = "stage-named-in-the-trace-file"
 _STAGE_ID_PATTERN = r"^S-(?:0\d|1[0-5])$"
 _DIGEST_PATTERN = r"^sha256:[0-9a-f]{64}$"
 
-#: Schema version of the StageRecord contract shape.
-_STAGE_RECORD_SCHEMA_VERSION = "1.0"
+#: Schema version of the StageRecord contract shape. 1.1 typed ``outcomes`` and
+#: ``precedence`` against the ARP records (#292): a 1.0 record carried whatever
+#: shape its stage wrote, so it is a different document and a reader is told so
+#: rather than left to discover it field by field.
+_STAGE_RECORD_SCHEMA_VERSION = "1.1"
 
 #: ``core.v2.json`` → 2. The version sits between dots so that a name may
 #: carry an ID with digits in it and still state exactly one version.
@@ -406,16 +411,17 @@ class StageRecord(_Record):
     created_by: StageAttribution
     inputs: tuple[EntityRef, ...] = ()
     outputs: tuple[EntityRef, ...] = ()
-    #: §4.2 also gives a StageRecord its routing evidence, its call
-    #: accounting, its OutcomeRecords and its PrecedenceApplications. Their
-    #: shapes belong to the ARP plumbing (NB-01c), so they are carried here as
-    #: written rather than typed against stage contracts that do not exist
-    #: yet. What this slice fixes is that they have a place and travel with
-    #: the execution they describe.
+    #: §4.2 also gives a StageRecord its routing evidence and its call
+    #: accounting. Those two are still carried as written: their shapes belong
+    #: to ``stage_routing`` and to the stages that make the calls.
     routing: Optional[dict[str, Any]] = None
     calls: Optional[dict[str, Any]] = None
-    outcomes: tuple[dict[str, Any], ...] = ()
-    precedence: tuple[dict[str, Any], ...] = ()
+    #: The outcome log and the PrecedenceLog of this execution (§4.1, U-3).
+    #: They live inside the record that produced them rather than in files of
+    #: their own, and ``src/editorial_core/arp.py`` assembles the run's ordered
+    #: views over them.
+    outcomes: tuple[OutcomeRecord, ...] = ()
+    precedence: tuple[PrecedenceApplication, ...] = ()
     status: StageStatus
 
     @field_validator("schema_version", mode="after")
@@ -444,7 +450,39 @@ class StageRecord(_Record):
             )
         if self.ended_at < self.started_at:
             raise ValueError("a stage execution cannot end before it started")
+        for outcome in self.outcomes:
+            self._route_is_declared(outcome)
         return self
+
+    def _route_is_declared(self, outcome: OutcomeRecord) -> None:
+        """A REPLAN goes where the topology registry says it may (§5.3).
+
+        The OutcomeRecord knows it routes somewhere; only the record that
+        carries it knows where from. So this is where the pair is checked
+        against the route table: an undeclared backward edge is a second
+        engine, and a route spending a counter other than its own is a loop
+        that no counter bounds.
+        """
+
+        if outcome.outcome is not ArpOutcome.REPLAN:
+            return
+        counters = {
+            route.counter
+            for route in CANONICAL_TOPOLOGY.replan_routes
+            if route.source == self.stage and route.target == outcome.route_target
+        }
+        if not counters:
+            raise ValueError(
+                f"{self.stage} → {outcome.route_target} is not a declared "
+                "REPLAN route; the route table is the whole set of routes a "
+                "run may take"
+            )
+        if outcome.counter not in counters:
+            raise ValueError(
+                f"the REPLAN from {self.stage} to {outcome.route_target} spends "
+                f"{outcome.counter!r}; that route spends "
+                + ", ".join(sorted(counters))
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """JSON-compatible: enums as values, timestamps as ISO-8601 UTC."""
