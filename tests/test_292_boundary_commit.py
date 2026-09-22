@@ -350,6 +350,60 @@ def test_a_new_interpretation_at_a_re_entry_is_recorded_as_inadmissible(
     ).exists(), "a refused commit writes nothing at all"
 
 
+def test_an_unchanged_member_may_not_change_lists_without_a_new_version(
+    tmp_path: Path,
+):
+    """A reclassification is a new E-08 version, not a different member entry.
+
+    ``int-2`` was committed as inadmissible at version 1. A second commit that
+    writes something unrelated may not list that same version as admissible:
+    the file it points at still says inadmissible, so the marker and the record
+    would disagree, and the move would leave no version a reader could follow.
+    """
+
+    workspace = _workspace(tmp_path)
+    _first_commit(workspace)
+
+    with pytest.raises(BoundaryCommitError, match="without writing a new version"):
+        commit_boundary(
+            workspace,
+            boundary_id="bnd-292",
+            version=2,
+            interpretations=(_interpretation("int-3", 1, Admissibility.INADMISSIBLE),),
+            members=(
+                _member("int-1", 1, Admissibility.ADMISSIBLE),
+                _member("int-2", 1, Admissibility.ADMISSIBLE),
+                _member("int-3", 1, Admissibility.INADMISSIBLE),
+            ),
+        )
+    assert not (
+        workspace.run_dir / interpretation_relative_path("int-3", 1)
+    ).exists(), "a refused commit writes nothing at all"
+
+    boundary = current_boundary(workspace.run_dir)
+    assert boundary is not None and boundary.version == 1
+    assert _pairs(boundary.inadmissible) == [("int-2", 1)]
+
+    # The same move as a new version of the record is the way it is done.
+    commit_boundary(
+        workspace,
+        boundary_id="bnd-292",
+        version=2,
+        interpretations=(
+            _interpretation(
+                "int-2", 2, Admissibility.ADMISSIBLE, supersedes="int-2.v1"
+            ),
+        ),
+        members=(
+            _member("int-1", 1, Admissibility.ADMISSIBLE),
+            _member("int-2", 2, Admissibility.ADMISSIBLE),
+        ),
+    )
+    boundary = current_boundary(workspace.run_dir)
+    assert boundary is not None and boundary.version == 2
+    assert _pairs(boundary.admissible) == [("int-1", 1), ("int-2", 2)]
+
+
 def test_an_interpretation_the_marker_would_not_reference_is_refused(tmp_path: Path):
     workspace = _workspace(tmp_path)
 

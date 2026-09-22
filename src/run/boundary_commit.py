@@ -261,9 +261,11 @@ def commit_boundary(
     list that names an interpretation twice; a written version no member
     references, which would be an orphan created on purpose; a member whose
     file is neither written here nor already on disk; a written version whose
-    admissibility disagrees with its member entry; and, at a re-entry, a newly
-    discovered interpretation recorded as anything but inadmissible (§2.4 /
-    Step 2 S-04 rule 2).
+    admissibility disagrees with its member entry; an unchanged member listed
+    against the classification it was committed with, which is a
+    reclassification without the new E-08 version it needs; and, at a re-entry,
+    a newly discovered interpretation recorded as anything but inadmissible
+    (§2.4 / Step 2 S-04 rule 2).
     """
 
     if not boundary_id.strip():
@@ -288,6 +290,7 @@ def commit_boundary(
         written=written,
         version=version,
         known_ids=_known_interpretation_ids(existing),
+        classified=_committed_classifications(existing),
     )
     body = _checked_body(payload)
 
@@ -407,6 +410,7 @@ def _checked_members(
     written: dict[tuple[str, int], InterpretationVersion],
     version: int,
     known_ids: frozenset[str],
+    classified: dict[tuple[str, int], Admissibility],
 ) -> tuple[tuple[BoundaryMember, Optional[str]], ...]:
     """Every member with the digest of the file it references.
 
@@ -463,6 +467,19 @@ def _checked_members(
                 "the workspace; an unchanged interpretation is referenced "
                 "where it is, and a changed one is written first (§2.4 rules 1 "
                 "and 4)"
+            )
+        committed = classified.get(key)
+        if committed is not None and committed is not member.admissibility:
+            raise BoundaryCommitError(
+                f"{member.interpretation_id} version {member.version} was "
+                f"committed as {committed.value} and this commit lists it as "
+                f"{member.admissibility.value} without writing a new version; "
+                "moving an interpretation between the two lists is a "
+                "reclassification, and a reclassification is a new E-08 "
+                "version with its reason and its supersedes chain (§2.4 rules "
+                "1 and 4, Step 1 §0.1). The file this member points at still "
+                "says the old classification, so the marker and the record "
+                "would disagree the moment a reader followed the pair"
             )
         resolved.append((member, file_digest(path)))
 
@@ -693,3 +710,21 @@ def _known_interpretation_ids(existing: Sequence[BoundaryVersion]) -> frozenset[
     return frozenset(
         member.interpretation_id for boundary in existing for member in boundary.members
     )
+
+
+def _committed_classifications(
+    existing: Sequence[BoundaryVersion],
+) -> dict[tuple[str, int], Admissibility]:
+    """Which list each already-committed exact pair was committed in.
+
+    A pair is the unit: the same interpretation at a later version may sit in
+    the other list, which is what a reclassification is. ``existing`` is oldest
+    first, so the latest version to record a pair wins — the same order a
+    reader resolves the boundary in.
+    """
+
+    return {
+        (member.interpretation_id, member.version): member.admissibility
+        for boundary in existing
+        for member in boundary.members
+    }
