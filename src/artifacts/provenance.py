@@ -15,6 +15,14 @@ missing, an artifact belongs to another run/source/configuration, a
 digest/reference is inconsistent, a later artifact exists without its valid
 upstream chain, or an artifact is malformed — a blocked business outcome is
 not corrupted provenance.
+
+Step 3 §4.3 extends the verifier to the canonical engine's run workspace
+(Issue #291): a caller that has one passes ``editorial_runs_root``, and the
+run's manifest is verified too — every indexed digest, and the §2.3 write
+ownership of every indexed path. It is a keyword with no default root on
+purpose. The workspace is shadow-only while SL-1 is built, and a verifier
+that went looking for one would start failing production runs that correctly
+have none.
 """
 
 from __future__ import annotations
@@ -40,6 +48,11 @@ from src.run.decision_policy import (
 )
 from src.research.provider import ResearchResultEnvelope
 from src.run.run_context import ExecutionMode
+from src.run.run_manifest import (
+    RunDigestMismatchError,
+    TopologyDigestMismatchError,
+)
+from src.run.run_workspace import RunWorkspaceError, verify_run_workspace
 from src.strategy.business_config import BusinessStrategyConfiguration
 from src.strategy.execution_context import ConfigurationIdentity
 from src.visual.contract import VisualAssetsRecord
@@ -58,6 +71,10 @@ class RunProvenanceReport(BaseModel):
     run_kind: str                       # "generation" | "reuse-publication"
     verified_artifacts: tuple[str, ...]
     stopped_after: str                  # last verified lifecycle stage
+    #: The run digest of the canonical engine's workspace, when the caller
+    #: gave one to verify. Absent — not empty — for a run that has none, so
+    #: "no workspace was checked" never reads as "a workspace checked out".
+    editorial_run_digest: str | None = None
 
 
 def _load(run_dir: Path, name: str) -> dict | None:
@@ -83,12 +100,51 @@ def _require(condition: bool, message: str) -> None:
 
 
 def verify_run_provenance(
-    packages_dir: Path, signal_id: str, run_id: str
+    packages_dir: Path,
+    signal_id: str,
+    run_id: str,
+    *,
+    editorial_runs_root: Path | None = None,
 ) -> RunProvenanceReport:
     """Verify the complete applicable provenance chain of one run.
 
     ``signal_id`` is the storage namespace component; identity consistency is
     proven from the artifacts themselves.
+
+    ``editorial_runs_root`` adds the canonical engine's run workspace to what
+    is verified (Step 3 §4.3): the manifest must exist — a run without one is
+    incomplete and is not evidence — every file it indexes must still digest
+    to what it recorded, and every path must have been written by the stage
+    §2.3 gives it to. The run's own chain is verified first: a workspace
+    describes a run, and a run whose artifacts do not hold together has
+    nothing for a manifest to be the index of.
+    """
+
+    report = _verify_legacy_chain(packages_dir, signal_id, run_id)
+    if editorial_runs_root is None:
+        return report
+    try:
+        workspace = verify_run_workspace(Path(editorial_runs_root), run_id)
+    except (
+        RunWorkspaceError,
+        TopologyDigestMismatchError,
+        RunDigestMismatchError,
+    ) as exc:
+        raise ProvenanceError(
+            f"run {run_id} has a legitimate artifact chain, but its editorial "
+            f"run workspace does not verify: {exc}"
+        ) from exc
+    return report.model_copy(update={"editorial_run_digest": workspace.run_digest})
+
+
+def _verify_legacy_chain(
+    packages_dir: Path, signal_id: str, run_id: str
+) -> RunProvenanceReport:
+    """Verify the run-scoped artifacts under the legacy run namespace.
+
+    ``reports/content_packages/<signal_id>/runs/<run_id>/`` — the root the
+    existing lifecycle writes, which Step 3 §2.1 keeps holding exactly what it
+    holds today.
     """
 
     run_dir = resolve_run_dir(Path(packages_dir), signal_id, run_id)
@@ -538,7 +594,7 @@ def _verify_reuse_publication_run(
     # verifier); a source that is itself a reuse run is rejected, which also
     # bounds the recursion at depth one.
     try:
-        source_report = verify_run_provenance(packages_dir, signal_id, source_run_id)
+        source_report = _verify_legacy_chain(packages_dir, signal_id, source_run_id)
     except ProvenanceError as exc:
         raise ProvenanceError(
             f"source generation run {source_run_id} failed provenance "

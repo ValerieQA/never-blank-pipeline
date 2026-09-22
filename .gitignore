@@ -31,6 +31,10 @@ data/editorial/*
 !data/editorial/publication_markers/
 # PNG images are already on Cloudinary — do not store in Git
 reports/content_packages/images/
+# Canonical run workspaces (NB-01b, Step 3 §2.1) are tier 1: everything a run
+# produced, kept as a 90-day Actions artifact and never committed. What must
+# outlive that is written to the durable ledger instead.
+reports/editorial_runs/
 # logo and fonts are tracked assets — must NOT be ignored
 __pycache__/
 *.py[cod]
