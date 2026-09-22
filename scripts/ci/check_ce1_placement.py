@@ -22,9 +22,14 @@ Two rules, over every module of the editorial core (S-00 … S-13):
 
 ``CE1-DESTINATION``
     No module may select stages by destination: a branch on a destination, or
-    a table keyed by destination, may not decide which stages run. The stages
-    may be named outright (``"S-10"``) or reached through a name that holds
-    them (``stages``, ``CANONICAL_TOPOLOGY.stage_ids``); both are selection.
+    a table keyed by destination, may not decide which stages run. The
+    destination may be written out (``"telegram"``) or arrive as a value
+    (``destination``, ``enabled_destinations``), and the stages may be named
+    outright (``"S-10"``) or reached through a name that holds them
+    (``stages``, ``CANONICAL_TOPOLOGY.stage_ids``); every pairing of the two
+    is selection, and ``if destination in enabled_destinations: return
+    stages[:2]`` — naming neither a destination nor a stage — is the breach in
+    its plainest form rather than a way around the rule.
     Destination-specific *behaviour* is legitimate and untouched — it lives in
     destination knowledge (``K-DST-*``), in adaptation (S-10), in check
     records and in the publishers. What is forbidden is a destination choosing
@@ -82,6 +87,13 @@ _STAGE_SEQUENCE = re.compile(
     r"(?i)(?:^|_)"
     r"(?:stages|stage_ids|stage_order|stage_sequence|topology|pipeline)"
     r"(?:_|$)"
+)
+
+#: Names a destination arrives and travels under. A branch need not write a
+#: surface out to be a branch on one: ``if destination in enabled_destinations``
+#: cuts the engine per destination while naming no destination at all.
+_DESTINATION_VALUE = re.compile(
+    r"(?i)(?:^|_)(?:destination|channel|surface|platform)s?(?:_|$)"
 )
 
 
@@ -270,32 +282,33 @@ def _prose_nodes(tree: ast.Module) -> set[int]:
 
 def _destination_violations(path: Path, tree: ast.Module) -> list[Violation]:
     violations: list[Violation] = []
+    values = _destination_values(tree)
 
     for node in ast.walk(tree):
         if isinstance(node, ast.If):
             violations.extend(_branch_violations(
-                path, node.test, [node.body, node.orelse]))
+                path, node.test, [node.body, node.orelse], values))
         elif isinstance(node, ast.IfExp):
             violations.extend(_branch_violations(
-                path, node.test, [[node.body], [node.orelse]]))
+                path, node.test, [[node.body], [node.orelse]], values))
         elif isinstance(node, ast.Match):
-            subject = _destination_name(node.subject)
+            subject = _destination_name(node.subject, values)
             for case in node.cases:
-                discriminator = subject or _destination_name(case.pattern)
+                discriminator = subject or _destination_name(case.pattern, values)
                 if discriminator is None:
                     continue
                 violations.extend(_selection_violations(
                     path, discriminator, [case.body]))
         elif isinstance(node, ast.Dict):
-            violations.extend(_table_violations(path, node))
+            violations.extend(_table_violations(path, node, values))
 
     return sorted(violations, key=lambda violation: (violation.line, violation.message))
 
 
 def _branch_violations(
-    path: Path, test: ast.AST, branches: Iterable[list[Any]]
+    path: Path, test: ast.AST, branches: Iterable[list[Any]], values: set[str]
 ) -> list[Violation]:
-    destination = _destination_name(test)
+    destination = _destination_name(test, values)
     if destination is None:
         return []
     return _selection_violations(path, destination, branches)
@@ -312,7 +325,7 @@ def _selection_violations(
         line, reference = found
         violations.append(Violation(
             path, line, "CE1-DESTINATION",
-            f"a branch on the destination {destination!r} selects {reference}: "
+            f"a branch on {destination} selects {reference}: "
             "a destination may not decide which stages run. "
             "Destination-specific behaviour belongs in destination knowledge "
             "(K-DST-*), adaptation (S-10), check records and the publishers",
@@ -320,12 +333,12 @@ def _selection_violations(
     return violations
 
 
-def _table_violations(path: Path, node: ast.Dict) -> list[Violation]:
+def _table_violations(path: Path, node: ast.Dict, values: set[str]) -> list[Violation]:
     violations: list[Violation] = []
     for key, value in zip(node.keys, node.values):
         if key is None:  # a ``**other`` entry has no key
             continue
-        destination = _destination_name(key)
+        destination = _destination_name(key, values)
         if destination is None:
             continue
         found = _first_stage_reference([value])
@@ -334,18 +347,70 @@ def _table_violations(path: Path, node: ast.Dict) -> list[Violation]:
         line, stage = found
         violations.append(Violation(
             path, line, "CE1-DESTINATION",
-            f"a table keyed by destination {destination!r} names {stage}: "
+            f"a table keyed by {destination} names {stage}: "
             "the stages a run executes come from the topology registry, not "
             "from a per-destination table",
         ))
     return violations
 
 
-def _destination_name(node: Optional[ast.AST]) -> Optional[str]:
-    """The destination this expression names, if any."""
+def _destination_values(tree: ast.Module) -> set[str]:
+    """Local names that hold a destination, as parameters or by binding.
+
+    The destination reaches a module as a value, and a value can be renamed:
+    ``def plan(destination)`` brings one in and ``chosen = destination`` passes
+    it on, each leaving a branch that selects per destination without a
+    destination appearing anywhere in it. Following the value is to the
+    destination rule what :func:`_clock_aliases` is to the clock — it makes
+    the rule about what is branched on rather than how it is spelled.
+    """
+
+    values: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.arg):
+            if _DESTINATION_VALUE.search(node.arg):
+                values.add(node.arg)
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            if node.value is None or _destination_name(node.value, values) is None:
+                continue
+            targets: list[ast.expr] = (
+                node.targets if isinstance(node, ast.Assign) else [node.target]
+            )
+            for target in targets:
+                if isinstance(target, ast.Name):
+                    values.add(target.id)
+    return values
+
+
+def _destination_name(node: Optional[ast.AST], values: set[str]) -> Optional[str]:
+    """How this expression names a destination, if it does.
+
+    Three spellings, one branch: the destination written out (``"telegram"``,
+    ``Channel.TELEGRAM``), a name the destination travels under
+    (``destination``, ``enabled_destinations``), and a name bound to one of
+    those. Without the last two, a branch that selects stages per destination
+    passes untouched as long as it never mentions a surface — which is the
+    easiest way to write the breach, not the hardest.
+
+    Returns the phrase a violation message reads the branch back as, so that
+    every spelling says what was branched on. A written-out destination wins,
+    because naming the surface says more than naming the variable it sits in.
+    """
 
     if node is None:
         return None
+    named = _named_destination(node)
+    if named is not None:
+        return f"the destination {named!r}"
+    holder = _destination_holder(node, values)
+    if holder is not None:
+        return f"the destination in {holder!r}"
+    return None
+
+
+def _named_destination(node: ast.AST) -> Optional[str]:
+    """The destination this expression writes out, if it writes one out."""
+
     for child in ast.walk(node):
         if isinstance(child, ast.Constant) and isinstance(child.value, str):
             candidate = child.value.strip().lower()
@@ -353,6 +418,29 @@ def _destination_name(node: Optional[ast.AST]) -> Optional[str]:
                 return candidate
         elif isinstance(child, ast.Attribute) and child.attr.lower() in DESTINATION_NAMES:
             return child.attr.lower()
+    return None
+
+
+def _destination_holder(node: ast.AST, values: set[str]) -> Optional[str]:
+    """The value this expression reads a destination out of, if any.
+
+    Only a lower-case name counts as the vocabulary: ``destination`` and
+    ``plan.enabled_destinations`` are values in flight, while
+    ``StageScope.DESTINATION`` and ``TerminalOutcome.SKIP_DESTINATION`` are
+    the registry's own words for a scope and an outcome, and reading the
+    topology is the opposite of branching around it. A destination written
+    into an enum member (``Channel.TELEGRAM``) is caught before this, by name.
+    """
+
+    for child in ast.walk(node):
+        if isinstance(child, ast.Attribute):
+            if not child.attr.isupper() and _DESTINATION_VALUE.search(child.attr):
+                return child.attr
+        elif isinstance(child, ast.Name):
+            if child.id in values:
+                return child.id
+            if not child.id.isupper() and _DESTINATION_VALUE.search(child.id):
+                return child.id
     return None
 
 

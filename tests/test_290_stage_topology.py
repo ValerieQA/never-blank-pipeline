@@ -17,8 +17,9 @@ The placement rule, CE-1's third mechanism, is in
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
 import pytest
 
@@ -250,49 +251,199 @@ def test_a_changed_topology_changes_the_digest():
 # Acceptance: a REPLAN and a destination SKIP share one digest (C-1)
 # ===========================================================================
 
-#: One destination, sent back to S-08 by its plan check and re-planned.
-_REPLANNED_RUN = (
-    ("S-00", "signal"), ("S-01", "signal"), ("S-02", "signal"),
-    ("S-03", "signal"), ("S-04", "signal"), ("S-05", "signal"),
-    ("S-06", "unit"), ("S-07", "unit"),
-    ("S-08", "wix"), ("S-09", "wix"), ("S-10", "wix"), ("S-11", "wix"),
-    ("S-08", "wix"), ("S-09", "wix"), ("S-10", "wix"), ("S-11", "wix"),
-    ("S-12", "wix"), ("S-13", "wix"), ("S-14", "wix"),
-)
 
-#: Two eligible destinations, of which Telegram is skipped at S-07 and so
-#: never enters S-08; no enrichment round was needed either.
-_RUN_WITH_A_SKIPPED_DESTINATION = (
-    ("S-00", "signal"), ("S-01", "signal"), ("S-02", "signal"),
-    ("S-04", "signal"), ("S-05", "signal"),
-    ("S-06", "unit"), ("S-07", "unit"),
-    ("S-08", "wix"), ("S-09", "wix"), ("S-10", "wix"), ("S-11", "wix"),
-    ("S-12", "wix"), ("S-13", "wix"), ("S-14", "wix"),
-)
-
-
-def _is_permitted(trace: tuple[tuple[str, str], ...]) -> bool:
-    return all(
-        CANONICAL_TOPOLOGY.permits_transition(before[0], after[0])
-        for before, after in zip(trace, trace[1:])
+def _lane_stages(*scopes: StageScope) -> tuple[str, ...]:
+    """The stages of these scopes, in registry order."""
+    return tuple(
+        stage.stage_id for stage in CANONICAL_TOPOLOGY.stages if stage.scope in scopes
     )
 
 
-def test_both_executed_paths_are_ones_the_registry_permits():
-    assert _REPLANNED_RUN != _RUN_WITH_A_SKIPPED_DESTINATION
-    assert _is_permitted(_REPLANNED_RUN)
-    assert _is_permitted(_RUN_WITH_A_SKIPPED_DESTINATION)
+_SIGNAL_LANE = "signal"
+_UNIT_LANE = "unit"
+
+_SIGNAL_STAGES = _lane_stages(StageScope.SIGNAL)
+_UNIT_STAGES = _lane_stages(StageScope.UNIT)
+#: S-08 … S-14: what one destination executes on its own, publication
+#: included — S-14 fingerprints one text for one destination. Observation
+#: (S-15) is post-run and outside what these two scenarios need.
+_DESTINATION_STAGES = _lane_stages(StageScope.DESTINATION, StageScope.PUBLICATION)
+
+
+@dataclass(frozen=True)
+class _Finding:
+    """What a stage reports every time the simulated run reaches it.
+
+    Not an error the harness invents: a finding is the ``cause`` of one row of
+    the Step 2 §5.3 route table, and the registry alone decides where it goes,
+    which counter it spends and what happens when that counter runs out.
+    ``occurrences`` is how many times the stage reports it before it is
+    satisfied — once for a run that REPLANs and recovers, more than the
+    counter allows for one that exhausts it.
+    """
+
+    stage_id: str
+    lane: str
+    cause: str
+    occurrences: int = 1
+
+
+class _SimulatedRun:
+    """A run of the canonical topology that records what it executed.
+
+    Not an engine: it holds no stage logic, which #290 keeps out of this
+    slice. It walks the registry's order, takes the backward routes the
+    registry declares, spends the counters those routes spend and ends a lane
+    on the terminal outcome the registry names — so a REPLAN and a
+    destination SKIP are *produced* by running rather than written down. What
+    it yields is an executed path and a manifest, which is what clarification
+    C-1 is a claim about.
+
+    A lane is one scope instance: the signal, the unit, or one destination.
+    The simulation has a single signal and a single unit, so keying counters
+    by lane counts them per the scope Step 2 §0.3 gives them.
+    """
+
+    def __init__(
+        self,
+        run_context: RunContext,
+        destinations: tuple[str, ...],
+        findings: tuple[_Finding, ...] = (),
+    ) -> None:
+        self.manifest = RunManifest.for_run(run_context)
+        self.steps: list[tuple[str, str]] = []
+        self.outcomes: list[tuple[str, TerminalOutcome]] = []
+        self._unresolved = {(f.stage_id, f.lane): f.occurrences for f in findings}
+        self._causes = {(f.stage_id, f.lane): f.cause for f in findings}
+        self._spent: dict[tuple[str, str], int] = {}
+
+        if self._walk(_SIGNAL_STAGES, _SIGNAL_LANE) and self._walk(
+            _UNIT_STAGES, _UNIT_LANE
+        ):
+            for destination in destinations:
+                self._walk(_DESTINATION_STAGES, destination)
+
+    def path(self, destination: str) -> tuple[str, ...]:
+        """The stages one destination executed, from the shared prefix on."""
+        return tuple(
+            stage_id
+            for stage_id, lane in self.steps
+            if lane in (_SIGNAL_LANE, _UNIT_LANE, destination)
+        )
+
+    def _walk(self, stage_ids: tuple[str, ...], lane: str) -> bool:
+        """Execute these stages in order; ``False`` when the lane ends early."""
+        index = 0
+        while index < len(stage_ids):
+            self.steps.append((stage_ids[index], lane))
+            route = self._route_raised_at(stage_ids[index], lane)
+            if route is None:
+                index += 1
+                continue
+            if self._spend(route.counter, lane):
+                index = stage_ids.index(route.target)
+                continue
+            self.outcomes.append((lane, route.on_exhaustion))
+            return False
+        return True
+
+    def _route_raised_at(self, stage_id: str, lane: str) -> Optional[ReplanRoute]:
+        """The route the registry gives the finding this stage reports."""
+        unresolved = self._unresolved.get((stage_id, lane), 0)
+        if unresolved <= 0:
+            return None
+        self._unresolved[(stage_id, lane)] = unresolved - 1
+        cause = self._causes[(stage_id, lane)]
+        # exactly one row, or the scenario named a route the registry does not
+        # have and the harness must say so rather than invent one
+        (route,) = [
+            candidate
+            for candidate in CANONICAL_TOPOLOGY.replan_routes
+            if candidate.source == stage_id and candidate.cause == cause
+        ]
+        return route
+
+    def _spend(self, counter_id: str, lane: str) -> bool:
+        """Charge one attempt to the counter; ``False`` when it is exhausted."""
+        (counter,) = [
+            candidate
+            for candidate in CANONICAL_TOPOLOGY.counters
+            if candidate.counter_id == counter_id
+        ]
+        spent = self._spent.get((counter_id, lane), 0)
+        if spent >= counter.default_limit:
+            return False
+        self._spent[(counter_id, lane)] = spent + 1
+        return True
+
+
+def _is_permitted(path: tuple[str, ...]) -> bool:
+    return all(
+        CANONICAL_TOPOLOGY.permits_transition(before, after)
+        for before, after in zip(path, path[1:])
+    )
+
+
+#: Wix's plan check fails once; S-11 sends it back to S-08 and it recovers.
+_PLAN_CHECK_FAILS_ONCE = _Finding(
+    stage_id="S-11", lane="wix", cause="plan_check_failed",
+)
+
+#: Telegram never finds an admissible strategy, so S-09 keeps sending it back
+#: to S-08 until L_strategy runs out and the route's terminal outcome — a
+#: destination SKIP — is what ends the lane. More occurrences than any limit.
+_TELEGRAM_NEVER_FINDS_A_STRATEGY = _Finding(
+    stage_id="S-09", lane="telegram", cause="no_admissible_candidate",
+    occurrences=99,
+)
+
+
+def test_a_replanning_run_re_enters_the_stage_the_registry_routes_it_to():
+    run = _SimulatedRun(_run_context(), ("wix",), (_PLAN_CHECK_FAILS_ONCE,))
+
+    assert run.path("wix").count("S-08") == 2  # planned twice
+    assert run.path("wix")[-1] == "S-14"  # and published on the second plan
+    assert run.outcomes == []
+    assert _is_permitted(run.path("wix"))
+
+
+def test_a_run_that_exhausts_a_counter_skips_that_destination_and_no_other():
+    run = _SimulatedRun(
+        _run_context(), ("wix", "telegram"), (_TELEGRAM_NEVER_FINDS_A_STRATEGY,)
+    )
+
+    assert run.outcomes == [("telegram", TerminalOutcome.SKIP_DESTINATION)]
+    assert run.path("telegram")[-1] == "S-09"  # ended where it ran out
+    assert "S-14" not in run.path("telegram")  # so it never published
+    assert run.path("wix")[-1] == "S-14"  # while its sibling published
+    assert _is_permitted(run.path("telegram"))
 
 
 def test_a_replan_and_a_skipped_destination_carry_the_same_digest():
-    digests: set[str] = set()
-    for trace in (_REPLANNED_RUN, _RUN_WITH_A_SKIPPED_DESTINATION):
-        assert _is_permitted(trace)
-        # nothing about the executed path reaches the manifest: the digest is
-        # computed from the registry, which is why the two agree (C-1)
-        digests.add(RunManifest.for_run(_run_context()).topology_digest)
+    replanned = _SimulatedRun(
+        _run_context(lens="a"), ("wix",), (_PLAN_CHECK_FAILS_ONCE,)
+    )
+    skipped = _SimulatedRun(
+        _run_context(lens="b"),
+        ("wix", "telegram"),
+        (_TELEGRAM_NEVER_FINDS_A_STRATEGY,),
+    )
 
-    assert digests == {topology_digest()}
+    # the two runs executed genuinely different paths: one re-entered S-08 and
+    # published, the other ended a destination on an exhausted counter
+    assert replanned.path("wix") != skipped.path("wix")
+    assert replanned.outcomes == []
+    assert skipped.outcomes == [("telegram", TerminalOutcome.SKIP_DESTINATION)]
+
+    # and their manifests carry one digest, because it identifies the allowed
+    # topology and not the path a run took through it (C-1)
+    assert (
+        replanned.manifest.topology_digest
+        == skipped.manifest.topology_digest
+        == topology_digest()
+    )
+    verify_topology_digest(replanned.manifest)
+    verify_topology_digest(skipped.manifest)
 
 
 def test_an_undeclared_backward_move_is_not_a_permitted_transition():

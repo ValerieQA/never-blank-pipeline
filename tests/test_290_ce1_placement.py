@@ -64,6 +64,24 @@ def stages_for_destination(destination, stages):
     return stages
 '''
 
+#: The same breach naming no destination at all: the surface is a value, and
+#: the branch cuts the canonical sequence per destination all the same.
+_DESTINATION_MEMBERSHIP = '''\
+def stages_for_destination(destination, enabled_destinations, stages):
+    if destination in enabled_destinations:
+        return stages[:2]
+    return stages
+'''
+
+#: The same destination, renamed on the way through, as the clock can be.
+_RENAMED_DESTINATION = '''\
+def stages_for_destination(destination, stages):
+    chosen = destination
+    if chosen:
+        return stages[:2]
+    return stages
+'''
+
 #: The same breach as a table instead of a branch.
 _DESTINATION_TABLE = '''\
 _STAGES_BY_DESTINATION = {
@@ -146,6 +164,24 @@ def test_stages_reached_through_a_variable_are_still_selected(tmp_path):
 
     assert _rules(violations) == {"CE1-DESTINATION"}
     assert any("telegram" in violation.message for violation in violations)
+
+
+def test_a_branch_on_a_destination_value_is_still_a_destination_pipeline(tmp_path):
+    # neither a surface nor a stage is written out, and this is still one
+    # pipeline per destination — the plainest way to write the breach
+    violations = _planted(
+        tmp_path, "destination_membership.py", _DESTINATION_MEMBERSHIP)
+
+    assert _rules(violations) == {"CE1-DESTINATION"}
+    assert any("'destination'" in violation.message for violation in violations)
+
+
+def test_a_renamed_destination_is_still_the_destination(tmp_path):
+    # the branch spells it chosen(); the binding says what it holds
+    violations = _planted(tmp_path, "renamed_destination.py", _RENAMED_DESTINATION)
+
+    assert _rules(violations) == {"CE1-DESTINATION"}
+    assert any("'chosen'" in violation.message for violation in violations)
 
 
 # ===========================================================================
