@@ -30,10 +30,17 @@ Two rules, over every module of the editorial core (S-00 … S-13):
     is selection, and ``if destination in enabled_destinations: return
     stages[:2]`` — naming neither a destination nor a stage — is the breach in
     its plainest form rather than a way around the rule.
+    A branch may also select by *leaving*: ``if destination == "telegram":
+    return ()`` above ``return stages`` names no stage at all and still hands
+    that destination an empty pipeline. An early exit — return, raise, break
+    or continue — under a destination branch counts as selection whenever it
+    sits inside a function that produces the topology.
     Destination-specific *behaviour* is legitimate and untouched — it lives in
     destination knowledge (``K-DST-*``), in adaptation (S-10), in check
-    records and in the publishers. What is forbidden is a destination choosing
-    the topology.
+    records and in the publishers. That is why the early-exit rule is tied to
+    stage-producing functions: a branch that returns a caption length or picks
+    a publisher decides no topology. What is forbidden is a destination
+    choosing the topology.
 
 Prose is not a breach: docstrings and other bare string expressions are
 exempt, so a module may describe the rule it obeys.
@@ -280,17 +287,74 @@ def _prose_nodes(tree: ast.Module) -> set[int]:
 # ---------------------------------------------------------------------------
 
 
+_FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef)
+
+#: Leaving the flow early. The code that would have run is what produces the
+#: stages, so skipping it selects a different pipeline just as surely as
+#: naming the stages would.
+_EARLY_EXITS = (ast.Return, ast.Raise, ast.Break, ast.Continue)
+
+
+def _enclosing_functions(tree: ast.Module) -> dict[int, Any]:
+    """For every node, the function it sits in — or ``None`` at module level."""
+
+    mapping: dict[int, Any] = {}
+
+    def walk(node: ast.AST, function: Any) -> None:
+        for child in ast.iter_child_nodes(node):
+            mapping[id(child)] = function
+            walk(child, child if isinstance(child, _FUNCTIONS) else function)
+
+    walk(tree, None)
+    return mapping
+
+
+def _stage_producing(tree: ast.Module) -> set[int]:
+    """Functions that reach the topology somewhere in their body.
+
+    A destination branch that exits early only changes the pipeline if the
+    function it exits was going to produce one. Tying the rule to that keeps
+    it off the destination-specific *behaviour* CE-1 allows — a branch that
+    picks a caption or a publisher exits nothing the topology depends on.
+    """
+
+    return {
+        id(node)
+        for node in ast.walk(tree)
+        if isinstance(node, _FUNCTIONS) and _first_stage_reference([node]) is not None
+    }
+
+
+def _first_early_exit(nodes: Iterable[Any]) -> Optional[tuple[int, str]]:
+    """The first early exit in these nodes, as (line, what it was)."""
+
+    for root in nodes:
+        for child in ast.walk(root):
+            if isinstance(child, _EARLY_EXITS):
+                return child.lineno, type(child).__name__.lower()
+    return None
+
+
 def _destination_violations(path: Path, tree: ast.Module) -> list[Violation]:
     violations: list[Violation] = []
     values = _destination_values(tree)
+    functions = _enclosing_functions(tree)
+    producing = _stage_producing(tree)
+
+    def selects(node: ast.AST) -> bool:
+        """Is this branch inside a function that produces the topology?"""
+
+        return id(functions.get(id(node))) in producing
 
     for node in ast.walk(tree):
         if isinstance(node, ast.If):
             violations.extend(_branch_violations(
-                path, node.test, [node.body, node.orelse], values))
+                path, node.test, [node.body, node.orelse], values,
+                in_stage_producer=selects(node)))
         elif isinstance(node, ast.IfExp):
             violations.extend(_branch_violations(
-                path, node.test, [[node.body], [node.orelse]], values))
+                path, node.test, [[node.body], [node.orelse]], values,
+                in_stage_producer=selects(node)))
         elif isinstance(node, ast.Match):
             subject = _destination_name(node.subject, values)
             for case in node.cases:
@@ -298,7 +362,8 @@ def _destination_violations(path: Path, tree: ast.Module) -> list[Violation]:
                 if discriminator is None:
                     continue
                 violations.extend(_selection_violations(
-                    path, discriminator, [case.body]))
+                    path, discriminator, [case.body],
+                    in_stage_producer=selects(node)))
         elif isinstance(node, ast.Dict):
             violations.extend(_table_violations(path, node, values))
 
@@ -306,21 +371,55 @@ def _destination_violations(path: Path, tree: ast.Module) -> list[Violation]:
 
 
 def _branch_violations(
-    path: Path, test: ast.AST, branches: Iterable[list[Any]], values: set[str]
+    path: Path,
+    test: ast.AST,
+    branches: Iterable[list[Any]],
+    values: set[str],
+    *,
+    in_stage_producer: bool = False,
 ) -> list[Violation]:
     destination = _destination_name(test, values)
     if destination is None:
         return []
-    return _selection_violations(path, destination, branches)
+    return _selection_violations(
+        path, destination, branches, in_stage_producer=in_stage_producer
+    )
 
 
 def _selection_violations(
-    path: Path, destination: str, branches: Iterable[list[Any]]
+    path: Path,
+    destination: str,
+    branches: Iterable[list[Any]],
+    *,
+    in_stage_producer: bool = False,
 ) -> list[Violation]:
     violations: list[Violation] = []
     for branch in branches:
         found = _first_stage_reference(branch)
         if found is None:
+            # No stage named — but a branch that leaves early never reaches
+            # the code that would have produced the stages, so it selects a
+            # different pipeline while naming nothing (#322 review):
+            #
+            #     if destination == "telegram":
+            #         return ()
+            #     return stages
+            #
+            # Only inside a function that produces the topology, so ordinary
+            # destination-specific behaviour stays legitimate.
+            exit_found = _first_early_exit(branch) if in_stage_producer else None
+            if exit_found is None:
+                continue
+            line, statement = exit_found
+            violations.append(Violation(
+                path, line, "CE1-DESTINATION",
+                f"a branch on {destination} leaves the stage sequence early "
+                f"({statement}): skipping the code that produces the topology "
+                "selects a pipeline for that destination as surely as naming "
+                "the stages would. Destination-specific behaviour belongs in "
+                "destination knowledge (K-DST-*), adaptation (S-10), check "
+                "records and the publishers",
+            ))
             continue
         line, reference = found
         violations.append(Violation(

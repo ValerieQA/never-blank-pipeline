@@ -238,3 +238,101 @@ def test_the_check_fails_ci_on_a_planted_breach(tmp_path, capsys):
 def test_a_missing_root_fails_closed(tmp_path, capsys):
     assert main(["--root", str(tmp_path / "nowhere")]) == 1
     assert "NOT CHECKED" in capsys.readouterr().out
+
+
+# ===========================================================================
+# Early exits: selecting a pipeline without naming a stage (#322 review)
+# ===========================================================================
+#
+# The rule used to need an explicit stage reference inside the branch, so a
+# destination could cut itself out of the engine by leaving before the stages
+# were produced. Naming nothing is not the same as selecting nothing.
+
+_EARLY_RETURN = '''\
+"""Planted breach: Telegram leaves before the stages are produced."""
+
+from src.editorial_core.topology import CANONICAL_TOPOLOGY
+
+
+def stages_for(destination: str):
+    stages = CANONICAL_TOPOLOGY.stage_ids
+    if destination == "telegram":
+        return ()
+    return stages
+'''
+
+_EARLY_RAISE = '''\
+"""Planted breach: one destination is refused the engine outright."""
+
+from src.editorial_core.topology import CANONICAL_TOPOLOGY
+
+
+def stages_for(destination: str):
+    if destination == "instagram":
+        raise RuntimeError("not for instagram")
+    return CANONICAL_TOPOLOGY.stage_ids
+'''
+
+_EARLY_CONTINUE = '''\
+"""Planted breach: a destination is skipped while the stages are assembled."""
+
+from src.editorial_core.topology import CANONICAL_TOPOLOGY
+
+
+def plan(destinations):
+    planned = []
+    for destination in destinations:
+        if destination == "facebook":
+            continue
+        planned.append((destination, CANONICAL_TOPOLOGY.stage_ids))
+    return planned
+'''
+
+_EARLY_RETURN_IN_BEHAVIOUR = '''\
+"""Legitimate: a destination-specific early return that decides no topology."""
+
+
+def caption_for(destination: str, text: str) -> str:
+    if destination == "telegram":
+        return text[:200]
+    return text
+'''
+
+
+def test_a_destination_that_returns_before_the_stages_fails_the_check(tmp_path):
+    """The exact bypass the review named:
+
+        if destination == "telegram":
+            return ()
+        return stages
+
+    Selects an empty pipeline for one destination while naming no stage.
+    """
+
+    violations = _planted(tmp_path, "selector.py", _EARLY_RETURN)
+
+    assert _rules(violations) == {"CE1-DESTINATION"}
+    assert "leaves the stage sequence early" in violations[0].message
+
+
+def test_a_destination_that_raises_before_the_stages_fails_the_check(tmp_path):
+    assert _rules(_planted(tmp_path, "selector.py", _EARLY_RAISE)) == {
+        "CE1-DESTINATION"
+    }
+
+
+def test_a_destination_skipped_while_stages_are_assembled_fails_the_check(tmp_path):
+    assert _rules(_planted(tmp_path, "planner.py", _EARLY_CONTINUE)) == {
+        "CE1-DESTINATION"
+    }
+
+
+def test_an_early_return_that_decides_no_topology_is_still_legitimate(tmp_path):
+    """The rule is tied to functions that produce the topology, deliberately.
+
+    Destination-specific behaviour returns early all the time — a caption
+    length, a publisher, a format. None of it chooses which stages run, and
+    CE-1 explicitly permits it.
+    """
+
+    assert _planted(tmp_path, "adaptation.py", _EARLY_RETURN_IN_BEHAVIOUR) == []
