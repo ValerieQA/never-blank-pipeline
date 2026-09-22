@@ -663,16 +663,23 @@ def load_manifest(run_dir: Path) -> RunManifest:
 
 
 def load_source_run(runs_root: Path, run_id: str) -> tuple[Path, RunManifest]:
-    """Open a finished run for reading by another run.
+    """Open a verified finished run for reading by another run.
 
     The one door into somebody else's workspace, and the door that fails
-    closed: an incomplete run raises instead of yielding its partial files.
+    closed: an incomplete run raises instead of yielding its partial files,
+    and a complete one is verified — the whole of :func:`verify_run_workspace`
+    — before it is handed over. P7 has every reader validate schema version,
+    run binding and digest before use, and validation that the door does not
+    perform is validation each caller has to remember; a manifest copied from
+    another run, or an artifact edited after the run sealed it, must not
+    become somebody's input on the strength of parsing alone.
     """
 
     run_dir = resolve_editorial_run_dir(runs_root, run_id)
     if not run_dir.is_dir():
         raise FileNotFoundError(f"no run workspace at {run_dir}")
-    return run_dir, load_manifest(run_dir)
+    manifest, _ = _verified_workspace(run_dir, run_id)
+    return run_dir, manifest
 
 
 def _load_json_object(path: Path) -> dict[str, Any]:
@@ -721,6 +728,18 @@ def verify_run_workspace(runs_root: Path, run_id: str) -> RunWorkspaceReport:
     run_dir = resolve_editorial_run_dir(runs_root, run_id)
     if not run_dir.is_dir():
         raise WorkspaceVerificationError(f"run workspace does not exist: {run_dir}")
+    return _verified_workspace(run_dir, run_id)[1]
+
+
+def _verified_workspace(
+    run_dir: Path, run_id: str
+) -> tuple[RunManifest, RunWorkspaceReport]:
+    """The five checks above, on a workspace that is known to exist.
+
+    Separate from :func:`verify_run_workspace` so that :func:`load_source_run`
+    runs the same checks and still hands back the manifest they proved, rather
+    than reading the manifest a second time and returning the unproven copy.
+    """
 
     manifest = load_manifest(run_dir)
     if manifest.run_context.run_id != run_id:
@@ -800,12 +819,13 @@ def verify_run_workspace(runs_root: Path, run_id: str) -> RunWorkspaceReport:
                 "after it"
             )
 
-    return RunWorkspaceReport(
+    report = RunWorkspaceReport(
         run_id=run_id,
         run_digest=manifest.run_digest,
         verified_entities=len(manifest.entities),
         verified_stage_records=len(manifest.trace),
     )
+    return manifest, report
 
 
 def _verified_file(run_dir: Path, relative: str, digest: str) -> Path:

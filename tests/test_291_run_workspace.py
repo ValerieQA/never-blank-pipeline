@@ -316,6 +316,28 @@ def test_a_complete_run_is_readable_as_a_source(fixture_run):
     assert manifest.run_context.run_id == fixture_run.run_id
 
 
+def test_a_tampered_run_is_refused_as_a_source(fixture_run):
+    path = fixture_run.workspace.run_dir / "signal/core/core.v1.json"
+    path.write_text(json.dumps({"id": "core-291", "tampered": True}), encoding="utf-8")
+
+    # the door verifies rather than parses: P7 wants validation before use,
+    # and a reader that got the manifest back would have no reason to doubt it
+    with pytest.raises(
+        WorkspaceVerificationError, match="changed after the run indexed it"
+    ):
+        load_source_run(fixture_run.runs_root, fixture_run.run_id)
+
+
+def test_a_manifest_copied_from_another_run_is_refused_as_a_source(
+    fixture_run, tmp_path
+):
+    other = _build_fixture_run(tmp_path / "other_runs", create_run_id())
+    _rewrite_manifest(fixture_run, _manifest_of(other))
+
+    with pytest.raises(WorkspaceVerificationError, match="belongs to run"):
+        load_source_run(fixture_run.runs_root, fixture_run.run_id)
+
+
 def test_the_run_id_alone_is_the_workspace_key(fixture_run):
     assert EDITORIAL_RUNS_ROOT == Path("reports/editorial_runs")
     assert fixture_run.workspace.run_dir == fixture_run.runs_root / fixture_run.run_id
