@@ -53,35 +53,27 @@ jobs:
           python-version: "3.12"
       - run: pip install --quiet -r requirements.txt
 
-      # Auto-select signal if none provided (scheduled runs)
+      # The marker authority decides what is still unpublished, not the
+      # published-signals file alone: that file is written only when a whole
+      # job succeeded, so a run that published Wix and then failed LinkedIn
+      # leaves the signal looking unused (NB-00b, Step 5 §1.1). An explicitly
+      # dispatched signal is checked the same way — naming a signal says which
+      # one to consider, not that the authority may be ignored. Exit 3 is a
+      # completed search that selected nothing: publishing nothing is correct
+      # and the run stays green.
       - name: Resolve signal ID
         id: resolve
         run: |
-          SIGNAL_ID="${{ inputs.signal_id }}"
-          if [ -z "$SIGNAL_ID" ]; then
-            SIGNAL_ID=$(python - <<'EOF'
-          import json, pathlib
-
-          active = pathlib.Path("data/research/signals_active.jsonl")
-          published = pathlib.Path("data/research/published_signal_ids.txt")
-          done = set(published.read_text().splitlines()) if published.exists() else set()
-
-          for line in active.read_text().splitlines():
-              line = line.strip()
-              if not line:
-                  continue
-              try:
-                  obj = json.loads(line)
-                  sid = obj.get("SIGNAL_ID", "")
-                  if sid and sid not in done:
-                      print(sid)
-                      break
-              except Exception:
-                  pass
-          EOF
-            )
-            echo "Auto-selected signal: $SIGNAL_ID"
+          set +e
+          SIGNAL_ID=$(python scripts/streams/resolve_research_signal.py \
+            --signal-id "${{ inputs.signal_id }}")
+          RC=$?
+          set -e
+          if [ "$RC" != "0" ]; then
+            echo "signal_id=" >> $GITHUB_OUTPUT
+            exit 0
           fi
+          echo "Selected signal: $SIGNAL_ID"
           echo "signal_id=$SIGNAL_ID" >> $GITHUB_OUTPUT
 
       # Always required: OpenAI for LLM generation
@@ -130,6 +122,11 @@ jobs:
           NB_TELEGRAM_CHANNEL_ID:         ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
 
       - name: "Generate + Publish — ${{ steps.resolve.outputs.signal_id }}"
+        # Empty means the resolver selected nothing: no unused signal, or the
+        # marker authority could not answer. Either way nothing is published
+        # (NB-00b). Without this guard a refusal would still reach the
+        # publisher with an empty --signal-id.
+        if: steps.resolve.outputs.signal_id != ''
         env:
           NB_OPENAI_API_KEY:              ${{ secrets.NB_OPENAI_API_KEY }}
           # Story #11 research evidence. Without it the canonical Exa
