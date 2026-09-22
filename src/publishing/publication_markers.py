@@ -65,6 +65,11 @@ from src.publishing.release_scope import (
     R1_PUBLISH_CHANNELS,
 )
 from src.publishing.result import PublishResult, PublishStatus, UrlProvenance
+from src.publishing.shared_claim import (
+    SharedClaim,
+    default_shared_claim,
+    shared_claim_required,
+)
 from src.strategy.client_contracts import client_dir
 
 if TYPE_CHECKING:  # pragma: no cover — typing only, no import weight at runtime
@@ -496,8 +501,29 @@ class AuthorityLookup:
 class MarkerStore:
     """The durable authority: one file per publication, plus its intent."""
 
-    def __init__(self, root: Optional[Path] = None) -> None:
+    def __init__(
+        self,
+        root: Optional[Path] = None,
+        *,
+        shared_claim: Optional[SharedClaim] = None,
+        require_shared_claim: Optional[bool] = None,
+    ) -> None:
         self.root = Path(root) if root is not None else markers_root()
+        #: Arbitrates a key across runners. Resolved lazily so a store that is
+        #: only ever read never shells out to git.
+        self._shared_claim = shared_claim
+        self._shared_claim_resolved = shared_claim is not None
+        self._require_shared_claim = (
+            shared_claim_required()
+            if require_shared_claim is None
+            else require_shared_claim
+        )
+
+    def _claim_arbiter(self) -> Optional[SharedClaim]:
+        if not self._shared_claim_resolved:
+            self._shared_claim = default_shared_claim(self.root)
+            self._shared_claim_resolved = True
+        return self._shared_claim
 
     def destination_dir(self, identity: PublicationIdentity) -> Path:
         return self.root / _path_token(identity.client) / identity.destination
@@ -572,6 +598,21 @@ class MarkerStore:
         path = self.intent_path(identity)
         claimed = _claim_durably(path, intent.to_dict())
         if claimed is _Claim.OURS:
+            # A local claim answers "has anyone on THIS filesystem taken the
+            # key". On a hosted runner that is not the question: two jobs have
+            # two filesystems, so both would pass here and both would publish
+            # (#321 review). The arbiter makes the claim visible to the other
+            # runner BEFORE either calls the provider.
+            arbiter = self._claim_arbiter()
+            if arbiter is not None:
+                if arbiter.acquire(path, run_id):
+                    return intent
+                # Lost the race, or could not verify it. Either way this run
+                # must not call. The winner's claim is what stays on disk.
+                return None
+            if self._require_shared_claim:
+                # A claim only this runner can see is not a claim here.
+                return None
             return intent
         if claimed is _Claim.TAKEN:
             # Another run holds the claim for this key. `lookup` already refuses

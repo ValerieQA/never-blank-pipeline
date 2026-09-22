@@ -48,7 +48,7 @@ def _store(root: Path) -> MarkerStore:
     """A store that exists: a missing root means "no authority", not "empty"."""
 
     root.mkdir(parents=True, exist_ok=True)
-    return MarkerStore(root)
+    return MarkerStore(root, require_shared_claim=False)
 
 
 def _identity(destination: str = "wix") -> PublicationIdentity:
@@ -300,7 +300,7 @@ def test_a_later_destination_failing_does_not_strand_the_earlier_marker(tmp_path
     # A fresh checkout — a different runner, nothing carried over.
     fresh = tmp_path / "fresh"
     subprocess.run(["git", "clone", "-q", str(remote), str(fresh)], check=True)
-    fresh_store = MarkerStore(fresh / STORE_PATH)
+    fresh_store = MarkerStore(fresh / STORE_PATH, require_shared_claim=False)
 
     assert fresh_store.lookup(wix).state is AuthorityState.PUBLISHED
     assert fresh_store.lookup(linkedin).state is AuthorityState.POSSIBLY_PUBLISHED
@@ -314,7 +314,7 @@ def test_a_fresh_checkout_refuses_to_republish_what_a_previous_run_published(tmp
 
     fresh = tmp_path / "fresh"
     subprocess.run(["git", "clone", "-q", str(remote), str(fresh)], check=True)
-    store = MarkerStore(fresh / STORE_PATH)
+    store = MarkerStore(fresh / STORE_PATH, require_shared_claim=False)
 
     assert store.record_intent(_identity(), run_id="run-B") is None, (
         "a key published by an earlier run must not be claimable by the next"
@@ -334,7 +334,7 @@ def test_a_crash_after_the_claim_survives_to_the_next_checkout(tmp_path):
 
     fresh = tmp_path / "fresh"
     subprocess.run(["git", "clone", "-q", str(remote), str(fresh)], check=True)
-    lookup = MarkerStore(fresh / STORE_PATH).lookup(identity)
+    lookup = MarkerStore(fresh / STORE_PATH, require_shared_claim=False).lookup(identity)
 
     assert lookup.state is AuthorityState.POSSIBLY_PUBLISHED
     assert not lookup.may_publish
@@ -356,3 +356,141 @@ def test_the_persisted_intent_is_the_one_the_run_wrote(tmp_path):
 
     assert written["run_id"] == "run-A"
     assert written["source_signal_ids"] == ["sig-287-0001"]
+
+
+# ── two runners, one key ───────────────────────────────────────────────────
+#
+# The race the local exclusive create cannot see (#321 review): two hosted
+# runners have two filesystems, so both take the key locally, both believe they
+# may call, and both publish. Persisting afterwards cannot undo an external
+# side effect, so the arbitration has to happen before the call.
+#
+# These use two real clones of one real remote, and the decision is the remote
+# ref update — the same git the store already lives in, per key, never a global
+# serialization of unrelated work.
+
+
+def _runner(tmp_path: Path, remote: Path, name: str) -> MarkerStore:
+    """A second checkout of the same repository: another runner."""
+
+    work = tmp_path / name
+    subprocess.run(["git", "clone", "-q", str(remote), str(work)], check=True)
+    for key, value in (("user.name", name), ("user.email", f"{name}@e"),
+                       ("commit.gpgsign", "false")):
+        subprocess.run(["git", "-C", str(work), "config", key, value], check=True)
+    root = work / STORE_PATH
+    root.mkdir(parents=True, exist_ok=True)
+    return MarkerStore(root, require_shared_claim=True)
+
+
+def test_two_runners_that_both_see_nothing_published_do_not_both_get_to_call(
+    tmp_path,
+):
+    """The reviewer's sequence, end to end, with the call gated on the claim."""
+
+    seed, remote = _repo(tmp_path)
+    del seed
+    a, b = _runner(tmp_path, remote, "runner-a"), _runner(tmp_path, remote, "runner-b")
+    identity = _identity()
+
+    # 1 + 2: both look, both see nothing. This is true and must stay true —
+    # it is why a lookup alone can never be the authority here.
+    assert a.lookup(identity).state is AuthorityState.NO_PUBLICATION
+    assert b.lookup(identity).state is AuthorityState.NO_PUBLICATION
+
+    # 3 + 4: both try to take the key. Exactly one may call the publisher.
+    first = a.record_intent(identity, run_id="run-A")
+    second = b.record_intent(identity, run_id="run-B")
+
+    permitted = [run for run, intent in (("run-A", first), ("run-B", second)) if intent]
+    assert permitted == ["run-A"], (
+        "exactly one runner may be permitted to call the publisher, "
+        f"got {permitted}"
+    )
+
+
+def test_the_race_is_decided_by_the_remote_not_by_arrival_order(tmp_path):
+    """Both runners reach the claim together; still exactly one is permitted."""
+
+    import threading
+
+    seed, remote = _repo(tmp_path)
+    del seed
+    stores = {
+        "run-A": _runner(tmp_path, remote, "runner-a"),
+        "run-B": _runner(tmp_path, remote, "runner-b"),
+    }
+    identity = _identity()
+    start = threading.Barrier(len(stores))
+    granted: dict[str, bool] = {}
+
+    def claim(run_id: str) -> None:
+        start.wait(timeout=10)
+        granted[run_id] = stores[run_id].record_intent(identity, run_id=run_id) is not None
+
+    threads = [threading.Thread(target=claim, args=(run_id,)) for run_id in stores]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=60)
+
+    winners = [run_id for run_id, ok in granted.items() if ok]
+    assert len(granted) == 2, "both runners must reach a decision"
+    assert len(winners) == 1, f"exactly one runner may publish, got {winners}"
+
+    # And the remote agrees with whoever won: one claim, and it is theirs.
+    published = tmp_path / "audit"
+    subprocess.run(["git", "clone", "-q", str(remote), str(published)], check=True)
+    claims = sorted((published / STORE_PATH).rglob("*.intent.json"))
+    assert len(claims) == 1, claims
+    assert json.loads(claims[0].read_text(encoding="utf-8"))["run_id"] == winners[0]
+
+
+def test_a_runner_that_cannot_reach_the_remote_does_not_publish(tmp_path):
+    """Fail closed: an unverifiable claim is not a claim."""
+
+    seed, remote = _repo(tmp_path)
+    del seed
+    runner = _runner(tmp_path, remote, "runner-a")
+    subprocess.run(
+        ["git", "-C", str(runner.root.parent.parent.parent), "remote", "set-url",
+         "origin", str(tmp_path / "gone.git")],
+        check=True,
+    )
+
+    assert runner.record_intent(_identity(), run_id="run-A") is None
+
+
+def test_a_store_with_no_shared_authority_refuses_when_one_is_required(tmp_path):
+    """No remote to arbitrate with, and arbitration required → no publication."""
+
+    root = tmp_path / "loose" / STORE_PATH
+    root.mkdir(parents=True, exist_ok=True)
+    store = MarkerStore(root, shared_claim=None, require_shared_claim=True)
+
+    assert store.record_intent(_identity(), run_id="run-A") is None
+
+
+def test_the_loser_ends_up_holding_the_winners_claim(tmp_path):
+    """Losing is not just "do not call" — the workspace must carry the truth.
+
+    A loser that keeps its own claim commit has a checkout that disagrees with
+    the authority: its next lookup reads its own intent and its later marker
+    persistence would push a claim it never owned. So the losing branch resets
+    onto the remote, and this is what tells "we detected the owner" apart from
+    "our rebase happened to fail".
+    """
+
+    seed, remote = _repo(tmp_path)
+    del seed
+    winner = _runner(tmp_path, remote, "runner-a")
+    loser = _runner(tmp_path, remote, "runner-b")
+    identity = _identity()
+
+    assert winner.record_intent(identity, run_id="run-A") is not None
+    assert loser.record_intent(identity, run_id="run-B") is None
+
+    local = json.loads(loser.intent_path(identity).read_text(encoding="utf-8"))
+    assert local["run_id"] == "run-A", (
+        "the loser's checkout must hold the winner's claim, not its own"
+    )

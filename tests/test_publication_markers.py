@@ -47,7 +47,9 @@ def _store(tmp_path) -> MarkerStore:
 
     root = tmp_path / "publication_markers"
     root.mkdir(parents=True, exist_ok=True)
-    return MarkerStore(root)
+    # The local transaction is what this suite is about; cross-runner
+    # arbitration has its own suite (tests/test_287_marker_durability.py).
+    return MarkerStore(root, require_shared_claim=False)
 
 
 def _guard(store, *, signals=("sig-1",), run_id="run-1") -> PublicationGuard:
@@ -285,7 +287,9 @@ def test_an_unreadable_marker_never_becomes_a_licence_to_publish_again(
 def test_a_store_that_is_not_in_this_checkout_is_unavailable_not_empty(tmp_path):
     """A missing answer is never "no": fail closed, and never wait for a human."""
 
-    guard = _guard(MarkerStore(tmp_path / "never-checked-out"))
+    guard = _guard(
+        MarkerStore(tmp_path / "never-checked-out", require_shared_claim=False)
+    )
     results, calls = _publish_once(guard, ["wix"])
     assert calls == []
     assert results["wix"].status is PublishStatus.SKIPPED
@@ -444,6 +448,10 @@ def test_stage_11_partial_failure_does_not_republish_on_the_next_run(
 ):
     """The real research publishing path, run twice over the same signal."""
 
+    # These paths build their own store. This suite is the single-filesystem
+    # contract; the cross-runner arbiter is proven in
+    # tests/test_287_marker_durability.py against two real clones.
+    monkeypatch.setenv("NB_SHARED_CLAIM", "0")
     _setup_common(monkeypatch, tmp_path)
 
     first = [
@@ -486,6 +494,11 @@ def test_the_canonical_entrypoint_does_not_republish_after_a_partial_failure(
     Wix scan is in ``tests/test_wix_idempotency.py`` — so the one thing that
     can suppress the second run's Wix call is the marker written by the first.
     """
+
+    # These paths build their own store. This suite is the single-filesystem
+    # contract; the cross-runner arbiter is proven in
+    # tests/test_287_marker_durability.py against two real clones.
+    monkeypatch.setenv("NB_SHARED_CLAIM", "0")
 
     from unittest import mock
 

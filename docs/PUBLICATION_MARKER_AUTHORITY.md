@@ -199,7 +199,7 @@ real remote, a fresh clone standing in for the next runner:
 | only the store is committed | `test_the_script_persists_the_markers_and_nothing_else` |
 | every publishing workflow persists, under `always()`, never `success()` | `test_every_publishing_workflow_persists_the_markers`, `test_the_persistence_step_survives_a_later_destination_failing` |
 
-## One run wins a key
+## One run wins a key, on one filesystem
 
 `record_intent` used to write the intent the way a marker is written — a temp
 file renamed over the target. That is the right shape for a value being
@@ -212,6 +212,52 @@ The claim is now an exclusive create. The filesystem decides which run wins,
 and only the winner may make the external call. A run may re-record its own
 claim — re-entry is not a race — and a claim that cannot be read is treated as
 another run's, because a half-written claim is still a claim.
+
+## One run wins a key, across runners
+
+The exclusive create above answers "has anyone on **this filesystem** taken the
+key". On a persistent working tree that is the whole question. On
+GitHub-hosted runners it is not: two jobs have two filesystems, so both local
+creates succeed, both runs believe they may call, and both publish. Persisting
+afterwards cannot undo an external side effect, so the arbitration has to
+happen *before* the provider call (#321 review).
+
+`src/publishing/shared_claim.py` is that arbitration. The store already lives
+in git, and a remote ref update is atomic and server-side: exactly one push of
+a given parent lands. `record_intent` takes the key locally, then pushes the
+single intent file. **A push that lands is the claim**, and it is durable for
+every later runner at the moment it lands — before this run calls anything. A
+push that is rejected means the branch moved: if the mover took this key, this
+run has lost and does not call; if they did something unrelated, this run
+rebases and tries again.
+
+This is not a second idempotency authority. It is how the existing one becomes
+visible to a runner that has not seen it yet, and it is arbitrated per key —
+two runs publishing different things never wait for each other, and nothing
+about Editorial Core is globally serialized.
+
+**Fail closed, everywhere.** A claim that cannot be committed, pushed, verified
+or cleaned up returns false, and false means the provider is not called. A
+runner that cannot reach the remote does not publish. When a shared claim is
+required and none can be built, `record_intent` refuses.
+
+A claim only this runner can see is required to be more than that whenever
+`GITHUB_ACTIONS` is set. `NB_SHARED_CLAIM` forces it either way for a
+self-hosted setup or a test. The loser of a race resets onto the remote, so its
+checkout carries the winner's claim rather than a losing one of its own — a
+checkout that disagreed with the authority would read its own intent on the
+next lookup and push a claim it never owned.
+
+Proven in `tests/test_287_marker_durability.py` with **two independent clones
+of one remote**, which is what the single-filesystem test cannot model:
+
+| What | Test |
+|---|---|
+| both runners see nothing published, exactly one may call | `test_two_runners_that_both_see_nothing_published_do_not_both_get_to_call` |
+| both reach the claim together; the remote decides, not arrival order | `test_the_race_is_decided_by_the_remote_not_by_arrival_order` |
+| the loser's checkout carries the winner's claim | `test_the_loser_ends_up_holding_the_winners_claim` |
+| a runner that cannot reach the remote does not publish | `test_a_runner_that_cannot_reach_the_remote_does_not_publish` |
+| required arbitration with no authority refuses | `test_a_store_with_no_shared_authority_refuses_when_one_is_required` |
 
 ## A durability failure is never reported as success
 

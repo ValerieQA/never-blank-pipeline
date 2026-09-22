@@ -234,7 +234,7 @@ def _fake_publication_guard(*, source_signal_ids, run_id, **kwargs):
     return PublicationGuard(
         source_signal_ids=source_signal_ids,
         run_id=run_id,
-        store=MarkerStore(root),
+        store=MarkerStore(root, require_shared_claim=False),
         **kwargs,
     )
 
