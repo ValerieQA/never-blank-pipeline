@@ -207,7 +207,8 @@ def _fake_linkedin_package(**kwargs):
 # entrypoint reads .match and .evidence_note(). The real scan is covered by
 # tests/test_wix_idempotency.py.
 def _fake_no_prior_publication(*args, **kwargs):
-    return SimpleNamespace(match=None, evidence_note=lambda: None)
+    # NB-00b: a scan answers with a match, a refusal, or neither.
+    return SimpleNamespace(match=None, refusal=None, evidence_note=lambda: None)
 
 
 # Publication marker authority stand-in (NB-00a, Issue #287). The real guard

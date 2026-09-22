@@ -74,10 +74,12 @@ a run may publish to. A marker is evidence, not an authorization.
 
 In the canonical entrypoint the authority is consulted **before** the existing
 `find_prior_*` run-directory scan, because it is the authority that survives a
-fresh checkout. Re-pointing `find_prior_*` onto the store is NB-00b and is
-explicitly out of scope here; until then the two run in series and either one
-alone can suppress a call, never authorize one. Both end in the same recorded
-state, through one shared `_record_reuse` seam.
+fresh checkout. Since NB-00b (#288) that is one lookup rather than two in
+series: `find_prior_*` ask this store first and read the run directories only
+when it has proven nothing was published — see
+`docs/PUBLICATION_MARKER_LOOKUP.md`. Either source alone can suppress a call
+and neither can authorize one, and both end in the same recorded state through
+one shared `_record_reuse` seam.
 
 Two rules keep the authority from recording a rehearsal:
 

@@ -18,13 +18,24 @@ writes an audit record of every disposition it made, because "why did the stream
 pick this signal and skip that one" must be answerable from evidence, not from
 a rerun.
 
+A candidate is *unused* by two independent authorities (NB-00b). The signal
+list ``data/research/published_signal_ids.txt`` is a summary committed only
+when a whole publishing job succeeded, so a run that published Wix and then
+failed LinkedIn leaves it untouched and the signal still looks unused. The
+durable publication marker store (invariant S3-I1) knows better, and is
+consulted as well — including for an explicitly dispatched ``--signal-id``,
+which is otherwise exactly the path that bypasses a consumption list.
+
 Exit codes:
   0  — an eligible candidate was selected (its SIGNAL_ID is on stdout's last
        ``selected=`` line, and in the audit record)
   3  — EVERY available unused candidate was evaluated, every judgment
        completed, and all were genuinely ineligible. Only this complete search
-       may claim a clean "publish nothing" outcome.
-  4  — no candidate was selected AND at least one eligibility judgment failed.
+       may claim a clean "publish nothing" outcome. A dispatched signal the
+       marker authority has already spent also ends here: it is refused, and
+       publishing nothing is the correct outcome for it.
+  4  — no candidate was selected AND at least one eligibility judgment failed,
+       or the publication idempotency authority could not answer at all.
        This is infrastructure failure, not a clean empty result: unattended
        automation must fail visibly rather than report "nothing to publish"
        over judgments that never completed.
@@ -51,6 +62,8 @@ from src.editorial.source_eligibility import (
     SourceEligibilityError,
     judge_source_eligibility,
 )
+from src.publishing.idempotency import signal_publication_state
+from src.publishing.publication_markers import AUTHORITY_UNAVAILABLE, MarkerStore
 from src.strategy.business_config import load_business_strategy_configuration
 from src.strategy.client_contracts import ClientContractError, contracts_for_role
 
@@ -80,6 +93,44 @@ def _load_candidates(active_path: Path, published_path: Path) -> list[dict]:
         if signal_id and signal_id not in published:
             candidates.append(signal)
     return candidates
+
+
+def _already_published(candidates: list[dict]) -> tuple[dict[str, dict], bool]:
+    """Ask the marker authority about every candidate (NB-00b).
+
+    Returns ``(refused, unavailable)``: the candidates the authority has
+    already spent — or may have spent, an intent with no marker — keyed by
+    signal ID with the sanitized per-destination state, and whether the store
+    could not answer at all.
+
+    One store for the whole sweep, so a queue of candidates is one authority
+    consulted many times rather than many authorities. An unanswerable
+    authority stops the sweep immediately: continuing would mean selecting a
+    signal nothing can prove is unpublished.
+    """
+
+    store = MarkerStore()
+    refused: dict[str, dict] = {}
+    for signal in candidates:
+        signal_id = str(signal.get("SIGNAL_ID", "") or "").strip()
+        if not signal_id:
+            continue
+        state = signal_publication_state([signal_id], store=store)
+        if state.unavailable:
+            return refused, True
+        if state.consumed:
+            refused[signal_id] = state.as_audit_dict()
+    return refused, False
+
+
+def _write_audit(audit_out: str, audit: dict) -> None:
+    """Persist the selection audit, when one was asked for."""
+
+    if not audit_out:
+        return
+    out = Path(audit_out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(audit, indent=2, ensure_ascii=False) + "\n")
 
 
 def main(argv: list[str] | None = None, *, transport=None) -> int:
@@ -135,6 +186,16 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
             print(f"ERROR: signal {args.signal_id!r} is not an unused queue candidate")
             return 1
 
+    # ── The publication idempotency authority is consulted too (NB-00b) ──────
+    # Before any eligibility judgment, because a signal that has already been
+    # published is not a candidate whatever a role thinks of it — and because
+    # a judgment costs a provider call.
+    marker_refused, authority_unavailable = _already_published(candidates)
+    candidates = [
+        signal for signal in candidates
+        if str(signal.get("SIGNAL_ID", "")) not in marker_refused
+    ]
+
     judge = transport or LlmChatSourceEligibilityTransport()
     audit = {
         "role_id": role.role_id,
@@ -143,10 +204,41 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
         "client_contracts": contracts.provenance if contracts is not None else None,
         "requested_signal_id": args.signal_id or None,
         "excluded_this_run": excluded,
+        # what the marker authority already knows about these candidates, per
+        # destination: the evidence for every candidate it removed
+        "already_published": marker_refused,
         "candidates_available": len(candidates),
         "dispositions": [],
         "selected_signal_id": None,
     }
+    if authority_unavailable:
+        # Fail closed, and never wait (§3.6 rule 2). A store that cannot answer
+        # is not an empty store: selecting over it would publish whatever it
+        # could not tell us about.
+        audit["outcome"] = AUTHORITY_UNAVAILABLE
+        audit["evaluated"] = 0
+        audit["remaining"] = len(candidates)
+        _write_audit(args.audit_out, audit)
+        print(
+            "Publication idempotency authority unavailable "
+            f"({AUTHORITY_UNAVAILABLE}): nothing can be proven unpublished, "
+            "so no candidate is selected."
+        )
+        return ELIGIBILITY_FAILURE
+    if args.signal_id and not candidates:
+        # The dispatched signal survived the queue's consumption list and the
+        # authority still knows it: an explicit dispatch is the one path that
+        # can walk past a list, and it does not walk past this.
+        audit["outcome"] = "already_published"
+        audit["evaluated"] = 0
+        audit["remaining"] = 0
+        _write_audit(args.audit_out, audit)
+        print(
+            f"  ○  {args.signal_id}: refused — the publication marker "
+            "authority has already spent this signal "
+            f"({marker_refused.get(args.signal_id)})"
+        )
+        return NO_ELIGIBLE
     selected = None
     for signal in candidates:
         signal_id = str(signal.get("SIGNAL_ID", ""))
@@ -229,10 +321,7 @@ def main(argv: list[str] | None = None, *, transport=None) -> int:
         audit["outcome"] = "eligibility_failure"
     else:
         audit["outcome"] = "no_eligible_complete"
-    if args.audit_out:
-        out = Path(args.audit_out)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(audit, indent=2, ensure_ascii=False) + "\n")
+    _write_audit(args.audit_out, audit)
 
     if selected is not None:
         print(f"selected={selected}")

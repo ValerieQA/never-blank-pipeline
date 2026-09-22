@@ -422,6 +422,7 @@ def test_recovery_re_resolves_from_the_provider_and_never_republishes(tmp_path):
                 post_id=POST_ID, url=DEFECT_URL,
                 url_provenance=UrlProvenance.LOCALLY_DERIVED,
             ),
+            refusal=None,                      # NB-00b: a match, not a refusal
             evidence_note=lambda: None,
         )
     )
