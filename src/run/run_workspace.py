@@ -97,6 +97,13 @@ _STAGE_RECORD_SCHEMA_VERSION = "1.0"
 #: carry an ID with digits in it and still state exactly one version.
 _VERSION_IN_NAME = re.compile(r"\.v(\d+)\.")
 
+#: The one name a workspace may hold without the manifest indexing it: the
+#: in-flight file ``atomic_write_json`` creates with ``tempfile.mkstemp``
+#: (prefix ``.tmp_``, suffix ``.json``, eight random name characters). Matching
+#: that exact shape, rather than every leading dot, is what keeps a planted
+#: ``.planted.json`` a stray instead of an invisible file.
+_WRITER_TEMP_NAME = re.compile(r"^\.tmp_[A-Za-z0-9_]{8}\.json$")
+
 #: ``stage_of_version`` is the one field of a payload the ownership table
 #: reads: ``plans/*`` is the single row §2.3 splits between two stages by what
 #: the version is rather than by where it sits.
@@ -894,12 +901,14 @@ def _verify_output(
 def _workspace_files(run_dir: Path) -> Iterator[str]:
     """Every file in the workspace, as a workspace-relative POSIX path.
 
-    Dot-files are skipped: the only ones a workspace can hold are the
-    writer's own ``.tmp_`` files, which exist between two lines of an atomic
-    commit and are never evidence.
+    Only the writer's own in-flight file is skipped, by its exact name shape:
+    it exists between two lines of an atomic commit and is never evidence. A
+    dot anywhere else hides nothing — skipping every dot-file would let an
+    unindexed one be added to a sealed workspace without completeness or
+    ownership ever seeing it.
     """
 
     for path in sorted(run_dir.rglob("*")):
-        if path.is_dir() or path.name.startswith("."):
+        if path.is_dir() or _WRITER_TEMP_NAME.match(path.name):
             continue
         yield path.relative_to(run_dir).as_posix()

@@ -608,6 +608,31 @@ def test_a_file_that_never_went_through_the_writer_is_detected(fixture_run):
         verify_run_workspace(fixture_run.runs_root, fixture_run.run_id)
 
 
+def test_a_planted_dot_file_does_not_hide_from_verification(fixture_run):
+    # a leading dot is not a way past completeness: the name is the only thing
+    # that would differ from the planted file above, and it decides nothing
+    (fixture_run.workspace.run_dir / "signal/notes/.planted.json").write_text(
+        json.dumps({"planted": True}), encoding="utf-8"
+    )
+
+    with pytest.raises(WorkspaceVerificationError, match="not in the manifest index"):
+        verify_run_workspace(fixture_run.runs_root, fixture_run.run_id)
+    with pytest.raises(WorkspaceVerificationError, match="not in the manifest index"):
+        load_source_run(fixture_run.runs_root, fixture_run.run_id)
+
+
+def test_a_writers_own_in_flight_file_is_not_a_stray(fixture_run):
+    # what an atomic commit leaves behind if it dies between its two lines:
+    # never indexed, never evidence, and the one name verification passes over
+    (fixture_run.workspace.run_dir / "signal/core/.tmp_a1b2c3d4.json").write_text(
+        json.dumps({"id": "core-291"}), encoding="utf-8"
+    )
+
+    report = verify_run_workspace(fixture_run.runs_root, fixture_run.run_id)
+
+    assert report.run_digest == fixture_run.manifest.run_digest
+
+
 # ===========================================================================
 # Manifest digests
 # ===========================================================================
