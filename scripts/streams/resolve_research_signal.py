@@ -22,10 +22,13 @@ Three outcomes, and the exit code says which:
 ``3``
     A completed search that found none. Publishing nothing is correct and the
     run stays green — the same contract ``select_eligible_signal.py`` uses.
-``3`` (authority unavailable)
-    The store could not answer. Never read as "nothing was published": that
-    confusion is what turns a fresh checkout into a second publication. The
-    run selects nothing and says why.
+``4``
+    The store could not answer. Never read as "nothing was published" — that
+    confusion is what turns a fresh checkout into a second publication — and
+    never converted into a quiet "nothing to publish" either: an authority
+    that cannot answer is infrastructure failure, so the run fails visibly.
+    The same distinction ``select_eligible_signal.py`` makes between its
+    ``NO_ELIGIBLE`` and ``ELIGIBILITY_FAILURE``.
 
 An explicitly dispatched ``--signal-id`` is checked too. A person naming a
 signal is telling the run which one to consider, not overriding the authority
@@ -44,6 +47,10 @@ from src.publishing.publication_markers import AUTHORITY_UNAVAILABLE
 
 #: A completed search that selected nothing. Shared with the Monday selector.
 NO_ELIGIBLE = 3
+
+#: The authority could not answer. Loud on purpose: a silent green run here
+#: would report an outage as a quiet day.
+AUTHORITY_FAILURE = 4
 
 
 def _candidates(active_path: Path) -> list[str]:
@@ -101,7 +108,7 @@ def main(argv: list[str] | None = None, *, store=None) -> int:
         refused, unavailable = _authority_refuses(requested, store=store)
         if unavailable:
             print(f"{AUTHORITY_UNAVAILABLE}: publishing nothing.", file=sys.stderr)
-            return NO_ELIGIBLE
+            return AUTHORITY_FAILURE
         if refused:
             print(
                 f"{requested} has already been published, or may have been, "
@@ -120,7 +127,7 @@ def main(argv: list[str] | None = None, *, store=None) -> int:
             # Not "this candidate is unusable" — the authority cannot answer
             # about any of them, so the search cannot continue at all.
             print(f"{AUTHORITY_UNAVAILABLE}: publishing nothing.", file=sys.stderr)
-            return NO_ELIGIBLE
+            return AUTHORITY_FAILURE
         if refused:
             continue
         print(signal_id)

@@ -18,7 +18,11 @@ from pathlib import Path
 import pytest
 import yaml
 
-from scripts.streams.resolve_research_signal import NO_ELIGIBLE, main
+from scripts.streams.resolve_research_signal import (
+    AUTHORITY_FAILURE,
+    NO_ELIGIBLE,
+    main,
+)
 from src.publishing.publication_markers import MarkerStore, PublicationIdentity
 
 _WORKFLOW = Path(".github/workflows/research_generate_and_publish.yml")
@@ -123,21 +127,35 @@ def test_a_dispatched_signal_the_authority_has_not_spent_is_selected(tmp_path, c
 # ── an authority that cannot answer stops the search ───────────────────────
 
 
-def test_an_unavailable_authority_selects_nothing(tmp_path, capsys):
-    """Never read as "nothing was published" — that is the fresh-checkout trap."""
+def test_an_unavailable_authority_fails_the_run_instead_of_going_quiet(
+    tmp_path, capsys
+):
+    """Two mistakes to avoid, not one.
+
+    Reading it as "nothing was published" is the fresh-checkout trap. Reading
+    it as a completed search is the quieter one: an outage would be reported
+    as a day with nothing to say. `select_eligible_signal.py` separates
+    `NO_ELIGIBLE` from `ELIGIBILITY_FAILURE` for exactly this, and
+    `monday_publish.yml` says it outright — never converted into a quiet
+    "nothing to publish".
+    """
 
     missing = MarkerStore(tmp_path / "never-checked-out", require_shared_claim=False)
 
     code = main(_argv(tmp_path, "sig-a", "sig-b"), store=missing)
 
-    assert code == NO_ELIGIBLE
+    assert code == AUTHORITY_FAILURE
+    assert code != NO_ELIGIBLE, "an outage is not a quiet day"
     assert "idempotency_authority_unavailable" in capsys.readouterr().err
 
 
 def test_an_unavailable_authority_refuses_a_dispatched_signal_too(tmp_path):
     missing = MarkerStore(tmp_path / "never-checked-out", require_shared_claim=False)
 
-    assert main(_argv(tmp_path, "sig-a", requested="sig-a"), store=missing) == NO_ELIGIBLE
+    assert (
+        main(_argv(tmp_path, "sig-a", requested="sig-a"), store=missing)
+        == AUTHORITY_FAILURE
+    )
 
 
 def test_nothing_left_is_a_completed_search_not_a_failure(tmp_path):
@@ -170,6 +188,19 @@ def test_the_workflow_no_longer_selects_on_the_published_file_alone():
 
     assert "published_signal_ids.txt" not in run, (
         "the inline membership check is what NB-00b replaces"
+    )
+
+
+def test_only_a_completed_search_keeps_the_run_green():
+    """Exit 3 is green; anything else, including exit 4, fails the run."""
+
+    resolve = next(step for step in _steps() if step.get("id") == "resolve")
+    run = str(resolve.get("run", ""))
+
+    assert '"$RC" = "3"' in run, "a completed search must stay green"
+    assert 'exit "$RC"' in run, (
+        "an authority failure must fail the run, not become a quiet "
+        "nothing-to-publish"
     )
 
 

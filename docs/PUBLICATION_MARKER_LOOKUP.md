@@ -15,12 +15,13 @@ proof here is deterministic, with no credential and no network.
 
 NB-00a built the authority and wired it into the four publishing paths. It
 could still only be reached through those paths' own `PublicationGuard`. The
-two checks that decide *before* them answered from somewhere else:
+checks that decide *before* them answered from somewhere else:
 
 | Check | Answered from, before | Answers from, now |
 |---|---|---|
 | `find_prior_wix_publication` / `find_prior_linkedin_publication` | `packages_dir/<signal_id>/runs/*/publication_results.json` only — nothing in a fresh CI checkout (§1.1) | the marker store first; this checkout's run directories only when the authority has proven nothing was published |
 | `select_eligible_signal.py`, including an explicitly dispatched `--signal-id` | `data/research/published_signal_ids.txt` only — written only when a whole job succeeded | the same list **and** the marker store |
+| the research workflow's signal selection, including an explicitly dispatched `signal_id` | an inline heredoc over `data/research/published_signal_ids.txt` only | `scripts/streams/resolve_research_signal.py` — the same list **and** the marker store |
 
 `src/publishing/idempotency.py` is now "has this publication already
 happened?", with the authority in front of the evidence reader it used to be:
@@ -121,23 +122,56 @@ Fixing the composed-versus-enriched comparison inside that reader would be a
 second, weaker idempotency rule for one destination. It is deliberately not
 done here.
 
-## Not delivered
+## The research workflow's selector
 
-**The research workflow's inline selector.** `NOT DELIVERED`.
+`SATISFIED`.
 
-`.github/workflows/research_generate_and_publish.yml` auto-selects a signal in
-an inline Python heredoc (L62-85) that reads `published_signal_ids.txt` and
-nothing else. Teaching it the marker store means editing that workflow file,
-and #288 declares no orch-containment entry for it, so this attempt did not
-touch it.
+`.github/workflows/research_generate_and_publish.yml` used to auto-select a
+signal in an inline Python heredoc that read `published_signal_ids.txt` and
+nothing else. That file is written only when a whole job succeeded, so a run
+that published Wix and then failed LinkedIn left it untouched and the signal
+still looked unused — the partial-success hole this issue exists to close.
 
-Nothing is unsafe as a result, and the gap is an optimization rather than a
-hole: a signal that selector picks is checked against the authority at the
-entrypoint before any external call (criterion 1 above), so an already
-published signal is `REUSED`/`SKIP`ped rather than published twice. What is
-missing is only that the workflow would pick that signal in the first place
-instead of the next unpublished one. The fix is three lines against
-`signal_publication_state`, in a follow-up that declares the workflow path.
+`scripts/streams/resolve_research_signal.py` replaces the heredoc. It reads
+the legacy file **and** asks `signal_publication_state`, so a marker at any
+destination — or an intent without one, a call that may have reached the
+platform — passes the candidate over. An explicitly dispatched `--signal-id`
+takes the same check: naming a signal says which one to consider, not that the
+authority may be ignored.
+
+It is deliberately not `select_eligible_signal.py`. Monday's selector runs an
+editorial eligibility judgement and spends model calls; the research stream
+has always taken the first unused signal, and the only thing that changes here
+is which signals count as unused.
+
+**Three outcomes, and the exit code says which.** `0` is a signal the
+authority has not spent. `3` is a completed search that found none:
+publishing nothing is correct and the run stays green. `4` is the authority
+failing to answer, and it fails the run — never read as "nothing was
+published", and never converted into a quiet "nothing to publish" either.
+That is the same separation `select_eligible_signal.py` makes between
+`NO_ELIGIBLE` and `ELIGIBILITY_FAILURE`, and the same contract
+`monday_publish.yml` states for its own selector.
+
+**The Generate + Publish step is guarded.** It had no condition on an empty
+selection and would have run with `--signal-id ""`. It now requires a resolved
+signal, so a refusal publishes nothing rather than reaching the publisher with
+an empty argument.
+
+Proven in `tests/test_288_research_selection.py`:
+
+| What | Test |
+|---|---|
+| a signal the legacy file calls unused is refused when a marker exists | `test_a_signal_the_file_calls_unused_is_refused_when_a_marker_exists` |
+| an intent without a marker is passed over too | `test_a_signal_with_an_intent_and_no_marker_is_also_passed_over` |
+| a marker at any destination refuses the signal | `test_a_marker_at_any_destination_refuses_the_signal` |
+| a dispatched signal does not bypass the authority | `test_a_dispatched_signal_is_still_checked` |
+| an unavailable authority fails the run instead of going quiet | `test_an_unavailable_authority_fails_the_run_instead_of_going_quiet` |
+| an unavailable authority refuses a dispatched signal too | `test_an_unavailable_authority_refuses_a_dispatched_signal_too` |
+| nothing left is a completed search, not a failure | `test_nothing_left_is_a_completed_search_not_a_failure` |
+| the workflow resolves through the resolver, not the published file | `test_the_workflow_resolves_through_the_marker_aware_resolver`, `test_the_workflow_no_longer_selects_on_the_published_file_alone` |
+| only a completed search keeps the run green | `test_only_a_completed_search_keeps_the_run_green` |
+| an empty selection never reaches the publisher | `test_nothing_is_published_when_the_resolver_selected_nothing` |
 
 ## Production safety
 

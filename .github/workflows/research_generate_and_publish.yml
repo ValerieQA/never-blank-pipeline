@@ -69,9 +69,17 @@ jobs:
             --signal-id "${{ inputs.signal_id }}")
           RC=$?
           set -e
-          if [ "$RC" != "0" ]; then
+          if [ "$RC" = "3" ]; then
+            # A completed search that found nothing unpublished. Publishing
+            # nothing is correct and the run stays green.
             echo "signal_id=" >> $GITHUB_OUTPUT
+            echo "No unpublished research signal — publishing nothing."
             exit 0
+          elif [ "$RC" != "0" ]; then
+            # Exit 4 is the idempotency authority failing to answer. It fails
+            # the run visibly and is never converted into a quiet "nothing to
+            # publish" — the same contract monday_publish.yml holds.
+            exit "$RC"
           fi
           echo "Selected signal: $SIGNAL_ID"
           echo "signal_id=$SIGNAL_ID" >> $GITHUB_OUTPUT
