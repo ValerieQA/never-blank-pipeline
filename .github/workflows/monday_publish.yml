@@ -325,6 +325,18 @@ jobs:
       # Only the candidate that completed (steps.publish), never the first one
       # selected: a candidate passed over as editorially unsuitable is not
       # consumed. A dry run marks nothing.
+      # S3-I1 (#287): the publication idempotency authority must outlive the
+      # runner. Its OWN step, and `always()`, because the marker of a
+      # destination that already published must become durable even when a
+      # later destination fails and the publishing step exits non-zero — that
+      # partial failure is the republication this authority exists to stop.
+      # A dry run persists nothing.
+      - name: Persist publication markers
+        if: always() && steps.window.outputs.due == 'true' && inputs.dry_run != 'true'
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: bash scripts/ci/persist_publication_markers.sh
+
       - name: Mark signal as published
         if: steps.window.outputs.due == 'true' && steps.publish.outputs.signal_id != '' && (success() && inputs.dry_run != 'true')
         run: |

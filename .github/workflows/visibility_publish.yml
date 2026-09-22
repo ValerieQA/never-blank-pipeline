@@ -92,6 +92,18 @@ jobs:
           fi
           python scripts/generate_and_publish_visibility.py $ARGS
 
+      # S3-I1 (#287): the publication idempotency authority must outlive the
+      # runner. Its OWN step, and `always()`, because the marker of a
+      # destination that already published must become durable even when a
+      # later destination fails and the publishing step exits non-zero — that
+      # partial failure is the republication this authority exists to stop.
+      # A dry run persists nothing.
+      - name: Persist publication markers
+        if: always() && inputs.dry_run != 'true'
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: bash scripts/ci/persist_publication_markers.sh
+
       - name: Commit queue + history updates
         if: ${{ inputs.dry_run != 'true' }}
         run: |

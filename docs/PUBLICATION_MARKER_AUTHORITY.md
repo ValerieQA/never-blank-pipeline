@@ -126,8 +126,12 @@ release-scope lists. Five scenarios are parametrised over it, plus
 
 **4. "One real run's trace shows intent and marker files committed, including
 in a partial-failure case (or a documented dry-run equivalent)."**
-`DEFERRED-LIVE`, with the dry-run equivalent below — and with one part of the
-criterion **NOT DELIVERED**, see the next section.
+`SATISFIED` by the accepted deterministic equivalent below. Only the "real run"
+wording needs a live publication; everything the criterion is *about* — intent
+and marker files **committed**, in a **partial-failure** case — is proven
+against a real git repository and a real remote, with a fresh clone standing in
+for the next runner:
+`tests/test_287_marker_durability.py::test_a_later_destination_failing_does_not_strand_the_earlier_marker`.
 
 ### Dry-run equivalent
 
@@ -156,27 +160,66 @@ The same trace on a live canonical run is visible in the run's
 `publication_results.json`, which now carries a `publication_unconfirmed` list
 alongside `unusable_prior_publication_evidence`.
 
-## NOT DELIVERED, and why
+## Durability across runners
 
-**The workflow step that commits the markers.** The issue's scope asks for the
-marker to be "committed in its own workflow step that runs even when a later
-destination fails" (Step 5 §1.1: "committed in its own step with `if: always()`
-semantics"). That is an edit to `.github/workflows/monday_publish.yml`,
-`wednesday_golden.yml`, `research_generate_and_publish.yml`,
-`visibility_publish.yml`, `scheduled_publish.yml` and
-`daily_signal_research.yml`. Issue #287 declares no orch-containment entry for
-any workflow file, so the edit was not made and not guessed at.
+**The workflow step that commits the markers.** `SATISFIED`.
 
-**Consequence, stated plainly:** on a GitHub-hosted runner the markers a run
-writes do not reach the next run's checkout, so in CI the authority is
-currently inert — it can only ever refuse, never wrongly permit, but it will not
-yet catch the partial-failure republication it was built for. The store,
-the transaction and the wiring are complete and tested; what is missing is the
-commit that makes them durable across runners. Adding those steps needs a
-containment declaration on the issue.
+The store is written inside the publishing step — intent before each
+irreversible call, marker immediately after that destination succeeds. On a
+GitHub-hosted runner that working tree dies with the job, so until this landed
+the authority was inert in CI: it could only ever refuse, never wrongly permit,
+but it would not catch the partial-failure republication it was built for.
 
-Until then the authority does protect: a persistent working tree (a local or
-self-hosted run), and any path within a single runner.
+`scripts/ci/persist_publication_markers.sh` is the whole seam, wired into every
+workflow that can publish: `monday_publish.yml`, `wednesday_golden.yml`,
+`research_generate_and_publish.yml`, `visibility_publish.yml`,
+`scheduled_publish.yml` and `daily_signal_research.yml`.
+
+It is its own step, under `always()`, and that is the point. The existing
+"mark signal as published" commits are guarded by `success()`, so a run whose
+second destination fails commits nothing — and the marker of the destination
+that *did* publish is exactly what has to survive that failure. It commits the
+marker store and nothing else, and a dry run persists nothing: the workflow
+guards it and the script checks `DRY_RUN` again itself, because the cost of
+being wrong is a real publication suppressed by evidence of one that never
+happened.
+
+It is not a second idempotency architecture and it is not the learning ledger.
+It persists the files the authority already writes.
+
+Proven in `tests/test_287_marker_durability.py` against a real repository with a
+real remote, a fresh clone standing in for the next runner:
+
+| What | Test |
+|---|---|
+| a later destination failing does not strand the earlier marker | `test_a_later_destination_failing_does_not_strand_the_earlier_marker` |
+| a fresh checkout refuses to republish | `test_a_fresh_checkout_refuses_to_republish_what_a_previous_run_published` |
+| a crash after the claim survives to the next checkout | `test_a_crash_after_the_claim_survives_to_the_next_checkout` |
+| a dry run persists nothing | `test_a_dry_run_persists_nothing` |
+| only the store is committed | `test_the_script_persists_the_markers_and_nothing_else` |
+| every publishing workflow persists, under `always()`, never `success()` | `test_every_publishing_workflow_persists_the_markers`, `test_the_persistence_step_survives_a_later_destination_failing` |
+
+## One run wins a key
+
+`record_intent` used to write the intent the way a marker is written — a temp
+file renamed over the target. That is the right shape for a value being
+replaced and the wrong one for a claim being taken: two runs that both read
+"nothing published" would both rename their own intent into place, both believe
+they may call, and both publish. `lookup` cannot see that case, because at the
+moment both runs look there is nothing to see.
+
+The claim is now an exclusive create. The filesystem decides which run wins,
+and only the winner may make the external call. A run may re-record its own
+claim — re-entry is not a race — and a claim that cannot be read is treated as
+another run's, because a half-written claim is still a claim.
+
+## A durability failure is never reported as success
+
+A rename is not durable until the directory holding it is synced, and
+`_fsync_dir` used to swallow that failure. An intent that vanishes after its
+publication is exactly the double publication this store exists to prevent, so
+the sync now reports its result, `_write_durably` carries it out to the caller,
+and every directory the write had to create is synced too.
 
 ## Production safety
 

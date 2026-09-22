@@ -189,19 +189,44 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _fsync_dir(path: Path) -> None:
-    """Make a rename durable. Silently a no-op where directories cannot be opened."""
+def _fsync_dir(path: Path) -> bool:
+    """Make a directory entry durable, and say whether it worked.
+
+    A rename is not durable until the directory holding it is synced, so a
+    swallowed failure here reports a durable write that a power loss can still
+    undo — an intent that vanishes after its publication is exactly the double
+    publication this store exists to prevent. The caller decides what to do
+    with a false; nothing here decides it quietly.
+    """
 
     try:
         fd = os.open(path, os.O_RDONLY)
     except OSError:
-        return
+        return False
     try:
         os.fsync(fd)
     except OSError:
-        pass
+        return False
     finally:
         os.close(fd)
+    return True
+
+
+def _created_ancestors(path: Path) -> tuple[Path, ...]:
+    """The directories ``path`` does not have yet, nearest last.
+
+    Creating ``a/b/c`` makes three directory entries, and each one needs its
+    own parent synced. Recorded before the ``mkdir`` because afterwards they
+    all exist and there is no way to tell which ones this call made.
+    """
+
+    missing: list[Path] = []
+    current = path
+    while not current.exists() and current != current.parent:
+        missing.append(current)
+        current = current.parent
+    missing.reverse()
+    return tuple(missing)
 
 
 def _write_durably(path: Path, payload: dict) -> bool:
@@ -215,6 +240,7 @@ def _write_durably(path: Path, payload: dict) -> bool:
     """
 
     data = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    fresh = _created_ancestors(path.parent)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         handle = tempfile.NamedTemporaryFile(
@@ -237,8 +263,63 @@ def _write_durably(path: Path, payload: dict) -> bool:
             raise
     except OSError:
         return False
-    _fsync_dir(path.parent)
-    return True
+    # Every directory this call created, then the one holding the file. A
+    # missed sync on a fresh ancestor loses the whole subtree, file and all.
+    for directory in fresh:
+        if not _fsync_dir(directory.parent):
+            return False
+    return _fsync_dir(path.parent)
+
+
+class _Claim(Enum):
+    """The outcome of trying to take the claim for one key."""
+
+    OURS = "ours"
+    TAKEN = "taken"
+    FAILED = "failed"
+
+
+def _claim_durably(path: Path, payload: dict) -> _Claim:
+    """Create ``path`` exclusively, or report that someone already holds it.
+
+    ``record_intent`` used to write the intent the way a marker is written —
+    a temp file renamed over the target. That is the right shape for a value
+    being replaced and the wrong one for a claim being taken: two runs that
+    both read "nothing published" would both rename their own intent into
+    place, both believe they may call, and both publish (#321 review). The
+    claim is therefore an exclusive create: the filesystem decides which run
+    wins, and only the winner may make the external call.
+
+    Written straight to the final name rather than through a temp file,
+    because the exclusivity IS the rename here. A crash mid-write leaves a
+    truncated file, and that is safe in the only direction that matters:
+    ``lookup`` treats the existence of an intent as "possibly published"
+    without parsing it, so the next run refuses the key.
+    """
+
+    fresh = _created_ancestors(path.parent)
+    data = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+    except FileExistsError:
+        return _Claim.TAKEN
+    except OSError:
+        return _Claim.FAILED
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+    except OSError:
+        # The claim file stays. It forbids the call, which is the safe
+        # direction, and the next run reads it as a key that may already
+        # have been published.
+        return _Claim.FAILED
+    for directory in fresh:
+        if not _fsync_dir(directory.parent):
+            return _Claim.FAILED
+    return _Claim.OURS if _fsync_dir(path.parent) else _Claim.FAILED
 
 
 @dataclass(frozen=True)
@@ -488,9 +569,46 @@ class MarkerStore:
             run_id=run_id,
             recorded_at=_now(),
         )
-        if _write_durably(self.intent_path(identity), intent.to_dict()):
+        path = self.intent_path(identity)
+        claimed = _claim_durably(path, intent.to_dict())
+        if claimed is _Claim.OURS:
             return intent
+        if claimed is _Claim.TAKEN:
+            # Another run holds the claim for this key. `lookup` already refuses
+            # a key whose intent exists, so this is the simultaneous case that
+            # lookup cannot see: both runs read "nothing published", and only
+            # the run that created the file may make the call.
+            existing = self._read_intent(path)
+            if existing is not None and existing.run_id == run_id:
+                # Our own earlier claim in this same run — re-entry, not a race.
+                return existing
         return None
+
+    def _read_intent(self, path: Path) -> Optional[PublicationIntent]:
+        """The intent on disk, or ``None`` when it cannot be read as one.
+
+        Unreadable is not "absent": the caller treats it as another run's
+        claim, because a half-written claim is still a claim.
+        """
+
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            return None
+        if not isinstance(data, dict):
+            return None
+        try:
+            return PublicationIntent(
+                key=str(data.get("key", "")),
+                client=str(data.get("client", "")),
+                destination=str(data.get("destination", "")),
+                source_signal_ids=tuple(data.get("source_signal_ids", ()) or ()),
+                content_digest=str(data.get("content_digest", "")),
+                run_id=str(data.get("run_id", "")),
+                recorded_at=str(data.get("recorded_at", "")),
+            )
+        except (TypeError, ValueError):
+            return None
 
     def record_marker(
         self,
