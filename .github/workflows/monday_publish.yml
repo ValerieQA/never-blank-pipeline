@@ -409,3 +409,4 @@ jobs:
           name: "generated-${{ steps.publish.outputs.signal_id || steps.resolve.outputs.signal_id }}"
           path: "reports/content_packages/${{ steps.publish.outputs.signal_id || steps.resolve.outputs.signal_id }}_generated.json"
           if-no-files-found: ignore
+          retention-days: 90
