@@ -57,6 +57,8 @@ from typing import Final
 
 import yaml
 
+from src.knowledge.ladder import CLIENT_LADDER_SLOT, level_names
+
 #: The deployment default. Another customer sets NB_CLIENT_DIR; no code changes.
 DEFAULT_CLIENT_DIR: Final[Path] = Path("clients/never_blank")
 
@@ -166,12 +168,18 @@ class StreamContract:
         it — for ``claim_strength_ceiling`` it is the strength ladder, weakest
         first, which is the only reason the Engine can compare two strengths
         without knowing what either one means.
+
+        A ladder level may also declare which universal level it maps to
+        (``… → universal level 2``, Step 4 §7). That declaration is about the
+        level, not part of its name, so what the Engine carries into a plan stays
+        the wording a person reads. ``plan_slots`` keeps the line as written,
+        which is what the register validator reads it from.
         """
         if slot not in PLAN_SLOTS:
             raise ClientContractError(f"unknown plan slot {slot!r}")
         for name, values in self.plan_slots:
             if name == slot:
-                return values
+                return level_names(values) if slot == CLIENT_LADDER_SLOT else values
         return ()
 
 
