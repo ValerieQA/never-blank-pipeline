@@ -36,8 +36,7 @@ import sys
 
 import pytest
 
-import src.utils.llm_client as llm_client
-
+from src.utils import llm_client
 
 #: Every variable that could authenticate a billed OpenAI call. The bare
 #: OPENAI_API_KEY is included because the SDK reads it as a default when no
@@ -117,4 +116,47 @@ def _run_artifacts_stay_out_of_the_tracked_tree(tmp_path_factory, monkeypatch):
         module = sys.modules.get(name)
         if module is not None and hasattr(module, "PACKAGES_DIR"):
             monkeypatch.setattr(module, "PACKAGES_DIR", root)
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _publication_markers_stay_out_of_the_tracked_tree(tmp_path_factory, monkeypatch):
+    """No test writes publication idempotency evidence into the tracked tree.
+
+    The publication marker store (NB-00a) is committed on purpose — losing a
+    marker could cause a double publication — so an unredirected test run would
+    leave real markers in ``data/editorial/publication_markers/`` and, worse,
+    let one test's marker suppress another test's publication. Each test gets
+    its own root, already created: a missing root is itself an answer (the
+    authority is unavailable, so nothing publishes), which makes creating it
+    here part of the redirection rather than an afterthought.
+
+    A test that redirects the root itself is unaffected: its own patch runs
+    after this fixture and wins.
+    """
+
+    monkeypatch.setenv(
+        "NB_PUBLICATION_MARKERS_DIR", str(tmp_path_factory.mktemp("markers"))
+    )
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _the_test_process_is_not_a_publishing_runner(monkeypatch):
+    """No suite inherits cross-runner arbitration from the ambient environment.
+
+    ``record_intent`` requires a claim both runners can see when it detects a
+    hosted runner (``GITHUB_ACTIONS``), and CI runs the tests on exactly such a
+    runner. Without this, every suite that drives a real publishing path in a
+    ``tmp_path`` would fail closed in CI and pass locally — the same code
+    behaving differently depending on where it runs, which is the one thing a
+    test must never do.
+
+    A test process is not a publishing runner. The suite that proves the
+    cross-runner arbitration builds its runners explicitly
+    (``tests/test_287_marker_durability.py``) and opts back in with
+    ``require_shared_claim=True``, so it is unaffected by this.
+    """
+
+    monkeypatch.setenv("NB_SHARED_CLAIM", "0")
     yield

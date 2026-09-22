@@ -28,6 +28,14 @@ from src.publishing.facebook import FacebookPublisher
 from src.publishing.hashtags import generate_hashtags
 from src.publishing.instagram import InstagramPublisher
 from src.publishing.linkedin import LinkedInPublisher
+from src.publishing.publication_markers import (
+    PUBLICATION_UNCONFIRMED,
+    PublicationGuard,
+    content_digest,
+    destination_text,
+    proves_publication,
+    refused_result,
+)
 from src.publishing.release_scope import (
     out_of_release_scope,
     restrict_to_release_scope,
@@ -303,9 +311,40 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
         }
         wix_url = ""
         wix_post_id: Optional[str] = None
+        # ── Publication marker authority (NB-00a, invariant S3-I1) ──────────
+        # Consulted before every irreversible call and written immediately
+        # after each destination succeeds, independently of the index and
+        # history writes further down: evidence that depended on those could
+        # be lost exactly when a partial failure made it matter most.
+        #
+        # Only ``live`` reaches it. A dry run makes no external call, so an
+        # intent written by one would suppress the real publication that
+        # follows — the authority must record what happened, never a rehearsal.
+        guard = (
+            PublicationGuard(source_signal_ids=[sig_id], run_id=draft.run_id)
+            if mode == "live"
+            else None
+        )
+        unconfirmed: list[str] = []
         for name, publisher in _PUBLISHERS:
             platform_img = pimgs.get(name, {}).get("url") or draft.image_url
             use_draft = _swap_image(draft, platform_img) if name in ("linkedin", "facebook", "instagram") else draft
+            digest = content_digest(destination_text(use_draft, name))
+            if guard is not None:
+                decision = guard.check(name)
+                if decision.proceed:
+                    decision = guard.record_intent(name, content_digest=digest)
+                if not decision.proceed:
+                    refused = refused_result(decision, run_id=draft.run_id)
+                    log.info(
+                        "%s not published: %s", name,
+                        refused.error_message or f"reusing {refused.external_id}",
+                    )
+                    results[name] = refused.to_dict()
+                    if name == "wix" and refused.url:
+                        wix_url = refused.url
+                        wix_post_id = refused.external_id
+                    continue
             try:
                 if name == "telegram":
                     final_telegram = _build_telegram(structured, wix_url=wix_url)
@@ -314,6 +353,14 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
                     telegram_text = final_telegram
                 else:
                     result = publisher.publish(use_draft, mode)
+                if guard is not None and proves_publication(result) and (
+                    guard.record_marker(name, result, content_digest=digest) is None
+                ):
+                    # The post exists and its marker does not. The intent
+                    # stays, so the next run treats the key as possibly
+                    # published and skips it (at most once).
+                    unconfirmed.append(guard.key(name))
+                    log.error("%s: %s", PUBLICATION_UNCONFIRMED, name)
                 if name == "wix" and result.ok():
                     if result.url:
                         wix_url = result.url
@@ -392,6 +439,10 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
             "mode": mode,
             "results": results,
             "wix_url": wix_url,
+            # NB-00a §3.6 p5: keys whose post exists but whose marker could not
+            # be made durable. Named here so a person can see which ones the
+            # next run will skip, instead of discovering it as a silent skip.
+            PUBLICATION_UNCONFIRMED: unconfirmed,
             "generated_file": str(generated_path),
             "platform_images": {p: {
                 "url": pimgs.get(p, {}).get("url", ""),

@@ -91,6 +91,18 @@ jobs:
       # distinguishes the two cases: the summary artifact is written only
       # once research completed, and a discovery failure raises before it
       # exists, leaving nothing to commit.
+      # S3-I1 (#287): the publication idempotency authority must outlive the
+      # runner. Its OWN step, and `always()`, because the marker of a
+      # destination that already published must become durable even when a
+      # later destination fails and the publishing step exits non-zero — that
+      # partial failure is the republication this authority exists to stop.
+      # A dry run persists nothing.
+      - name: Persist publication markers
+        if: always()
+        env:
+          DRY_RUN: false
+        run: bash scripts/ci/persist_publication_markers.sh
+
       - name: Commit research data
         if: always()
         run: |

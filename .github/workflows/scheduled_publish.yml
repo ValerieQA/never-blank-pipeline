@@ -94,6 +94,18 @@ jobs:
 
       # #224: written on EVERY path, including a stale skip — deliberately
       # separate from the publish report, which only exists when work ran.
+      # S3-I1 (#287): the publication idempotency authority must outlive the
+      # runner. Its OWN step, and `always()`, because the marker of a
+      # destination that already published must become durable even when a
+      # later destination fails and the publishing step exits non-zero — that
+      # partial failure is the republication this authority exists to stop.
+      # A dry run persists nothing.
+      - name: Persist publication markers
+        if: always()
+        env:
+          DRY_RUN: false
+        run: bash scripts/ci/persist_publication_markers.sh
+
       - name: Preserve scheduling decision
         if: always()
         uses: actions/upload-artifact@v4

@@ -267,6 +267,12 @@ from src.publishing.idempotency import (
     find_prior_linkedin_publication,
     find_prior_wix_publication,
 )
+from src.publishing.publication_markers import (
+    PUBLICATION_UNCONFIRMED,
+    PublicationGuard,
+    proves_publication,
+    refused_result,
+)
 from src.publishing.preflight import (
     ChannelPackageOutcome,
     FreshnessVerdict,
@@ -3362,12 +3368,48 @@ def _run(
     def _canonical_verdict_ok(verdict) -> bool:
         return verdict is not None and verdict.verified
 
+    def _record_reuse(name: str, reused: PublishResult, *, site_id: str) -> None:
+        """Record a channel as REUSED — this run created nothing at all.
+
+        Shared by both authorities that can prove the publication already
+        exists: the durable marker store (NB-00a) and the run-directory scan
+        (Issue #105). They must leave the run in exactly the same state, or
+        which one answered first would change what the run recorded.
+        """
+
+        nonlocal wix_post_id, wix_url, _canonical_verdict, _provider_lookup_audit
+
+        result = _normalize_publish_result(reused, run_ctx.run_id, name)
+        results[name] = result.to_dict()
+        if name != "wix":
+            return
+        wix_post_id = result.external_id
+        # #200: do NOT reuse the URL the earlier evidence recorded — evidence
+        # written before that fix can carry a locally constructed route.
+        # Re-establish the identity chain by asking the provider for this post
+        # again (one HTTP call, no publication).
+        _reuse_lookup = WixPublisher().lookup_canonical_url(
+            wix_post_id or "", site_id=site_id
+        )
+        _canonical_verdict = _verify_canonical(_reuse_lookup.as_result_view())
+        wix_url = _canonical_verdict.url
+        _provider_lookup_audit = _reuse_lookup.as_audit_dict()
+
     # #196: lineage evidence for the LinkedIn attempt — set only once the
     # enriched package exists and holds a persisted final ALLOW.
     _li_evidence: Optional[dict] = None
     # Issue #105: typed, sanitized note when prior publication evidence could
     # not be interpreted — it never suppresses publication, but the run says so.
     _unusable_prior_evidence: Optional[dict] = None
+    # ── Publication idempotency authority (NB-00a, invariant S3-I1) ─────────
+    # Durable, per destination, and independent of every other commit this run
+    # makes: the authority S-14 consults before an irreversible call and writes
+    # to immediately after one succeeds. Losing a learning record loses
+    # information; losing this could publish the same article twice.
+    _markers = PublicationGuard(source_signal_ids=[signal_id], run_id=run_ctx.run_id)
+    # §3.6 point 5: keys whose post exists but whose marker could not be made
+    # durable. The run ends normally and says so; the next run skips them.
+    _publication_unconfirmed: list[str] = []
 
     _r1_cls = {"wix": WixPublisher, "linkedin": LinkedInPublisher}
     _r1_packages = {
@@ -3536,6 +3578,33 @@ def _run(
                     "canonical_article_url": _canonical_url,
                 }
 
+            # ── Publication marker authority (NB-00a, invariant S3-I1) ───────
+            # Consulted BEFORE any external call and before the run-directory
+            # scan below, because this is the authority that survives a fresh
+            # checkout: an earlier run that published Wix and then failed
+            # LinkedIn must never republish Wix, whatever the other evidence
+            # in this working tree says. Re-pointing find_prior_* onto this
+            # store is NB-00b; until then the two run in series and either one
+            # alone can suppress a call, never authorize one.
+            _decision = _markers.check(name)
+            if not _decision.proceed:
+                _refused = refused_result(_decision, run_id=run_ctx.run_id)
+                if _refused.status is PublishStatus.REUSED:
+                    print(
+                        f"  ↺  {name:<12} REUSED — publication marker from run "
+                        f"{_refused.reused_from_run_id or '—'} "
+                        f"(post {_refused.external_id}); no duplicate created"
+                    )
+                    _record_reuse(
+                        name,
+                        _refused,
+                        site_id=getattr(_package.target, "site_id", ""),
+                    )
+                else:
+                    print(f"  ○  {name:<12} SKIPPED — {_refused.error_message}")
+                    results[name] = _refused.to_dict()
+                continue
+
             # ── Wix retry idempotency (Issue #105 / Story #18) ───────────────
             # Runs only after this channel received preflight ALLOW and only on
             # the exact authorized package, so it can suppress an authorized
@@ -3568,7 +3637,8 @@ def _run(
                         f"{_scan.match.run_id} (post {_scan.match.post_id}); "
                         "no duplicate created"
                     )
-                    result = _normalize_publish_result(
+                    _record_reuse(
+                        name,
                         PublishResult(
                             platform=name,
                             status=PublishStatus.REUSED,
@@ -3577,31 +3647,36 @@ def _run(
                             url_provenance=_scan.match.url_provenance,
                             reused_from_run_id=_scan.match.run_id,
                         ),
-                        run_ctx.run_id,
-                        name,
+                        site_id=getattr(_package.target, "site_id", ""),
                     )
-                    results[name] = result.to_dict()
-                    if name == "wix":
-                        wix_post_id = result.external_id
-                        # #200: do NOT reuse the URL the earlier run
-                        # recorded — evidence written before this fix can
-                        # carry a locally constructed route. Re-establish
-                        # the identity chain by asking the provider for
-                        # this post again (one HTTP call, no publication).
-                        _reuse_lookup = WixPublisher().lookup_canonical_url(
-                            wix_post_id or "", site_id=_package.target.site_id
-                        )
-                        _canonical_verdict = _verify_canonical(
-                            _reuse_lookup.as_result_view()
-                        )
-                        wix_url = _canonical_verdict.url
-                        _provider_lookup_audit = _reuse_lookup.as_audit_dict()
                     continue
+
+            # ── Intent before the irreversible step (§3.6 point 3) ───────────
+            # No durable intent, no external call: a call nobody recorded is
+            # exactly the one that can be made a second time.
+            _digest = _package.package_digest()
+            _decision = _markers.record_intent(name, content_digest=_digest)
+            if not _decision.proceed:
+                _refused = refused_result(_decision, run_id=run_ctx.run_id)
+                print(f"  ○  {name:<12} SKIPPED — {_refused.error_message}")
+                results[name] = _refused.to_dict()
+                continue
 
             result = _r1_cls[name]().publish(
                 _package, "live", strategy_view=channel_view
             )
             result = _normalize_publish_result(result, run_ctx.run_id, name)
+            # ── Marker after success (§3.6 point 4) ──────────────────────────
+            # Written first and alone, immediately after this destination
+            # succeeded and before anything else this run commits.
+            if proves_publication(result) and _markers.record_marker(
+                name, result, content_digest=_digest
+            ) is None:
+                _publication_unconfirmed.append(_markers.key(name))
+                print(
+                    f"  !  {name:<12} {PUBLICATION_UNCONFIRMED} — the post "
+                    "exists and its marker does not; the next run skips this key"
+                )
             results[name] = result.to_dict()
             if name == "wix" and result.ok():
                 wix_post_id = result.external_id
@@ -3664,6 +3739,10 @@ def _run(
             results.get("wix", {}).get("reused_from_run_id")
         ),
         "unusable_prior_publication_evidence": _unusable_prior_evidence,
+        # NB-00a §3.6 p5: publications whose marker could not be made durable.
+        # Named here so a person can see which keys the next run will skip,
+        # instead of discovering it as an unexplained SKIP.
+        PUBLICATION_UNCONFIRMED: _publication_unconfirmed,
         # #200: how the canonical article URL was established, and why it
         # was refused when it was. A refused candidate is preserved here
         # with its provenance so the failure is diagnosable without

@@ -40,6 +40,15 @@ from src.publishing.image_pipeline import ImageSpec, generate_and_upload_card
 from src.publishing.facebook import FacebookPublisher
 from src.publishing.instagram import InstagramPublisher
 from src.publishing.linkedin import LinkedInPublisher
+from src.publishing.publication_markers import (
+    PUBLICATION_UNCONFIRMED,
+    PublicationGuard,
+    content_digest,
+    destination_text,
+    draft_source_signal_ids,
+    proves_publication,
+    refused_result,
+)
 from src.publishing.release_scope import (
     out_of_release_scope,
     restrict_to_release_scope,
@@ -314,6 +323,15 @@ def _publish_platforms(
             "external_id": None, "url": None,
         })
 
+    # ── Publication marker authority (NB-00a, invariant S3-I1) ──────────────
+    # The queue's own "skip what already succeeded" is per-item state that the
+    # run rewrites; this is the durable per-destination authority, consulted
+    # before every irreversible call and written immediately after each one
+    # succeeds, independently of the queue and history commits below.
+    guard = PublicationGuard(
+        source_signal_ids=draft_source_signal_ids(draft), run_id=draft.run_id
+    )
+
     for name, publisher in publishers:
         prior = results.get(name, {})
         if prior.get("status") in _OK_STATUSES:
@@ -328,8 +346,32 @@ def _publish_platforms(
             results[name] = {"platform": name, "status": "SKIPPED", "error_message": "dry-run", "external_id": None, "url": None}
             continue
 
+        digest = content_digest(destination_text(draft, name))
+        decision = guard.check(name)
+        if decision.proceed:
+            decision = guard.record_intent(name, content_digest=digest)
+        if not decision.proceed:
+            # Either the publication is already proven, or the authority
+            # cannot answer. Both mean this run publishes nothing here.
+            refused = refused_result(decision, run_id=draft.run_id)
+            print(
+                f"  ○  {name:<12} {refused.status.value} — "
+                f"{refused.error_message or refused.external_id}"
+            )
+            results[name] = refused.to_dict()
+            if name == "wix" and refused.url:
+                wix_url     = refused.url
+                wix_post_id = refused.external_id or ""
+            continue
+
         try:
             result = publisher.publish(draft, "live")
+            if proves_publication(result) and guard.record_marker(
+                name, result, content_digest=digest
+            ) is None:
+                # The post exists and its marker does not. The intent stays,
+                # so the next run treats the key as possibly published.
+                print(f"  !  {name:<12} {PUBLICATION_UNCONFIRMED} ({guard.key(name)})")
             results[name] = result.to_dict()
             if name == "wix" and result.ok():
                 wix_post_id = result.external_id or ""

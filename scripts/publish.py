@@ -37,6 +37,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from src.publishing.base import load_draft, DraftPackage
+from src.publishing.publication_markers import (
+    PUBLICATION_UNCONFIRMED,
+    PublicationGuard,
+    content_digest,
+    destination_text,
+    draft_source_signal_ids,
+    proves_publication,
+    refused_result,
+)
 from src.publishing.result import PublishResult, PublishStatus
 from src.publishing.wix import WixPublisher
 from src.publishing.linkedin import LinkedInPublisher
@@ -175,6 +184,23 @@ def run(mode: str, channels: list[str]) -> int:
     results: list[PublishResult] = []
     wix_url: str = None
 
+    # ── Publication marker authority (NB-00a, invariant S3-I1) ─────────────
+    # Only ``live`` reaches it: a dry run makes no external call, and a Wix
+    # draft is not a publication — suppressing on one could leave the article
+    # permanently unpublished, the same rule the Wix idempotency scan keeps.
+    #
+    # This path is driven once per channel by scripts/scheduled_publish.py, so
+    # each process performs one destination's transaction. The draft names its
+    # own source (the manual topic the legacy generator worked from); a draft
+    # that names none has no identity key, so it publishes nothing.
+    guard = (
+        PublicationGuard(
+            source_signal_ids=draft_source_signal_ids(draft), run_id=draft.run_id
+        )
+        if mode == "live"
+        else None
+    )
+
     for channel in channels:
         cls = PUBLISHER_MAP.get(channel)
         if cls is None:
@@ -187,11 +213,31 @@ def run(mode: str, channels: list[str]) -> int:
 
         publisher = cls()
 
+        digest = content_digest(destination_text(draft, channel))
+        if guard is not None:
+            decision = guard.check(channel)
+            if decision.proceed:
+                decision = guard.record_intent(channel, content_digest=digest)
+            if not decision.proceed:
+                refused = refused_result(decision, run_id=draft.run_id)
+                if channel == "wix" and refused.url:
+                    wix_url = refused.url
+                results.append(refused)
+                _print_result(refused)
+                continue
+
         # Telegram gets the Wix URL if Wix already ran in this session
         if channel == "telegram":
             result = publisher.publish(draft, mode, wix_url=wix_url)
         else:
             result = publisher.publish(draft, mode)
+
+        if guard is not None and proves_publication(result):
+            if guard.record_marker(channel, result, content_digest=digest) is None:
+                # The post exists and its marker does not. The intent stays,
+                # so the next run treats the key as possibly published.
+                print(f"  !  {PUBLICATION_UNCONFIRMED}: {channel} "
+                      f"({guard.key(channel)})")
 
         # If Wix published or created a draft with a URL, pass it to Telegram
         if channel == "wix" and result.url:

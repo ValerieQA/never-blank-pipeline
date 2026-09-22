@@ -210,6 +210,35 @@ def _fake_no_prior_publication(*args, **kwargs):
     return SimpleNamespace(match=None, evidence_note=lambda: None)
 
 
+# Publication marker authority stand-in (NB-00a, Issue #287). The real guard
+# and the real store are used — only their scope is narrowed to a single run,
+# by giving each run its own store root under the redirected markers dir. The
+# harness seeds prior runs by publishing for real through this same
+# entrypoint, so a shared authority would correctly suppress the run under
+# test and these tests would stop testing what they were written for: the
+# run-directory scan (#105/#108) and the shapes built on it. The real
+# cross-run authority — including end-to-end through this entrypoint — is
+# covered by tests/test_publication_markers.py.
+def _fake_publication_guard(*, source_signal_ids, run_id, **kwargs):
+    from src.publishing.publication_markers import (
+        MarkerStore,
+        PublicationGuard,
+        markers_root,
+    )
+
+    kwargs.pop("store", None)                 # narrowing the store IS the stand-in
+    root = markers_root() / "per-run" / (run_id or "unidentified-run")
+    # Created, like the redirected root in conftest: an absent store root is
+    # itself an answer — the authority is unavailable, so nothing publishes.
+    root.mkdir(parents=True, exist_ok=True)
+    return PublicationGuard(
+        source_signal_ids=source_signal_ids,
+        run_id=run_id,
+        store=MarkerStore(root, require_shared_claim=False),
+        **kwargs,
+    )
+
+
 # ALLOW-shaped stand-in for the publication preflight gate (Issue #101): the
 # entrypoint reads .run_disposition, .channels, .run_blocking_reasons and
 # .verdict_for(channel). Digests are taken from the packages actually passed
@@ -460,6 +489,9 @@ def _base_patches(*, dry_run: bool = True, from_package: bool = False) -> tuple[
         "find_prior_linkedin_publication": mock.MagicMock(
             side_effect=_fake_no_prior_publication
         ),
+        # Publication marker authority (NB-00a / Issue #287): real guard,
+        # per-run store — see _fake_publication_guard.
+        "PublicationGuard": mock.MagicMock(side_effect=_fake_publication_guard),
         "evaluate_publication_preflight": mock.MagicMock(side_effect=_fake_preflight),
         "write_preflight_result_json": mock.MagicMock(),
         "build_wix_publication_package": mock.MagicMock(side_effect=_fake_wix_package),
