@@ -29,6 +29,7 @@ from typing import NamedTuple, Optional
 import pytest
 import yaml
 
+import scripts.ci.check_knowledge_register as check_module
 from scripts.ci.check_knowledge_register import (
     DEFAULT_BASELINE_REF,
     EXIT_NO_BASELINE,
@@ -790,3 +791,90 @@ def test_ci_runs_the_register_check_against_the_base_ref():
     assert (check.get("env") or {}).get("PYTHONPATH") == ".", (
         "a script run by path does not put the repository root on sys.path (#274)"
     )
+
+
+# ----------------------------------------------------------------------
+# A baseline missing part of itself is unusable, not smaller (#328 review)
+# ----------------------------------------------------------------------
+#
+# Each of these used to be a `continue`. A dropped id reads as "no earlier
+# record", and rule 7 asks nothing of a record that is new — so a partly
+# unreadable history let a changed record through without a version bump.
+
+
+def test_a_listed_baseline_blob_that_cannot_be_read_fails_closed(tmp_path, monkeypatch):
+    """The ref lists the record; `git show` cannot produce it."""
+
+    register = _committed_register(tmp_path)
+    monkeypatch.chdir(register.parent)
+    real = check_module._git
+
+    def refuse_show(*arguments: str):
+        if arguments and arguments[0] == "show":
+            return None
+        return real(*arguments)
+
+    monkeypatch.setattr(check_module, "_git", refuse_show)
+
+    with pytest.raises(check_module.BaselineUnreadable, match="cannot be read"):
+        build_baseline("HEAD", register)
+
+
+def test_a_malformed_historical_record_fails_closed(tmp_path, monkeypatch):
+    """The blob is there and is not a register file."""
+
+    register = _committed_register(tmp_path)
+    record = register / "records" / "mat" / "K-MAT-02.md"
+    record.write_text("not front matter at all\n", encoding="utf-8")
+    _git(register.parent, "add", "-A")
+    _git(register.parent, "commit", "-qm", "a history that does not parse")
+    monkeypatch.chdir(register.parent)
+
+    with pytest.raises(check_module.BaselineUnreadable, match="cannot be parsed"):
+        build_baseline("HEAD", register)
+
+
+def test_a_historical_record_without_id_or_version_fails_closed(tmp_path, monkeypatch):
+    """It parses, but nothing in it can be matched against the current tree."""
+
+    register = _committed_register(tmp_path)
+    record = register / "records" / "mat" / "K-MAT-02.md"
+    text = record.read_text(encoding="utf-8").replace("\nversion: 1", "", 1)
+    record.write_text(text, encoding="utf-8")
+    _git(register.parent, "add", "-A")
+    _git(register.parent, "commit", "-qm", "a history with no version")
+    monkeypatch.chdir(register.parent)
+
+    with pytest.raises(check_module.BaselineUnreadable, match="no usable"):
+        build_baseline("HEAD", register)
+
+
+def test_the_checker_reports_an_unusable_baseline_rather_than_continuing(
+    tmp_path, monkeypatch, capsys
+):
+    """The failure has to reach the exit status, not just the exception."""
+
+    register = _committed_register(tmp_path)
+    record = register / "records" / "mat" / "K-MAT-02.md"
+    record.write_text("not front matter at all\n", encoding="utf-8")
+    _git(register.parent, "add", "-A")
+    _git(register.parent, "commit", "-qm", "a history that does not parse")
+    monkeypatch.chdir(register.parent)
+
+    assert main(["--register", str(register), "--baseline-ref", "HEAD"]) == EXIT_NO_BASELINE
+    assert "--no-baseline" in capsys.readouterr().err
+
+
+def test_a_record_genuinely_absent_from_the_baseline_is_simply_new(tmp_path, monkeypatch):
+    """Absent is not unreadable: a new record has no earlier version."""
+
+    register = _committed_register(tmp_path)
+    fresh = register / "records" / "mat" / "K-MAT-03.md"
+    template = (register / "records" / "mat" / "K-MAT-02.md").read_text(encoding="utf-8")
+    fresh.write_text(template.replace("K-MAT-02", "K-MAT-03"), encoding="utf-8")
+    monkeypatch.chdir(register.parent)
+
+    baseline = build_baseline("HEAD", register)
+
+    assert baseline is not None and "K-MAT-03" not in baseline
+    assert main(["--register", str(register), "--baseline-ref", "HEAD"]) == 0

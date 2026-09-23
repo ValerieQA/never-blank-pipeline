@@ -54,6 +54,16 @@ DEFAULT_BASELINE_REF = "origin/main"
 #: register the ten rules refused: this one says the check could not be made.
 EXIT_NO_BASELINE = 2
 
+
+class BaselineUnreadable(Exception):
+    """The baseline tree lists a record whose history cannot be read.
+
+    Told apart from a record that simply was not there. Absent means new, and
+    a new record has no earlier version to have increased; unreadable means we
+    do not know what it was, and dropping it would answer "no earlier version"
+    to a question we cannot answer (#328 review).
+    """
+
 #: The register, and the client directories whose rule files carry a ladder.
 DEFAULT_REGISTER = Path("knowledge")
 DEFAULT_CLIENTS = Path("clients")
@@ -73,7 +83,13 @@ def client_rule_paths(clients_dir: Path) -> tuple[Path, ...]:
 def build_baseline(
     ref: str, register_dir: Path
 ) -> Optional[dict[str, RecordBaseline]]:
-    """Each record in `<ref>:<register_dir>`, by id. ``None`` when git cannot."""
+    """Each record in `<ref>:<register_dir>`, by id.
+
+    ``None`` when git cannot reach the ref or the register at all. Raises
+    :class:`BaselineUnreadable` when the ref lists a record it cannot then
+    produce: a baseline missing part of itself is not a smaller baseline, it
+    is an unusable one.
+    """
 
     inside = _repo_relative(register_dir)
     if inside is None:
@@ -90,19 +106,29 @@ def build_baseline(
         path = Path(name.strip())
         if path.suffix != ".md" or not _is_identified(path, inside):
             continue
+        # Every failure below used to be a `continue`. Each one turned a
+        # partly unreadable baseline into a smaller baseline that looked
+        # whole: the dropped id then read as "no earlier record", and rule 7
+        # asks nothing of a record that is new (#328 review).
         blob = _git("show", f"{ref}:{path}")
         if blob is None:
-            continue
+            raise BaselineUnreadable(
+                f"{ref}:{path} is listed in {ref} but its content cannot be read"
+            )
         try:
             document = parse_document(blob, str(path))
-        except DocumentError:
-            # It did not parse then either. Whatever is wrong with it now is the
-            # current tree's business, and the ten rules will say so.
-            continue
+        except DocumentError as exc:
+            raise BaselineUnreadable(
+                f"{ref}:{path} cannot be parsed as a register file ({exc}), so "
+                "there is no earlier version to compare against"
+            ) from exc
         identity = document.field("id")
         version = document.field("version")
         if not identity or version is None or not version.isdigit():
-            continue
+            raise BaselineUnreadable(
+                f"{ref}:{path} has no usable `id` and `version`, so its record "
+                "cannot be matched against the current tree"
+            )
         baseline[identity] = RecordBaseline(
             version=int(version),
             version_surface_digest=document.version_surface_digest(),
@@ -146,7 +172,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             file=sys.stderr,
         )
     else:
-        baseline = build_baseline(arguments.baseline_ref, arguments.register)
+        try:
+            baseline = build_baseline(arguments.baseline_ref, arguments.register)
+        except BaselineUnreadable as exc:
+            print(
+                f"{exc}. Rule 7's version-increase half cannot be checked "
+                "against a baseline that is missing part of itself: a record "
+                "dropped from it reads as new, and nothing is asked of a new "
+                "record. Fix the history, name another ref with "
+                "--baseline-ref, or say --no-baseline.",
+                file=sys.stderr,
+            )
+            return EXIT_NO_BASELINE
         if baseline is None:
             # Fail closed. An unreadable ref used to become "nothing to
             # compare", which reads as a clean tree and is how a record can
