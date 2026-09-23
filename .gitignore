@@ -29,6 +29,10 @@ data/research/archive/*
 !data/editorial/
 data/editorial/*
 !data/editorial/publication_markers/
+# The durable learning ledger is tier 2 (NB-01d, Step 3 §3.2): one RunSummary
+# per run, public-safe by construction (§3.3), committed because the
+# indicators it carries must outlive the 90-day run workspace.
+!data/editorial/runs/
 # PNG images are already on Cloudinary — do not store in Git
 reports/content_packages/images/
 # Canonical run workspaces (NB-01b, Step 3 §2.1) are tier 1: everything a run
