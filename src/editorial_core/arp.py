@@ -113,9 +113,10 @@ class StateCode(str, Enum):
 
     Closed on purpose: the durable RunSummary counts skips and degrades by
     state code, so a free-text state would make the main indicator of
-    autonomous operation (map §6.3) uncountable. Two codes come from Step 2
+    autonomous operation (map §6.3) uncountable. Three codes come from Step 2
     rather than from §6.2, because Step 2 names them as reasons of their own:
-    ``budget_exhausted`` (§0.4) and ``boundary_reentry_exhausted`` (§0.3).
+    ``budget_exhausted`` (§0.4), ``boundary_reentry_exhausted`` (§0.3) and
+    ``source_not_eligible`` (§1, S-00's ARP column).
 
     Later slices add the states their stages need. A stage may not invent one
     in passing: a new state is a new member here, reviewed with the contract
@@ -123,6 +124,7 @@ class StateCode(str, Enum):
     """
 
     SIGNAL_OUTSIDE_CONTRACT = "signal_outside_contract"
+    SOURCE_NOT_ELIGIBLE = "source_not_eligible"
     NO_ASSET_OR_ADMISSIBLE_INTERPRETATION = "no_asset_or_admissible_interpretation"
     CLIENT_POSITION_MISSING = "client_position_missing"
     EVIDENCE_CONFLICT_OUTSIDE_ANCHOR = "evidence_conflict_outside_anchor"
@@ -150,6 +152,11 @@ class StateCode(str, Enum):
 #: recording, say, a ``RESOLVE`` for a signal that does not fit the contract.
 _PERMITTED_OUTCOMES: Mapping[StateCode, frozenset[ArpOutcome]] = {
     StateCode.SIGNAL_OUTSIDE_CONTRACT: frozenset({ArpOutcome.SKIP}),
+    # Step 2 §1, S-00: "Source not eligible → SKIP signal (terminal)". The
+    # judgment fails closed, so there is nothing to degrade to and nowhere to
+    # replan: a source the role may not start from stays one however often it
+    # is asked about.
+    StateCode.SOURCE_NOT_ELIGIBLE: frozenset({ArpOutcome.SKIP}),
     StateCode.NO_ASSET_OR_ADMISSIBLE_INTERPRETATION: frozenset({
         ArpOutcome.RESOLVE,
         ArpOutcome.REPLAN,

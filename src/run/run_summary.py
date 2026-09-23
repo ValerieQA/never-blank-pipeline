@@ -169,6 +169,11 @@ class ReasonCategory(str, Enum):
 #: the contract that produces it.
 _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     StateCode.SIGNAL_OUTSIDE_CONTRACT: ReasonCategory.CONTRACT_FIT,
+    # The role's own source-class criteria turned the signal away (Step 2 §1,
+    # S-00). That is the contract deciding what it may start from, which is the
+    # same question ``contract_fit`` groups, asked of the source rather than of
+    # the topic.
+    StateCode.SOURCE_NOT_ELIGIBLE: ReasonCategory.CONTRACT_FIT,
     StateCode.NO_ASSET_OR_ADMISSIBLE_INTERPRETATION: ReasonCategory.EVIDENCE,
     StateCode.CLIENT_POSITION_MISSING: ReasonCategory.CLIENT_POSITION,
     StateCode.EVIDENCE_CONFLICT_OUTSIDE_ANCHOR: ReasonCategory.EVIDENCE,
