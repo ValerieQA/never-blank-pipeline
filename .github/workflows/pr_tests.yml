@@ -22,7 +22,13 @@ jobs:
     timeout-minutes: 20
 
     steps:
+      # Full history: rule 7 of the knowledge register asks whether a record's
+      # `version` went up when its body changed, and that needs the tree as it
+      # was. A shallow checkout has no base ref, and the check used to treat a
+      # ref it could not read as nothing to compare (#294/#328 review).
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -30,6 +36,19 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt pytest pydantic
+
+      # The ten rules over the register as shipped, including rule 7's
+      # version-increase half against the branch this PR targets. It fails
+      # closed: a base ref it cannot read stops the job rather than passing.
+      - name: Knowledge register (rules 1-10, versions against the base)
+        # PYTHONPATH: running a script by path puts scripts/ci on sys.path,
+        # not the repository root, so `import src...` would fail (#274).
+        env:
+          PYTHONPATH: .
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref || 'main' }}"
+          python3 scripts/ci/check_knowledge_register.py \
+            --baseline-ref "origin/${{ github.base_ref || 'main' }}"
 
       # pytest exits 1 when the accepted baseline failures occur, so that exit
       # code alone must not fail the job; the baseline comparison below is the
