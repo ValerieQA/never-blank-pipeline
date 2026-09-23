@@ -30,13 +30,13 @@ change.
 One validator, two callers. `validate_register` is the only thing that knows a
 rule; CI and run start differ in exactly one respect, stated below.
 
-Seed content is out of scope (NB-02c), so `knowledge/records/` and
-`knowledge/checks/` ship empty. The corpus supplies the records the validator
-is proven against, laid over the **real** vocabularies and the **real**
-universal ladder rather than over copies — a fixture register carrying its own
-vocabularies would go on passing after the shipped ones stopped agreeing with
-the code that reads them (`build_register`,
-`tests/test_294_knowledge_register.py`).
+Seed content was out of scope here and arrived with NB-02c (#296), which filled
+`knowledge/records/` and `knowledge/checks/`; `docs/KNOWLEDGE_SEED_SET.md` is
+its evidence map. The corpus below supplies the records the validator is proven
+against, laid over the **real** vocabularies and the **real** universal ladder
+rather than over copies — a fixture register carrying its own vocabularies
+would go on passing after the shipped ones stopped agreeing with the code that
+reads them (`build_register`, `tests/test_294_knowledge_register.py`).
 
 ## Acceptance evidence
 
@@ -54,10 +54,10 @@ defect:
 | KR-03 | `rule_03_invariant_without_approval/…/K-INV-01.md` | an invariant with no `approved_by` |
 | KR-04 | `rule_04_condition_uses_a_label/…/K-MAT-93.md` | the condition reads a label term (I-10) |
 | KR-05 | `rule_05_influences_an_unknown_stage/…/K-MAT-94.md` | it influences `S-16`, which the engine does not have |
-| KR-06 | `rule_06_route_differs_from_the_registry/…/V-P01.md` | the check's `## Route` row spends the wrong counter and ends in the wrong outcome |
+| KR-06 | `rule_06_route_differs_from_the_registry/…/V-P91.md` | the check's `## Route` row spends the wrong counter and ends in the wrong outcome |
 | KR-07 | `rule_07_id_already_exists/…/K-MAT-02-copy.md` | a second file claiming `K-MAT-02` |
 | KR-07 | `rule_07_version_did_not_increase/…/K-MAT-02.md` | a changed statement at the same version, with no change-log line |
-| KR-08 | `rule_08_destination_record_without_verified_on/…/K-DST-TG-01.md` | destination knowledge with no date on it |
+| KR-08 | `rule_08_destination_record_without_verified_on/…/K-DST-TG-91.md` | destination knowledge with no date on it |
 | KR-09 | `rule_09_client_ladder_is_not_monotonic/client/streams/weekly.md` | the second level maps *lower* than the first |
 | KR-10 | `rule_10_file_carries_a_credential/…/K-MAT-95.md` | a key pasted into the file (Q8) |
 
@@ -66,6 +66,17 @@ directory listing and asserts, per case, that the register is refused **and**
 that the set of rules fired is exactly `{its own}`. A fixture that tripped two
 rules would prove neither of them, so that equality is the point of the
 assertion rather than a tightening of it.
+
+**A fixture id is in the fixture range** — `K-MAT-91`…`K-MAT-95`,
+`K-DST-TG-91`, `V-P91` — **and never an id the accepted register already
+holds.** The corpus is laid *over* that register, so a fixture reusing one of
+its ids replaces the record instead of adding one: the defect is then also a
+changed body at an unchanged version, and rule 7 fires beside the rule the
+fixture exists to prove. `V-P01` and `K-DST-TG-01` were free when this corpus
+was written and were taken by the seed set (#296), which is what moved them
+here. The two deliberate exceptions are rule 7's own cases — `K-MAT-02-copy.md`
+and the `K-MAT-02` that does not bump its version — which need an id already in
+the register to have anything to collide with.
 
 `test_the_corpus_covers_every_numbered_rule` compares the directory names
 against `RULES` in the validator. **The corpus is the test's data, not its

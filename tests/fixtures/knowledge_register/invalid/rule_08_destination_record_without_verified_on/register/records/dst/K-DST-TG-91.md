@@ -1,5 +1,5 @@
 ---
-id: K-DST-TG-01
+id: K-DST-TG-91
 version: 1
 status: candidate
 tier: 4
@@ -24,7 +24,10 @@ destination is telegram
 None known.
 
 ## Source
-A fixture for §8 rule 8: destination knowledge with no date on it.
+A fixture for §8 rule 8: destination knowledge with no date on it. The number is
+in the fixture range on purpose — the shipped register holds `K-DST-TG-01`
+(#296), and a fixture reusing that id would overwrite the real record rather
+than add a dated-less one beside it, firing rule 7 as well as rule 8.
 
 ## Change log
 - v1, 2026-09-21: created as an invalid fixture: `verified_on` is missing.

@@ -15,6 +15,7 @@ voice and under which sourcing policy. Edit these files to change it.
 | `lists/machine_tells.md` | Constructions Never Blank never publishes (#268) |
 | `lenses/revision.md` | How a revision may change an article (D10, temporary until #253) |
 | `lenses/evidence_tension_lens.md` | **Conditional**, `activates_on: [evidence_tension]` (#263): what Never Blank does when a signal's own research evidence contradicts the source's claim — the Evidence Tension Lens |
+| `rules/` | The same rules as knowledge records, in the Step 4 §2 format with front matter (#296). Not read by the Engine yet; `rules/README.md` says what they are for |
 
 How the Engine reads these files is Engine documentation:
 `docs/engine/CLIENT_CONTRACTS.md` and `docs/engine/EDITORIAL_PLAN.md`.
