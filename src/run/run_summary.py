@@ -184,6 +184,10 @@ _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     StateCode.INVENTED_OR_INADMISSIBLE_INTERPRETATION: ReasonCategory.BOUNDARY,
     StateCode.FACT_OR_PHRASING_FAILURE: ReasonCategory.TEXT,
     StateCode.PLATFORM_KNOWLEDGE_EXPIRED: ReasonCategory.KNOWLEDGE,
+    # The mandatory set alone is over the request capacity (Step 4 §9.6). A
+    # knowledge refusal, not a budget one: no call was made and no allowance was
+    # spent — what did not fit is knowledge the stage may not go without.
+    StateCode.MANDATORY_KNOWLEDGE_EXCEEDS_CAPACITY: ReasonCategory.KNOWLEDGE,
     StateCode.BUDGET_EXHAUSTED: ReasonCategory.BUDGET,
     StateCode.BOUNDARY_REENTRY_EXHAUSTED: ReasonCategory.BOUNDARY,
 }
