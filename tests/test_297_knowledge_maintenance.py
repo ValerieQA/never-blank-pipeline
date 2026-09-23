@@ -42,8 +42,8 @@ import pytest
 from scripts.knowledge_maintenance import client_record_paths
 from src.artifacts import ArtifactCollisionError
 from src.editorial_core.arp import KnowledgeStatus, KnowledgeTier
+from src.knowledge import maintenance
 from src.knowledge.maintenance import (
-    DEFAULT_WARNING_DAYS,
     MaintenanceError,
     MaintenanceReport,
     register_files,
@@ -81,11 +81,18 @@ EXPECTED_DUE = {
 }
 
 
+#: The window these fixture passes run with. It is a property of the fixtures —
+#: chosen so that `K-FX-04` sits inside it and `K-FX-03` does not — and not a
+#: product default. There is deliberately no default window in the code under
+#: test; see `src/knowledge/maintenance.py`.
+FIXTURE_WARNING_DAYS: int = 14
+
+
 def pass_over(
     ledger: Path,
     *,
     today: date = TODAY,
-    warning_days: int = DEFAULT_WARNING_DAYS,
+    warning_days: int = FIXTURE_WARNING_DAYS,
 ) -> MaintenanceReport:
     """One scheduled pass of the job over the fixture register."""
 
@@ -180,7 +187,10 @@ def test_a_review_the_keeper_moved_forward_is_a_new_expiry_and_a_new_item(
     shutil.copytree(REGISTER, register)
     ledger = tmp_path / "ledger"
 
-    run_maintenance(register, today=TODAY, ledger_root=ledger)
+    run_maintenance(
+        register, today=TODAY, warning_days=FIXTURE_WARNING_DAYS,
+        ledger_root=ledger,
+    )
     assert len(queued_for(ledger, "K-DST-FX-01")) == 1
 
     record = register / "records" / "dst" / "K-DST-FX-01.md"
@@ -191,10 +201,16 @@ def test_a_review_the_keeper_moved_forward_is_a_new_expiry_and_a_new_item(
         encoding="utf-8",
     )
 
-    answered = run_maintenance(register, today=TODAY, ledger_root=ledger)
+    answered = run_maintenance(
+        register, today=TODAY, warning_days=FIXTURE_WARNING_DAYS,
+        ledger_root=ledger,
+    )
     assert "K-DST-FX-01" not in {item.record_id for item in answered.due}
 
-    run_maintenance(register, today=date(2027, 3, 2), ledger_root=ledger)
+    run_maintenance(
+        register, today=date(2027, 3, 2), warning_days=FIXTURE_WARNING_DAYS,
+        ledger_root=ledger,
+    )
     assert len(queued_for(ledger, "K-DST-FX-01")) == 2
 
 
@@ -334,6 +350,24 @@ def test_a_client_rule_is_scanned_where_it_lives(tmp_path):
     assert item.tier is KnowledgeTier.APPROVED_CLIENT_RULE
 
 
+def test_the_job_refuses_to_choose_a_warning_window_for_the_caller():
+    """§5.2 fixes no duration, so neither may the code (#297 escalation rule).
+
+    The window is a required argument everywhere it is asked for. A default
+    here would settle an open product question on the owner's behalf, which is
+    exactly what the first review of this work found and rejected, so the
+    regression is that calling without one fails rather than picking a number.
+    """
+
+    with pytest.raises(TypeError):
+        scan(REGISTER, today=TODAY)  # type: ignore[call-arg]
+
+    with pytest.raises(TypeError):
+        run_maintenance(REGISTER, today=TODAY)  # type: ignore[call-arg]
+
+    assert not hasattr(maintenance, "DEFAULT_WARNING_DAYS")
+
+
 def test_the_window_decides_what_is_due():
     """The warning window is a parameter, and it is the one doing the deciding."""
 
@@ -382,6 +416,7 @@ def test_the_shipped_register_is_one_the_job_can_read():
         _REPO_ROOT / "knowledge",
         client_rule_paths=client_record_paths(_REPO_ROOT / "clients"),
         today=date(2030, 1, 1),
+        warning_days=0,
     )
 
     assert report.unreadable == ()

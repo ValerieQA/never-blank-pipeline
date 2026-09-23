@@ -45,7 +45,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Final, Optional, Sequence
+from typing import Optional, Sequence
 
 from pydantic import ValidationError as _PydanticValidationError
 
@@ -67,13 +67,21 @@ from src.run.knowledge_queue import (
     write_queue_item,
 )
 
-#: How long before `review_by` a record is queued. §5.2 asks for "a warning
-#: window" and does not fix one, so this is a tunable parameter in exactly the
-#: sense §5 gives the periods themselves: the rule that expiry is automatic is
-#: architecture, the number is not. Two weeks is lead time a keeper can use on
-#: the shortest period in §5 (90 days for platform knowledge) without asking
-#: about a record that still has a season of life in it.
-DEFAULT_WARNING_DAYS: Final[int] = 14
+#: There is deliberately no default warning window here.
+#:
+#: §5.2 asks the job to scan for records past `review_by` "or within a warning
+#: window before it", and fixes no duration. How much notice a keeper wants
+#: before a review falls due is an owner and keeper judgement about how they
+#: work, not a fact about the architecture — so choosing a number here would
+#: settle an open product question in code, which this issue's escalation rule
+#: forbids.
+#:
+#: Every caller therefore states the window itself: `warning_days` is a
+#: required argument, the command line requires `--warning-days`, and the
+#: scheduled workflow reads it from repository configuration. `0` is a real and
+#: meaningful value, not a stand-in for a missing one: it means the warning
+#: window is not in use, and the job queues exactly what the first half of §5.2
+#: asks for — the records already past `review_by`.
 
 
 class MaintenanceError(ValueError):
@@ -167,7 +175,7 @@ def scan(
     *,
     client_rule_paths: Sequence[Path] = (),
     today: Optional[date] = None,
-    warning_days: int = DEFAULT_WARNING_DAYS,
+    warning_days: int,
 ) -> MaintenanceReport:
     """Read the register and say whose review is due. Writes nothing.
 
@@ -211,7 +219,7 @@ def run_maintenance(
     *,
     client_rule_paths: Sequence[Path] = (),
     today: Optional[date] = None,
-    warning_days: int = DEFAULT_WARNING_DAYS,
+    warning_days: int,
     ledger_root: Optional[Path] = None,
 ) -> MaintenanceReport:
     """One scheduled pass: scan, and write the items that are not queued yet.

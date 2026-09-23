@@ -15,6 +15,7 @@ Each acceptance criterion below is exactly one of `SATISFIED` /
 | The KnowledgeQueueItem, and the `expiry_review` kind of it | `src/run/knowledge_queue.py` |
 | The job: scan the register and the client rules, write the items | `src/knowledge/maintenance.py` |
 | The entry point a schedule calls | `scripts/knowledge_maintenance.py` |
+| The schedule | `.github/workflows/knowledge_maintenance.yml` |
 | A register whose dates make each §5 case happen | `tests/fixtures/knowledge_maintenance/` |
 | The tests | `tests/test_297_knowledge_maintenance.py` |
 
@@ -131,18 +132,53 @@ record is on.
   record and committing it are separate steps because a commit can fail and a
   written record must not depend on one (Step 3 §3.1).
 
-## What is not here
+## The schedule
 
-**The schedule itself.** The job is an entry point; nothing in this change adds
-a workflow to run it, because the issue declares no containment for
-`.github/workflows/`, and a job that widened its own permissions would be the
-wrong thing to guess at. Wiring `scripts/knowledge_maintenance.py` into a daily
-schedule is a one-file change to be made where the repository's other schedules
-are, and until it is made, the job is run by hand:
+`.github/workflows/knowledge_maintenance.yml` runs the pass **daily at 13:00 UTC
+(09:00 ET)**, which is §5.2's own "for example daily". It is its own workflow, not
+a step inside a publishing one, because §5.2 requires a job that does not depend
+on a publication or a run happening and that never blocks one — a separate
+workflow cannot delay a production run, and its failure cannot stop one.
+
+It deliberately does **not** read `config/schedule.yaml`. That file is the
+*publication* schedule; tying the keeper's queue to it would create exactly the
+dependency §5.2 rules out. The hour is an operational choice, set well away from
+the 04:17 ET publishing window so the two never contend for a runner.
+
+The scheduled run commits what it writes (`--commit`). A manual
+`workflow_dispatch` can override the window or ask for `--dry-run`.
+
+## Where the warning window comes from
+
+**Nowhere in the code**, and that is deliberate. §5.2 asks the job to scan for
+records past `review_by` "or within a warning window before it" and fixes no
+duration. How much notice a keeper wants is an owner and keeper judgement about
+how they work, not a fact about the architecture, so choosing a number here
+would settle an open product question in code.
+
+So the window is stated by whoever runs the job:
+
+| Caller | Source |
+|---|---|
+| The library | `warning_days` is a **required** argument on `scan` and `run_maintenance` |
+| The command line | `--warning-days` is **required**; there is no default |
+| The schedule | the `KNOWLEDGE_MAINTENANCE_WARNING_DAYS` repository variable, overridable per manual run |
+
+**`0` is a real value, not a missing one.** It means the warning window is not in
+use, and the pass queues exactly what the first half of §5.2 asks for: the
+records already past `review_by`. That is why an unset repository variable does
+not fail the run — the job does the architecture-required half of its work while
+the owner decides whether they want notice, and how much.
+
+`tests/test_297_knowledge_maintenance.py` pins this: one test proves `0` and a
+wide window select different records, and another proves the job refuses to
+choose a window for the caller at all.
+
+## Running it by hand
 
 ```
-python3 scripts/knowledge_maintenance.py --dry-run
-python3 scripts/knowledge_maintenance.py --commit
+python3 scripts/knowledge_maintenance.py --warning-days 0 --dry-run
+python3 scripts/knowledge_maintenance.py --warning-days 30 --commit
 ```
 
 Nothing about the queue depends on how often that happens. A pass that never

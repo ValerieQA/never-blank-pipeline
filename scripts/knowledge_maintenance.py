@@ -35,7 +35,6 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from src.knowledge.maintenance import (
-    DEFAULT_WARNING_DAYS,
     MaintenanceError,
     MaintenanceReport,
     run_maintenance,
@@ -79,10 +78,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         help="the client directories whose rule files are scanned too",
     )
     parser.add_argument(
-        "--warning-days", type=int, default=DEFAULT_WARNING_DAYS,
+        "--warning-days", type=int, required=True,
         help=(
-            "how long before `review_by` a record is queued "
-            f"(default: {DEFAULT_WARNING_DAYS})"
+            "how many days before `review_by` a record is queued. Required, "
+            "and deliberately without a default: §5.2 asks for a warning "
+            "window and fixes no duration, so the caller states it rather "
+            "than inheriting a number nobody chose. `0` means the warning "
+            "window is not in use — only records already past `review_by` "
+            "are queued"
         ),
     )
     parser.add_argument(
