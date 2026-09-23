@@ -56,6 +56,7 @@ from src.knowledge.loader import (
     RoutedKnowledge,
     StageInputs,
     fit_to_capacity,
+    KnowledgeSelection,
     in_precedence_order,
     in_reduction_order,
     load_register,
@@ -919,3 +920,76 @@ def test_both_orders_are_total_and_independent_of_input_order(base):
     assert cut == [i.identity for i in in_reduction_order(items[::-1])]
     assert set(forwards) == set(cut) and len(cut) == 4
     assert cut[0] == "K-MAT-10", "the only unreinforced weak candidate goes first"
+
+
+# ----------------------------------------------------------------------
+# The cut order has to reach the packing, not just exist (#331 review)
+# ----------------------------------------------------------------------
+#
+# The order above is only a helper until `fit_to_capacity` uses it. It did not:
+# packing walked `selection.reducible`, which is in precedence order, and kept
+# what fitted from the front — so the expired tier-3 record was packed first
+# and the fresh tier-4 record was the one that fell off the end.
+#
+# These go through `fit_to_capacity` for that reason. A test that only sorted a
+# list would have passed against the defect.
+
+
+def _selection_of(base, *identities: str) -> KnowledgeSelection:
+    """One stage's selection over exactly these records, nothing mandatory."""
+
+    return KnowledgeSelection(
+        stage="S-09",
+        eligible=tuple(_ordering_items(base, *identities)),
+        checks=(),
+    )
+
+
+def test_packing_keeps_fresh_knowledge_and_cuts_the_expired_candidate(base):
+    """The reported defect, through the real packing path."""
+
+    selection = _selection_of(base, "K-MAT-10", "K-DST-LI-03")
+    assert {item.identity for item in selection.reducible} == {"K-MAT-10", "K-DST-LI-03"}
+
+    # Room for exactly one reducible record, so something has to be cut.
+    packing = fit_to_capacity(selection, capacity=1, size_of=lambda item: 1)
+
+    assert [item.identity for item in packing.included] == ["K-DST-LI-03"]
+    assert [item.identity for item in packing.excluded] == ["K-MAT-10"]
+
+
+def test_packing_cuts_the_weak_end_first_across_three_tiers(base):
+    """Two survive, and the one that goes is the unreinforced weak candidate."""
+
+    selection = _selection_of(base, "K-MAT-10", "K-MAT-11", "K-DST-LI-03")
+
+    packing = fit_to_capacity(selection, capacity=2, size_of=lambda item: 1)
+
+    assert [item.identity for item in packing.included] == ["K-MAT-11", "K-DST-LI-03"]
+    assert [item.identity for item in packing.excluded] == ["K-MAT-10"]
+
+
+def test_what_is_cut_is_reported_in_the_order_it_was_cut(base):
+    """`excluded` is evidence, so it reads most expendable first."""
+
+    selection = _selection_of(base, "K-MAT-10", "K-MAT-11", "K-DST-LI-03")
+
+    packing = fit_to_capacity(selection, capacity=0, size_of=lambda item: 1)
+
+    assert [item.identity for item in packing.included] == []
+    assert [item.identity for item in packing.excluded] == [
+        "K-MAT-10", "K-DST-LI-03", "K-MAT-11",
+    ]
+
+
+def test_everything_fits_when_there_is_room_for_it(base):
+    """The cut order must not drop anything when nothing needs cutting."""
+
+    selection = _selection_of(base, "K-MAT-10", "K-MAT-11", "K-DST-LI-03")
+
+    packing = fit_to_capacity(selection, capacity=99, size_of=lambda item: 1)
+
+    assert {item.identity for item in packing.included} == {
+        "K-MAT-10", "K-MAT-11", "K-DST-LI-03",
+    }
+    assert packing.excluded == ()

@@ -773,9 +773,17 @@ def fit_to_capacity(
     """Fit one stage's knowledge into one request (§9.6).
 
     Raises :class:`MandatoryKnowledgeExceedsCapacity` when the mandatory set
-    alone is over capacity. Otherwise the reducible records are added in
-    precedence order and cut from the weak end: once one does not fit, the rest
-    of the order goes with it, which is what cutting in tier order means.
+    alone is over capacity. Otherwise the reducible records are added
+    least-expendable first and cut from the expendable end: once one does not
+    fit, the rest of the order goes with it.
+
+    That order is :func:`in_reduction_order` reversed, **not** the precedence
+    ladder. It used to be the ladder, which is the same thing only inside one
+    tier — so an expired tier-3 candidate was packed ahead of fresh tier-4
+    knowledge and survived a cut that dropped the fresh record (#331 review).
+    §9.6 cuts "weak-candidates first", whatever the tier, and a demoted record
+    defending its place with the tier it no longer earns is the authority the
+    demotion removed.
 
     ``size_of`` measures one item however the caller measures a request —
     characters by default, tokens where a stage counts tokens.
@@ -791,7 +799,7 @@ def fit_to_capacity(
         stage=selection.stage,
         mandatory=mandatory,
         included=(),
-        excluded=selection.reducible,
+        excluded=in_reduction_order(selection.reducible),
         mandatory_size=mandatory_size,
         size=mandatory_size,
         capacity=capacity,
@@ -801,7 +809,8 @@ def fit_to_capacity(
 
     included: list[RoutedKnowledge] = []
     size = mandatory_size
-    remaining = list(selection.reducible)
+    # Least expendable first, so what falls off the end is what §9.6 cuts first.
+    remaining = list(reversed(in_reduction_order(selection.reducible)))
     while remaining:
         item = remaining[0]
         item_size = measure(item)
@@ -813,7 +822,8 @@ def fit_to_capacity(
     return replace(
         packing,
         included=tuple(included),
-        excluded=tuple(remaining),
+        # Reported most expendable first: the order they were cut in.
+        excluded=in_reduction_order(remaining),
         size=size,
     )
 
