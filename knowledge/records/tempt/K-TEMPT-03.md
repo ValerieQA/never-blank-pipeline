@@ -22,10 +22,14 @@ reaction — that no source observation records?
 
 ## Real examples
 - `reports/content_packages/0c3ab0c08576373a_generated.json`, generated
-  2026-09-17, Facebook post: "Imagine waking up, checking your business
-  analytics, and seeing a sudden, unexplained drop in new customer inquiries and
-  website visits." The evidence is a report about publisher traffic; the
-  morning, the dashboard and the drop are the engine's.
+  2026-09-17, blog article: "But then, one morning, you check your analytics
+  dashboard and see a sudden, unexplained drop in new customer inquiries and
+  website visits. Your posts are still going up, but fewer people seem to
+  notice." Nothing marks the scene as supposed, so it reads as reporting: the
+  morning, the dashboard and the moment of noticing are the engine's, and the
+  evidence is a report about publisher traffic that records none of them. The
+  same run's Facebook post opens the same scene with "Imagine waking up" —
+  which is the hypothetical opening below, not this family.
 - `docs/editorial/CANONICAL_EDITORIAL_MAP_v1.md` §13 walkthrough A records
   `real_scene = none` for the material and the outcome excludes the scene
   explicitly, under I-03.
