@@ -20,13 +20,22 @@ in CI (`scripts/ci/check_knowledge_register.py`).
 
 from __future__ import annotations
 
+import re
 import shutil
+import subprocess
 from pathlib import Path
 from typing import NamedTuple, Optional
 
 import pytest
+import yaml
 
-from scripts.ci.check_knowledge_register import build_baseline, client_rule_paths, main
+from scripts.ci.check_knowledge_register import (
+    DEFAULT_BASELINE_REF,
+    EXIT_NO_BASELINE,
+    build_baseline,
+    client_rule_paths,
+    main,
+)
 from src.knowledge.grammar import (
     Always,
     And,
@@ -154,7 +163,17 @@ def test_the_shipped_register_is_valid():
 
 
 def test_the_ci_script_accepts_the_shipped_register():
-    assert main(["--register", str(REGISTER), "--clients", str(CLIENTS)]) == 0
+    # `--no-baseline` on purpose: this asserts the shipped tree satisfies the
+    # rules, and rule 7's version-increase half needs an earlier tree, which a
+    # working tree is not. Saying so is the point — it used to be the silent
+    # default (#328 review). The half itself is proven against a real git
+    # baseline below.
+    assert (
+        main(
+            ["--register", str(REGISTER), "--clients", str(CLIENTS), "--no-baseline"]
+        )
+        == 0
+    )
 
 
 def test_the_shipped_vocabularies_mirror_the_code_that_reads_them():
@@ -209,6 +228,7 @@ def test_the_ci_script_refuses_each_invalid_file(case, tmp_path):
                 str(built.register),
                 "--clients",
                 str(built.clients_root),
+                "--no-baseline",
             ]
         )
         == 1
@@ -356,7 +376,15 @@ def test_without_a_baseline_the_version_half_is_not_invented(tmp_path):
     )
 
 
-def test_a_baseline_ref_git_cannot_read_is_reported_rather_than_faked(capsys):
+def test_a_baseline_ref_git_cannot_read_fails_closed(capsys):
+    """It used to say so on stderr and exit 0.
+
+    Which means the documented invocation enforced nine and a half of the ten
+    rules while reporting that it enforced ten, and a record could change
+    without its version moving (#328 review). An unreadable ref is now an
+    error of its own, told apart from a register the rules refused.
+    """
+
     assert build_baseline("no-such-ref-for-issue-294", REGISTER) is None
     assert (
         main(
@@ -369,9 +397,12 @@ def test_a_baseline_ref_git_cannot_read_is_reported_rather_than_faked(capsys):
                 "no-such-ref-for-issue-294",
             ]
         )
-        == 0
+        == EXIT_NO_BASELINE
     )
-    assert "NOT checked" in capsys.readouterr().err
+    # One read: capsys clears the buffer, and the second call used to see "".
+    stderr = capsys.readouterr().err
+    assert "cannot be read here" in stderr
+    assert "--no-baseline" in stderr, "the error has to say what the way out is"
 
 
 # ----------------------------------------------------------------------
@@ -622,3 +653,140 @@ def _register_with(root: Path, replacement: Path) -> Path:
     shutil.copytree(REGISTER, register)
     shutil.copy(replacement, register / "vocab" / replacement.name)
     return register
+
+
+# ----------------------------------------------------------------------
+# Rule 7's version-increase half, against a real git baseline (#328 review)
+# ----------------------------------------------------------------------
+#
+# This half needs the tree as it was, so it was the one the CI script could
+# silently skip: `--baseline-ref` defaulted to nothing, an unreadable ref also
+# passed, and the corpus case for it was excluded from the CI-script test for
+# want of a baseline. These build one in a real repository, so the negative and
+# the positive are both proven rather than asserted about the code that would
+# have done it.
+
+
+def _git(repo: Path, *arguments: str) -> None:
+    subprocess.run(
+        ["git", "-C", str(repo), *arguments],
+        check=True, capture_output=True, text=True,
+    )
+
+
+def _committed_register(tmp_path: Path) -> Path:
+    """A repository whose HEAD holds a valid register."""
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-q", "-b", "main")
+    for key, value in (("user.name", "t"), ("user.email", "t@e"),
+                       ("commit.gpgsign", "false")):
+        _git(repo, "config", key, value)
+    built = build_register(repo)
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "the register as it was")
+    return built.register
+
+
+def _edit_body(record: Path) -> None:
+    """Change the surface a version bump has to cover, and nothing else."""
+
+    record.write_text(
+        record.read_text(encoding="utf-8").replace(
+            "## Change log", "An extra sentence below the front matter.\n\n## Change log", 1
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_a_changed_record_without_a_version_bump_is_refused(tmp_path, monkeypatch):
+    register = _committed_register(tmp_path)
+    _edit_body(register / "records" / "mat" / "K-MAT-02.md")
+    monkeypatch.chdir(register.parent)
+
+    assert main(["--register", str(register), "--baseline-ref", "HEAD"]) == 1
+
+
+def test_the_same_change_passes_once_the_version_moves(tmp_path, monkeypatch):
+    register = _committed_register(tmp_path)
+    record = register / "records" / "mat" / "K-MAT-02.md"
+    _edit_body(record)
+    text = record.read_text(encoding="utf-8")
+    version = int(re.search(r"^version: (\d+)$", text, re.M).group(1))
+    # A material record at version 2 states what it supersedes; only check
+    # records are exempt, because a check's lineage is its change log alone.
+    text = text.replace(
+        f"version: {version}",
+        f"version: {version + 1}\nsupersedes: K-MAT-02 v{version}",
+        1,
+    )
+    text = text.replace(
+        "## Change log\n",
+        f"## Change log\n- v{version + 1}, 2026-09-23: reworded the body.\n", 1,
+    )
+    record.write_text(text, encoding="utf-8")
+    monkeypatch.chdir(register.parent)
+
+    assert main(["--register", str(register), "--baseline-ref", "HEAD"]) == 0
+
+
+def test_an_unchanged_register_passes_against_its_own_baseline(tmp_path, monkeypatch):
+    """The half must be quiet when nothing moved, or it is not usable in CI."""
+
+    register = _committed_register(tmp_path)
+    monkeypatch.chdir(register.parent)
+
+    assert main(["--register", str(register), "--baseline-ref", "HEAD"]) == 0
+
+
+def test_the_baseline_is_required_unless_a_caller_says_otherwise(tmp_path, monkeypatch):
+    """No baseline argument at all must not mean "skip rule 7 quietly"."""
+
+    register = _committed_register(tmp_path)
+    _edit_body(register / "records" / "mat" / "K-MAT-02.md")
+    monkeypatch.chdir(register.parent)
+
+    # The default ref does not exist in this throwaway repository, so the run
+    # stops rather than reporting a register it did not fully check.
+    assert DEFAULT_BASELINE_REF == "origin/main"
+    assert main(["--register", str(register)]) == EXIT_NO_BASELINE
+
+
+def test_only_an_explicit_no_baseline_skips_the_half(tmp_path, monkeypatch, capsys):
+    register = _committed_register(tmp_path)
+    _edit_body(register / "records" / "mat" / "K-MAT-02.md")
+    monkeypatch.chdir(register.parent)
+
+    # The unbumped change goes unnoticed — which is exactly why saying so out
+    # loud is the only way to get here.
+    assert main(["--register", str(register), "--no-baseline"]) == 0
+    assert "NOT checked" in capsys.readouterr().err
+
+
+def test_ci_runs_the_register_check_against_the_base_ref():
+    """The enforcement lives in the workflow, so the workflow is the evidence.
+
+    Everything above proves the script refuses what it should. This proves CI
+    actually asks it, against a real base ref rather than the nothing a
+    shallow checkout would give it.
+    """
+
+    workflow = yaml.safe_load(
+        Path(".github/workflows/pr_tests.yml").read_text(encoding="utf-8")
+    )
+    steps = [step for job in workflow["jobs"].values() for step in job["steps"]]
+
+    checkout = next(s for s in steps if "actions/checkout" in str(s.get("uses", "")))
+    assert (checkout.get("with") or {}).get("fetch-depth") == 0, (
+        "rule 7 needs the tree as it was; a shallow checkout has no base ref"
+    )
+
+    check = next(
+        s for s in steps if "check_knowledge_register.py" in str(s.get("run", ""))
+    )
+    assert "--baseline-ref" in str(check["run"]), "the version half needs a baseline"
+    assert "--no-baseline" not in str(check["run"]), "CI must not skip the half"
+    assert (check.get("env") or {}).get("PYTHONPATH") == ".", (
+        "a script run by path does not put the repository root on sys.path (#274)"
+    )

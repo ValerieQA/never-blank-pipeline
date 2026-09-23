@@ -10,16 +10,22 @@ applies.
 Run it directly::
 
     python3 scripts/ci/check_knowledge_register.py
-    python3 scripts/ci/check_knowledge_register.py --baseline-ref origin/main
+    python3 scripts/ci/check_knowledge_register.py --baseline-ref HEAD
+    python3 scripts/ci/check_knowledge_register.py --no-baseline
 
 or through `tests/test_294_knowledge_register.py`, which is what puts it in CI.
 
 **The baseline.** Rule 7 has a half that no single tree can answer: whether
 `version` went up when the body changed. That needs the tree as it was, so the
 script reads it from git — every record in `<ref>:knowledge/`, by id, with the
-digest of the surface a version bump has to cover. Without a usable ref that half
-is **skipped and said to be skipped**: a check that quietly compared a record with
-itself would report a clean tree it never examined.
+digest of the surface a version bump has to cover.
+
+A baseline is therefore **required**, and `--baseline-ref` defaults to
+`origin/main`. A ref that was asked for and cannot be read is an error, not a
+note: it used to print to stderr and still exit 0, so the documented invocation
+enforced nine and a half of the ten rules while saying it enforced ten (#328
+review). Skipping that half is now something a caller has to ask for by name,
+with `--no-baseline`, which is honest about what it did not check.
 """
 
 from __future__ import annotations
@@ -40,6 +46,13 @@ from src.knowledge.validator import (
     RecordBaseline,
     validate_register,
 )
+
+#: The tree rule 7 compares against unless a caller names another one.
+DEFAULT_BASELINE_REF = "origin/main"
+
+#: A baseline was asked for and could not be built. Distinct from 1, which is a
+#: register the ten rules refused: this one says the check could not be made.
+EXIT_NO_BASELINE = 2
 
 #: The register, and the client directories whose rule files carry a ladder.
 DEFAULT_REGISTER = Path("knowledge")
@@ -62,13 +75,20 @@ def build_baseline(
 ) -> Optional[dict[str, RecordBaseline]]:
     """Each record in `<ref>:<register_dir>`, by id. ``None`` when git cannot."""
 
-    listing = _git("ls-tree", "-r", "--name-only", ref, "--", str(register_dir))
+    inside = _repo_relative(register_dir)
+    if inside is None:
+        # The register is not in this checkout, so `<ref>:<path>` names nothing
+        # and the listing would come back empty. Empty is indistinguishable
+        # from "the register held no records then", which is the silent
+        # nothing-to-compare this check exists to refuse (#328 review).
+        return None
+    listing = _git("ls-tree", "-r", "--name-only", ref, "--", str(inside))
     if listing is None:
         return None
     baseline: dict[str, RecordBaseline] = {}
     for name in listing.splitlines():
         path = Path(name.strip())
-        if path.suffix != ".md" or not _is_identified(path, register_dir):
+        if path.suffix != ".md" or not _is_identified(path, inside):
             continue
         blob = _git("show", f"{ref}:{path}")
         if blob is None:
@@ -101,23 +121,45 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         help="the client directories whose stream contracts declare a ladder",
     )
     parser.add_argument(
-        "--baseline-ref", default="",
+        "--baseline-ref", default=DEFAULT_BASELINE_REF,
         help=(
             "a git ref holding the register before this change, for rule 7's "
-            "version-increase half (for example origin/main)"
+            f"version-increase half (default: {DEFAULT_BASELINE_REF})"
+        ),
+    )
+    parser.add_argument(
+        "--no-baseline", action="store_true",
+        help=(
+            "check the other nine and a half rules only. Rule 7's "
+            "version-increase half needs an earlier tree, and there is no "
+            "earlier tree at the first commit or outside a checkout — say so "
+            "here rather than letting an unreadable ref pass for one"
         ),
     )
     arguments = parser.parse_args(argv)
 
     baseline = None
-    if arguments.baseline_ref:
+    if arguments.no_baseline:
+        print(
+            "note: --no-baseline, so rule 7's version-increase half was NOT "
+            "checked. Every other rule was.",
+            file=sys.stderr,
+        )
+    else:
         baseline = build_baseline(arguments.baseline_ref, arguments.register)
         if baseline is None:
+            # Fail closed. An unreadable ref used to become "nothing to
+            # compare", which reads as a clean tree and is how a record can
+            # change without its version moving (#328 review).
             print(
-                f"note: {arguments.baseline_ref} is not readable here, so rule 7's "
-                "version-increase half was NOT checked. Every other rule was.",
+                f"{arguments.baseline_ref} cannot be read here, so rule 7's "
+                "version-increase half cannot be checked. A changed record "
+                "could be missing its version bump and this run would not "
+                "know. Fetch the ref, name another with --baseline-ref, or "
+                "say --no-baseline if there really is no earlier tree.",
                 file=sys.stderr,
             )
+            return EXIT_NO_BASELINE
 
     findings = validate_register(
         arguments.register,
@@ -147,6 +189,24 @@ def report(findings: Sequence[Finding], *, register: Path) -> int:
         file=sys.stderr,
     )
     return 1
+
+
+def _repo_relative(path: Path) -> Optional[Path]:
+    """``path`` as git names it, or ``None`` when git does not name it at all.
+
+    `git ls-tree -- <path>` wants a path the repository knows. An absolute one
+    from outside it matches nothing and returns success with no output, so the
+    baseline would be empty rather than missing — and an empty baseline reads
+    as "no record existed before", which passes everything.
+    """
+
+    top = _git("rev-parse", "--show-toplevel")
+    if top is None:
+        return None
+    try:
+        return Path(path).resolve().relative_to(Path(top.strip()).resolve())
+    except ValueError:
+        return None
 
 
 def _is_identified(path: Path, register_dir: Path) -> bool:

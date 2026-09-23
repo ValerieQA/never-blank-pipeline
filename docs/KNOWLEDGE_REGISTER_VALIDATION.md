@@ -137,26 +137,48 @@ proof.
 
 ## In CI
 
-`SATISFIED`, and **no workflow file was edited.**
+`SATISFIED`, by the pytest suite **and** by a step of its own.
 
-`.github/workflows/pr_tests.yml` already runs the complete pytest suite for
-every pull request targeting `main`, and
-`test_the_ci_script_accepts_the_shipped_register` runs
-`scripts/ci/check_knowledge_register.py`'s `main()` over the shipped
-`knowledge/` and `clients/` inside that suite. §8 asks for validation on every
-change to `knowledge/` and to the client folders' rule files; running on every
-pull request is a superset of that, and it cannot be defeated by a path filter
-somebody later gets wrong.
+`.github/workflows/pr_tests.yml` runs the complete pytest suite for every pull
+request targeting `main`, and `test_the_ci_script_accepts_the_shipped_register`
+runs `main()` over the shipped `knowledge/` and `clients/` inside it. §8 asks
+for validation on every change to `knowledge/` and to the client folders' rule
+files; running on every pull request is a superset of that, and it cannot be
+defeated by a path filter somebody later gets wrong.
 
-This is NB-01a's arrangement, unchanged: `scripts/ci/check_ce1_placement.py`
-reaches CI through `tests/test_290_ce1_placement.py::test_the_check_reports_success_over_the_canonical_core`
-in the same suite. The script is also runnable by hand, which is how a keeper
-checks an edit before pushing it:
+That half alone was not enough. Rule 7's version-increase half needs the tree
+as it was, a working tree is not one, and the script used to treat a baseline
+it could not read as nothing to compare — so the documented invocation
+enforced nine and a half of the ten rules while reporting ten (#328 review).
+The workflow now also runs the script directly, against the branch the pull
+request targets, with `fetch-depth: 0` so that ref exists:
+
+```yaml
+- name: Knowledge register (rules 1-10, versions against the base)
+  env:
+    PYTHONPATH: .
+  run: |
+    git fetch --no-tags --depth=1 origin "${{ github.base_ref || 'main' }}"
+    python3 scripts/ci/check_knowledge_register.py \
+      --baseline-ref "origin/${{ github.base_ref || 'main' }}"
+```
+
+It fails closed: a base ref it cannot read stops the job rather than passing.
+`test_ci_runs_the_register_check_against_the_base_ref` holds that wiring in
+place, because a check that CI stops asking for is a check that is gone.
+
+The script is also runnable by hand, which is how a keeper checks an edit
+before pushing it:
 
 ```
-python3 scripts/ci/check_knowledge_register.py
 python3 scripts/ci/check_knowledge_register.py --baseline-ref origin/main
+python3 scripts/ci/check_knowledge_register.py --baseline-ref HEAD
+python3 scripts/ci/check_knowledge_register.py --no-baseline
 ```
+
+`--baseline-ref` defaults to `origin/main`. `--no-baseline` is the only way to
+skip rule 7's version half, and it says on stderr that it did — there is no
+longer a spelling of this command that quietly checks less than it claims.
 
 A refusal prints every finding, then the wording of each rule that fired, then
 what it means: a run started on this register would `SKIP` at signal scope
@@ -167,7 +189,10 @@ with the reason `knowledge_register_invalid`. Fix the file, not the check.
 Rule 7 has a half no single tree can answer: whether `version` went up when
 the body changed. That needs the tree as it was, so the CI script reads it
 from git — every record in `<ref>:knowledge/`, by id, with the digest of the
-surface a version bump has to cover.
+surface a version bump has to cover. The register path is resolved against the
+repository root first: `git ls-tree` matches nothing for a path outside the
+checkout and returns success with no output, and an empty baseline reads as
+"no record existed before", which passes everything.
 
 At run start there is no earlier tree, so that half is CI's alone. Every other
 rule is enforced identically in both places, because both call the same
