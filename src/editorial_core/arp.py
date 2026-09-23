@@ -138,6 +138,7 @@ class StateCode(str, Enum):
     INVENTED_OR_INADMISSIBLE_INTERPRETATION = "invented_or_inadmissible_interpretation"
     FACT_OR_PHRASING_FAILURE = "fact_or_phrasing_failure"
     PLATFORM_KNOWLEDGE_EXPIRED = "platform_knowledge_expired"
+    MANDATORY_KNOWLEDGE_EXCEEDS_CAPACITY = "mandatory_knowledge_exceeds_capacity"
     BUDGET_EXHAUSTED = "budget_exhausted"
     BOUNDARY_REENTRY_EXHAUSTED = "boundary_reentry_exhausted"
 
@@ -200,6 +201,11 @@ _PERMITTED_OUTCOMES: Mapping[StateCode, frozenset[ArpOutcome]] = {
     # outcome for it. A stage that does record the demotion records a DEGRADE:
     # it proceeded on a weaker input.
     StateCode.PLATFORM_KNOWLEDGE_EXPIRED: frozenset({ArpOutcome.DEGRADE}),
+    # Step 4 §9.6: the knowledge that may never be truncated did not fit the
+    # request. There is nothing to degrade to — a hard-policy surface with a
+    # hole in it is not a weaker input, it is a different rule set — so the
+    # stage fails closed before the call and the scope is skipped.
+    StateCode.MANDATORY_KNOWLEDGE_EXCEEDS_CAPACITY: frozenset({ArpOutcome.SKIP}),
     StateCode.BUDGET_EXHAUSTED: frozenset({ArpOutcome.SKIP}),
     StateCode.BOUNDARY_REENTRY_EXHAUSTED: frozenset({ArpOutcome.SKIP}),
 }
@@ -254,6 +260,18 @@ _TIER_LADDER: tuple[KnowledgeTier, ...] = (
 _TIER_RANK: Mapping[KnowledgeTier, int] = {
     tier: rank for rank, tier in enumerate(_TIER_LADDER)
 }
+
+
+def tier_rank(tier: KnowledgeTier) -> Optional[int]:
+    """Where a tier sits on the map §5 ladder: 0 is strongest.
+
+    ``None`` for a tier the ladder does not place, which today is only
+    :attr:`KnowledgeTier.ARCHITECTURAL`. A caller that orders records has to
+    say what it does with one rather than assume a position for it, which is
+    the same reason the precedence check above declines to compare it.
+    """
+
+    return _TIER_RANK.get(tier)
 
 
 class KnowledgeStatus(str, Enum):
