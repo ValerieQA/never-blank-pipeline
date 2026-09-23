@@ -5,9 +5,11 @@ The scheduled entry point of `src/knowledge/maintenance.py`: it scans the
 register and the client rule files, and writes one `expiry_review`
 KnowledgeQueueItem per record per expiry into the durable ledger.
 
-    python3 scripts/knowledge_maintenance.py
-    python3 scripts/knowledge_maintenance.py --dry-run
+    python3 scripts/knowledge_maintenance.py --warning-days 0 --dry-run
     python3 scripts/knowledge_maintenance.py --warning-days 30 --commit
+
+`--warning-days` is required and has no default: §5.2 fixes no duration, so the
+caller states it rather than inheriting a number nobody chose.
 
 **Offline, and outside every run.** §5.2: the job does not depend on a
 publication or a run happening, and it never blocks one. Nothing here reads a

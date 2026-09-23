@@ -22,7 +22,7 @@ on:
   workflow_dispatch:
     inputs:
       warning_days:
-        description: "Days before review_by to queue a record (overrides the repository variable; 0 = window not in use)"
+        description: "Days before review_by to queue a record. Overrides the repository variable for this run. 0 means no advance warning."
         required: false
         type: string
       dry_run:
@@ -57,28 +57,46 @@ jobs:
         id: window
         env:
           # Where the warning window comes from. §5.2 asks for a warning window
-          # and fixes no duration, so no number is written into the code: the
-          # owner sets `KNOWLEDGE_MAINTENANCE_WARNING_DAYS` as a repository
-          # variable, and a manual run may override it.
+          # and fixes no duration, so no number is written into the code, the
+          # command line or this file: the owner states it once, as the
+          # `KNOWLEDGE_MAINTENANCE_WARNING_DAYS` repository variable.
           #
-          # `0` is not a stand-in for a missing value. It means the warning
-          # window is not in use, and the pass queues exactly what the first
-          # half of §5.2 asks for: the records already past `review_by`. That
-          # is the honest behaviour until the owner decides on a window, and it
-          # is why an unset variable does not fail the run.
+          # An unset variable is an error, not a zero. `0` is a real and valid
+          # setting — "no advance warning; queue a record when it is due or
+          # past due" — and that is a different statement from "nobody has
+          # configured this yet". Treating the second as the first would pick a
+          # policy on the owner's behalf, which is the whole reason the
+          # hard-coded default was removed.
+          #
+          # Failing here is safe: this workflow is offline and independent, so
+          # a red run blocks no publication and delays no production run. It
+          # simply says, visibly and daily, that a decision is outstanding.
           FROM_VARIABLE: ${{ vars.KNOWLEDGE_MAINTENANCE_WARNING_DAYS }}
           FROM_DISPATCH: ${{ inputs.warning_days }}
         run: |
-          days="${FROM_DISPATCH:-$FROM_VARIABLE}"
-          days="${days:-0}"
-          case "$days" in
-            ''|*[!0-9]*)
-              echo "::error::warning window must be a whole number of days; got '$days'"
+          # An explicitly supplied dispatch input wins; otherwise the variable.
+          if [ -n "${FROM_DISPATCH}" ]; then
+            days="${FROM_DISPATCH}"
+            source="workflow_dispatch input"
+          else
+            days="${FROM_VARIABLE}"
+            source="KNOWLEDGE_MAINTENANCE_WARNING_DAYS repository variable"
+          fi
+
+          if [ -z "${days}" ]; then
+            echo "::error::The warning window is not configured. Set the repository variable KNOWLEDGE_MAINTENANCE_WARNING_DAYS (Settings → Secrets and variables → Actions → Variables) to the number of days before review_by a record should be queued. Step 4 §5.2 asks for a warning window and deliberately fixes no duration, so this job will not choose one. '0' is a valid setting and means: no advance warning, queue a record only when it is due or past due."
+            exit 1
+          fi
+
+          case "${days}" in
+            *[!0-9]*)
+              echo "::error::The warning window must be a whole number of days, and was '${days}' from the ${source}. Negative and non-numeric values are refused."
               exit 1
               ;;
           esac
-          echo "days=$days" >> "$GITHUB_OUTPUT"
-          echo "Warning window: $days day(s)"
+
+          echo "days=${days}" >> "$GITHUB_OUTPUT"
+          echo "Warning window: ${days} day(s), from the ${source}."
 
       - name: Run the maintenance pass
         env:

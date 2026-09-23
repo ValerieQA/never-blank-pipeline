@@ -105,8 +105,10 @@ what the keeper needs, in terms the public ledger can hold (§3.3, P9).
 ## The warning window
 
 §5.2 asks for "a warning window" before `review_by` and fixes no number, so
-`DEFAULT_WARNING_DAYS` is 14 — a tunable parameter in the sense §5 gives the
-periods themselves, and `--warning-days` on the entry point.
+**nothing here fixes one either** — there is no default in the code, on the
+command line or in the schedule. Who runs the job states the window; see
+"Where the warning window comes from" below.
+
 `test_the_window_decides_what_is_due` runs the scan at 0 and at 200 days and
 watches the due set change, so the window is doing the deciding and not a
 second rule hidden behind it.
@@ -164,15 +166,27 @@ So the window is stated by whoever runs the job:
 | The command line | `--warning-days` is **required**; there is no default |
 | The schedule | the `KNOWLEDGE_MAINTENANCE_WARNING_DAYS` repository variable, overridable per manual run |
 
-**`0` is a real value, not a missing one.** It means the warning window is not in
-use, and the pass queues exactly what the first half of §5.2 asks for: the
-records already past `review_by`. That is why an unset repository variable does
-not fail the run — the job does the architecture-required half of its work while
-the owner decides whether they want notice, and how much.
+**`0` is a real value, and it is not what "unset" means.** `0` says: no advance
+warning — queue a record when it is due or past due, which is the first half of
+§5.2. "Nobody has configured this yet" is a different statement, and reading the
+second as the first would pick a policy on the owner's behalf, which is the
+whole reason the hard-coded default was removed.
 
-`tests/test_297_knowledge_maintenance.py` pins this: one test proves `0` and a
-wide window select different records, and another proves the job refuses to
-choose a window for the caller at all.
+So the scheduled run **requires** `KNOWLEDGE_MAINTENANCE_WARNING_DAYS` to be
+present. If it is absent the workflow fails with a message naming the variable,
+where to set it, and what `0` would mean. Negative, fractional and non-numeric
+values are refused too.
+
+Failing there is safe, and is why the job was built as its own workflow: it is
+offline and independent, so a red run blocks no publication and delays no
+production run (§5.2). It simply says, visibly, that a decision is outstanding.
+
+A `workflow_dispatch` run may pass `warning_days` to override the variable for
+that run; an explicit `0` overrides, because `0` is a value and not an absence.
+
+`tests/test_297_knowledge_maintenance.py` pins the code half: one test proves
+`0` and a wide window select different records, and another proves the job
+refuses to choose a window for the caller at all.
 
 ## Running it by hand
 
