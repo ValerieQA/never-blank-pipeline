@@ -373,6 +373,25 @@ def test_the_same_source_is_its_own_kind_of_resemblance():
     ]
 
 
+def test_two_locators_that_differ_only_in_path_case_are_two_sources():
+    """Only the scheme and the host fold; the path is the server's to spell."""
+
+    portfolio = (
+        PortfolioFingerprint(
+            "fp-other", source_locators=("https://example.test/Recall",)
+        ),
+        PortfolioFingerprint(
+            "fp-earlier", source_locators=("HTTPS://Example.test/recall",)
+        ),
+    )
+
+    selection = _select(portfolio=portfolio)
+
+    assert [item.fingerprint_id for item in selection.portfolio_pressure] == [
+        "fp-earlier"
+    ]
+
+
 def test_pressure_is_recorded_for_a_skipped_signal_too():
     portfolio = (PortfolioFingerprint("fp-earlier", topic_key="supply chain"),)
 

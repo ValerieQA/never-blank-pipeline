@@ -49,6 +49,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Final, Optional, Protocol
+from urllib.parse import urlsplit, urlunsplit
 
 from src.editorial.source_eligibility import (
     SourceEligibilityError,
@@ -620,7 +621,7 @@ def _portfolio_pressure(
     """
 
     topic = _normalized(candidate.topic_key or "")
-    sources = {_normalized(locator) for locator in candidate.source_locators}
+    sources = {_normalized_locator(locator) for locator in candidate.source_locators}
     sources.discard("")
     found: list[PortfolioPressure] = []
     for entry in portfolio:
@@ -629,7 +630,7 @@ def _portfolio_pressure(
                 PortfolioPressure(entry.fingerprint_id, SimilarityKind.SAME_TOPIC)
             )
         if sources and any(
-            _normalized(locator) in sources for locator in entry.source_locators
+            _normalized_locator(locator) in sources for locator in entry.source_locators
         ):
             found.append(
                 PortfolioPressure(entry.fingerprint_id, SimilarityKind.SAME_SOURCE)
@@ -699,3 +700,32 @@ def _normalized(value: str) -> str:
     """One comparable spelling: whitespace collapsed, case folded."""
 
     return " ".join(value.split()).casefold()
+
+
+def _normalized_locator(value: str) -> str:
+    """One comparable spelling for a source locator, case kept where it counts.
+
+    Whitespace is collapsed as everywhere else, but only what a URL declares
+    case-insensitive is folded: the scheme and the host. A path and a query are
+    the origin server's to spell, so ``/Case`` and ``/case`` are two sources
+    until that server says otherwise, and a locator this cannot read as a URL
+    is compared exactly as it was given.
+    """
+
+    collapsed = " ".join(value.split())
+    try:
+        parsed = urlsplit(collapsed)
+    except ValueError:
+        return collapsed
+    if not parsed.scheme or not parsed.netloc:
+        return collapsed
+    userinfo, at, host = parsed.netloc.rpartition("@")
+    return urlunsplit(
+        (
+            parsed.scheme.casefold(),
+            f"{userinfo}{at}{host.casefold()}",
+            parsed.path,
+            parsed.query,
+            parsed.fragment,
+        )
+    )
