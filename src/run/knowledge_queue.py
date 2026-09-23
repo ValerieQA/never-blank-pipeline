@@ -76,6 +76,14 @@ _IDENTIFIER_PATTERN = r"^[A-Za-z0-9_][A-Za-z0-9._+-]*$"
 
 _Identifier = Annotated[str, StringConstraints(pattern=_IDENTIFIER_PATTERN)]
 
+#: The two file statuses expiry demotes (§5), as ``arp.py`` holds them for a
+#: KnowledgeRef. Every other status stays in force and is flagged instead,
+#: because dropping a rule nobody re-checked is the unsafe direction.
+_DEMOTABLE_STATUSES = frozenset({
+    KnowledgeStatus.DESCRIPTIVE,
+    KnowledgeStatus.CANDIDATE,
+})
+
 
 class KnowledgeQueueError(ValueError):
     """A queue item was asked for something its contract refuses."""
@@ -227,12 +235,19 @@ class ExpiryReviewItem(KnowledgeQueueItem):
         if self.effective_status != self.file_status and not (
             self.effective_status is KnowledgeStatus.WEAK_CANDIDATE
             and self.expired
+            # The demotion is the loader's, and the loader makes it for an
+            # expired knowledge record of a demotable status and for nothing
+            # else: a check keeps its `rule_status` however long it has gone
+            # unreviewed (§3, §5), so a check demoted here is an item that
+            # tells the keeper a rule stopped applying when it did not.
+            and self.record_kind is RegisterRecordKind.KNOWLEDGE
+            and self.file_status in _DEMOTABLE_STATUSES
         ):
             raise ValueError(
                 f"{self.record_id} is {self.file_status.value} in its file and "
                 f"{self.effective_status.value} here; §5 demotes an expired "
-                "`descriptive` or `candidate` and leaves every other status as "
-                "written"
+                "`descriptive` or `candidate` knowledge record and leaves every "
+                "other status, and every check, as written"
             )
         if self.record_kind is RegisterRecordKind.CHECK and self.tier is not None:
             raise ValueError(

@@ -519,6 +519,15 @@ def test_the_queue_path_is_not_ignored_by_this_repository():
             "file_status": KnowledgeStatus.APPROVED_RULE,
             "effective_status": KnowledgeStatus.CANDIDATE,
         },
+        # And the one demotion it makes is from `descriptive` or `candidate`:
+        # an expired rule recorded as a weak candidate tells the keeper their
+        # rule stopped applying, which is the reading §5 exists to refuse.
+        {
+            "file_status": KnowledgeStatus.APPROVED_RULE,
+            "effective_status": KnowledgeStatus.WEAK_CANDIDATE,
+        },
+        # A check is flagged and never demoted, whatever its rule status (§3).
+        {"record_kind": RegisterRecordKind.CHECK, "tier": None},
         # A check has a rule status and no tier; a record has a tier.
         {"record_kind": RegisterRecordKind.CHECK},
         {"tier": None},
