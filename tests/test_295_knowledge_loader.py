@@ -82,6 +82,7 @@ from src.run.stage_routing import (
     StageRequest,
     StageRouting,
 )
+from src.editorial_core.topology import EDITORIAL_CORE_STAGE_IDS
 from src.strategy.execution_context import ConfigurationIdentity
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -261,14 +262,63 @@ def test_a_stage_that_holds_no_such_input_reads_the_term_as_false(base):
     assert [item.identity for item in selection.routed] == []
 
 
-def test_a_check_reaches_the_stage_its_own_route_table_names(base):
-    text_check = base.select("S-13", S09_INPUTS)
+def _route_table_stage(loaded):
+    """The stage a check's own `## Route` table leaves, read from its rows.
 
-    assert [check.identity for check in text_check.checks] == ["V-T01"]
+    Read from the record the register shipped rather than from the loader's own
+    `applied_at`, so the assertions below compare documents against placement
+    instead of restating the loader's answer back to it.
+    """
+
+    sources = {row.edge[0] for row in loaded.check.routes if row.edge is not None}
+    return sources.pop() if len(sources) == 1 else None
+
+
+def test_a_check_reaches_the_stage_its_own_route_table_names(base):
+    """§9.3. Placement follows each check's own route table, record by record.
+
+    Stated as a law over whatever the register holds rather than as a list of
+    identities: the canonical seed register grows, and a test that pinned the
+    whole of one stage's checks would fail on every legitimate addition without
+    saying anything about routing. What is actually being claimed is that a
+    check reaches the one stage its rows leave, and reaches no other.
+    """
+
+    placed = {
+        stage: {check.identity for check in base.select(stage, S09_INPUTS).checks}
+        for stage in EDITORIAL_CORE_STAGE_IDS
+    }
+
+    for loaded in base.checks:
+        names = _route_table_stage(loaded)
+        reached = {stage for stage, checks in placed.items() if loaded.identity in checks}
+        assert reached == ({names} if names is not None else set()), (
+            f"{loaded.identity}: route table leaves {names!r}, placed at {sorted(reached)}"
+        )
+
+    # The anchor the law cannot supply: a check the register does place is also
+    # mandatory where it lands, because a hard check is not reducible material.
+    text_check = base.select("S-13", S09_INPUTS)
+    assert "V-T01" in {check.identity for check in text_check.checks}
     assert "V-T01" in {item.identity for item in text_check.mandatory}
-    # V-S10 routes nothing at all, so the register does not place it: the stage
-    # that applies a soft check says so out of its own Step 2 contract.
-    assert base.select("S-11", S09_INPUTS).checks == ()
+
+
+def test_a_check_whose_rows_never_leave_a_stage_is_placed_nowhere(base):
+    """The other half of §9.3, as a claim about records rather than totals.
+
+    `V-S10` is all hints and `V-T05` is terminal, so neither names a stage to be
+    applied at and the register places neither: the stage that applies a soft or
+    terminal check says so itself, out of its own Step 2 contract.
+    """
+
+    for identity in ("V-S10", "V-T05"):
+        loaded = next(check for check in base.checks if check.identity == identity)
+        assert _route_table_stage(loaded) is None
+        assert loaded.applied_at is None
+        for stage in EDITORIAL_CORE_STAGE_IDS:
+            assert identity not in {
+                check.identity for check in base.select(stage, S09_INPUTS).checks
+            }
 
 
 # ----------------------------------------------------------------------
