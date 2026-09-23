@@ -275,7 +275,11 @@ def commit_ledger(
     tried = 0
     for attempt in range(1, attempts + 1):
         tried = attempt
-        if _git(repo, "push") is not None:
+        # Named, and from HEAD: the rebase below puts this commit on top of
+        # ``<remote>/<branch>``, so that is the ref it has to land on. A bare
+        # ``git push`` follows whatever upstream the checkout happens to have,
+        # which is how a step reports COMMITTED after updating another branch.
+        if _git(repo, "push", remote, f"HEAD:{branch}") is not None:
             return LedgerCommitReport(
                 status=LedgerCommitStatus.COMMITTED, attempts=attempt
             )

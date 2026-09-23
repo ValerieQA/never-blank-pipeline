@@ -18,8 +18,10 @@ stay in the 90-day workspace trace, where a reader with access can find them.
 That rule is enforced twice, deliberately:
 
 1. **The shape.** Every field here is an identifier, a count, a flag, a
-   timestamp, a digest, a public URL or a member of a closed vocabulary. A
-   reason is a :class:`~src.editorial_core.arp.StateCode` and a
+   timestamp, a digest, a public URL or a member of a closed vocabulary, and
+   each is declared with the alphabet it is drawn from — so a field that takes
+   an identifier takes an identifier and not a phrase that happens to have no
+   space in it. A reason is a :class:`~src.editorial_core.arp.StateCode` and a
    :class:`ReasonCategory` derived from it, never a sentence — which is what
    keeps the main indicator of autonomous operation countable (map §6.3).
 2. **The validator.** :func:`verify_public_safe` reads a serialized summary and
@@ -43,9 +45,16 @@ from collections.abc import Iterator, Mapping, Sequence
 from datetime import date, datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 from pydantic import ValidationError as _PydanticValidationError
 
 from src.editorial_core.arp import (
@@ -80,6 +89,40 @@ TOKENS_OUT_KEY = "tokens_out"
 
 _DIGEST_PATTERN = r"^sha256:[0-9a-f]{64}$"
 _STAGE_ID_PATTERN = r"^S-(?:0\d|1[0-5])$"
+
+#: What an identifier the ledger takes is made of: ASCII letters and digits,
+#: joined by the characters this repository's own IDs already use — a UUID run
+#: ID, ``never_blank``, ``L_strategy``, ``fp-unit-a-wix``, a publication key.
+#: A closed alphabet and not "no whitespace", because a sentence in a script
+#: that writes without spaces is still a sentence: the field an identifier
+#: arrives in is the only place that knows an identifier was what belonged
+#: there, so that is where it is said.
+_IDENTIFIER_PATTERN = r"^[A-Za-z0-9_][A-Za-z0-9._+-]*$"
+
+#: A scope key is identifiers joined by ``/`` (``unit-a/wix``, §0.3). The
+#: separator is deliberately outside the identifier alphabet, so a client or a
+#: run ID cannot carry one into the path its record is written at.
+_SCOPE_KEY_PATTERN = r"^[A-Za-z0-9_][A-Za-z0-9._+-]*(?:/[A-Za-z0-9._+-]+)*$"
+
+#: The provider's own ID for a published post, whose shape belongs to the
+#: provider and not to us — a LinkedIn URN is colon-separated. Still a token.
+_EXTERNAL_ID_PATTERN = r"^[A-Za-z0-9_][A-Za-z0-9._:+-]*$"
+
+#: An absolute http(s) URL, which is the only kind of URL §6 admits: the URL
+#: of a published post is public because the post is. A string that is not one
+#: is not made public by being put in this field.
+_URL_PATTERN = (
+    r"^https?://[A-Za-z0-9.-]+(?::[0-9]+)?"
+    r"(?:/[A-Za-z0-9._~:/?#@!&'()*+,;=%-]*)?$"
+)
+
+#: The patterns above as the types the models declare. As types rather than as
+#: ``Field(pattern=...)`` so that a tuple of identifiers is checked element by
+#: element, which is where a ``fingerprint_ids`` entry would otherwise slip in.
+_Identifier = Annotated[str, StringConstraints(pattern=_IDENTIFIER_PATTERN)]
+_ScopeKey = Annotated[str, StringConstraints(pattern=_SCOPE_KEY_PATTERN)]
+_ExternalId = Annotated[str, StringConstraints(pattern=_EXTERNAL_ID_PATTERN)]
+_PublicUrl = Annotated[str, StringConstraints(pattern=_URL_PATTERN)]
 
 
 class RunSummaryError(ValueError):
@@ -210,6 +253,12 @@ _RAW_ERROR = re.compile(
     r"at 0x[0-9a-f]+|File \"|[A-Za-z_][A-Za-z0-9_.]*Error\b"
 )
 
+#: Anything that is not printable ASCII, whitespace and control characters
+#: included. The blunt free-text rule (see :func:`verify_public_safe`) is an
+#: alphabet rather than a separator: "it has a space in it" would let a
+#: sentence written in a script that needs no spaces straight through.
+_NOT_A_TOKEN = re.compile(r"[^!-~]")
+
 
 def verify_public_safe(payload: Mapping[str, Any]) -> None:
     """Raise unless this record is one the public ledger takes (§3.3, P9).
@@ -218,11 +267,15 @@ def verify_public_safe(payload: Mapping[str, Any]) -> None:
     nested, because a rule that only covers today's fields stops covering the
     record the moment somebody adds one:
 
-    **Free text.** No string value may contain whitespace. Every legitimate
-    value in a RunSummary is a token — an identifier, a state code, a category,
-    an ISO timestamp, a digest, a URL — and prose is the one thing that always
-    has a space in it. It is a crude rule on purpose: it cannot be argued with,
+    **Free text.** Every string value must be a bare printable-ASCII token: no
+    whitespace, and no character outside that alphabet. Every legitimate value
+    in a RunSummary is such a token — an identifier, a state code, a category,
+    an ISO timestamp, a digest, a URL — and prose is not. Whitespace alone
+    would not do it: a sentence in a script that writes without spaces is
+    still a sentence. It is a crude rule on purpose: it cannot be argued with,
     and a stage that wants to explain itself has the workspace trace for it.
+    What it cannot know is which *kind* of token a field wanted, so the fields
+    say that themselves (``_IDENTIFIER_PATTERN`` and the patterns beside it).
 
     **Money.** No currency symbol, currency code or price wording in a value;
     no field named for an amount; and no fractional number anywhere. Counts and
@@ -264,7 +317,7 @@ def verify_public_safe(payload: Mapping[str, Any]) -> None:
                 f"{where} states a money amount; the ledger carries call and "
                 "token counts and no money (§3.3)"
             )
-        if any(character.isspace() for character in value):
+        if _NOT_A_TOKEN.search(value):
             raise PublicSafetyError(
                 f"{where} is free text; a RunSummary records a state code and a "
                 "closed reason category, and the words stay in the 90-day "
@@ -319,14 +372,14 @@ class RunScope(_Record):
     """
 
     scope: OutcomeScope
-    scope_key: str = Field(min_length=1)
+    scope_key: _ScopeKey
 
 
 class ScopeOutcome(_Record):
     """How one scope ended (§3.3): the outcome, the state code, the category."""
 
     scope: OutcomeScope
-    scope_key: str = Field(min_length=1)
+    scope_key: _ScopeKey
     outcome: ArpOutcome
     #: Absent when nothing was left unresolved — a scope that simply completed
     #: has no §6.2 state, and inventing one would make the indicators count it.
@@ -362,7 +415,7 @@ class ScopeOutcome(_Record):
 class CounterUsage(_Record):
     """One attempt counter, spent against its limit (§3.3)."""
 
-    counter: str = Field(min_length=1)
+    counter: _Identifier
     #: Summed across the scope keys that spent it: a counter is counted per
     #: scope, and what the indicator wants is what the run spent in total.
     used: int = Field(ge=0)
@@ -386,7 +439,7 @@ class DestinationFirstPass(_Record):
     is why they are per destination and not per run.
     """
 
-    destination: str = Field(min_length=1)
+    destination: _Identifier
     plan_first_pass: bool
     text_first_pass: bool
 
@@ -398,10 +451,10 @@ class PublicationResult(_Record):
     post is public — which is why §6 lists them among what the ledger takes.
     """
 
-    destination: str = Field(min_length=1)
+    destination: _Identifier
     published: bool
-    external_id: Optional[str] = None
-    url: Optional[str] = None
+    external_id: Optional[_ExternalId] = None
+    url: Optional[_PublicUrl] = None
     #: Present only for a failure, and always a category (§3.3).
     error_category: Optional[ErrorCategory] = None
 
@@ -428,7 +481,7 @@ class WorkspaceRef(_Record):
     wants the reason it stands for needs both.
     """
 
-    artifact_name: str = Field(min_length=1)
+    artifact_name: _Identifier
     retention_days: int = Field(ge=1)
     expires_on: date
     manifest_digest: str = Field(pattern=_DIGEST_PATTERN)
@@ -438,11 +491,11 @@ class RunSummary(_Record):
     """One run, as the durable ledger keeps it (§3.2, §3.3)."""
 
     schema_version: str = SCHEMA_VERSION
-    run_id: str = Field(min_length=1)
-    client: str = Field(min_length=1)
+    run_id: _Identifier
+    client: _Identifier
     started_at: datetime
-    signal_ids: tuple[str, ...] = Field(min_length=1)
-    unit_ids: tuple[str, ...] = ()
+    signal_ids: tuple[_Identifier, ...] = Field(min_length=1)
+    unit_ids: tuple[_Identifier, ...] = ()
     #: Absent when the run could not resolve its own code identity: a
     #: fabricated one would be worse than none (``src/run/code_identity.py``).
     code_identity: Optional[CodeIdentity] = None
@@ -456,7 +509,7 @@ class RunSummary(_Record):
     calls_total: int = Field(ge=0)
     call_budget_limit: int = Field(ge=1)
     first_pass: tuple[DestinationFirstPass, ...] = ()
-    fingerprint_ids: tuple[str, ...] = ()
+    fingerprint_ids: tuple[_Identifier, ...] = ()
     publications: tuple[PublicationResult, ...] = ()
     #: The AD-03 observation: a unit that looked like two (§3.3).
     split_candidate: bool = False
@@ -466,7 +519,7 @@ class RunSummary(_Record):
     workspace: WorkspaceRef
     ledger_commit: LedgerCommitStatus
     #: Publication keys whose marker could not be made durable (§3.6 point 5).
-    publication_unconfirmed: tuple[str, ...] = ()
+    publication_unconfirmed: tuple[_Identifier, ...] = ()
 
     @field_validator("schema_version", mode="after")
     @classmethod

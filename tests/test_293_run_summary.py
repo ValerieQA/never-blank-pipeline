@@ -32,6 +32,7 @@ from src.run.ledger import LedgerCommitStatus
 from src.run.run_context import ExecutionMode, RunContext, create_run_id
 from src.run.run_manifest import RunManifest
 from src.run.run_summary import (
+    PublicationResult,
     PublicSafetyError,
     ReasonCategory,
     RunScope,
@@ -214,6 +215,40 @@ def test_a_summary_cannot_be_built_around_the_validator():
 
     with pytest.raises(ValidationError):
         _summary(client="never blank, the client")
+
+
+def test_free_text_without_a_space_in_it_is_still_free_text():
+    """A script that writes without spaces writes sentences all the same."""
+
+    with pytest.raises(ValidationError):
+        _summary(client="客户内部机密")
+
+    with pytest.raises(PublicSafetyError, match="free text"):
+        verify_public_safe({"client": "客户内部机密"})
+
+
+def test_a_field_that_holds_an_identifier_holds_nothing_else():
+    """What the blunt rule cannot know: which kind of token belonged here."""
+
+    with pytest.raises(ValidationError):
+        _summary(fingerprint_ids=("fp-1(the-second-attempt)",))
+
+    with pytest.raises(ValidationError):
+        _summary(client="never_blank/../elsewhere")
+
+
+def test_a_publication_url_is_a_url_and_an_external_id_is_an_id():
+    PublicationResult(
+        destination="linkedin",
+        published=True,
+        external_id="urn:li:share:7123",
+        url="https://www.linkedin.com/feed/update/urn:li:share:7123/",
+    )
+
+    with pytest.raises(ValidationError):
+        PublicationResult(
+            destination="linkedin", published=True, url="see-the-workspace-trace"
+        )
 
 
 def test_a_record_read_back_from_the_ledger_is_validated_again():

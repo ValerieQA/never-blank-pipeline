@@ -65,6 +65,15 @@ def _record(work: Path, name: str = "runs/never_blank/2026-09/run-a.json") -> Pa
     return write_record(name, {"run_id": "run-a"}, root=work / STORE)
 
 
+def _branch_head(repository: Path, branch: str = "main") -> str:
+    return subprocess.run(
+        ["git", "-C", str(repository), "rev-parse", branch],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+
+
 def _committed_paths(work: Path) -> list[str]:
     return subprocess.run(
         ["git", "-C", str(work), "show", "--name-only", "--format=", "HEAD"],
@@ -155,6 +164,41 @@ def test_the_commit_step_commits_nothing_but_the_run_s_own_records(tmp_path):
 
     assert report.status is LedgerCommitStatus.COMMITTED
     assert _committed_paths(work) == [f"{STORE}/runs/never_blank/2026-09/run-a.json"]
+
+
+def test_the_push_lands_on_the_remote_and_branch_it_was_given(tmp_path):
+    """The rebase targets those two; the push has to target the same ones.
+
+    A push that followed the checkout's own upstream instead would report
+    ``committed`` having left the ledger branch exactly as it found it.
+    """
+
+    work, remote = _repo(tmp_path)
+    elsewhere = tmp_path / "elsewhere.git"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", elsewhere], check=True)
+    subprocess.run(
+        ["git", "-C", str(work), "remote", "add", "elsewhere", str(elsewhere)],
+        check=True,
+    )
+    # The configured upstream is now the other remote: a bare ``git push``
+    # would go there and not to the ledger the caller asked for.
+    subprocess.run(
+        ["git", "-C", str(work), "push", "-q", "-u", "elsewhere", "main"], check=True
+    )
+    record = _record(work)
+
+    report = commit_ledger(
+        paths=(record,),
+        message=commit_message("run-summary", "run-a", (record,)),
+        repo_root=work,
+        remote="origin",
+        branch="main",
+        retry_seconds=0.0,
+    )
+
+    assert report.status is LedgerCommitStatus.COMMITTED
+    assert _branch_head(remote) == _branch_head(work)
+    assert _branch_head(elsewhere) != _branch_head(work)
 
 
 def test_a_run_that_wrote_no_record_commits_nothing(tmp_path):
