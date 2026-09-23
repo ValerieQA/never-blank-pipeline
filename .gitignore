@@ -33,6 +33,10 @@ data/editorial/*
 # per run, public-safe by construction (§3.3), committed because the
 # indicators it carries must outlive the 90-day run workspace.
 !data/editorial/runs/
+# The keeper's offline queue is tier 2 as well (NB-02d, Step 3 §3.2): the
+# Knowledge Maintenance job writes one expiry_review item per record per
+# expiry, and a question nobody can see is a question nobody answers.
+!data/editorial/knowledge_queue/
 # PNG images are already on Cloudinary — do not store in Git
 reports/content_packages/images/
 # Canonical run workspaces (NB-01b, Step 3 §2.1) are tier 1: everything a run
