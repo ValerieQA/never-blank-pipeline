@@ -1,0 +1,107 @@
+# Knowledge Maintenance — the offline expiry/review pass (Step 4 §5.2, issue #297).
+#
+# §5.2 asks for a job that is "offline and scheduled, for example daily", that does
+# not depend on a publication or a run happening, and that never blocks one. This
+# workflow is that schedule.
+#
+# It is deliberately its own workflow rather than a step inside a publishing one:
+# a production run must not wait for it, and its failure must not stop a run. The
+# two schedules are independent, so this does not read `config/schedule.yaml` —
+# that file is the *publication* schedule, and coupling the keeper's queue to it
+# would be exactly the dependency §5.2 rules out.
+#
+# The daily cadence is §5.2's own example. The hour is an operational choice: it
+# sits well away from the 04:17 ET publishing window so the two never contend for
+# a runner, and `workflow_dispatch` can run it at any time.
+name: Knowledge Maintenance
+
+on:
+  schedule:
+    # 13:00 UTC = 09:00 ET. Daily, per §5.2.
+    - cron: "0 13 * * *"
+  workflow_dispatch:
+    inputs:
+      warning_days:
+        description: "Days before review_by to queue a record. Overrides the repository variable for this run. 0 means no advance warning."
+        required: false
+        type: string
+      dry_run:
+        description: "Report whose review is due and write nothing"
+        required: false
+        default: false
+        type: boolean
+
+# The job writes queue items into the ledger and commits them.
+permissions:
+  contents: write
+
+jobs:
+  maintenance:
+    name: Expiry and review pass
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install --quiet pydantic PyYAML
+
+      - name: Resolve the warning window
+        id: window
+        env:
+          # Where the warning window comes from. §5.2 asks for a warning window
+          # and fixes no duration, so no number is written into the code, the
+          # command line or this file: the owner states it once, as the
+          # `KNOWLEDGE_MAINTENANCE_WARNING_DAYS` repository variable.
+          #
+          # An unset variable is an error, not a zero. `0` is a real and valid
+          # setting — "no advance warning; queue a record when it is due or
+          # past due" — and that is a different statement from "nobody has
+          # configured this yet". Treating the second as the first would pick a
+          # policy on the owner's behalf, which is the whole reason the
+          # hard-coded default was removed.
+          #
+          # Failing here is safe: this workflow is offline and independent, so
+          # a red run blocks no publication and delays no production run. It
+          # simply says, visibly and daily, that a decision is outstanding.
+          FROM_VARIABLE: ${{ vars.KNOWLEDGE_MAINTENANCE_WARNING_DAYS }}
+          FROM_DISPATCH: ${{ inputs.warning_days }}
+        run: |
+          # An explicitly supplied dispatch input wins; otherwise the variable.
+          if [ -n "${FROM_DISPATCH}" ]; then
+            days="${FROM_DISPATCH}"
+            source="workflow_dispatch input"
+          else
+            days="${FROM_VARIABLE}"
+            source="KNOWLEDGE_MAINTENANCE_WARNING_DAYS repository variable"
+          fi
+
+          if [ -z "${days}" ]; then
+            echo "::error::The warning window is not configured. Set the repository variable KNOWLEDGE_MAINTENANCE_WARNING_DAYS (Settings → Secrets and variables → Actions → Variables) to the number of days before review_by a record should be queued. Step 4 §5.2 asks for a warning window and deliberately fixes no duration, so this job will not choose one. '0' is a valid setting and means: no advance warning, queue a record only when it is due or past due."
+            exit 1
+          fi
+
+          case "${days}" in
+            *[!0-9]*)
+              echo "::error::The warning window must be a whole number of days, and was '${days}' from the ${source}. Negative and non-numeric values are refused."
+              exit 1
+              ;;
+          esac
+
+          echo "days=${days}" >> "$GITHUB_OUTPUT"
+          echo "Warning window: ${days} day(s), from the ${source}."
+
+      - name: Run the maintenance pass
+        env:
+          PYTHONPATH: .
+        run: |
+          python3 scripts/knowledge_maintenance.py \
+            --warning-days "${{ steps.window.outputs.days }}" \
+            ${{ (inputs.dry_run && '--dry-run') || '--commit' }}
