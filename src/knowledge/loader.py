@@ -557,16 +557,45 @@ def in_precedence_order(
 ) -> tuple[RoutedKnowledge, ...]:
     """Strongest first: tier, then §5.1 rule 2 inside a tier, then confidence.
 
-    One order serves both purposes. Precedence reads it forwards — the map §5
-    ladder, with a weak candidate below every non-expired record of its own tier
-    whatever the confidences. The size discipline reads it backwards, which is
-    what §9.6's "cut in tier order" cuts: the least authoritative goes first.
+    §5.1 rule 2 is the whole of it: a weak candidate **keeps its tier** and
+    loses to any non-expired record *of that tier*, whatever the confidences.
+    "Within tier 3, the order is therefore: non-expired by confidence, then
+    weak-candidates by confidence."
+
+    This is the conflict ladder, and it is not the cut order — see
+    :func:`in_reduction_order`. One key used to serve both, which is how an
+    expired tier-3 candidate survived a capacity cut ahead of fresh tier-4
+    knowledge (#331 review).
     """
 
-    return tuple(sorted(items, key=_order_key))
+    return tuple(sorted(items, key=_precedence_key))
 
 
-def _order_key(item: RoutedKnowledge) -> tuple[int, int, int, str]:
+def in_reduction_order(
+    items: Sequence[RoutedKnowledge],
+) -> tuple[RoutedKnowledge, ...]:
+    """Most expendable first — what §9.6 cuts when the request is too large.
+
+    §9.6: reducible records "are cut in tier order, then by confidence,
+    **weak-candidates first**". That last clause is a different order from the
+    precedence ladder, not a restatement of it: a weak candidate nothing
+    reinforces goes before every record that still acts on its own, whatever
+    the tiers.
+
+    Which is the point of the demotion. On the ladder a demoted record keeps
+    its tier, because §5.1 rule 2 says so and a conflict is decided inside a
+    tier. Deciding what to *drop* is not a conflict: a record nobody has
+    re-checked is the most expendable thing in the request, and letting its
+    old tier defend it would hand it the authority the demotion took away.
+
+    Reading the precedence order backwards gave exactly that, and no test saw
+    it because within one tier the two orders agree.
+    """
+
+    return tuple(sorted(items, key=_reduction_key))
+
+
+def _precedence_key(item: RoutedKnowledge) -> tuple[int, int, int, str]:
     loaded = item.record
     if loaded is None:
         # A check is never cut and never loses a conflict; it sorts above the
@@ -577,6 +606,34 @@ def _order_key(item: RoutedKnowledge) -> tuple[int, int, int, str]:
         -1 if rank is None else rank,
         1 if item.acts_alone else 0,
         _CONFIDENCE_RANK.get(loaded.confidence, len(_CONFIDENCE_RANK)),
+        item.identity,
+    )
+
+
+def _reduction_key(item: RoutedKnowledge) -> tuple[int, int, int, str]:
+    """Most expendable first, which is the order §9.6 cuts in.
+
+    The reverse of the ladder in every component, with one difference that is
+    the whole point: the unreinforced-weak flag comes first, so a demoted
+    record is cut before anything that still acts on its own, whatever the
+    tiers. After that, the weakest tier goes first and then the lowest
+    confidence — `tier_rank` counts 0 as strongest and `_CONFIDENCE_RANK`
+    counts `high` as 0, so both are negated to put the weak end in front.
+    """
+
+    loaded = item.record
+    if loaded is None:
+        # A check is never cut (§9.6 reduces only descriptive, candidate and
+        # weak-candidate records), so it sorts last: the least expendable
+        # thing in the request.
+        return (2, 0, 0, item.identity)
+    rank = tier_rank(loaded.tier)
+    return (
+        0 if item.acts_alone else 1,
+        # A tier the ladder does not place is the strongest there is, so it is
+        # the last thing to drop rather than the first.
+        1 if rank is None else -rank,
+        -_CONFIDENCE_RANK.get(loaded.confidence, len(_CONFIDENCE_RANK)),
         item.identity,
     )
 

@@ -57,6 +57,7 @@ from src.knowledge.loader import (
     StageInputs,
     fit_to_capacity,
     in_precedence_order,
+    in_reduction_order,
     load_register,
     may_exclude,
     outcome_scope,
@@ -827,3 +828,94 @@ def test_the_label_vocabulary_arrives_with_the_register(base):
 
     assert "material_label" in base.forbidden_terms
     assert "Teardown" in base.forbidden_terms
+
+
+# ----------------------------------------------------------------------
+# §9.6's cut order is not the §5.1 ladder read backwards (#331 review)
+# ----------------------------------------------------------------------
+#
+# §5.1 rule 2 settles a conflict, and a conflict is settled inside a tier: a
+# weak candidate keeps its tier and loses to non-expired records of that tier.
+# §9.6 decides what to drop when the request is too large, and it says
+# "weak-candidates first" — whatever the tiers.
+#
+# One key served both. Read backwards it made an expired tier-3 candidate
+# survive a cut ahead of fresh tier-4 knowledge, which hands a demoted record
+# the authority the demotion took away.
+#
+# K-MAT-10 is tier 3 and past its review_by; K-DST-LI-03 is tier 4 and current.
+
+
+def _ordering_items(base, *identities: str) -> list[RoutedKnowledge]:
+    """Named apart from the module's own `_routed`, which takes a packing."""
+
+    return [
+        RoutedKnowledge.of_record(base.record(identity), applicable=True)
+        for identity in identities
+    ]
+
+
+def test_an_expired_candidate_is_cut_before_fresh_knowledge_of_a_weaker_tier(base):
+    """The reported case, exactly."""
+
+    expired_tier_3, fresh_tier_4 = _ordering_items(base, "K-MAT-10", "K-DST-LI-03")
+    assert expired_tier_3.acts_alone, "K-MAT-10 is past review_by and unreinforced"
+    assert not fresh_tier_4.acts_alone
+
+    assert in_reduction_order([fresh_tier_4, expired_tier_3])[0].identity == "K-MAT-10"
+
+
+def test_the_conflict_ladder_still_lets_it_keep_its_tier(base):
+    """§5.1 rule 2, deliberately unchanged.
+
+    The demotion costs a record the cut order, not the ladder: "it keeps its
+    tier", and it loses to non-expired records *of that tier*. Reading the
+    review's wording as "a weak candidate loses to fresh knowledge of every
+    tier" would rewrite this, so it is asserted rather than left implicit.
+    """
+
+    expired_tier_3, fresh_tier_4 = _ordering_items(base, "K-MAT-10", "K-DST-LI-03")
+
+    ordered = in_precedence_order([fresh_tier_4, expired_tier_3])
+
+    assert [item.identity for item in ordered] == ["K-MAT-10", "K-DST-LI-03"]
+
+
+def test_inside_one_tier_the_two_orders_agree(base):
+    """Which is why nothing caught this: the pair has to cross a tier."""
+
+    expired, fresh = _ordering_items(base, "K-MAT-10", "K-MAT-11")
+
+    assert [i.identity for i in in_precedence_order([expired, fresh])] == [
+        "K-MAT-11", "K-MAT-10",
+    ]
+    assert in_reduction_order([fresh, expired])[0].identity == "K-MAT-10"
+
+
+def test_reinforcement_returns_a_demoted_record_to_the_cut_order_of_its_tier(base):
+    """Reinforced means it counts at its original weight — in both orders."""
+
+    expired, same_tier, fresh_tier_4 = _ordering_items(
+        base, "K-MAT-10", "K-MAT-11", "K-DST-LI-03"
+    )
+    supported = reinforced(expired, base.record("K-MAT-11"))
+    assert not supported.acts_alone
+
+    cut = in_reduction_order([fresh_tier_4, supported, same_tier])
+
+    assert cut[0].identity == "K-DST-LI-03", (
+        "once reinforced it is no longer the most expendable; the weakest tier is"
+    )
+
+
+def test_both_orders_are_total_and_independent_of_input_order(base):
+    """Identity is the last key in each, so neither depends on arrival order."""
+
+    items = _ordering_items(base, "K-MAT-10", "K-MAT-11", "K-MAT-12", "K-DST-LI-03")
+    forwards = [i.identity for i in in_precedence_order(items)]
+    cut = [i.identity for i in in_reduction_order(items)]
+
+    assert forwards == [i.identity for i in in_precedence_order(items[::-1])]
+    assert cut == [i.identity for i in in_reduction_order(items[::-1])]
+    assert set(forwards) == set(cut) and len(cut) == 4
+    assert cut[0] == "K-MAT-10", "the only unreinforced weak candidate goes first"
