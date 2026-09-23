@@ -43,6 +43,7 @@ from src.knowledge.ladder import (
 )
 from src.knowledge.markdown import load_document
 from src.knowledge.validator import (
+    KR_APPROVAL,
     KR_CLIENT_LADDER,
     KR_CONDITION,
     KR_STRUCTURE,
@@ -256,6 +257,54 @@ def test_a_vocabulary_that_has_drifted_from_the_code_refuses_the_register(tmp_pa
 def test_a_register_that_is_not_there_is_refused(tmp_path):
     findings = validate_register(tmp_path / "nothing-here")
     assert [finding.rule for finding in findings] == [KR_STRUCTURE]
+
+
+# ----------------------------------------------------------------------
+# Rule 3's other two arms (Q5, I-12, I-13)
+# ----------------------------------------------------------------------
+
+# The corpus proves rule 3 through an invariant nobody approved, which is one of
+# its three arms. The other two are the two invariants this issue must preserve,
+# and each is one edit to an already accepted check away.
+
+
+def test_a_threshold_on_a_soft_check_needs_an_owner(tmp_path):
+    """I-12: a soft signal acts on a number only where an owner approved one."""
+
+    built = build_register(tmp_path)
+    check = built.register / "checks" / "V-S10.md"
+    check.write_text(
+        check.read_text(encoding="utf-8").replace(
+            "threshold: none", "threshold: 0.7", 1
+        ),
+        encoding="utf-8",
+    )
+
+    findings = validate_register(built.register, client_rule_paths=built.client_paths)
+
+    assert [finding.rule for finding in findings] == [KR_APPROVAL]
+    assert "I-12" in findings[0].message
+
+
+def test_a_hard_check_drawn_from_research_needs_an_owner(tmp_path):
+    """I-13: a research finding does not become a hard check on its own."""
+
+    built = build_register(tmp_path)
+    check = built.register / "checks" / "V-T01.md"
+    # `approved-rule` rather than the invariant it is, so the one thing missing
+    # approval is the research-sourced hard check itself.
+    check.write_text(
+        check.read_text(encoding="utf-8")
+        .replace("rule_status: invariant", "rule_status: approved-rule", 1)
+        .replace("evidence_class: REPO", "evidence_class: RES", 1)
+        .replace("approved_by: owner, 2026-09-21 (I-03, Step 2 S-13)\n", "", 1),
+        encoding="utf-8",
+    )
+
+    findings = validate_register(built.register, client_rule_paths=built.client_paths)
+
+    assert [finding.rule for finding in findings] == [KR_APPROVAL]
+    assert "I-13" in findings[0].message
 
 
 # ----------------------------------------------------------------------
