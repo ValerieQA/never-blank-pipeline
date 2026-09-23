@@ -624,6 +624,12 @@ def reinforced(
             "non-expired record pointing the same way, and two demoted records "
             "do not add up to one"
         )
+    if by.expired_review:
+        raise LoaderError(
+            f"{by.identity} is past its own `review_by`; §5 keeps a rule of that "
+            "kind enforced, which is its status and not its currency, and §5.1 "
+            "rule 3 asks for a record somebody has re-checked"
+        )
     item_rank = tier_rank(item.record.tier)
     by_rank = tier_rank(by.tier)
     if item_rank is not None and by_rank is not None and by_rank > item_rank:

@@ -396,6 +396,23 @@ def test_two_demoted_records_do_not_add_up_to_one(register):
         reinforced(weak, base.record("K-DST-LI-03"))
 
 
+def test_an_expired_rule_does_not_reinforce_a_weak_candidate(base):
+    """§5 keeps an old rule's status, which is not the currency rule 3 asks for.
+
+    `K-DST-TG-05` is a tier-1 `approved-rule` past its `review_by`, so it is
+    neither weak nor of a weaker tier: nothing but the lapsed review itself
+    stands between it and reinforcing `K-MAT-10` into an exclusion.
+    """
+
+    weak = RoutedKnowledge.of_record(base.record("K-MAT-10"), applicable=True)
+    supporter = base.record("K-DST-TG-05")
+
+    assert supporter.is_weak is False and supporter.expired_review is True
+    with pytest.raises(LoaderError, match="past its own `review_by`"):
+        reinforced(weak, supporter)
+    assert may_exclude([weak]) is False
+
+
 def test_a_higher_tier_may_reinforce_a_demoted_record(register):
     base = _with_expired_platform_record(register)
     demoted = RoutedKnowledge.of_record(base.record("K-DST-LI-03"), applicable=True)
