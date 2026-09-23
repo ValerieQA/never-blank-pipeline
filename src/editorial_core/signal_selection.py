@@ -683,13 +683,16 @@ def _stated_values(raw: Any) -> tuple[str, ...]:
     A field may hold one value or several — a signal about two topics states
     two — and a rule passes only when the contract admits every one of them.
     Anything that is not a string or a sequence of strings states nothing: the
-    rule then refuses, which is the fail-closed direction.
+    rule then refuses, which is the fail-closed direction. A sequence holding
+    one member this cannot read states nothing either, rather than stating the
+    members it can: dropping the unreadable one would let the rule pass on a
+    field whose fit the signal never established in full.
     """
 
     if isinstance(raw, str):
-        values = [raw]
-    elif isinstance(raw, Sequence):
-        values = [item for item in raw if isinstance(item, str)]
+        values: list[str] = [raw]
+    elif isinstance(raw, Sequence) and all(isinstance(item, str) for item in raw):
+        values = list(raw)
     else:
         return ()
     normalized = [_normalized(value) for value in values]

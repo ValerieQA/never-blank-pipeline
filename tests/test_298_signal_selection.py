@@ -228,6 +228,16 @@ def test_a_signal_fits_only_when_every_value_it_states_is_admitted():
     assert selection.fit_rules[0].stated == ("supply chain", "celebrity gossip")
 
 
+def test_a_field_with_a_member_the_stage_cannot_read_states_nothing_at_all():
+    """Reading past it would pass the rule on a fit never established in full."""
+
+    selection = _select(_candidate(RISK_LEVEL=["low", 123]))
+
+    assert selection.selected is False
+    assert selection.fit is SignalFit.OUTSIDE_RISK_LEVEL
+    assert selection.fit_rules[1].stated == ()
+
+
 def test_the_fit_rules_are_a_required_input_of_the_stage():
     with pytest.raises(SignalSelectionError, match="required input"):
         ContractFitRules(())
