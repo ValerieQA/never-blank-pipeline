@@ -143,6 +143,18 @@ class StateCode(str, Enum):
     MANDATORY_KNOWLEDGE_EXCEEDS_CAPACITY = "mandatory_knowledge_exceeds_capacity"
     BUDGET_EXHAUSTED = "budget_exhausted"
     BOUNDARY_REENTRY_EXHAUSTED = "boundary_reentry_exhausted"
+    #: The model provider refused or could not be reached: a rate limit, an
+    #: authentication failure, a connection failure, a provider outage. It is
+    #: not a statement about the material. `source_eligibility.py` already
+    #: draws this line — its `SourceEligibilityError.scope` separates a
+    #: candidate-local judgment failure from a provider-wide one — and a stage
+    #: that flattened the two would record "this source was not eligible"
+    #: about a source nobody managed to read.
+    #:
+    #: The name is the one this repository already uses for the condition:
+    #: `ErrorCategory.PROVIDER_UNAVAILABLE` on the publication side, and the
+    #: `provider_unavailable` disposition the live sweep writes.
+    PROVIDER_UNAVAILABLE = "provider_unavailable"
 
 
 #: Which outcomes each state may end in. The union of two columns: the outcome
@@ -215,6 +227,11 @@ _PERMITTED_OUTCOMES: Mapping[StateCode, frozenset[ArpOutcome]] = {
     StateCode.MANDATORY_KNOWLEDGE_EXCEEDS_CAPACITY: frozenset({ArpOutcome.SKIP}),
     StateCode.BUDGET_EXHAUSTED: frozenset({ArpOutcome.SKIP}),
     StateCode.BOUNDARY_REENTRY_EXHAUSTED: frozenset({ArpOutcome.SKIP}),
+    # Nothing to degrade to and nothing to replan: no verdict was produced, so
+    # there is no weaker reading to fall back on. The scope is skipped, and the
+    # state says why, so that a later caller walking a queue can tell this from
+    # a source its own role turned away.
+    StateCode.PROVIDER_UNAVAILABLE: frozenset({ArpOutcome.SKIP}),
 }
 
 

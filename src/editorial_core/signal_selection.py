@@ -73,6 +73,11 @@ STAGE: Final[str] = "S-00"
 #: caller passes in.
 SPLIT_CAP: Final[int] = 1
 
+#: `SourceEligibilityError.scope` for a provider-wide failure. Named here so
+#: the comparison is against the boundary's own token and not a string spelled
+#: twice; `source_eligibility.py` owns that vocabulary.
+PROVIDER_SCOPE: Final[str] = "provider"
+
 
 class SignalSelectionError(RuntimeError):
     """S-00 was asked for a selection its contract cannot honestly make."""
@@ -357,6 +362,23 @@ class EligibilityRecord:
     #: criteria turned this source away" and "nobody could tell" are different
     #: facts, and both are ``SKIP``.
     failed_closed: bool = False
+    #: How far the failure reached, carried across verbatim from
+    #: ``SourceEligibilityError.scope``: ``"candidate"`` for a judgment that
+    #: failed on this one source, ``"provider"`` for a provider that refused
+    #: or could not be reached. ``None`` when a verdict was produced.
+    #:
+    #: A field rather than something a reader parses out of ``reason``:
+    #: ``reason`` is free text and workspace-only, so a distinction kept only
+    #: there cannot be read back by the caller U-2 will eventually put in
+    #: front of this stage.
+    failure_scope: Optional[str] = None
+    #: The sanitized provider account (#188), for provider scope only. The
+    #: shape is `ProviderFailureDiagnostic.as_audit_dict()`, which is built by
+    #: explicit field extraction and never from provider prose — so what is
+    #: persisted here is the provider name, the normalized reason from a fixed
+    #: vocabulary, and the structured error identifiers, and nothing a
+    #: provider wrote in a sentence.
+    provider_failure: Optional[dict[str, Any]] = None
 
     def as_entity(self) -> dict[str, Any]:
         return {
@@ -364,6 +386,8 @@ class EligibilityRecord:
             "eligible": self.eligible,
             "reason": self.reason,
             "failed_closed": self.failed_closed,
+            "failure_scope": self.failure_scope,
+            "provider_failure": self.provider_failure,
         }
 
 
@@ -521,6 +545,17 @@ def select_signal(
 
     eligibility = _judge(candidate, role, transport)
     if not eligibility.eligible:
+        # Which state this is depends on who failed, not on the fact that the
+        # signal is not going ahead. A provider that refused the call has said
+        # nothing about the source, so recording `SOURCE_NOT_ELIGIBLE` would
+        # put an editorial verdict on an outage — and the indicators would
+        # read it as the role being selective.
+        provider_failed = eligibility.failure_scope == PROVIDER_SCOPE
+        state_code = (
+            StateCode.PROVIDER_UNAVAILABLE
+            if provider_failed
+            else StateCode.SOURCE_NOT_ELIGIBLE
+        )
         return _skipped(
             candidate,
             fit=SignalFit.FITS,
@@ -529,7 +564,7 @@ def select_signal(
             eligibility=eligibility,
             outcome=OutcomeRecord(
                 outcome=ArpOutcome.SKIP,
-                state_code=StateCode.SOURCE_NOT_ELIGIBLE,
+                state_code=state_code,
                 scope=OutcomeScope.SIGNAL,
                 scope_key=candidate.signal_id,
                 reason=eligibility.reason,
@@ -592,6 +627,7 @@ def _judge(
     try:
         verdict = judge_source_eligibility(dict(candidate.signal), role, transport)
     except SourceEligibilityError as exc:
+        diagnostic = exc.diagnostic
         return EligibilityRecord(
             role_id=role.role_id,
             eligible=False,
@@ -600,6 +636,17 @@ def _judge(
             # carries no material the artifact should not hold.
             reason=f"the eligibility judgment failed closed: {exc}",
             failed_closed=True,
+            # Kept, not flattened. `source_eligibility.py` separates a failure
+            # that is this candidate's from one that is the provider's, and
+            # says why it matters: "every subsequent call is expected to fail
+            # identically, and each attempt makes a rate limit worse; a caller
+            # walking a queue must stop". S-00 has no queue to stop today, so
+            # this stage does not act on it — it records it, which is what a
+            # later caller needs in order to act.
+            failure_scope=exc.scope,
+            provider_failure=(
+                diagnostic.as_audit_dict() if diagnostic is not None else None
+            ),
         )
     return EligibilityRecord(
         role_id=verdict.role_id,

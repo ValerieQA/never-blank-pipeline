@@ -161,6 +161,14 @@ class ReasonCategory(str, Enum):
     TEXT = "text"
     KNOWLEDGE = "knowledge"
     BUDGET = "budget"
+    #: Not an editorial reason at all. The model provider refused or could not
+    #: be reached, so no judgment was made about the material. It sits beside
+    #: `BUDGET` because that is the other category naming a condition of the
+    #: machinery rather than of the text, and it exists so that a provider
+    #: outage is never counted as contract fit or as a source the role turned
+    #: away — the indicators would otherwise read an outage as editorial
+    #: selectivity.
+    PROVIDER = "provider"
 
 
 #: Every state code, in its category. Total on purpose: a state with no
@@ -194,6 +202,9 @@ _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     # spent — what did not fit is knowledge the stage may not go without.
     StateCode.MANDATORY_KNOWLEDGE_EXCEEDS_CAPACITY: ReasonCategory.KNOWLEDGE,
     StateCode.BUDGET_EXHAUSTED: ReasonCategory.BUDGET,
+    # A provider failure, not a verdict: `source_eligibility.py` fails closed
+    # without producing one, so nothing here describes the source.
+    StateCode.PROVIDER_UNAVAILABLE: ReasonCategory.PROVIDER,
     StateCode.BOUNDARY_REENTRY_EXHAUSTED: ReasonCategory.BOUNDARY,
 }
 

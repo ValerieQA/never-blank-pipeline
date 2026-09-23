@@ -558,3 +558,168 @@ def _write(tmp_path: Path, selection: SignalSelection) -> tuple[RunWorkspace, st
         status=StageStatus.COMPLETED,
     ))
     return workspace, trace.path
+
+
+# ===========================================================================
+# Provider scope: an outage is not a verdict about the source
+# ===========================================================================
+#
+# `source_eligibility.py` separates a judgment that failed on this candidate
+# from one that failed because the provider refused, and says why the
+# difference matters: "every subsequent call is expected to fail identically,
+# and each attempt makes a rate limit worse; a caller walking a queue must
+# stop". S-00 has no queue to stop at cap 1 — these tests do not assert that it
+# stops, because it must not start doing so here. What they assert is that the
+# distinction survives into the record, so the caller U-2 eventually puts in
+# front of this stage can act on it.
+#
+# Live run 32440540565 is the shape being guarded: eight consecutive judgment
+# calls, each refused with `RateLimitError`, one outage amplified into a burst
+# against the provider that was refusing it. Recorded as `SOURCE_NOT_ELIGIBLE`
+# that would read as eight sources the role turned away.
+
+
+def _sdk_error(cls: type, message: str) -> BaseException:
+    # Constructed the way `test_selector_circuit_breaker.py` constructs them:
+    # the classifier is isinstance-anchored, and building these the SDK's own
+    # way needs an httpx response whose package differs across openai versions.
+    exc = cls.__new__(cls)
+    Exception.__init__(exc, message)
+    return exc
+
+
+class _ProviderRefusingTransport:
+    """A transport that fails the way a provider fails."""
+
+    def __init__(self, error: BaseException) -> None:
+        self.error = error
+
+    def complete(self, *, instructions: str, request: str) -> str:
+        raise self.error
+
+
+def _provider_selection(error: BaseException) -> SignalSelection:
+    return _select(transport=_ProviderRefusingTransport(error))
+
+
+@pytest.mark.parametrize(
+    ("factory", "normalized_reason"),
+    [
+        ("RateLimitError", "rate_limit"),
+        ("AuthenticationError", "authentication"),
+        ("APIConnectionError", "connection"),
+        ("InternalServerError", "provider_internal"),
+    ],
+)
+def test_a_provider_failure_is_never_recorded_as_an_ineligible_source(
+    factory: str, normalized_reason: str
+):
+    """The #170 provider set, each one proven not to become a verdict."""
+
+    import openai
+
+    selection = _provider_selection(_sdk_error(getattr(openai, factory), factory))
+
+    assert selection.selected is False
+    assert selection.outcome is not None
+    # The point of the whole repair.
+    assert selection.outcome.state_code is StateCode.PROVIDER_UNAVAILABLE
+    assert selection.outcome.state_code is not StateCode.SOURCE_NOT_ELIGIBLE
+    assert selection.outcome.outcome is ArpOutcome.SKIP
+
+    # Not an editorial reason: an outage counted as contract fit or as source
+    # eligibility would make the indicators read a dead provider as a selective
+    # role.
+    assert reason_category(selection.outcome.state_code) is ReasonCategory.PROVIDER
+
+    assert selection.eligibility is not None
+    assert selection.eligibility.failed_closed is True
+    # Structural, not parsed back out of `reason`.
+    assert selection.eligibility.failure_scope == "provider"
+
+    diagnostic = selection.eligibility.provider_failure
+    assert diagnostic is not None
+    assert diagnostic["normalized_reason"] == normalized_reason
+    assert diagnostic["provider"]
+
+
+def test_the_provider_diagnostic_carries_no_provider_prose():
+    """#188's contract: structured fields only, never the provider's sentence."""
+
+    import openai
+
+    secret_shaped = "Invalid API key sk-proj-ABC123DEF456 supplied"
+    selection = _provider_selection(
+        _sdk_error(openai.AuthenticationError, secret_shaped)
+    )
+
+    diagnostic = selection.eligibility.provider_failure  # type: ignore[union-attr]
+    assert diagnostic is not None
+    assert set(diagnostic) == {
+        "provider",
+        "normalized_reason",
+        "http_status",
+        "provider_error_type",
+        "provider_error_code",
+        "request_id",
+        "sanitized_message",
+    }
+    # The message an authentication error quotes can echo key-shaped material,
+    # so it is not extracted at all.
+    assert "sk-proj-ABC123DEF456" not in json.dumps(diagnostic)
+    assert diagnostic["sanitized_message"] is None
+    # And the normalized reason comes from the fixed vocabulary, not the prose.
+    assert diagnostic["normalized_reason"] == "authentication"
+
+
+def test_a_candidate_scope_failure_still_fails_closed_as_before():
+    """The other half: an unjudgeable candidate is unchanged by this repair."""
+
+    selection = _select(transport=_RefusingTransport())
+
+    assert selection.selected is False
+    assert selection.outcome is not None
+    assert selection.outcome.state_code is StateCode.SOURCE_NOT_ELIGIBLE
+    assert selection.outcome.outcome is ArpOutcome.SKIP
+    assert reason_category(selection.outcome.state_code) is not ReasonCategory.PROVIDER
+
+    assert selection.eligibility is not None
+    assert selection.eligibility.eligible is False
+    assert selection.eligibility.failed_closed is True
+    assert selection.eligibility.failure_scope == "candidate"
+    # No provider failed, so there is nothing to say about one.
+    assert selection.eligibility.provider_failure is None
+
+
+def test_a_verdict_carries_no_failure_scope_at_all():
+    """`failure_scope` is about a failure; a judged source did not have one."""
+
+    selection = _select(transport=_Transport(eligible=True))
+
+    assert selection.selected is True
+    assert selection.eligibility is not None
+    assert selection.eligibility.failed_closed is False
+    assert selection.eligibility.failure_scope is None
+    assert selection.eligibility.provider_failure is None
+
+
+def test_the_distinction_survives_into_the_written_trace(tmp_path: Path):
+    """Structural in the artifact too, not only in memory (§3.3)."""
+
+    import openai
+
+    selection = _provider_selection(_sdk_error(openai.RateLimitError, "429"))
+    workspace, record = _write(tmp_path, selection)
+
+    written = (workspace.run_dir / record).read_text(encoding="utf-8")
+    assert "provider_unavailable" in written
+    assert "source_not_eligible" not in written
+
+    # And the entity the stage wrote carries the scope as a field.
+    entity = json.loads(
+        (workspace.run_dir / "signal" / "selection.json").read_text(encoding="utf-8")
+    )
+    assert entity["eligibility"]["failure_scope"] == "provider"
+    assert entity["eligibility"]["provider_failure"]["normalized_reason"] == (
+        "rate_limit"
+    )
