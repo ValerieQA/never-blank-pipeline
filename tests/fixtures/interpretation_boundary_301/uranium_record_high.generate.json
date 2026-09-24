@@ -1,0 +1,36 @@
+{
+  "interpretations": [
+    {
+      "statement": "Small businesses supplying the sector saw more work.",
+      "kind": "generalization",
+      "support_refs": ["ev-uranium-1"],
+      "counter_refs": ["ev-uranium-2"],
+      "depends_on": [],
+      "audience_transfer": "bounded_external_case",
+      "strength_level": 2,
+      "limits": [],
+      "rationale": "The production series is the only quantity the material carries, and the reading extends it to the suppliers behind it.",
+      "rationale_refs": ["ev-uranium-1"]
+    },
+    {
+      "statement": "Contractors to the sector will see sustained demand.",
+      "kind": "forecast",
+      "support_refs": ["ev-uranium-1"],
+      "counter_refs": [],
+      "depends_on": [],
+      "audience_transfer": "bounded_external_case",
+      "strength_level": 3,
+      "limits": [],
+      "rationale": "The published series is national and corroborated, so the demand it records is read forward.",
+      "rationale_refs": ["ev-uranium-1"]
+    }
+  ],
+  "limits": [
+    {
+      "text": "The published series measures producers, not the businesses around them.",
+      "refs": ["ev-uranium-2"]
+    }
+  ],
+  "ambiguities": [],
+  "reader_connection": null
+}

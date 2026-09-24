@@ -1,0 +1,68 @@
+{
+  "families": [
+    {
+      "record_id": "K-TEMPT-01",
+      "finding": "The only scene the material carries belongs to the founder; a reading that moves it onto the reader has nothing scoped to the reader behind it.",
+      "tempting": {
+        "statement": "You, the reader, bake at night.",
+        "kind": "consequence_for_reader",
+        "support_refs": [],
+        "reason": "invented_scene",
+        "temptation_note": "The second person turns a reported case into the reader's own night, and it is the opening a writer reaches for first."
+      }
+    },
+    {
+      "record_id": "K-TEMPT-02",
+      "finding": "No proposed reading turns the reported sales figure into a wider or different gain.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-03",
+      "finding": "The kitchen and the overnight filling are both in the founder's own recorded account; nothing further is staged.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-04",
+      "finding": "The capacity reading names the mechanism the material records and claims no further cause.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-05",
+      "finding": "The single case is already recorded as a limitation, and no reading is stated across cases.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-06",
+      "finding": "No proposed reading is about what happens next.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-07",
+      "finding": "The material records no cost, inspection or obligation that a reading could enlarge.",
+      "tempting": null
+    }
+  ],
+  "verdicts": [
+    {
+      "index": 1,
+      "admissibility": "admissible",
+      "finding": "The sales figure and the kitchen's daily output are both recorded, and the reading claims nothing beyond the named case.",
+      "reason": null,
+      "temptation_note": null
+    },
+    {
+      "index": 2,
+      "admissibility": "inadmissible",
+      "finding": "Nothing in the core records a hiring decision, an attempt at one, or what it produced.",
+      "reason": "unsupported",
+      "temptation_note": "It is the obvious next sentence after a capacity problem, and a reader supplies it before the evidence does."
+    },
+    {
+      "index": 3,
+      "admissibility": "admissible",
+      "finding": "The kitchen's output is recorded, so the ceiling the reading names is in the material.",
+      "reason": null,
+      "temptation_note": null
+    }
+  ]
+}

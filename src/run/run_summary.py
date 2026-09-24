@@ -231,6 +231,13 @@ _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     # dropped is about the material, and the material is the core.
     StateCode.MATERIAL_DESCRIPTION_FAILED: ReasonCategory.PROVIDER,
     StateCode.MATERIAL_WITHOUT_REFERENCE: ReasonCategory.EVIDENCE,
+    # S-04 (Step 2 §1). Neither model call answering is a condition of the
+    # machinery, counted where S-01's and S-02's are; a boundary that admits
+    # only what the ladder's weakest level allows is about the boundary, and
+    # `boundary` is where a client reads what the texts may mean.
+    StateCode.BOUNDARY_GENERATION_FAILED: ReasonCategory.PROVIDER,
+    StateCode.BOUNDARY_PROBE_FAILED: ReasonCategory.PROVIDER,
+    StateCode.ONLY_LOW_STRENGTH_INTERPRETATION: ReasonCategory.BOUNDARY,
 }
 
 
