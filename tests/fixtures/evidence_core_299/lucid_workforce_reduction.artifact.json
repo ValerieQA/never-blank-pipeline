@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "artifact_id": "research-da56d75c98d25d55",
+  "run_id": "d41c7e26-3a8b-4f19-8e0d-5b7a9c1f3e44",
+  "assignment_id": "da56d75c98d25d55",
+  "signal_id": "da56d75c98d25d55",
+  "configuration_identity": {
+    "schema_version": "1.0",
+    "configuration_id": "never_blank",
+    "configuration_version": "1",
+    "configuration_hash": "sha256:0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0"
+  },
+  "created_at": "2026-06-22T16:20:00+00:00",
+  "sources": [
+    {
+      "source_id": "source-cnbc-lucid-layoffs",
+      "locator": {
+        "kind": "url",
+        "value": "https://www.cnbc.com/2026/06/22/lucid-layoffs-evs.html"
+      },
+      "title": "Lucid to lay off roughly 18% of U.S. workforce, COO Marc Winterhoff leaves",
+      "publisher": "CNBC Business",
+      "publication_time": {
+        "status": "known",
+        "value": "2026-06-22T13:00:00+00:00"
+      },
+      "retrieved_at": "2026-06-22T16:10:00+00:00"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "evidence-lucid-workforce",
+      "claim": "Lucid is cutting roughly 18 percent of its United States workforce as part of a cost-savings plan.",
+      "source_ids": ["source-cnbc-lucid-layoffs"],
+      "support": [
+        {
+          "source_id": "source-cnbc-lucid-layoffs",
+          "excerpt": "Lucid Group is cutting roughly 18% of its U.S. workforce as part of a cost-savings plan.",
+          "location": "summary"
+        },
+        {
+          "source_id": "source-cnbc-lucid-layoffs",
+          "excerpt": "Lucid to lay off roughly 18% of U.S. workforce, COO Marc Winterhoff leaves",
+          "location": "headline"
+        }
+      ],
+      "disposition": "not_assessed"
+    },
+    {
+      "evidence_id": "evidence-lucid-coo",
+      "claim": "Lucid's chief operating officer Marc Winterhoff is leaving effective immediately.",
+      "source_ids": ["source-cnbc-lucid-layoffs"],
+      "support": [
+        {
+          "source_id": "source-cnbc-lucid-layoffs",
+          "excerpt": "The company also announced that COO Marc Winterhoff is leaving effective immediately.",
+          "location": "summary"
+        }
+      ],
+      "disposition": "not_assessed"
+    }
+  ],
+  "uncertainties": [
+    {
+      "uncertainty_id": "uncertainty-lucid-savings",
+      "level": "high",
+      "materiality": "material",
+      "resolution": "unresolved",
+      "description": "Whether the reduction achieves the stated cost savings is not established by the retrieved material.",
+      "evidence_ids": ["evidence-lucid-workforce"],
+      "source_ids": ["source-cnbc-lucid-layoffs"]
+    }
+  ],
+  "readiness": "insufficient"
+}

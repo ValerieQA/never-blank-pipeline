@@ -246,7 +246,10 @@ def test_maintained_decision_lens_profile_is_mechanism_neutral_and_versioned():
     prompt = _normalized(instructions.instructions)
 
     assert instructions.profile_version == "1.2"
-    assert instructions.version == "1.2"
+    # #299 reconciled the profile with the target's audience-transfer semantics
+    # and bumped the instruction revision; the mechanism neutrality this test
+    # guards is untouched by it.
+    assert instructions.version == "1.3"
     assert "nb-supported-mechanism" in prompt
     assert "nb-supported-business-consequence" in prompt
     assert "none is required by this profile" in prompt

@@ -113,10 +113,11 @@ class StateCode(str, Enum):
 
     Closed on purpose: the durable RunSummary counts skips and degrades by
     state code, so a free-text state would make the main indicator of
-    autonomous operation (map §6.3) uncountable. Three codes come from Step 2
+    autonomous operation (map §6.3) uncountable. Several codes come from Step 2
     rather than from §6.2, because Step 2 names them as reasons of their own:
-    ``budget_exhausted`` (§0.4), ``boundary_reentry_exhausted`` (§0.3) and
-    ``source_not_eligible`` (§1, S-00's ARP column).
+    ``budget_exhausted`` (§0.4), ``boundary_reentry_exhausted`` (§0.3),
+    ``source_not_eligible`` (§1, S-00's ARP column) and the S-01 states at the
+    end of this vocabulary (§1, S-01's ARP column).
 
     Later slices add the states their stages need. A stage may not invent one
     in passing: a new state is a new member here, reviewed with the contract
@@ -155,6 +156,39 @@ class StateCode(str, Enum):
     #: `ErrorCategory.PROVIDER_UNAVAILABLE` on the publication side, and the
     #: `provider_unavailable` disposition the live sweep writes.
     PROVIDER_UNAVAILABLE = "provider_unavailable"
+
+    # -- S-01 · Evidence Core and relevance screen (Step 2 §1, ARP) --------
+    #: Retrieval produced no artifact this run may reason from: a
+    #: `FailedResearchResult`, or an envelope whose lineage is not this run's.
+    #: Step 2 §1 names this reason `research_failed`.
+    RESEARCH_FAILED = "research_failed"
+    #: The extended evidence assessment produced no admissible judgment, so no
+    #: record was assessed and no strength was placed on the ladder. It says
+    #: nothing about the material: `assess_artifact` fails closed rather than
+    #: promoting anything, and persists the artifact exactly as retrieved.
+    EVIDENCE_ASSESSMENT_FAILED = "evidence_assessment_failed"
+    #: The core was built and holds no `accepted` or `qualified` claim (E-03's
+    #: usability rule). This is the state that says the material was thin, and
+    #: it is the only one of S-01's that says it.
+    NO_USABLE_EVIDENCE_CLAIM = "no_usable_evidence_claim"
+    #: The #58 relevance screen produced no admissible judgment at all: the
+    #: provider failed, or the answer did not satisfy the decision contract, so
+    #: no decision artifact exists. Not a verdict about the audience.
+    RELEVANCE_SCREEN_FAILED = "relevance_screen_failed"
+    #: Disposition `revise` or `hold`: relevance is not established and the
+    #: screen's own reasons name what is missing. The one S-01 state that is not
+    #: terminal — §1 routes it into S-03 while `L_enrich` allows, and I-01 makes
+    #: that a REPLAN rather than the wait the current engine takes.
+    RELEVANCE_NOT_ESTABLISHED = "relevance_not_established"
+    #: Disposition `reject`, or relevance `irrelevant`: the screen refused the
+    #: signal for the configured audience. Both are one row of §1's ARP column,
+    #: and both are the audience question answered — not the evidence one.
+    SIGNAL_NOT_RELEVANT = "signal_not_relevant"
+    #: Disposition `insufficient_evidence`: the claims may be usable and still
+    #: not carry an audience judgment. Kept apart from
+    #: `no_usable_evidence_claim`, which is about the core holding nothing
+    #: usable at all; a client reading the skip rate is owed the difference.
+    RELEVANCE_EVIDENCE_INSUFFICIENT = "relevance_evidence_insufficient"
 
 
 #: Which outcomes each state may end in. The union of two columns: the outcome
@@ -232,6 +266,24 @@ _PERMITTED_OUTCOMES: Mapping[StateCode, frozenset[ArpOutcome]] = {
     # state says why, so that a later caller walking a queue can tell this from
     # a source its own role turned away.
     StateCode.PROVIDER_UNAVAILABLE: frozenset({ArpOutcome.SKIP}),
+    # Step 2 §1, S-01. Four of its five states are terminal for the same
+    # reason: there is no weaker reading of material nobody retrieved, of a
+    # judgment nobody made, or of an audience the screen refused, and S-01 has
+    # no counter of its own ("None of its own", §1 Limits).
+    StateCode.RESEARCH_FAILED: frozenset({ArpOutcome.SKIP}),
+    StateCode.EVIDENCE_ASSESSMENT_FAILED: frozenset({ArpOutcome.SKIP}),
+    StateCode.NO_USABLE_EVIDENCE_CLAIM: frozenset({ArpOutcome.SKIP}),
+    StateCode.RELEVANCE_SCREEN_FAILED: frozenset({ArpOutcome.SKIP}),
+    # The exception, and the whole point of R-1: `revise`/`hold` is "not a
+    # wait" but a REPLAN into S-03 with a gap, and a SKIP once `L_enrich` is
+    # exhausted. Both outcomes keep this state code, because what was never
+    # established is still relevance when the last attempt is spent.
+    StateCode.RELEVANCE_NOT_ESTABLISHED: frozenset({
+        ArpOutcome.REPLAN,
+        ArpOutcome.SKIP,
+    }),
+    StateCode.SIGNAL_NOT_RELEVANT: frozenset({ArpOutcome.SKIP}),
+    StateCode.RELEVANCE_EVIDENCE_INSUFFICIENT: frozenset({ArpOutcome.SKIP}),
 }
 
 

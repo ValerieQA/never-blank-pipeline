@@ -609,10 +609,14 @@ def test_production_instruction_artifact_loads_with_stable_version():
     assert instructions.profile_id == "never-blank-editorial-lens"
     # Issue #157 bumped the maintained profile to 1.2 when its judgment
     # criteria became mechanism-neutral. These assertions make that semantic
-    # revision explicit rather than allowing a silent prompt edit.
+    # revision explicit rather than allowing a silent prompt edit. Issue #299
+    # bumped the instruction revision to 1.3 for the #151 reconciliation —
+    # relevance plus claim mode feed the boundary, the angle fields are hints —
+    # and left the profile identity at 1.2, because the judgment's fields, its
+    # relevance bar and its claim modes are unchanged.
     assert instructions.profile_version == "1.2"
-    assert instructions.version == "1.2"
-    assert instructions.decision_lens_version == "never-blank-decision-lens/1.2"
+    assert instructions.version == "1.3"
+    assert instructions.decision_lens_version == "never-blank-decision-lens/1.3"
     assert instructions.profile_identity == DecisionLensProfileIdentity(
         lens_profile_id="never-blank-editorial-lens", lens_profile_version="1.2"
     )
@@ -625,7 +629,7 @@ def test_production_evaluator_wires_maintained_instructions_without_live_calls()
     # constructing the production evaluator performs no provider calls; the
     # decision version comes from the maintained artifact
     assert evaluator._instructions.decision_lens_version == (  # noqa: SLF001
-        "never-blank-decision-lens/1.2"
+        "never-blank-decision-lens/1.3"
     )
 
 
