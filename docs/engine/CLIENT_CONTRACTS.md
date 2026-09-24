@@ -17,6 +17,7 @@ another directory — no Engine code changes. That is the Replace-the-client tes
   streams/*.md   one stream contract per stream
   lenses/*.md    0..N lenses
   lists/*.md     0..N shared lists
+  audience.md    the Audience Profile, exactly one
 ```
 
 ## Stream contract
@@ -106,6 +107,27 @@ title for people if wanted, then one bullet per entry, no repeats. Shared
 because one list applies to as many streams as it names. The Engine matches
 case- and whitespace-insensitively and reports which list an entry came from;
 what belongs in the list is client policy.
+
+## Audience Profile
+
+Who the client writes for. Implementation: `src/strategy/audience_profile.py`;
+it is configuration like everything else here, produced by no stage and changed
+by no run. Front matter, both required, nothing else accepted: `profile_id`,
+`version`. Body: a `#` title and notes for people if wanted, then one
+`## Attributes` table — `Attribute | Value | Why`.
+
+What the profile may say is not the client's to widen.
+`knowledge/vocab/audience_attributes.md` declares the attributes a condition may
+read and the closed set of values each one takes; the profile states **every**
+declared attribute, each with a value from that attribute's own set, and may
+state nothing else. A missing attribute, a value outside the set, an attribute
+the vocabulary does not declare, or a value with an empty `Why` stops the run.
+
+It reaches exactly two stages, S-04 and S-08 — Step 1 §295 admits the Audience
+Profile to the interpretation boundary and admits no other client context with
+it, so the client's positions, its lenses and its portfolio have no attribute to
+arrive under. What those two stages get is what `audience <attribute> is
+<value>` conditions are evaluated against (Step 4 §4).
 
 ## Notes for people
 

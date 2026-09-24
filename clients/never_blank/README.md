@@ -13,6 +13,7 @@ voice and under which sourcing policy. Edit these files to change it.
 | `lenses/concession.md` | When an article concedes, and when it says nothing (#268) |
 | `lenses/portable_noun.md` | Mint our own, reuse our own, or none — and the cut test (#268) |
 | `lists/machine_tells.md` | Constructions Never Blank never publishes (#268) |
+| `audience.md` | Who Never Blank writes for, in the attributes `knowledge/vocab/audience_attributes.md` declares (#335). The only client context the interpretation boundary reads |
 | `lenses/revision.md` | How a revision may change an article (D10, temporary until #253) |
 | `lenses/evidence_tension_lens.md` | **Conditional**, `activates_on: [evidence_tension]` (#263): what Never Blank does when a signal's own research evidence contradicts the source's claim — the Evidence Tension Lens |
 | `rules/` | The same rules as knowledge records, in the Step 4 §2 format with front matter (#296). Not read by the Engine yet; `rules/README.md` says what they are for |
