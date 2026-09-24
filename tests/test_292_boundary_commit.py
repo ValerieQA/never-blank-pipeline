@@ -47,6 +47,7 @@ from src.run.boundary_commit import (
     write_interpretation_version,
 )
 from src.run.run_context import ExecutionMode, RunContext, create_run_id
+from src.run.run_manifest import RunInputs
 from src.run.run_workspace import (
     DeciderKind,
     RunWorkspace,
@@ -181,7 +182,10 @@ def test_the_marker_is_written_last_and_carries_the_digests(tmp_path: Path):
     workspace = _workspace(tmp_path)
     commit = _first_commit(workspace)
     workspace.write_stage_record(_stage_record(1))
-    manifest = workspace.write_manifest(_run_context())
+    manifest = workspace.write_manifest(
+        _run_context(),
+        inputs=RunInputs.stated_absent("boundary fixture: no editorial input"),
+    )
 
     # The entity index is assembled from the writes as they happened, so its
     # order is the order the commit wrote in: every E-08 version, then E-09.

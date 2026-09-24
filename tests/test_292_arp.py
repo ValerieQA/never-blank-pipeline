@@ -56,6 +56,7 @@ from src.run.call_budget_arp import (
     DestinationState,
 )
 from src.run.run_context import ExecutionMode, RunContext, create_run_id
+from src.run.run_manifest import RunInputs
 from src.run.run_workspace import (
     DeciderKind,
     RunWorkspace,
@@ -792,7 +793,10 @@ def test_the_trace_carries_the_outcomes_through_the_workspace(tmp_path: Path):
             precedence=(_application("voice preference against platform policy"),),
         )
     )
-    workspace.write_manifest(_run_context(RUN_ID))
+    workspace.write_manifest(
+        _run_context(RUN_ID),
+        inputs=RunInputs.stated_absent("ARP fixture: no editorial input"),
+    )
 
     report = verify_run_workspace(runs_root, RUN_ID)
     assert report.verified_stage_records == 1

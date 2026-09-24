@@ -38,6 +38,7 @@ from src.editorial_core.topology import (
 from src.run.code_identity import CLEAN_POLICY, CodeIdentity
 from src.run.run_context import ExecutionMode, RunContext, create_run_id
 from src.run.run_manifest import (
+    RunInputs,
     RunManifest,
     TopologyDigestMismatchError,
     verify_topology_digest,
@@ -45,6 +46,10 @@ from src.run.run_manifest import (
 from src.strategy.execution_context import ConfigurationIdentity
 
 TS_UTC = datetime(2026, 9, 21, 10, 0, tzinfo=timezone.utc)
+
+#: Every manifest states its §4.1 inputs (#336). These runs are about the
+#: topology digest, which no input touches, so they state that they read none.
+_INPUTS = RunInputs.stated_absent("topology fixture: no editorial input")
 
 
 def _configuration(lens: str) -> ConfigurationIdentity:
@@ -203,8 +208,8 @@ def test_stages_out_of_execution_order_are_refused():
 
 
 def test_two_lens_settings_produce_the_same_topology_digest():
-    first = RunManifest.for_run(_run_context(lens="a"))
-    second = RunManifest.for_run(_run_context(lens="b"))
+    first = RunManifest.for_run(_run_context(lens="a"), inputs=_INPUTS)
+    second = RunManifest.for_run(_run_context(lens="b"), inputs=_INPUTS)
 
     assert (
         first.run_context.configuration_identity
@@ -310,7 +315,7 @@ class _SimulatedRun:
         destinations: tuple[str, ...],
         findings: tuple[_Finding, ...] = (),
     ) -> None:
-        self.manifest = RunManifest.for_run(run_context)
+        self.manifest = RunManifest.for_run(run_context, inputs=_INPUTS)
         self.steps: list[tuple[str, str]] = []
         self.outcomes: list[tuple[str, TerminalOutcome]] = []
         self._unresolved = {(f.stage_id, f.lane): f.occurrences for f in findings}
@@ -464,14 +469,14 @@ def test_a_transition_from_an_unknown_stage_is_refused():
 
 
 def test_every_manifest_carries_the_registry_digest_by_construction():
-    manifest = RunManifest.for_run(_run_context())
+    manifest = RunManifest.for_run(_run_context(), inputs=_INPUTS)
 
     assert manifest.topology_digest == topology_digest()
     verify_topology_digest(manifest)  # does not raise
 
 
 def test_a_run_whose_digest_differs_from_the_registry_fails_verification():
-    stale = RunManifest.for_run(_run_context()).to_dict()
+    stale = RunManifest.for_run(_run_context(), inputs=_INPUTS).to_dict()
     stale["topology_digest"] = "sha256:" + "0" * 64
 
     manifest = RunManifest.from_dict(stale)  # readable, for forensics
@@ -484,7 +489,9 @@ def test_a_manifest_round_trips_through_its_serialization():
     identity = CodeIdentity(
         commit_sha="0" * 40, tracked_worktree_clean=True, clean_policy=CLEAN_POLICY,
     )
-    original = RunManifest.for_run(_run_context(), code_identity=identity)
+    original = RunManifest.for_run(
+        _run_context(), code_identity=identity, inputs=_INPUTS
+    )
 
     restored = RunManifest.from_dict(original.to_dict())
 
@@ -493,7 +500,7 @@ def test_a_manifest_round_trips_through_its_serialization():
 
 
 def test_a_manifest_without_a_topology_digest_is_refused():
-    incomplete = RunManifest.for_run(_run_context()).to_dict()
+    incomplete = RunManifest.for_run(_run_context(), inputs=_INPUTS).to_dict()
     del incomplete["topology_digest"]
 
     with pytest.raises(ValueError, match="topology_digest"):

@@ -33,6 +33,7 @@ from src.run.run_context import ExecutionMode, RunContext, create_run_id
 from src.run.run_manifest import (
     EntityIndexEntry,
     RunDigestMismatchError,
+    RunInputs,
     RunManifest,
 )
 from src.run.run_workspace import (
@@ -62,6 +63,12 @@ from src.run.run_workspace import (
 from src.strategy.execution_context import ConfigurationIdentity
 
 TS_UTC = datetime(2026, 9, 22, 10, 0, tzinfo=timezone.utc)
+
+#: Every manifest states its §4.1 input versions (#336). These runs are about
+#: the workspace, and a fixture run reads no contract, no lens and no
+#: register — so they state that, per input. What the inputs themselves prove
+#: is `tests/test_336_run_inputs.py`.
+_INPUTS = RunInputs.stated_absent("fixture run: no editorial input was read")
 
 _UNIT = "units/unit-291"
 _DEST = f"{_UNIT}/destinations/linkedin"
@@ -262,7 +269,7 @@ def _build_fixture_run(runs_root: Path, run_id: str) -> _FixtureRun:
         workspace.write_stage_record(
             _stage_record(run_id, seq, step.stage, step.scope_key, _refs(entries))
         )
-    manifest = workspace.write_manifest(_run_context(run_id))
+    manifest = workspace.write_manifest(_run_context(run_id), inputs=_INPUTS)
     return _FixtureRun(runs_root, run_id, workspace, manifest)
 
 
@@ -586,7 +593,7 @@ def test_a_stage_claiming_a_file_another_stage_wrote_is_detected(tmp_path):
     workspace.write_stage_record(
         _stage_record(run_id, 1, "S-12", "unit-291/linkedin", _refs([entry]))
     )
-    workspace.write_manifest(_run_context(run_id))
+    workspace.write_manifest(_run_context(run_id), inputs=_INPUTS)
 
     with pytest.raises(WriteOwnershipError, match="which §2.3 gives to S-08"):
         verify_run_workspace(runs_root, run_id)
@@ -728,14 +735,18 @@ def test_nothing_may_be_written_after_the_manifest(fixture_run):
             _stage_record(fixture_run.run_id, 99, "S-15", "run")
         )
     with pytest.raises(RunWorkspaceError, match="nothing follows"):
-        workspace.write_manifest(_run_context(fixture_run.run_id))
+        workspace.write_manifest(
+            _run_context(fixture_run.run_id), inputs=_INPUTS
+        )
 
 
 def test_a_manifest_is_refused_for_another_runs_context(tmp_path):
     workspace = _empty_workspace(tmp_path)
 
     with pytest.raises(RunWorkspaceError, match="belongs to run"):
-        workspace.write_manifest(_run_context(create_run_id()))
+        workspace.write_manifest(
+            _run_context(create_run_id()), inputs=_INPUTS
+        )
     assert not is_complete(workspace.run_dir)
 
 
@@ -870,7 +881,7 @@ def _sealed_run(tmp_path) -> tuple[Path, str, EntityIndexEntry]:
     workspace.write_stage_record(
         _stage_record(run_id, 0, "S-08", "unit-291/linkedin", _refs([entry]))
     )
-    workspace.write_manifest(_run_context(run_id))
+    workspace.write_manifest(_run_context(run_id), inputs=_INPUTS)
     return runs_root, run_id, entry
 
 
@@ -917,7 +928,7 @@ def test_a_reopened_run_refuses_a_second_manifest(tmp_path):
     reopened = RunWorkspace(resolve_editorial_run_dir(runs_root, run_id), run_id)
 
     with pytest.raises(RunWorkspaceError, match="nothing follows"):
-        reopened.write_manifest(_run_context(run_id))
+        reopened.write_manifest(_run_context(run_id), inputs=_INPUTS)
 
 
 def test_reopening_a_finished_run_leaves_it_verifiable(tmp_path):
@@ -961,7 +972,7 @@ def test_a_stage_that_wrote_an_entity_and_no_record_cannot_seal_the_run(tmp_path
     )
 
     with pytest.raises(RunWorkspaceError, match="S-08 wrote entities"):
-        workspace.write_manifest(_run_context(run_id))
+        workspace.write_manifest(_run_context(run_id), inputs=_INPUTS)
 
 
 def test_verification_rejects_a_manifest_whose_artifacts_have_no_record(tmp_path):
@@ -977,7 +988,7 @@ def test_verification_rejects_a_manifest_whose_artifacts_have_no_record(tmp_path
     runs_root, run_id, entry = _sealed_run(tmp_path)
     run_dir = resolve_editorial_run_dir(runs_root, run_id)
     untraced = RunManifest.for_run(
-        _run_context(run_id), None, entities=(entry,), trace=()
+        _run_context(run_id), None, inputs=_INPUTS, entities=(entry,), trace=()
     )
     (run_dir / MANIFEST_NAME).write_text(
         json.dumps(untraced.to_dict()), encoding="utf-8"
@@ -993,7 +1004,9 @@ def test_a_run_that_wrote_nothing_still_seals(tmp_path):
     runs_root, run_id = tmp_path / "editorial_runs", create_run_id()
     workspace = RunWorkspace.create(runs_root, run_id)
 
-    assert workspace.write_manifest(_run_context(run_id)).run_context.run_id == run_id
+    sealed = workspace.write_manifest(_run_context(run_id), inputs=_INPUTS)
+
+    assert sealed.run_context.run_id == run_id
 
 
 def test_a_recorded_stage_that_produced_nothing_is_legitimate(tmp_path):
@@ -1005,7 +1018,7 @@ def test_a_recorded_stage_that_produced_nothing_is_legitimate(tmp_path):
         _stage_record(run_id, 0, "S-08", "unit-291/linkedin", ())
     )
 
-    workspace.write_manifest(_run_context(run_id))
+    workspace.write_manifest(_run_context(run_id), inputs=_INPUTS)
 
     assert verify_run_workspace(runs_root, run_id).run_id == run_id
 
@@ -1029,6 +1042,6 @@ def test_coverage_is_per_stage_not_per_entity(tmp_path):
         _stage_record(run_id, 0, "S-08", "unit-291/linkedin", _refs([first, second]))
     )
 
-    workspace.write_manifest(_run_context(run_id))
+    workspace.write_manifest(_run_context(run_id), inputs=_INPUTS)
 
     assert verify_run_workspace(runs_root, run_id).run_id == run_id
