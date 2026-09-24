@@ -190,6 +190,19 @@ class StateCode(str, Enum):
     #: usable at all; a client reading the skip rate is owed the difference.
     RELEVANCE_EVIDENCE_INSUFFICIENT = "relevance_evidence_insufficient"
 
+    # -- S-02 · Material features and initial assets (Step 2 §1, ARP) ------
+    #: The one S-02 call produced no description this stage may use: the
+    #: transport failed, or the answer did not satisfy the S-02 contract. Like
+    #: S-01's machinery states it says nothing about the material — an empty
+    #: feature vector is not a description of it, so there is nothing to
+    #: degrade to.
+    MATERIAL_DESCRIPTION_FAILED = "material_description_failed"
+    #: A feature, an asset or a note failed the S-02 reference check and was
+    #: dropped. §1 makes this a `DEGRADE` with low confidence and never a
+    #: retry: the description continues without the item, and the trace records
+    #: which item and why.
+    MATERIAL_WITHOUT_REFERENCE = "material_without_reference"
+
 
 #: Which outcomes each state may end in. The union of two columns: the outcome
 #: map §6.2 gives the state, and the terminal outcome Step 2 §5.3 gives its
@@ -284,6 +297,14 @@ _PERMITTED_OUTCOMES: Mapping[StateCode, frozenset[ArpOutcome]] = {
     }),
     StateCode.SIGNAL_NOT_RELEVANT: frozenset({ArpOutcome.SKIP}),
     StateCode.RELEVANCE_EVIDENCE_INSUFFICIENT: frozenset({ArpOutcome.SKIP}),
+    # Step 2 §1, S-02. Nothing to degrade to when the one call produced no
+    # description, and S-02 has no counter of its own ("—", §1 Limits).
+    StateCode.MATERIAL_DESCRIPTION_FAILED: frozenset({ArpOutcome.SKIP}),
+    # "A feature or asset failing the reference check is dropped and recorded
+    # (DEGRADE, low confidence), not retried". Exactly one outcome, because the
+    # stage continues in every case: what is dropped is the item, never the
+    # description.
+    StateCode.MATERIAL_WITHOUT_REFERENCE: frozenset({ArpOutcome.DEGRADE}),
 }
 
 
@@ -781,6 +802,30 @@ class AttemptCounterLedger:
         """Has this scope spent the whole counter?"""
 
         return self.remaining(counter_id, scope_key) <= 0
+
+    def spend_attempt(self, counter_id: str, scope_key: str) -> Optional[int]:
+        """Spend one attempt of a counter no route is taking, or refuse.
+
+        Returns the attempt number just spent, and ``None`` when the counter is
+        already gone. It exists for the one counter §0.3 says a **stage** and
+        not a route consumes: ``L_enrich`` is "consumed by S-03 enrichment
+        rounds", and a round is the stage doing its own work rather than a
+        backward edge, so it has no row in the §5.3 route table to take.
+
+        It therefore returns a count and never an outcome. What a spent counter
+        means is the route table's to say, and :meth:`route` is where that
+        contract is applied; here the ledger only keeps the accounting, so that
+        a round and a route into the same stage spend the one counter the
+        termination argument in §5.3 rests on.
+        """
+
+        limit = self.limit(counter_id)
+        key = (counter_id, self._validated(scope_key))
+        used = self._spent.get(key, 0)
+        if used >= limit:
+            return None
+        self._spent[key] = used + 1
+        return used + 1
 
     def route(
         self,

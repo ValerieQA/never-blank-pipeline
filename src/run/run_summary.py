@@ -226,6 +226,11 @@ _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     # for that audience is the same question `contract_fit` groups for S-00 —
     # asked of the material rather than of the topic or the source.
     StateCode.SIGNAL_NOT_RELEVANT: ReasonCategory.CONTRACT_FIT,
+    # S-02 (Step 2 §1). The one call producing no description is a condition of
+    # the machinery, counted where S-01's three are; an item the reference check
+    # dropped is about the material, and the material is the core.
+    StateCode.MATERIAL_DESCRIPTION_FAILED: ReasonCategory.PROVIDER,
+    StateCode.MATERIAL_WITHOUT_REFERENCE: ReasonCategory.EVIDENCE,
 }
 
 
