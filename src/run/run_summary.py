@@ -161,6 +161,14 @@ class ReasonCategory(str, Enum):
     TEXT = "text"
     KNOWLEDGE = "knowledge"
     BUDGET = "budget"
+    #: Not an editorial reason at all. The model provider refused or could not
+    #: be reached, so no judgment was made about the material. It sits beside
+    #: `BUDGET` because that is the other category naming a condition of the
+    #: machinery rather than of the text, and it exists so that a provider
+    #: outage is never counted as contract fit or as a source the role turned
+    #: away — the indicators would otherwise read an outage as editorial
+    #: selectivity.
+    PROVIDER = "provider"
 
 
 #: Every state code, in its category. Total on purpose: a state with no
@@ -169,6 +177,11 @@ class ReasonCategory(str, Enum):
 #: the contract that produces it.
 _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     StateCode.SIGNAL_OUTSIDE_CONTRACT: ReasonCategory.CONTRACT_FIT,
+    # The role's own source-class criteria turned the signal away (Step 2 §1,
+    # S-00). That is the contract deciding what it may start from, which is the
+    # same question ``contract_fit`` groups, asked of the source rather than of
+    # the topic.
+    StateCode.SOURCE_NOT_ELIGIBLE: ReasonCategory.CONTRACT_FIT,
     StateCode.NO_ASSET_OR_ADMISSIBLE_INTERPRETATION: ReasonCategory.EVIDENCE,
     StateCode.CLIENT_POSITION_MISSING: ReasonCategory.CLIENT_POSITION,
     StateCode.EVIDENCE_CONFLICT_OUTSIDE_ANCHOR: ReasonCategory.EVIDENCE,
@@ -189,6 +202,9 @@ _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     # spent — what did not fit is knowledge the stage may not go without.
     StateCode.MANDATORY_KNOWLEDGE_EXCEEDS_CAPACITY: ReasonCategory.KNOWLEDGE,
     StateCode.BUDGET_EXHAUSTED: ReasonCategory.BUDGET,
+    # A provider failure, not a verdict: `source_eligibility.py` fails closed
+    # without producing one, so nothing here describes the source.
+    StateCode.PROVIDER_UNAVAILABLE: ReasonCategory.PROVIDER,
     StateCode.BOUNDARY_REENTRY_EXHAUSTED: ReasonCategory.BOUNDARY,
 }
 
