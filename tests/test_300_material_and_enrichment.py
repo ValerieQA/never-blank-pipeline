@@ -17,9 +17,10 @@ SL-3's acceptance evidence for the third and fourth stages, as scenarios:
 And the properties the two stages rest on: no label is produced (I-10), a
 calculation is arithmetic code does over usable figures the core holds, a
 positional asset comes only from an approved position of the Client Contract, a
-note that blocks no decision opens no gap, a gap closes only on material of the
-kind it asks for and only in a round that carried its query, the client's
-excluded sources survive the request's directive bound, and a round is
+note that blocks no decision opens no gap, a gap is met only by the material it
+names, a gap closes only on material of the kind it asks for and only in a round
+that carried its query — in the core's closure list as much as in E-07 — the
+client's excluded sources survive the request's directive bound, and a round is
 committed whole or not at all so that the core and its description are never
 two different versions.
 """
@@ -1064,6 +1065,7 @@ def test_a_gap_the_core_already_satisfies_is_abandoned_as_not_needed():
         note_id="note-1",
         kind=GapKind.FIGURE_PROVENANCE,
         description="No figure the subject produced itself.",
+        refs=("evidence-1",),
         blocks=NoteBlock("S-08", "whether an opening may be built on a figure"),
     )
 
@@ -1072,6 +1074,59 @@ def test_a_gap_the_core_already_satisfies_is_abandoned_as_not_needed():
     assert gap.status is GapStatus.ABANDONED
     assert gap.stop_reason is StopReason.NOT_NEEDED
     assert gap.attempts == 0
+
+
+def test_a_provenance_gap_about_another_figure_is_searched_not_dismissed():
+    """What satisfies a gap is the material the gap names. A figure the source
+    produced itself answers a note about *that* figure, and a note asking for
+    the provenance of a second one is a gap the loop still has to search."""
+
+    core = _core(figures=(_figure("48", "USD"), None))
+    note = MaterialNote(
+        note_id="note-1",
+        kind=GapKind.FIGURE_PROVENANCE,
+        description="The second figure is quoted from elsewhere.",
+        refs=("evidence-2",),
+        blocks=NoteBlock("S-08", "whether an opening may be built on a figure"),
+    )
+
+    (gap,) = open_gaps(core=core, assets=(), notes=(note,))
+
+    assert gap.status is GapStatus.OPEN
+    assert gap.stop_reason is None
+
+
+@pytest.mark.parametrize(
+    ("cited", "status"),
+    [
+        (("evidence-1",), GapStatus.ABANDONED),
+        (("evidence-2",), GapStatus.OPEN),
+        ((), GapStatus.OPEN),
+    ],
+)
+def test_an_asset_gap_is_met_only_by_an_asset_over_the_material_it_names(
+    cited: tuple[str, ...], status: GapStatus
+):
+    """An asset gap asks for one asset over named material. An asset the
+    description built over other claims is not that asset, and a note that named
+    no claim at all names nothing to check the assets against."""
+
+    core = _core(figures=(None, None))
+    described = describe_material(
+        core=core, transport=_Describing(assets=(_asset(refs=["evidence-1"]),))
+    )
+    assert described.assets, "the description built the asset to be tested against"
+    note = MaterialNote(
+        note_id="note-1",
+        kind=GapKind.ASSET,
+        description="Nothing here the reader could not get elsewhere.",
+        refs=cited,
+        blocks=NoteBlock("S-04", "whether the signal carries an asset at all"),
+    )
+
+    (gap,) = open_gaps(core=core, assets=described.assets, notes=(note,))
+
+    assert gap.status is status
 
 
 # ===========================================================================
@@ -1416,6 +1471,41 @@ def test_more_gaps_than_the_request_holds_never_drop_an_excluded_source():
     ], (
         "the gap the bound cut is searched in the next round rather than "
         "closed by material the round never asked about"
+    )
+
+
+def test_the_core_records_no_closure_for_a_gap_the_directive_bound_cut():
+    """A core version's closure list and the gaps' own records are one fact. The
+    gap whose query the bound cut was not searched, so the round closes it in
+    neither place — and with the loop's last round spent, the gap S-04 reads is
+    abandoned rather than closed by material nobody asked about."""
+
+    core = _core()
+    counters = AttemptCounterLedger()
+    counters.route(
+        source="S-01",
+        cause=ENRICHMENT_ROUTE_CAUSE,
+        scope_key=SIGNAL,
+        state_code=StateCode.RELEVANCE_NOT_ESTABLISHED,
+    )
+    notes = tuple(
+        _blocking_note(note_id=f"note-{index}")
+        for index in range(1, MAX_DIRECTIVES + 1)
+    )
+
+    enrichment = _enrich(
+        core,
+        notes=notes,
+        counters=counters,
+        request=_request(core, directives=CLIENT_DIRECTIVES + (_excluded(1),)),
+    )
+
+    assert len(enrichment.rounds) == 1
+    (cut,) = enrichment.abandoned
+    assert cut.stop_reason is StopReason.LIMIT_REACHED
+    assert cut.gap_id not in enrichment.core.closed_gaps
+    assert sorted(enrichment.core.closed_gaps) == sorted(
+        gap.gap_id for gap in enrichment.closed
     )
 
 

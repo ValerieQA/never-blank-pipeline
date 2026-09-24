@@ -380,22 +380,28 @@ def open_gaps(
 
     Code's, and deliberately narrow: a note that names no blocked decision
     opens nothing, which is what "it must not collect interesting extras"
-    means in practice. A gap the core already satisfies is opened and
-    abandoned as ``not_needed`` in the same step — it is recorded, because a
-    note that turned out not to block anything is worth reading offline, and it
-    costs no round.
+    means in practice. A gap whose own material the core already holds is
+    opened and abandoned as ``not_needed`` in the same step — it is recorded,
+    because a note that turned out not to block anything is worth reading
+    offline, and it costs no round.
     """
 
-    opened: list[Gap] = []
+    # Each opened gap beside the claims the note behind it cited, which are the
+    # material it says is missing. E-07 carries no references of its own, and
+    # the gaps the relevance screen asks for name no claim at all.
+    opened: list[tuple[Gap, tuple[str, ...]]] = []
     index = 0
     for requested in dict.fromkeys(requested_gaps):
         index += 1
         opened.append(
-            Gap(
-                gap_id=gap_id(core.core_id, index),
-                kind=_SCREEN_GAP_KINDS[requested],
-                description=_SCREEN_BLOCKS[requested],
-                blocks=GapBlocks("S-01", _SCREEN_BLOCKS[requested]),
+            (
+                Gap(
+                    gap_id=gap_id(core.core_id, index),
+                    kind=_SCREEN_GAP_KINDS[requested],
+                    description=_SCREEN_BLOCKS[requested],
+                    blocks=GapBlocks("S-01", _SCREEN_BLOCKS[requested]),
+                ),
+                (),
             )
         )
     for note in notes:
@@ -403,36 +409,66 @@ def open_gaps(
             continue
         index += 1
         opened.append(
-            Gap(
-                gap_id=gap_id(core.core_id, index),
-                kind=note.kind,
-                description=note.description,
-                blocks=GapBlocks(note.blocks.stage, note.blocks.decision),
+            (
+                Gap(
+                    gap_id=gap_id(core.core_id, index),
+                    kind=note.kind,
+                    description=note.description,
+                    blocks=GapBlocks(note.blocks.stage, note.blocks.decision),
+                ),
+                note.refs,
             )
         )
     return tuple(
         (
             replace(gap, status=GapStatus.ABANDONED, stop_reason=StopReason.NOT_NEEDED)
-            if _already_met(gap, core, assets)
+            if _already_met(gap, cited, core, assets)
             else gap
         )
-        for gap in opened
+        for gap, cited in opened
     )
 
 
-def _already_met(gap: Gap, core: EvidenceCore, assets: Sequence[Asset]) -> bool:
-    """Does the core already hold what this gap asks for?
+def _already_met(
+    gap: Gap,
+    cited: Sequence[str],
+    core: EvidenceCore,
+    assets: Sequence[Asset],
+) -> bool:
+    """Does the core already hold the material *this* gap asks for?
 
-    Only the two kinds with a test code can make on the material as it stands.
-    For the rest, what would satisfy the gap is a judgment S-04 makes, so S-03
-    searches rather than deciding it has nothing to search for.
+    Only the two kinds with a test code can make on the material as it stands,
+    and only over the claims the note behind the gap cited: a provenance gap
+    asks for the provenance of one figure and an asset gap for one asset over
+    named material, so any own figure and any asset at all are not tests of
+    them — a note asking about a second figure would be abandoned without ever
+    being searched for. A gap that cites nothing names no material to look for
+    and is searched rather than dismissed against material it is not about. For
+    the other kinds, what would satisfy the gap is a judgment S-04 makes, so
+    S-03 searches rather than deciding it has nothing to search for.
     """
 
+    wanted = set(cited)
+    if not wanted:
+        return False
     if gap.kind is GapKind.FIGURE_PROVENANCE:
-        return any(_is_own_figure(item) for item in core.observations)
+        return wanted <= _own_figure_claims(core)
     if gap.kind is GapKind.ASSET:
-        return bool(assets)
+        return any(wanted <= set(item.refs) for item in assets)
     return False
+
+
+def _own_figure_claims(core: EvidenceCore) -> set[str]:
+    """The claims the core holds over a figure the source produced itself."""
+
+    own = {
+        item.observation_id for item in core.observations if _is_own_figure(item)
+    }
+    return {
+        claim.evidence_claim_id
+        for claim in core.evidence_claims
+        if set(claim.observation_refs) & own
+    }
 
 
 def _is_own_figure(observation: SourceObservation) -> bool:
@@ -751,14 +787,18 @@ def _round(
         added, new_asset=len(described.assets) > len(state.assets)
     )
     # The closure list belongs to the version the closure produced (§2.5), and
-    # which gaps closed is known only once the recomputation has run.
+    # which gaps closed is known only once the recomputation has run. Only the
+    # gaps whose query the request carried, which is the test E-07 is closed on
+    # too: a core naming a gap the loop then abandoned would record a closure no
+    # gap stands behind.
+    carried = {identity for identity, _ in taken}
     committed = replace(
         candidate,
         closed_gaps=candidate.closed_gaps
         + tuple(
             gap.gap_id
             for gap in searched
-            if _closes(gap, added)
+            if gap.gap_id in carried and _closes(gap, added)
         ),
     )
     return _RoundOutcome(
