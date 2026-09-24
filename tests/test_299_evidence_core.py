@@ -11,7 +11,10 @@ SL-3's acceptance evidence for the second stage, as scenarios:
    gone. Not the wait the current engine takes;
 3. the reconciled #58 profile, whose diff is in the pull request: relevance and
    claim mode feed the boundary, and the angle fields are hints — which is
-   asserted here structurally, over what ``for_boundary()`` contains.
+   asserted here structurally, over what ``for_boundary()`` contains. The
+   reconciliation ships as a second instruction artifact behind a flag that is
+   off, and the maintained profile the live research path reads is asserted to
+   still be the revision it was: NB-03b is shadow only.
 
 And the properties the stage rests on: observations are built from the
 artifact's own support references and attributed by code (I-03 at source), the
@@ -66,10 +69,14 @@ from src.editorial_core.evidence_core import (
 )
 from src.editorial_core.relevance_screen import (
     ENRICHMENT_ROUTE_CAUSE,
+    RECONCILED_INSTRUCTIONS_PATH,
+    RECONCILED_PROFILE_FLAG,
     AudienceTransfer,
     RelevanceScreen,
     RelevanceScreenError,
     RequestedGapKind,
+    reconciled_profile_enabled,
+    screen_instructions,
     screen_relevance,
 )
 from src.intake import from_jsonl_signal
@@ -1254,6 +1261,75 @@ def test_relevance_revise_or_hold_routes_to_enrichment(
     ]
 
 
+@dataclass(frozen=True)
+class _Wrapped:
+    """A core built outside the stage, in the shape :func:`_screen` reads."""
+
+    core: EvidenceCore
+    research: NormalizedResearchArtifact
+
+
+def _saved_wrapped(context: _Run, case: str) -> _Wrapped:
+    """One saved artifact, re-addressed to this run and wrapped as E-04.
+
+    The saved files carry the execution identity of the run that recorded them,
+    and #58 refuses a decision for any run but the one in front of it. Only the
+    addressing moves: every source, excerpt, claim and uncertainty is the saved
+    one, and the assessment replayed over it is the saved response.
+    """
+
+    artifact = _saved_artifact(case).model_copy(
+        update={
+            "run_id": context.run.run_id,
+            "assignment_id": context.assignment.assignment_id,
+            "signal_id": context.signal_id,
+            "configuration_identity": context.strategy.identity,
+        }
+    )
+    assessed, assessor = _assess(artifact, _Saved(case))
+    return _Wrapped(
+        core=build_evidence_core(
+            artifact=assessed,
+            assessment=assessor.assessment,
+            core_id=f"core-{case}",
+            ladder=LADDER,
+            client_ceiling=CLIENT_CEILING,
+        ),
+        research=assessed,
+    )
+
+
+def test_a_saved_artifact_the_lens_revises_routes_to_enrichment(tmp_path: Path):
+    """Acceptance evidence 2, on the fixed set rather than on a built artifact.
+
+    ``target_chair_support`` is the saved case that earns a ``revise``: its
+    support does not establish one of its claims, so the artifact reaches the
+    screen at ``needs_review`` with an unresolved uncertainty. The screen sends
+    it to S-03 for the evidence it is missing — where the current engine stops.
+    """
+
+    context = _run(tmp_path)
+    wrapped = _saved_wrapped(context, "target_chair_support")
+    assert wrapped.research.readiness is EvidenceReadiness.NEEDS_REVIEW
+
+    screen = _screen(context, wrapped, _Lens(disposition="revise"))
+
+    assert screen.replans is True
+    outcome = screen.outcome
+    assert outcome is not None
+    assert outcome.outcome is ArpOutcome.REPLAN
+    assert outcome.route_target == "S-03"
+    assert outcome.counter == "L_enrich"
+    assert outcome.state_code is StateCode.RELEVANCE_NOT_ESTABLISHED
+    assessment = screen.assessment
+    assert assessment is not None
+    assert assessment.core_ref == wrapped.core.core_id
+    assert assessment.requested_gaps == (RequestedGapKind.EVIDENCE,)
+    # The judgment that routed it is the one on disk, over the saved evidence.
+    assert (context.run_dir / "decision.json").exists()
+    assert assessment.decision.digest.startswith("sha256:")
+
+
 def test_an_unmet_audience_connection_asks_for_a_reader_connection_gap(
     tmp_path: Path,
 ):
@@ -1464,6 +1540,87 @@ def test_the_angle_fields_are_hints_and_reach_no_later_stage(tmp_path: Path):
     # And the decision artifact still carries them, so nothing was deleted from
     # the #58 contract to achieve it.
     assert ANGLE in (context.run_dir / "decision.json").read_text(encoding="utf-8")
+
+
+# ===========================================================================
+# The reconciled profile, and the production one it did not touch
+# (acceptance evidence 3)
+# ===========================================================================
+
+
+#: The angle requirement of the `proceed` bar, which is what the reconciliation
+#: removes: relevance and claim mode decide, and the angle is a hint (AD-09).
+ANGLE_REQUIREMENT = "a defensible perspective plus a supported editorial angle exist"
+
+
+def _prompt(instructions: DecisionLensInstructions) -> str:
+    """The instruction text as one line, so a wrapped sentence still matches."""
+
+    return " ".join(instructions.instructions.split())
+
+
+def test_the_production_profile_is_the_revision_production_already_ran():
+    """Shadow only: the file the live research path reads has not moved.
+
+    Removing the angle requirement from this artifact would change what a live
+    Friday/Sunday run decides — a signal with direct relevance, sufficient
+    evidence and no compelling angle would become `proceed` where it was
+    `revise`. That is a production behaviour change, so the reconciliation is
+    not in this file.
+    """
+
+    production = DecisionLensInstructions.load()
+
+    assert production.version == "1.2"
+    assert production.decision_lens_version == "never-blank-decision-lens/1.2"
+    assert ANGLE_REQUIREMENT in _prompt(production)
+
+
+def test_the_reconciled_profile_is_a_second_artifact_at_the_same_identity():
+    """Step 5 §1.2's four verdicts, in a file of their own."""
+
+    reconciled = DecisionLensInstructions.load(RECONCILED_INSTRUCTIONS_PATH)
+    prompt = _prompt(reconciled)
+
+    assert reconciled.version == "1.3"
+    assert reconciled.decision_lens_version == "never-blank-decision-lens/1.3"
+    # The profile identity does not move with the instruction revision, so the
+    # reconciled artifact still satisfies the identity the lifecycle expects and
+    # every decision.json already written still revalidates on reuse.
+    assert reconciled.profile_identity == RELEASE1_LENS_PROFILE
+    # `revise`/`hold` are an enrichment request, not a stop.
+    assert "it sends the signal back for more research" in prompt
+    # The angle fields are hints, and the `proceed` bar no longer names them.
+    assert "are recorded as hints and are consumed by nothing" in prompt
+    assert ANGLE_REQUIREMENT not in prompt
+    # Claim mode is what binds S-04, with AD-08's mapping spelled out.
+    assert '"direct_audience_claim" becomes "direct_audience"' in prompt
+
+
+def test_the_reconciled_profile_is_off_unless_a_job_turns_it_on(monkeypatch):
+    """The flag production never sets, which is how 1.3 stays out of it."""
+
+    monkeypatch.delenv(RECONCILED_PROFILE_FLAG, raising=False)
+    assert reconciled_profile_enabled() is False
+    assert screen_instructions().version == "1.2"
+
+    monkeypatch.setenv(RECONCILED_PROFILE_FLAG, "1")
+    assert reconciled_profile_enabled() is True
+    assert screen_instructions().version == "1.3"
+
+
+@pytest.mark.parametrize(
+    ("value", "version"),
+    [(None, "1.2"), ("", "1.2"), ("0", "1.2"), ("off", "1.2"), ("true", "1.3")],
+)
+def test_the_screen_reads_the_flag_out_of_the_environment_it_is_given(
+    value: Optional[str], version: str
+):
+    """A shadow job says so in its own environment, and nothing else does."""
+
+    env = {} if value is None else {RECONCILED_PROFILE_FLAG: value}
+
+    assert screen_instructions(env).version == version
 
 
 # ===========================================================================

@@ -25,11 +25,17 @@ What changes here is not the judgment but what is done with it (Step 5 §1.2):
   whether the material concerns this audience and how the article may speak
   about them.
 
-The reconciled profile (``config/prompts/decision_lens/never_blank.yaml``,
-instruction revision 1.3) says the same four things to the model, which is the
-#151 debt Step 5 §1.2 deferred and then defined. The decision **contract** is
-untouched: ``decision.json`` keeps its schema, so every artifact already written
-still validates and reuse through ``--from-package`` still works.
+The reconciled profile — ``never_blank_reconciled.yaml`` under
+``config/prompts/decision_lens/``, instruction revision 1.3 — says the same four
+things to the model, which is the #151 debt Step 5 §1.2 deferred and then
+defined. It is a **second** artifact, selected by :func:`screen_instructions`
+and only behind a flag that is off by default: its ``proceed`` no longer
+requires an angle, and the live research Friday/Sunday path reads the maintained
+``never_blank.yaml``, which still does. NB-03b is shadow only, and an edit to
+that file is a change to what a live run decides whatever else it is. The
+decision **contract** is untouched either way: ``decision.json`` keeps its
+schema, so every artifact already written still validates and reuse through
+``--from-package`` still works.
 
 ``require_proceed`` is replaced rather than called (§1, Seam): a disposition is
 routed here, not raised. ``DecisionPolicyRecord`` is not consulted at all —
@@ -44,6 +50,7 @@ and §7 (R-1); ``docs/editorial/architecture/06_STEP5_MIGRATION_MAP.md`` §1.2;
 from __future__ import annotations
 
 import hashlib
+import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
@@ -61,7 +68,11 @@ from src.editorial.decision_contract import (
     EditorialClaimMode,
     research_artifact_digest,
 )
-from src.editorial.decision_lens_evaluator import DecisionLensEvaluator
+from src.editorial.decision_lens_evaluator import (
+    DEFAULT_INSTRUCTIONS_PATH,
+    DecisionLensEvaluator,
+    DecisionLensInstructions,
+)
 from src.editorial.decision_lifecycle import (
     DecisionGateError,
     evaluate_and_persist_decision,
@@ -90,6 +101,24 @@ ENRICHMENT_ROUTE_CAUSE: Final[str] = "relevance_revise_or_hold"
 #: Where the enrichment REPLAN goes. Recorded for readers; the target itself
 #: comes from the registry through :class:`AttemptCounterLedger`.
 ENRICHMENT_ROUTE_TARGET: Final[str] = "S-03"
+
+#: The reconciled instruction revision (Step 5 §1.2), as its own artifact beside
+#: the maintained one. Separate rather than an edit because the maintained file
+#: is what the live research path reads, and revision 1.3 drops the angle from
+#: the ``proceed`` bar — on that path the reconciliation would be a change to
+#: what a live run decides, which NB-03b's production-safety line forbids.
+RECONCILED_INSTRUCTIONS_PATH: Final[Path] = (
+    Path(__file__).resolve().parents[2]
+    / "config"
+    / "prompts"
+    / "decision_lens"
+    / "never_blank_reconciled.yaml"
+)
+
+#: What turns the reconciled revision on. Off unless the environment says
+#: otherwise, and nothing in this repository says otherwise, so it is off in
+#: production: a job that wants revision 1.3 sets it in its own environment.
+RECONCILED_PROFILE_FLAG: Final[str] = "NB_RECONCILED_LENS_PROFILE"
 
 
 class RelevanceScreenError(RuntimeError):
@@ -341,6 +370,35 @@ class RelevanceScreen:
 # ===========================================================================
 # The screen
 # ===========================================================================
+
+
+def reconciled_profile_enabled(env: Optional[Mapping[str, str]] = None) -> bool:
+    """Is instruction revision 1.3 turned on for this process?"""
+
+    values: Mapping[str, str] = os.environ if env is None else env
+    return values.get(RECONCILED_PROFILE_FLAG, "").strip().casefold() in {
+        "1",
+        "true",
+        "yes",
+    }
+
+
+def screen_instructions(
+    env: Optional[Mapping[str, str]] = None,
+) -> DecisionLensInstructions:
+    """Which instruction artifact this screen runs the #58 evaluator on.
+
+    The maintained production artifact unless :data:`RECONCILED_PROFILE_FLAG`
+    is on, which is how "current production behaviour is unchanged" holds while
+    the reconciliation exists in the repository: the reconciled revision is a
+    file production never reads and a flag production never sets. The profile
+    identity is the same in both, so either one satisfies the Release 1 lens
+    profile and the decision each writes records which revision judged it.
+    """
+
+    if reconciled_profile_enabled(env):
+        return DecisionLensInstructions.load(RECONCILED_INSTRUCTIONS_PATH)
+    return DecisionLensInstructions.load(DEFAULT_INSTRUCTIONS_PATH)
 
 
 def screen_relevance(

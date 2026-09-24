@@ -34,3 +34,9 @@ a feed item from preserved evidence for the same reason.
 
 Three readiness outcomes across the set, on purpose: only one of them would pass
 the Release 1 READY gate, and Step 2 §1 gives that decision to the ARP instead.
+
+**The `revise` case.** `target_chair_support` is also the saved artifact the
+second piece of acceptance evidence runs on: it reaches the relevance screen at
+`needs_review` with the evidence gap its own rejected claim opened, so a `revise`
+over it routes to enrichment rather than stopping the run
+(`test_a_saved_artifact_the_lens_revises_routes_to_enrichment`).
