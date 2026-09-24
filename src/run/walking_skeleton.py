@@ -22,7 +22,9 @@ The six destination folders in the workspace are what that looks like on disk.
 **The manifest verifies.** Entities go through :class:`RunWorkspace`, so
 create-once, the version in the key and §2.3 write ownership hold; the
 manifest is written last, and ``verify_run_workspace`` is run over the sealed
-result before the run reports success.
+result before the run reports success. It states its §4.1 input versions too
+(#336) — and for a fixture run with pass-through stages that statement is
+that it read none of them, which is the honest one.
 
 **The ledger takes the summary.** The run ends with a public-safe RunSummary
 in ``data/editorial/`` (§3.2) and, when the caller asks for it, a commit. A
@@ -82,7 +84,7 @@ from src.run.ledger import (
     commit_message,
 )
 from src.run.run_context import ExecutionMode, RunContext, create_run_id
-from src.run.run_manifest import EntityIndexEntry, RunManifest
+from src.run.run_manifest import EntityIndexEntry, RunInputs, RunManifest
 from src.run.run_summary import (
     DestinationFirstPass,
     RunScope,
@@ -118,6 +120,16 @@ SKELETON_COMPONENT = "walking-skeleton"
 #: Written into every entity body. A reader that finds one of these files must
 #: be able to tell at a glance that it carries no editorial content.
 PASS_THROUGH_MARKER = "pass_through"
+
+#: What the manifest states for every §4.1 input when the caller supplies no
+#: input versions. A stage with no logic reads no contract, no lens and no
+#: register, so there is nothing to record — and the manifest says that rather
+#: than leaving the section out, because "the run read none" and "the run did
+#: not say" are different facts about a run (#336).
+SKELETON_READS_NO_INPUT = (
+    "the walking skeleton is a fixture shadow run: every stage is a typed "
+    "pass-through and reads no editorial input"
+)
 
 #: §2.1: the workspace is one Actions artifact per run, 90 days.
 WORKSPACE_RETENTION_DAYS = 90
@@ -627,6 +639,7 @@ def run_walking_skeleton(
     commit_attempts: int = DEFAULT_PUSH_ATTEMPTS,
     commit_retry_seconds: float = DEFAULT_RETRY_SECONDS,
     code_identity: Optional[CodeIdentity] = None,
+    inputs: Optional[RunInputs] = None,
 ) -> SkeletonRun:
     """Run the canonical topology end to end as pass-throughs, and report.
 
@@ -634,6 +647,11 @@ def run_walking_skeleton(
     because nobody said otherwise would be a production effect, and this slice
     has none. With it on, a failed commit is recorded in the report and the run
     still returns normally (§3.1).
+
+    ``inputs`` are the §4.1 input versions the manifest states. A caller that
+    loaded a register or a client contract hands them in (``run_inputs``);
+    without them the run states, per input, that a fixture shadow run read
+    none — see :data:`SKELETON_READS_NO_INPUT`.
 
     Raises only when the run cannot honestly be made: a destination list that
     is not the canonical six, a registry stage with no pass-through, or a
@@ -675,7 +693,15 @@ def run_walking_skeleton(
                 execution=execution,
             ))
 
-    manifest = workspace.write_manifest(context, identity)
+    manifest = workspace.write_manifest(
+        context,
+        identity,
+        inputs=(
+            inputs
+            if inputs is not None
+            else RunInputs.stated_absent(SKELETON_READS_NO_INPUT)
+        ),
+    )
     verification = verify_run_workspace(workspace.run_dir.parent, context.run_id)
 
     ledger = _write_ledger(

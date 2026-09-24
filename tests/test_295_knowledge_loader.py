@@ -67,6 +67,7 @@ from src.knowledge.loader import (
 from src.knowledge.validator import validate_register
 from src.knowledge.vocabulary import load_vocabularies
 from src.run.run_context import ExecutionMode, RunContext, create_run_id
+from src.run.run_inputs import run_inputs
 from src.run.run_workspace import (
     DeciderKind,
     RunWorkspace,
@@ -752,7 +753,11 @@ def _fixture_trace(base: KnowledgeBase, tmp_path: Path) -> Trace:
             status=StageStatus.COMPLETED,
         )
     )
-    workspace.write_manifest(_run_context(run_id))
+    workspace.write_manifest(
+        _run_context(run_id),
+        # The register this run actually loaded, stated as §4.1 asks (#336).
+        inputs=run_inputs(knowledge=base, register_dir=tmp_path / "register"),
+    )
     return Trace(
         run_dir=workspace.run_dir,
         record=json.loads(

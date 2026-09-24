@@ -68,8 +68,10 @@ from src.run.code_identity import CodeIdentity
 from src.run.run_context import RunContext
 from src.run.run_manifest import (
     EntityIndexEntry,
+    RunInputs,
     RunManifest,
     TraceIndexEntry,
+    verify_input_digests,
     verify_run_digest,
     verify_topology_digest,
 )
@@ -669,6 +671,8 @@ class RunWorkspace:
         self,
         run_context: RunContext,
         code_identity: Optional[CodeIdentity] = None,
+        *,
+        inputs: RunInputs,
     ) -> RunManifest:
         """Write ``manifest.json`` last, and seal the workspace (§4.3).
 
@@ -676,6 +680,11 @@ class RunWorkspace:
         it. Writing it seals the workspace: every writer here refuses
         afterwards, so "the manifest is written last" is something the code
         enforces rather than something the caller remembers.
+
+        ``inputs`` is required and has no default: the workspace assembles the
+        entity and trace indexes from the writes it performed, but what a run
+        read is the harness's knowledge, and a default would let a run state
+        nothing about its inputs by saying nothing (§4.1, #336).
         """
 
         self._refuse_when_sealed("write the manifest")
@@ -696,6 +705,7 @@ class RunWorkspace:
         manifest = RunManifest.for_run(
             run_context,
             code_identity,
+            inputs=inputs,
             entities=tuple(self._entities),
             trace=tuple(self._trace),
         )
@@ -799,7 +809,7 @@ def verify_run_workspace(runs_root: Path, run_id: str) -> RunWorkspaceReport:
 
     1. the run is complete — it has a manifest, which strictly reloads, binds
        to this ``run_id``, records the canonical topology and carries the
-       digest of its own index;
+       digest of its own index and of the §4.1 inputs it executed against;
     2. every indexed file exists and still digests to what the manifest says;
     3. nothing else is in the workspace: an unindexed file is either a write
        the run did not record or one that arrived after it;
@@ -832,6 +842,7 @@ def _verified_workspace(
             f"{manifest.run_context.run_id!r}, not to {run_id!r}"
         )
     verify_topology_digest(manifest)
+    verify_input_digests(manifest)
     verify_run_digest(manifest)
     uncovered = uncovered_writer_stages(manifest.entities, manifest.trace)
     if uncovered:

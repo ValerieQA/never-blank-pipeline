@@ -30,7 +30,7 @@ from src.editorial_core.topology import CANONICAL_TOPOLOGY
 from src.run.code_identity import CLEAN_POLICY, CodeIdentity
 from src.run.ledger import LedgerCommitStatus
 from src.run.run_context import ExecutionMode, RunContext, create_run_id
-from src.run.run_manifest import RunManifest
+from src.run.run_manifest import RunInputs, RunManifest
 from src.run.run_summary import (
     PublicationResult,
     PublicSafetyError,
@@ -61,6 +61,11 @@ _WIX = f"{_UNIT}/wix"
 _LINKEDIN = f"{_UNIT}/linkedin"
 
 _DIGEST = "sha256:" + "a" * 64
+
+#: The §4.1 inputs the manifests behind these summaries state (#336). The
+#: summary reads only the topology digest from a manifest, so these runs state
+#: that they read no editorial input.
+_INPUTS = RunInputs.stated_absent("summary fixture: no editorial input")
 
 
 def _run_context(run_id: str | None = None) -> RunContext:
@@ -113,7 +118,7 @@ def _summary(**overrides: Any) -> RunSummary:
     context = _run_context()
     fields: dict[str, Any] = dict(
         run_context=context,
-        manifest=RunManifest.for_run(context),
+        manifest=RunManifest.for_run(context, inputs=_INPUTS),
         records=(),
         scopes=(RunScope(scope=OutcomeScope.SIGNAL, scope_key=_SIGNAL),),
         client="never_blank",
@@ -429,7 +434,7 @@ def test_a_run_cannot_claim_more_calls_than_its_budget_allowed():
 
 def test_the_summary_is_keyed_by_client_month_and_run():
     context = _run_context()
-    summary = _summary(run_context=context, manifest=RunManifest.for_run(context))
+    summary = _summary(run_context=context, manifest=RunManifest.for_run(context, inputs=_INPUTS))
 
     assert summary.relative_path() == (
         f"runs/never_blank/2026-09/{context.run_id}.json"
@@ -438,7 +443,7 @@ def test_the_summary_is_keyed_by_client_month_and_run():
 
 def test_the_summary_states_the_topology_the_run_executed():
     context = _run_context()
-    manifest = RunManifest.for_run(context)
+    manifest = RunManifest.for_run(context, inputs=_INPUTS)
 
     summary = _summary(run_context=context, manifest=manifest)
 
