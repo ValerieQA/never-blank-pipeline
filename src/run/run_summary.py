@@ -161,13 +161,14 @@ class ReasonCategory(str, Enum):
     TEXT = "text"
     KNOWLEDGE = "knowledge"
     BUDGET = "budget"
-    #: Not an editorial reason at all. The model provider refused or could not
-    #: be reached, so no judgment was made about the material. It sits beside
-    #: `BUDGET` because that is the other category naming a condition of the
-    #: machinery rather than of the text, and it exists so that a provider
-    #: outage is never counted as contract fit or as a source the role turned
-    #: away — the indicators would otherwise read an outage as editorial
-    #: selectivity.
+    #: Not an editorial reason at all. A provider — a model provider or a
+    #: research retrieval provider — refused, could not be reached, or returned
+    #: nothing the engine may use, so no judgment was made about the material.
+    #: It sits beside `BUDGET` because that is the other category naming a
+    #: condition of the machinery rather than of the text, and it exists so that
+    #: a provider outage is never counted as contract fit, as a source the role
+    #: turned away or as thin evidence — the indicators would otherwise read an
+    #: outage as editorial selectivity.
     PROVIDER = "provider"
 
 
@@ -206,6 +207,25 @@ _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     # without producing one, so nothing here describes the source.
     StateCode.PROVIDER_UNAVAILABLE: ReasonCategory.PROVIDER,
     StateCode.BOUNDARY_REENTRY_EXHAUSTED: ReasonCategory.BOUNDARY,
+    # S-01 (Step 2 §1). Three of its states are conditions of the machinery:
+    # retrieval delivered no artifact, the assessment produced no judgment, the
+    # relevance screen produced no judgment. None of them says anything about
+    # the material, and counting them as `evidence` would make a dead provider
+    # read as thin material — the mirror of what `PROVIDER` was added for.
+    StateCode.RESEARCH_FAILED: ReasonCategory.PROVIDER,
+    StateCode.EVIDENCE_ASSESSMENT_FAILED: ReasonCategory.PROVIDER,
+    StateCode.RELEVANCE_SCREEN_FAILED: ReasonCategory.PROVIDER,
+    # These three are about the material and the audience, which is why they are
+    # the ones a client may read as editorial. The core held nothing usable, or
+    # the screen could not yet establish relevance, or it could not establish it
+    # on the evidence it was shown.
+    StateCode.NO_USABLE_EVIDENCE_CLAIM: ReasonCategory.EVIDENCE,
+    StateCode.RELEVANCE_NOT_ESTABLISHED: ReasonCategory.EVIDENCE,
+    StateCode.RELEVANCE_EVIDENCE_INSUFFICIENT: ReasonCategory.EVIDENCE,
+    # The configured audience is the contract's, so a signal the screen refused
+    # for that audience is the same question `contract_fit` groups for S-00 —
+    # asked of the material rather than of the topic or the source.
+    StateCode.SIGNAL_NOT_RELEVANT: ReasonCategory.CONTRACT_FIT,
 }
 
 

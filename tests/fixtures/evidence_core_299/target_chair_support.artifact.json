@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0",
+  "artifact_id": "research-215284813eae82ce",
+  "run_id": "3f9c1d7a-58b2-4e6c-9a1f-2d4b6e8c0a11",
+  "assignment_id": "215284813eae82ce",
+  "signal_id": "215284813eae82ce",
+  "configuration_identity": {
+    "schema_version": "1.0",
+    "configuration_id": "never_blank",
+    "configuration_version": "1",
+    "configuration_hash": "sha256:0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0"
+  },
+  "created_at": "2026-06-22T14:05:00+00:00",
+  "sources": [
+    {
+      "source_id": "source-cnbc-target-cornell",
+      "locator": {
+        "kind": "url",
+        "value": "https://www.cnbc.com/2026/06/22/target-brian-cornell-shareholder-support.html"
+      },
+      "title": "'Reward for failure': Investor support for Target Chair Brian Cornell falls to lowest level ever",
+      "publisher": "CNBC Business",
+      "publication_time": {
+        "status": "known",
+        "value": "2026-06-22T11:30:00+00:00"
+      },
+      "retrieved_at": "2026-06-22T14:00:00+00:00"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "evidence-cornell-support",
+      "claim": "Investor support for Target chair Brian Cornell fell to its lowest level ever.",
+      "source_ids": ["source-cnbc-target-cornell"],
+      "support": [
+        {
+          "source_id": "source-cnbc-target-cornell",
+          "excerpt": "Investor support for Target Chair Brian Cornell has fallen to its lowest level ever amid recent company struggles and underperformance.",
+          "location": "summary"
+        }
+      ],
+      "disposition": "not_assessed"
+    },
+    {
+      "evidence_id": "evidence-cornell-board-refresh",
+      "claim": "Target refreshed its board and separated the chair and chief executive roles in response to the vote.",
+      "source_ids": ["source-cnbc-target-cornell"],
+      "support": [
+        {
+          "source_id": "source-cnbc-target-cornell",
+          "excerpt": "The article frames the backlash as growing shareholder pressure for leadership or governance changes at the retailer.",
+          "location": "summary"
+        }
+      ],
+      "disposition": "not_assessed"
+    }
+  ],
+  "uncertainties": [
+    {
+      "uncertainty_id": "uncertainty-cornell-response",
+      "level": "high",
+      "materiality": "non_material",
+      "resolution": "unresolved",
+      "description": "What Target did in response to the vote is not established by the retrieved material.",
+      "evidence_ids": ["evidence-cornell-board-refresh"],
+      "source_ids": []
+    }
+  ],
+  "readiness": "insufficient"
+}

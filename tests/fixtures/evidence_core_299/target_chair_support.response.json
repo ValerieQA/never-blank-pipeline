@@ -1,0 +1,40 @@
+{
+  "verdicts": [
+    {
+      "evidence_id": "evidence-cornell-support",
+      "disposition": "accepted",
+      "rationale": "The excerpt states the record-low support for the chair directly."
+    },
+    {
+      "evidence_id": "evidence-cornell-board-refresh",
+      "disposition": "rejected",
+      "rationale": "The excerpt reports shareholder pressure and no board or role change."
+    }
+  ],
+  "claims": [
+    {
+      "evidence_claim_id": "evidence-cornell-support",
+      "scope": "Target Corporation's own director election, as reported on 2026-06-22.",
+      "strength_level": 2
+    },
+    {
+      "evidence_claim_id": "evidence-cornell-board-refresh",
+      "scope": "Target Corporation's governance after the 2026 election.",
+      "strength_level": 2
+    }
+  ],
+  "observations": [
+    {
+      "observation_id": "obs-evidence-cornell-support-1",
+      "kind": "document_fact",
+      "is_third_party_assertion": false,
+      "figure": null
+    },
+    {
+      "observation_id": "obs-evidence-cornell-board-refresh-1",
+      "kind": "stated_position",
+      "is_third_party_assertion": true,
+      "figure": null
+    }
+  ]
+}

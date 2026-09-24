@@ -1,0 +1,45 @@
+{
+  "verdicts": [
+    {
+      "evidence_id": "evidence-ups-investment",
+      "disposition": "accepted",
+      "rationale": "The excerpt states the investment and its amount as reported."
+    },
+    {
+      "evidence_id": "evidence-ups-demand",
+      "disposition": "accepted",
+      "rationale": "The excerpt states the stated reason for the investment."
+    }
+  ],
+  "claims": [
+    {
+      "evidence_claim_id": "evidence-ups-investment",
+      "scope": "UPS's own announced capital plan for healthcare logistics, as of 2026-06-22.",
+      "strength_level": 2
+    },
+    {
+      "evidence_claim_id": "evidence-ups-demand",
+      "scope": "The healthcare cold-chain logistics market UPS is investing into, as reported.",
+      "strength_level": 1
+    }
+  ],
+  "observations": [
+    {
+      "observation_id": "obs-evidence-ups-investment-1",
+      "kind": "figure",
+      "is_third_party_assertion": true,
+      "figure": {
+        "value": "$48 million",
+        "unit": "USD",
+        "as_of": "2026-06-22",
+        "provenance": "third_party"
+      }
+    },
+    {
+      "observation_id": "obs-evidence-ups-demand-1",
+      "kind": "stated_position",
+      "is_third_party_assertion": true,
+      "figure": null
+    }
+  ]
+}

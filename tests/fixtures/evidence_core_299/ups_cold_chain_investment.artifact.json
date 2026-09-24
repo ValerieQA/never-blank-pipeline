@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "artifact_id": "research-877d024ab304797c",
+  "run_id": "6b2e4c81-9d37-4a5f-b8c2-1e3f5a7c9d02",
+  "assignment_id": "877d024ab304797c",
+  "signal_id": "877d024ab304797c",
+  "configuration_identity": {
+    "schema_version": "1.0",
+    "configuration_id": "never_blank",
+    "configuration_version": "1",
+    "configuration_hash": "sha256:0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0"
+  },
+  "created_at": "2026-06-22T15:10:00+00:00",
+  "sources": [
+    {
+      "source_id": "source-cnbc-ups-healthcare",
+      "locator": {
+        "kind": "url",
+        "value": "https://www.cnbc.com/2026/06/22/ups-healthcare-logistics-investment.html"
+      },
+      "title": "UPS to invest $48 million in temperature-controlled facilities amid healthcare boom",
+      "publisher": "CNBC Business",
+      "publication_time": {
+        "status": "known",
+        "value": "2026-06-22T12:15:00+00:00"
+      },
+      "retrieved_at": "2026-06-22T15:00:00+00:00"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "evidence-ups-investment",
+      "claim": "UPS plans to invest 48 million dollars in temperature-controlled healthcare logistics facilities.",
+      "source_ids": ["source-cnbc-ups-healthcare"],
+      "support": [
+        {
+          "source_id": "source-cnbc-ups-healthcare",
+          "excerpt": "UPS plans to invest $48 million in temperature-controlled healthcare logistics facilities.",
+          "location": "summary"
+        }
+      ],
+      "disposition": "not_assessed"
+    },
+    {
+      "evidence_id": "evidence-ups-demand",
+      "claim": "The investment responds to growing demand for cold-chain logistics tied to healthcare products.",
+      "source_ids": ["source-cnbc-ups-healthcare"],
+      "support": [
+        {
+          "source_id": "source-cnbc-ups-healthcare",
+          "excerpt": "The investment responds to growing demand for cold-chain logistics tied to healthcare products.",
+          "location": "summary"
+        }
+      ],
+      "disposition": "not_assessed"
+    }
+  ],
+  "readiness": "insufficient"
+}

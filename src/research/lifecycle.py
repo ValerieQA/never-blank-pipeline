@@ -130,7 +130,7 @@ def build_research_request(
 def validate_research_envelope(
     envelope: ResearchResultEnvelope, *, run_id: str, assignment_id: str,
     signal_id: str, identity: ConfigurationIdentity, run_started_at: datetime,
-    now: datetime,
+    now: datetime, require_ready: bool = True,
 ) -> NormalizedResearchArtifact:
     request, result = envelope.request, envelope.result
     if (request.run_id, request.assignment_id, request.signal_id) != (run_id, assignment_id, signal_id):
@@ -153,25 +153,34 @@ def validate_research_envelope(
         )
     if artifact.configuration_identity != identity:
         raise ResearchGateError("research artifact configuration identity mismatch")
-    if artifact.readiness is not EvidenceReadiness.READY:
-        raise ResearchGateError(f"research evidence is {artifact.readiness.value}, not ready")
-    # READY asserts that evidence was assessed, and the canonical path holds
-    # it to that. Without a named assessor and a stated reason per record the
-    # assertion is unfalsifiable afterwards, and retrieval alone could wear
-    # the appearance of assessment. The artifact contract itself is unchanged:
-    # this is the production gate declining an unassessed READY, not a new
-    # meaning for READY.
-    if artifact.assessor is None:
-        raise ResearchGateError("research evidence is ready but names no assessor")
-    unexplained = tuple(
-        item.evidence_id
-        for item in artifact.evidence
-        if not (item.assessment_rationale or "").strip()
-    )
-    if unexplained:
-        raise ResearchGateError(
-            f"research evidence is ready but unexplained: {unexplained!r}"
+    # The three checks below are the Release 1 disposition gate: nothing but
+    # READY, assessed and explained evidence may enter generation. Issue #299
+    # made them conditional and left them on by default, because the canonical
+    # S-01 needs the identity, lineage, timestamp and canonical-form checks
+    # above without them: Step 2 §1 records readiness on the core and gives the
+    # decision to the ARP, where `needs_review` continues and only a core with
+    # no usable claim is a SKIP. Every current caller passes nothing and gets
+    # exactly today's behaviour.
+    if require_ready:
+        if artifact.readiness is not EvidenceReadiness.READY:
+            raise ResearchGateError(f"research evidence is {artifact.readiness.value}, not ready")
+        # READY asserts that evidence was assessed, and the canonical path holds
+        # it to that. Without a named assessor and a stated reason per record the
+        # assertion is unfalsifiable afterwards, and retrieval alone could wear
+        # the appearance of assessment. The artifact contract itself is unchanged:
+        # this is the production gate declining an unassessed READY, not a new
+        # meaning for READY.
+        if artifact.assessor is None:
+            raise ResearchGateError("research evidence is ready but names no assessor")
+        unexplained = tuple(
+            item.evidence_id
+            for item in artifact.evidence
+            if not (item.assessment_rationale or "").strip()
         )
+        if unexplained:
+            raise ResearchGateError(
+                f"research evidence is ready but unexplained: {unexplained!r}"
+            )
     return artifact
 
 
@@ -180,6 +189,7 @@ def execute_and_persist_research(
     *, identity: ConfigurationIdentity, run_started_at: datetime,
     clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
     judgment_transport: "EvidenceJudgmentTransport | None" = None,
+    require_ready: bool = True,
 ) -> NormalizedResearchArtifact:
     result = execute_research(provider, request)
     # Issue #125: assessment happens here — after retrieval, before the
@@ -209,7 +219,7 @@ def execute_and_persist_research(
     return validate_research_envelope(
         persisted, run_id=request.run_id, assignment_id=request.assignment_id,
         signal_id=request.signal_id, identity=identity, run_started_at=run_started_at,
-        now=clock(),
+        now=clock(), require_ready=require_ready,
     )
 
 

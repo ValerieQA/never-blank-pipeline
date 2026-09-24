@@ -1,0 +1,51 @@
+{
+  "verdicts": [
+    {
+      "evidence_id": "evidence-lucid-workforce",
+      "disposition": "qualified",
+      "rationale": "One source, and the company is reporting its own restructuring."
+    },
+    {
+      "evidence_id": "evidence-lucid-coo",
+      "disposition": "accepted",
+      "rationale": "The excerpt states the departure and its timing directly."
+    }
+  ],
+  "claims": [
+    {
+      "evidence_claim_id": "evidence-lucid-workforce",
+      "scope": "Lucid Group's own United States workforce, as announced on 2026-06-22.",
+      "strength_level": 2
+    },
+    {
+      "evidence_claim_id": "evidence-lucid-coo",
+      "scope": "Lucid Group's own officer appointments, as announced on 2026-06-22.",
+      "strength_level": 2
+    }
+  ],
+  "observations": [
+    {
+      "observation_id": "obs-evidence-lucid-workforce-1",
+      "kind": "figure",
+      "is_third_party_assertion": true,
+      "figure": {
+        "value": "roughly 18%",
+        "unit": "percent of United States workforce",
+        "as_of": "2026-06-22",
+        "provenance": "third_party"
+      }
+    },
+    {
+      "observation_id": "obs-evidence-lucid-workforce-2",
+      "kind": "quote",
+      "is_third_party_assertion": true,
+      "figure": null
+    },
+    {
+      "observation_id": "obs-evidence-lucid-coo-1",
+      "kind": "event",
+      "is_third_party_assertion": true,
+      "figure": null
+    }
+  ]
+}
