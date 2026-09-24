@@ -23,11 +23,11 @@ What it does, in the order it does it
    rejected are the same mistake. An item that fails is **dropped and
    recorded** — a ``DEGRADE`` with low confidence, never a retry (§1, ARP).
 3. **The calculations, by code.** A calculation asset is a derived evidence
-   claim (E-06), so its inputs must all be in the core and its arithmetic is
-   never left to the model: code resolves each input claim to the one figure
-   its observations record, reads the amount off the figure, and computes the
-   result. A figure code cannot read is a calculation that is dropped, not one
-   that is guessed at.
+   claim (E-06), so its inputs must all be in the core and all usable, and its
+   arithmetic is never left to the model: code resolves each input claim to
+   the one figure its observations record, reads the amount off the figure,
+   and computes the result. A figure code cannot read is a calculation that is
+   dropped, not one that is guessed at.
 
 **A positional asset is not something a model may create** (E-06). The model
 may only point at a position the Client Contract already approved; code refuses
@@ -1193,6 +1193,18 @@ def _derive(
     failure = _unheld(answer.inputs, claims)
     if failure is not None:
         return None, failure
+    # Stricter than the reference check, which asks for one usable claim among
+    # the references: a calculation is a derived evidence claim (E-06), and an
+    # amount read off a claim the assessment rejected would enter the result
+    # with no verdict of its own to keep it out.
+    unusable = sorted(ref for ref in answer.inputs if not claims[ref].usable)
+    if unusable:
+        return None, (
+            "it computes over claim(s) the assessment did not accept: "
+            + ", ".join(unusable)
+            + "; every input of a calculation is a claim that may be referenced "
+            "downstream (E-03), not merely one cited beside such a claim"
+        )
 
     figures = {
         observation.observation_id: observation.figure

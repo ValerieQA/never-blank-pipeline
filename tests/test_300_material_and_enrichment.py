@@ -15,10 +15,13 @@ SL-3's acceptance evidence for the third and fourth stages, as scenarios:
    and none at all for an enrichment with no blocking gap.
 
 And the properties the two stages rest on: no label is produced (I-10), a
-calculation is arithmetic code does over figures the core holds, a positional
-asset comes only from an approved position of the Client Contract, a note that
-blocks no decision opens no gap, and a round is committed whole or not at all
-so that the core and its description are never two different versions.
+calculation is arithmetic code does over usable figures the core holds, a
+positional asset comes only from an approved position of the Client Contract, a
+note that blocks no decision opens no gap, a gap closes only on material of the
+kind it asks for and only in a round that carried its query, the client's
+excluded sources survive the request's directive bound, and a round is
+committed whole or not at all so that the core and its description are never
+two different versions.
 """
 
 from __future__ import annotations
@@ -39,6 +42,7 @@ from src.editorial_core.arp import (
 )
 from src.editorial_core.enrichment import (
     ENRICHMENT_COUNTER,
+    MAX_DIRECTIVES,
     Enrichment,
     EnrichmentError,
     Gap,
@@ -145,6 +149,24 @@ SIGNAL = "signal-300"
 #: An approved position of the Client Contract, as S-02 receives the list.
 APPROVED_POSITION = "position-nb-automation-stance"
 
+#: The client's source policy, as the run's own research request carries it:
+#: one source it required, and one domain it prefers.
+CLIENT_DIRECTIVES = (
+    SourceDirective(
+        directive_id="required-source-1",
+        priority=SourcePriority.REQUIRED,
+        kind=SourceDirectiveKind.URL,
+        value="https://www.cnbc.com/2026/06/22/item.html",
+    ),
+    SourceDirective(
+        directive_id="preferred-source-1",
+        priority=SourcePriority.PREFERRED,
+        kind=SourceDirectiveKind.DOMAIN,
+        value="reuters.com",
+        material=False,
+    ),
+)
+
 
 # ===========================================================================
 # Transports: a model that answers the request it was given
@@ -224,9 +246,16 @@ class _Describing:
 class _Answering:
     """An extended assessment that answers exactly the request it was given."""
 
-    def __init__(self, *, strength_level: int = 2, figure: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        strength_level: int = 2,
+        figure: bool = False,
+        disposition: str = "accepted",
+    ) -> None:
         self.strength_level = strength_level
         self.figure = figure
+        self.disposition = disposition
         self.calls = 0
 
     def complete(self, *, instructions: str, request: str) -> str:
@@ -239,7 +268,7 @@ class _Answering:
             identity = item["evidence_claim_id"]
             verdicts.append({
                 "evidence_id": identity,
-                "disposition": "accepted",
+                "disposition": self.disposition,
                 "rationale": "The cited excerpt states the claim.",
             })
             claims.append({
@@ -500,7 +529,11 @@ def _strategy() -> Any:
     ).research
 
 
-def _request(core: EvidenceCore) -> ResearchProviderRequest:
+def _request(
+    core: EvidenceCore,
+    *,
+    directives: Optional[tuple[SourceDirective, ...]] = None,
+) -> ResearchProviderRequest:
     """The run's own research request, as S-03 receives it."""
 
     return ResearchProviderRequest(
@@ -512,21 +545,7 @@ def _request(core: EvidenceCore) -> ResearchProviderRequest:
             retrieved_not_before=NOW - timedelta(hours=2),
             allow_open_discovery=False,
         ),
-        source_directives=(
-            SourceDirective(
-                directive_id="required-source-1",
-                priority=SourcePriority.REQUIRED,
-                kind=SourceDirectiveKind.URL,
-                value="https://www.cnbc.com/2026/06/22/item.html",
-            ),
-            SourceDirective(
-                directive_id="preferred-source-1",
-                priority=SourcePriority.PREFERRED,
-                kind=SourceDirectiveKind.DOMAIN,
-                value="reuters.com",
-                material=False,
-            ),
-        ),
+        source_directives=CLIENT_DIRECTIVES if directives is None else directives,
         requested_at=NOW,
     )
 
@@ -549,6 +568,7 @@ def _enrich(
     requested_gaps: tuple[RequestedGapKind, ...] = (),
     assets: tuple[Any, ...] = (),
     provider: Optional[_Enriching] = None,
+    request: Optional[ResearchProviderRequest] = None,
     transport: Optional[Any] = None,
     counters: Optional[AttemptCounterLedger] = None,
     budget: Optional[Any] = None,
@@ -562,7 +582,7 @@ def _enrich(
         notes=notes,
         requested_gaps=requested_gaps,
         provider=provider or _Enriching(),
-        request=_request(core),
+        request=request or _request(core),
         transport=transport or _Model(_Describing(), _Answering()),
         ladder=LADDER,
         counters=counters or AttemptCounterLedger(),
@@ -884,6 +904,37 @@ def test_a_calculation_over_a_claim_with_no_figure_is_dropped():
     assert "0 figure(s)" in described.dropped[0].reason
 
 
+def test_a_calculation_over_a_claim_the_assessment_rejected_is_dropped():
+    """E-06: a calculation is a derived evidence claim, so every amount it
+    reads comes from a claim that may be referenced downstream. One accepted
+    figure beside a rejected one passes the reference check and is still not
+    arithmetic this stage may emit."""
+
+    core = _core(
+        figures=(_figure("$8 million"), _figure("$5 million")),
+        verdicts=(EvidenceDisposition.ACCEPTED, EvidenceDisposition.REJECTED),
+    )
+    described = describe_material(
+        core=core,
+        transport=_Describing(
+            assets=(
+                _asset(
+                    kind="calculation",
+                    refs=["evidence-1", "evidence-2"],
+                    derivation={
+                        "inputs": ["evidence-1", "evidence-2"],
+                        "method": "difference",
+                    },
+                ),
+            )
+        ),
+    )
+
+    assert described.assets == ()
+    assert "evidence-2" in described.dropped[0].reason
+    assert described.outcomes[0].state_code is StateCode.MATERIAL_WITHOUT_REFERENCE
+
+
 def test_a_positional_asset_the_contract_did_not_approve_is_a_missing_position():
     described = describe_material(
         core=_core(),
@@ -1064,6 +1115,66 @@ def test_an_evidence_gap_closes_against_the_core_version_that_closed_it():
         StateCode.NO_ASSET_OR_ADMISSIBLE_INTERPRETATION
     ]
     assert resolved[0].scope is OutcomeScope.SIGNAL
+
+
+def test_a_counter_evidence_gap_is_not_closed_by_material_that_agrees():
+    """What closes a gap is material of the kind the gap asks for. A round that
+    found a second source saying the same thing found no counter-evidence, and
+    closing on it would stop the loop looking for any."""
+
+    core = _core()
+    counters = AttemptCounterLedger()
+
+    enrichment = _enrich(
+        core, notes=(_blocking_note(GapKind.COUNTER_EVIDENCE),), counters=counters
+    )
+
+    assert enrichment.rounds[0].usable_claims_added == 1, "material did arrive"
+    (gap,) = enrichment.gaps
+    assert gap.status is GapStatus.ABANDONED
+    assert gap.stop_reason is StopReason.LIMIT_REACHED
+    assert gap.attempts == counters.limit(ENRICHMENT_COUNTER)
+    assert enrichment.core.closed_gaps == ()
+
+
+def test_a_counter_evidence_gap_closes_on_material_that_runs_against_the_core():
+    core = _core()
+    # A verdict of `conflicting` is the assessment's own record that the
+    # retrieved material and the core do not agree: code reads it, and judges
+    # nothing itself.
+    transport = _Model(_Describing(), _Answering(disposition="conflicting"))
+
+    enrichment = _enrich(
+        core,
+        notes=(_blocking_note(GapKind.COUNTER_EVIDENCE),),
+        transport=transport,
+    )
+
+    (gap,) = enrichment.gaps
+    assert gap.status is GapStatus.CLOSED
+    assert gap.closure == 2
+    assert enrichment.rounds[0].usable_claims_added == 0
+    assert enrichment.core.closed_gaps == (gap.gap_id,)
+
+
+def test_a_reader_connection_gap_is_not_closed_by_material_s_03_cannot_judge():
+    """Whether material establishes a reader connection is S-04's judgment. S-03
+    searches for it and records that it stopped; it never says it was found."""
+
+    core = _core()
+    counters = AttemptCounterLedger()
+
+    enrichment = _enrich(
+        core,
+        requested_gaps=(RequestedGapKind.READER_CONNECTION,),
+        counters=counters,
+    )
+
+    assert len(enrichment.rounds) == counters.limit(ENRICHMENT_COUNTER)
+    (gap,) = enrichment.gaps
+    assert gap.status is GapStatus.ABANDONED
+    assert gap.stop_reason is StopReason.LIMIT_REACHED
+    assert enrichment.continues is True, "S-04 decides what an abandoned gap costs"
 
 
 def test_two_calls_are_recorded_for_one_round():
@@ -1249,6 +1360,87 @@ def test_the_search_keeps_the_run_identity_and_the_client_source_policy():
     }
     assert priorities["preferred-source-1"] is SourcePriority.PREFERRED
     assert "required-source-1" not in priorities
+
+
+def _excluded(index: int) -> SourceDirective:
+    return SourceDirective(
+        directive_id=f"excluded-source-{index}",
+        priority=SourcePriority.EXCLUDED,
+        kind=SourceDirectiveKind.DOMAIN,
+        value=f"excluded-{index}.test",
+        material=False,
+    )
+
+
+def test_more_gaps_than_the_request_holds_never_drop_an_excluded_source():
+    """The provider bounds a request at twenty directives. A preferred source
+    the bound cuts is one the round did not ask for; an excluded source it cut
+    would be one the client prohibited and the round researched anyway."""
+
+    core = _core()
+    provider = _Enriching()
+    notes = tuple(
+        _blocking_note(note_id=f"note-{index}")
+        for index in range(1, MAX_DIRECTIVES + 1)
+    )
+
+    _enrich(
+        core,
+        notes=notes,
+        provider=provider,
+        request=_request(core, directives=CLIENT_DIRECTIVES + (_excluded(1),)),
+    )
+
+    search = provider.requests[0]
+    assert len(search.source_directives) == MAX_DIRECTIVES
+    priorities = {
+        directive.directive_id: directive.priority
+        for directive in search.source_directives
+    }
+    assert priorities["excluded-source-1"] is SourcePriority.EXCLUDED
+    assert "preferred-source-1" not in priorities, (
+        "the gap queries take the room the exclusions leave, before the "
+        "client's preferred sources"
+    )
+    queries = [
+        directive
+        for directive in search.source_directives
+        if directive.priority is SourcePriority.DISCOVERY
+    ]
+    assert len(queries) == MAX_DIRECTIVES - 1
+    second = provider.requests[1]
+    assert [directive.priority for directive in second.source_directives] == [
+        SourcePriority.EXCLUDED,
+        SourcePriority.DISCOVERY,
+        SourcePriority.PREFERRED,
+    ], (
+        "the gap the bound cut is searched in the next round rather than "
+        "closed by material the round never asked about"
+    )
+
+
+def test_exclusions_that_fill_the_request_leave_no_round_to_search():
+    core = _core()
+    provider = _Enriching()
+
+    enrichment = _enrich(
+        core,
+        notes=(_blocking_note(),),
+        provider=provider,
+        request=_request(
+            core,
+            directives=tuple(
+                _excluded(index) for index in range(1, MAX_DIRECTIVES + 1)
+            ),
+        ),
+    )
+
+    assert provider.requests == [], "a search with no room for the gap is not sent"
+    (gap,) = enrichment.gaps
+    assert gap.status is GapStatus.ABANDONED
+    assert gap.stop_reason is StopReason.NOTHING_FOUND
+    failure = enrichment.rounds[0].failure
+    assert failure is not None and "no gap query fits" in failure
 
 
 def test_a_description_of_another_core_version_is_refused():

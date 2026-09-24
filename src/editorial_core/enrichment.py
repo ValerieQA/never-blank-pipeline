@@ -36,13 +36,18 @@ claims; it never drops one and never rewrites one. Material the search returned
 that the core already holds is not added twice — the core keeps its own copy,
 and the artifact the round retrieved is referenced by digest either way.
 
-**Who decides what is closed.** Code, from what entered the core: a figure
-provenance gap by a figure the source produced itself, an asset gap by an asset
-the recomputation found, everything else by new usable material. Whether that
-material actually establishes a reader connection or an interpretation is
-S-04's judgment, and S-03 does not take it. Whether an abandoned gap costs the
-signal is S-04's too (§1, ARP), which is why an abandoned gap is recorded with
-its stop reason here and with no outcome of its own.
+**Who decides what is closed.** Code, from what entered the core, and one test
+per kind: a figure provenance gap by a figure the source produced itself, an
+asset gap by an asset the recomputation found, a counter-evidence gap by
+material that runs against what the core holds, an evidence gap by new usable
+material. A kind whose satisfaction code cannot test — a reader connection, and
+whatever ``other`` was opened for — is not closed here at all: whether the
+material establishes a reader connection or an interpretation is S-04's
+judgment, and taking it here would be worse than leaving the gap open, because
+a closure stops the loop searching for what still blocks the decision. Such a
+gap reaches S-04 abandoned with the stop reason the loop ended on, and whether
+an abandoned gap costs the signal is S-04's too (§1, ARP), which is why it is
+recorded here with no outcome of its own.
 
 Sources: ``docs/editorial/architecture/03_STEP2_STAGE_CONTRACTS.md`` §0.3,
 §0.4 and §1 (S-03); ``docs/editorial/architecture/01_STEP1_TYPED_ENTITIES.md``
@@ -91,6 +96,7 @@ from src.editorial_core.signal_selection import CallBudget
 from src.research.assessment import EvidenceAssessmentError, assess_artifact
 from src.research.evidence import (
     Contradiction,
+    EvidenceDisposition,
     EvidenceReadiness,
     NormalizedResearchArtifact,
     NormalizedSource,
@@ -117,8 +123,9 @@ STAGE: Final[str] = "S-03"
 ENRICHMENT_COUNTER: Final[str] = "L_enrich"
 
 #: The most directives one search request may carry, from the provider
-#: contract's own bound. Gap directives are placed first, so a run with many
-#: gaps loses the client's preferred sources before it loses a gap.
+#: contract's own bound. What the bound cuts into is not a free choice: the
+#: client's excluded sources are a prohibition and are carried whole, and the
+#: gap queries come before the client's preferred sources in what is left.
 MAX_DIRECTIVES: Final[int] = 20
 
 
@@ -532,10 +539,14 @@ def enrich(
             stop = outcome.stop or StopReason.NOTHING_FOUND
             break
         current = replace(outcome.state, calls=spent)
+        # Only the gaps whose query the request actually carried: a gap the
+        # directive bound cut is a gap this round did not search for, and
+        # material it never asked about does not close it.
+        carried = {identity for identity, _ in outcome.directives}
         gaps = [
             (
                 replace(gap, status=GapStatus.CLOSED, closure=current.core.version)
-                if gap.gap_id in searched_ids and _closes(gap, outcome.added)
+                if gap.gap_id in carried and _closes(gap, outcome.added)
                 else gap
             )
             for gap in gaps
@@ -588,6 +599,9 @@ class _Added:
     usable_claims: int = 0
     own_figure: bool = False
     new_asset: bool = False
+    #: Material that runs against what the core holds: a claim the assessment
+    #: found conflicting, or a contradiction it recorded over the merged core.
+    counter_material: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -630,6 +644,9 @@ def _round(
     try:
         directives = _directives(searched)
         search = _search_request(request, directives, now)
+    except EnrichmentError as exc:
+        # This module's own refusal, so it is this module's own words.
+        return _failed_round(number, gap_ids, f"no search could be built: {exc}")
     except (ValueError, TypeError) as exc:
         return _failed_round(
             number, gap_ids, f"no search could be built ({type(exc).__name__})"
@@ -771,19 +788,27 @@ def _round(
 def _closes(gap: Gap, added: _Added) -> bool:
     """Did what a round added close this gap? Code's, from what entered the core.
 
-    The generic rule — new usable material — is the honest one for the kinds
-    whose satisfaction is an editorial judgment: S-03 may say that the search
-    produced material the core can reason from, and may not say that the
-    material establishes a reader connection or an interpretation. Those are
-    S-04's, and the trace records what closed the gap so the judgment is made
-    on the material rather than on this stage's word for it.
+    One test per kind, and each is a property of the material rather than a
+    reading of it: an evidence gap asks for material the core can reason from
+    and a round that produced a usable claim produced it, while a
+    counter-evidence gap asks for material that runs against what the core
+    already holds — which is what a conflicting verdict and a recorded
+    contradiction are, and which a usable claim agreeing with the core is not.
+
+    The kinds code has no test for are not closed here. S-03 may say that the
+    search produced material, and may not say that the material establishes a
+    reader connection or an interpretation; those are S-04's. Saying it anyway
+    would not be a harmless overstatement, because a closure ends the loop's
+    search for what still blocks the decision.
     """
 
     if gap.kind is GapKind.FIGURE_PROVENANCE:
         return added.own_figure
     if gap.kind is GapKind.ASSET:
         return added.new_asset
-    return added.usable_claims > 0
+    if gap.kind is GapKind.COUNTER_EVIDENCE:
+        return added.counter_material
+    return gap.kind is GapKind.EVIDENCE and added.usable_claims > 0
 
 
 def _failed_round(
@@ -859,14 +884,31 @@ def _search_request(
     sources carried across so that its source policy still holds. The required
     directives are not carried: that source has been retrieved already, and
     asking for it again returns the material the core has.
+
+    The provider bounds a request at twenty directives, and the exclusions are
+    carried whole whatever else has to go: a preferred source the bound cut is
+    a source the round did not ask for, while an excluded source the bound cut
+    is a source the client prohibited and the round would research anyway. A
+    client whose exclusions leave room for no gap query at all has asked for a
+    round that cannot be searched, and that is refused rather than sent.
     """
 
-    carried = tuple(
+    excluded = tuple(
         directive
         for directive in request.source_directives
-        if directive.priority
-        in (SourcePriority.PREFERRED, SourcePriority.EXCLUDED)
+        if directive.priority is SourcePriority.EXCLUDED
     )
+    preferred = tuple(
+        directive
+        for directive in request.source_directives
+        if directive.priority is SourcePriority.PREFERRED
+    )
+    room = MAX_DIRECTIVES - len(excluded)
+    if room < 1:
+        raise EnrichmentError(
+            f"the client excludes {len(excluded)} sources and a request carries "
+            f"{MAX_DIRECTIVES} directives, so no gap query fits beside them"
+        )
     return ResearchProviderRequest(
         run_id=request.run_id,
         assignment_id=request.assignment_id,
@@ -876,7 +918,7 @@ def _search_request(
             retrieved_not_before=request.freshness.retrieved_not_before,
             allow_open_discovery=True,
         ),
-        source_directives=(tuple(directives) + carried)[:MAX_DIRECTIVES],
+        source_directives=excluded + (tuple(directives) + preferred)[:room],
         requested_at=now,
     )
 
@@ -960,6 +1002,10 @@ def _merged(
         _Added(
             usable_claims=sum(1 for item in claims if item.usable),
             own_figure=any(_is_own_figure(item) for item in observations),
+            counter_material=bool(contradictions)
+            or any(
+                item.verdict is EvidenceDisposition.CONFLICTING for item in claims
+            ),
         ),
     )
 
