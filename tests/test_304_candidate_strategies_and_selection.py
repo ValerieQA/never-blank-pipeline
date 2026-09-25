@@ -1208,6 +1208,42 @@ def test_another_destinations_route_bounds_nothing_here():
         )
 
 
+def test_an_unkeyed_route_authorizes_no_destination():
+    """A REPLAN that names no destination cannot show which one paid.
+
+    ``L_strategy`` is counted per destination (§0.3), so a re-entry has to prove
+    the destination whose attempt it spent. ``OutcomeRecord.scope_key`` is
+    optional on the durable record, and an absent one means "the scope key of
+    the StageRecord that carries it" — which this boundary cannot resolve. If it
+    were accepted here, one unkeyed record would authorize a second attempt at
+    *every* destination, which is the unbounded loop the counter exists to stop.
+    """
+
+    unit = _unit()
+    counters = _ledger()
+    keyed = _route(unit, counters)
+    unkeyed = keyed.model_copy(update={"scope_key": None})
+    assert unkeyed.scope_key is None
+    assert unkeyed.counter == STRATEGY_COUNTER
+    assert unkeyed.outcome is ArpOutcome.REPLAN
+    assert unkeyed.route_target == STRATEGY_STAGE
+
+    with pytest.raises(StrategyError, match="counted per destination"):
+        propose_strategies(
+            unit=unit,
+            anchor=_anchor(unit),
+            decision=_decision(unit),
+            boundary=_two_readings(),
+            core=_core(),
+            features=_features(),
+            contract=StrategyContract(),
+            transport=_Transport(_answer()),
+            assets=_assets(),
+            attempt=2,
+            re_entry=unkeyed,
+        )
+
+
 def test_the_route_that_paid_for_the_attempt_names_the_set_it_produces():
     unit = _unit()
     counters = _ledger()

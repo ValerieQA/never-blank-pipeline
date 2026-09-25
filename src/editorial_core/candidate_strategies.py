@@ -1311,12 +1311,13 @@ def _authorized(
             f"into {STAGE} against {STRATEGY_COUNTER}, and a route that spent "
             "another counter did not bound this one"
         )
-    if route.scope_key not in (None, scope_key):
+    if route.scope_key != scope_key:
         raise StrategyError(
             f"the route offered spent {STRATEGY_COUNTER} against "
             f"{route.scope_key!r} and is being taken for {scope_key!r}; the "
             "counter is counted per destination, so another destination's "
-            "attempt bounds nothing here"
+            "attempt bounds nothing here — and an unkeyed route names no "
+            "destination at all, so it cannot show which one paid"
         )
     if route.attempt is not None and attempt != route.attempt + 1:
         raise StrategyError(
