@@ -266,6 +266,19 @@ _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     # an editorial fact, and keeping the two apart is what stops a provider
     # outage from reading as a destination nothing could be said on.
     StateCode.STRATEGY_GENERATION_FAILED: ReasonCategory.PROVIDER,
+    # S-10 (Step 2 §3). The reader path not fitting the format is a fact about
+    # the plan this strategy would have to become, which is what `plan` groups.
+    # The one call producing no plan is a condition of the machinery, counted
+    # where S-08's is — and kept apart from it so that a dead provider is never
+    # read as a surface nothing could be shaped for.
+    StateCode.ADAPTATION_CANNOT_MEET_CONSTRAINT: ReasonCategory.PLAN,
+    StateCode.PLAN_GENERATION_FAILED: ReasonCategory.PROVIDER,
+    # S-11 (Step 2 §3). A hard check that found something is the plan's; a hard
+    # check nobody could run is the provider's. `promise_wider_than_boundary`
+    # and `destinations_contradict` are not here because V-P02 and V-P03 keep
+    # the map's own rows, which are already `boundary` and `coordination`.
+    StateCode.PLAN_CHECK_FAILED: ReasonCategory.PLAN,
+    StateCode.PLAN_CHECK_UNAVAILABLE: ReasonCategory.PROVIDER,
 }
 
 
