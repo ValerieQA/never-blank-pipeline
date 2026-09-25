@@ -255,6 +255,17 @@ class StateCode(str, Enum):
     #: `no_eligible_destination`").
     NO_ELIGIBLE_DESTINATION = "no_eligible_destination"
 
+    # -- S-08 · Candidate strategies (Step 2 §1, ARP) ----------------------
+    #: The one call for this destination produced no candidate set this stage
+    #: may read: the transport failed, the answer did not satisfy the contract,
+    #: or it proposed a number of strategies §1 does not ask for. Like S-01's,
+    #: S-02's, S-04's and S-06's machinery states it says nothing about the
+    #: material, and it is deliberately **not** `no_admissible_strategy`: §1
+    #: reserves that for candidates that were produced and did not survive, and
+    #: a provider outage recorded under it would be counted as the engine
+    #: finding nothing to say (Step 3 §3.3, the skip rate of map §6.3).
+    STRATEGY_GENERATION_FAILED = "strategy_generation_failed"
+
 
 #: Which outcomes each state may end in. The union of two columns: the outcome
 #: map §6.2 gives the state, and the terminal outcome Step 2 §5.3 gives its
@@ -377,6 +388,11 @@ _PERMITTED_OUTCOMES: Mapping[StateCode, frozenset[ArpOutcome]] = {
     StateCode.HARD_PLATFORM_POLICY_FORBIDS: frozenset({ArpOutcome.SKIP}),
     StateCode.DESTINATION_DEFERRED_BY_CADENCE: frozenset({ArpOutcome.SKIP}),
     StateCode.NO_ELIGIBLE_DESTINATION: frozenset({ArpOutcome.SKIP}),
+    # Step 2 §1, S-08. Nothing to degrade to when the one call produced no
+    # candidate set, and nowhere to replan: S-08's counter is spent by the
+    # routes that re-enter it — S-09's among them — and not by an execution of
+    # its own, so asking again here would be the unbounded loop §5.3 forbids.
+    StateCode.STRATEGY_GENERATION_FAILED: frozenset({ArpOutcome.SKIP}),
 }
 
 
