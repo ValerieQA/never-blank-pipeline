@@ -1,0 +1,61 @@
+{
+  "families": [
+    {
+      "record_id": "K-TEMPT-01",
+      "finding": "Neither proposed reading states what happens to the reader; both stay on the sector.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-02",
+      "finding": "The series measures production, and no reading turns that into a gain for anybody.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-03",
+      "finding": "Nothing proposed puts a person or a place into a statistical series.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-04",
+      "finding": "No proposed reading names a cause of the production figure.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-05",
+      "finding": "The supplier reading is a step out from the measured population, and the series itself says the population is producers.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-06",
+      "finding": "The contractor reading states a future, which is what proposal 2 does and what its own strength claims.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-07",
+      "finding": "The material carries no inspection or compliance figure at all, so a reading about the weight of them has nothing behind it.",
+      "tempting": {
+        "statement": "Owners were buried in inspections.",
+        "kind": "consequence_for_reader",
+        "support_refs": [],
+        "reason": "unsupported",
+        "temptation_note": "A record production year invites a sentence about the paperwork behind it, and the engine wrote exactly this one."
+      }
+    }
+  ],
+  "verdicts": [
+    {
+      "index": 1,
+      "admissibility": "inadmissible",
+      "finding": "The published series covers producers; nothing in it is about their suppliers or contractors.",
+      "reason": "unsupported",
+      "temptation_note": "A record year in a sector reads as a good year for everyone near it, which is the reading a small-business audience is owed and the evidence does not carry."
+    },
+    {
+      "index": 2,
+      "admissibility": "admissible",
+      "finding": "The series is national and corroborated, so the level the reading is asserted at looked available.",
+      "reason": null,
+      "temptation_note": null
+    }
+  ]
+}

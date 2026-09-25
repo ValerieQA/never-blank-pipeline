@@ -1,0 +1,67 @@
+{
+  "families": [
+    {
+      "record_id": "K-TEMPT-01",
+      "finding": "Both proposed readings stay on the rail and its window; neither states the reader's own outcome.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-02",
+      "finding": "The material measures when money arrives and nothing about how much of it there is, which is the gap this family names.",
+      "tempting": {
+        "statement": "The business has more money.",
+        "kind": "cause",
+        "support_refs": [],
+        "reason": "unsupported",
+        "temptation_note": "Money arriving sooner reads as more money, and it is the reading a reader most wants to be true."
+      }
+    },
+    {
+      "record_id": "K-TEMPT-03",
+      "finding": "Nothing proposed puts a person, a room or a moment into the material.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-04",
+      "finding": "The mechanism reading names the documented mechanism and claims no further cause.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-05",
+      "finding": "The announcement is about one rail, and no reading is stated across cases.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-06",
+      "finding": "No proposed reading states a future as settled.",
+      "tempting": null
+    },
+    {
+      "record_id": "K-TEMPT-07",
+      "finding": "The compliance requirements are recorded as unchanged, and the reading that doubles them runs against that record.",
+      "tempting": {
+        "statement": "The compliance checklist doubles.",
+        "kind": "consequence_for_reader",
+        "support_refs": ["ev-ramp-3"],
+        "reason": "contradicted",
+        "temptation_note": "A new rail sounds like new paperwork, and the sentence writes itself before anybody checks the requirement list."
+      }
+    }
+  ],
+  "verdicts": [
+    {
+      "index": 1,
+      "admissibility": "admissible",
+      "finding": "The settlement window is stated in the announcement and the mechanism bounds the reading to timing.",
+      "reason": null,
+      "temptation_note": null
+    },
+    {
+      "index": 2,
+      "admissibility": "admissible",
+      "finding": "The shorter window is what the reading plans against, and it claims nothing about the amount.",
+      "reason": null,
+      "temptation_note": null
+    }
+  ]
+}

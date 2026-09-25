@@ -1,0 +1,44 @@
+{
+  "interpretations": [
+    {
+      "statement": "The time it takes a business to receive money changes.",
+      "kind": "mechanism",
+      "support_refs": ["ev-ramp-1", "ev-ramp-2"],
+      "counter_refs": [],
+      "depends_on": [],
+      "audience_transfer": "bounded_external_case",
+      "strength_level": 2,
+      "limits": [
+        {
+          "text": "The amount owed is unchanged: what moves is when it arrives.",
+          "refs": ["ev-ramp-2"]
+        }
+      ],
+      "rationale": "The settlement window is what the announcement states, and the documented mechanism is what bounds it to timing.",
+      "rationale_refs": ["ev-ramp-1", "ev-ramp-2"]
+    },
+    {
+      "statement": "A business on this rail can plan its cash timing against a shorter settlement window.",
+      "kind": "consequence_for_reader",
+      "support_refs": ["ev-ramp-1"],
+      "counter_refs": [],
+      "depends_on": [1],
+      "audience_transfer": "bounded_external_case",
+      "strength_level": 2,
+      "limits": [],
+      "rationale": "The shorter settlement window is the only thing the material establishes about a business's own planning.",
+      "rationale_refs": ["ev-ramp-1"]
+    }
+  ],
+  "limits": [
+    {
+      "text": "There is not more money.",
+      "refs": ["ev-ramp-2"]
+    }
+  ],
+  "ambiguities": [],
+  "reader_connection": {
+    "text": "The configured audience is paid on terms it does not set, so when money arrives is a decision it actually takes.",
+    "refs": ["ev-ramp-1"]
+  }
+}

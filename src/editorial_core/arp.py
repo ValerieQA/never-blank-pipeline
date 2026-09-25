@@ -203,6 +203,25 @@ class StateCode(str, Enum):
     #: which item and why.
     MATERIAL_WITHOUT_REFERENCE = "material_without_reference"
 
+    # -- S-04 · Interpretation Boundary (Step 2 §1, ARP; §4 U-1) -----------
+    #: The generate call produced no interpretation this stage may read: the
+    #: transport failed, the answer did not satisfy the contract, or it
+    #: proposed nothing. Like S-01's and S-02's machinery states it says
+    #: nothing about the material — "the evidence admits no reading" is a
+    #: finding, and no finding was made.
+    BOUNDARY_GENERATION_FAILED = "boundary_generation_failed"
+    #: The probe call produced no answer this stage may read, or skipped a
+    #: probe family or a proposed interpretation. Terminal for the same reason
+    #: the probe is a separate call at all (U-1): an admissible set nobody
+    #: tested against the tempting families is not a weaker boundary, it is the
+    #: error the probe exists to catch, recorded as truth.
+    BOUNDARY_PROBE_FAILED = "boundary_probe_failed"
+    #: Every admissible interpretation sits at the ladder's weakest level.
+    #: §1's ARP column: "Only low-strength interpretations → `DEGRADE`
+    #: (proceed with low confidence)". Exactly one outcome, because the
+    #: boundary stands either way — what is low is what it lets a text assert.
+    ONLY_LOW_STRENGTH_INTERPRETATION = "only_low_strength_interpretation"
+
 
 #: Which outcomes each state may end in. The union of two columns: the outcome
 #: map §6.2 gives the state, and the terminal outcome Step 2 §5.3 gives its
@@ -305,6 +324,14 @@ _PERMITTED_OUTCOMES: Mapping[StateCode, frozenset[ArpOutcome]] = {
     # stage continues in every case: what is dropped is the item, never the
     # description.
     StateCode.MATERIAL_WITHOUT_REFERENCE: frozenset({ArpOutcome.DEGRADE}),
+    # Step 2 §1, S-04. Neither call producing an answer leaves anything to
+    # degrade to: a boundary with no interpretations is not a weaker boundary,
+    # and one whose admissible set was never probed is the unchecked state U-1
+    # exists to prevent. S-04's own counter is spent by the re-entry route, not
+    # by a first execution, so neither state replans.
+    StateCode.BOUNDARY_GENERATION_FAILED: frozenset({ArpOutcome.SKIP}),
+    StateCode.BOUNDARY_PROBE_FAILED: frozenset({ArpOutcome.SKIP}),
+    StateCode.ONLY_LOW_STRENGTH_INTERPRETATION: frozenset({ArpOutcome.DEGRADE}),
 }
 
 

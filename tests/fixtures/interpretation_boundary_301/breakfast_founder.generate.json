@@ -1,0 +1,56 @@
+{
+  "interpretations": [
+    {
+      "statement": "Growth hit the founder's capacity: orders arrived faster than one home kitchen could fill them.",
+      "kind": "cause",
+      "support_refs": ["ev-breakfast-1", "ev-breakfast-3"],
+      "counter_refs": [],
+      "depends_on": [],
+      "audience_transfer": "bounded_external_case",
+      "strength_level": 2,
+      "limits": [
+        {
+          "text": "A single documented case; nothing here shows the pattern holds for any other operation.",
+          "refs": ["ev-breakfast-1"]
+        }
+      ],
+      "rationale": "The reported first-year sales and the reported daily output of the kitchen are what the reading rests on.",
+      "rationale_refs": ["ev-breakfast-1", "ev-breakfast-3"]
+    },
+    {
+      "statement": "Hiring would have solved the problem.",
+      "kind": "cause",
+      "support_refs": [],
+      "counter_refs": [],
+      "depends_on": [],
+      "audience_transfer": "bounded_external_case",
+      "strength_level": 2,
+      "limits": [],
+      "rationale": "The material records no hiring decision and no result of one.",
+      "rationale_refs": []
+    },
+    {
+      "statement": "Readers who bake at home will hit the same ceiling.",
+      "kind": "consequence_for_reader",
+      "support_refs": ["ev-breakfast-3"],
+      "counter_refs": [],
+      "depends_on": [1],
+      "audience_transfer": "direct_audience",
+      "strength_level": 2,
+      "limits": [],
+      "rationale": "The kitchen's recorded daily output is what the reading carries onto the reader.",
+      "rationale_refs": ["ev-breakfast-3"]
+    }
+  ],
+  "limits": [
+    {
+      "text": "One case, one founder, one kitchen, and no second source.",
+      "refs": ["ev-breakfast-1"]
+    }
+  ],
+  "ambiguities": [],
+  "reader_connection": {
+    "text": "The configured audience runs operations where one person's capacity is the binding constraint, which is the constraint this case records.",
+    "refs": ["ev-breakfast-1"]
+  }
+}
