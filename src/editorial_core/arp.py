@@ -266,6 +266,35 @@ class StateCode(str, Enum):
     #: finding nothing to say (Step 3 §3.3, the skip rate of map §6.3).
     STRATEGY_GENERATION_FAILED = "strategy_generation_failed"
 
+    # -- S-10 · Executable plan (Step 2 §3, ARP) ---------------------------
+    #: The reader path does not fit the destination's format: §3's own example
+    #: of "an adaptation that cannot meet a hard constraint". A fact about this
+    #: strategy on this surface and not about the machinery, which is why it
+    #: routes back to S-08 while `L_strategy` allows rather than ending the
+    #: destination outright.
+    ADAPTATION_CANNOT_MEET_CONSTRAINT = "adaptation_cannot_meet_constraint"
+    #: The one adaptation call produced no plan this stage may read: the
+    #: transport failed, the answer did not satisfy the contract, or the
+    #: segmentation it returned is not one. Like S-08's machinery state it says
+    #: nothing about the material, and it is deliberately **not**
+    #: `adaptation_cannot_meet_constraint`: that state is the format refusing
+    #: the path, which is an editorial fact, and a provider outage recorded
+    #: under it would be counted as a destination nothing could be shaped for.
+    PLAN_GENERATION_FAILED = "plan_generation_failed"
+
+    # -- S-11 · Plan check and exemplars (Step 2 §3, ARP) ------------------
+    #: A hard plan check found the plan wanting: V-P01's two fields that cannot
+    #: both hold, or a tier-2 client rule V-P04 found unmet. Both send the
+    #: destination back to S-08 with the finding, which is the route the check
+    #: records' own tables give them.
+    PLAN_CHECK_FAILED = "plan_check_failed"
+    #: A hard plan check produced no answer at all: the model half of V-P01,
+    #: V-P04 or V-P03 could not be made or could not be read. Terminal, and
+    #: deliberately not a pass: a plan whose checks nobody ran is not a checked
+    #: plan, and the difference between "the check found nothing" and "the check
+    #: did not run" is the whole value of recording it.
+    PLAN_CHECK_UNAVAILABLE = "plan_check_unavailable"
+
 
 #: Which outcomes each state may end in. The union of two columns: the outcome
 #: map §6.2 gives the state, and the terminal outcome Step 2 §5.3 gives its
@@ -393,6 +422,21 @@ _PERMITTED_OUTCOMES: Mapping[StateCode, frozenset[ArpOutcome]] = {
     # routes that re-enter it — S-09's among them — and not by an execution of
     # its own, so asking again here would be the unbounded loop §5.3 forbids.
     StateCode.STRATEGY_GENERATION_FAILED: frozenset({ArpOutcome.SKIP}),
+    # Step 2 §3, S-10. The format refusing the path is a REPLAN into S-08 while
+    # `L_strategy` allows and the destination's SKIP once it does not; the call
+    # producing no plan is terminal, for the reason S-08's is — no judgment was
+    # made, so there is nothing to degrade to.
+    StateCode.ADAPTATION_CANNOT_MEET_CONSTRAINT: frozenset({
+        ArpOutcome.REPLAN,
+        ArpOutcome.SKIP,
+    }),
+    StateCode.PLAN_GENERATION_FAILED: frozenset({ArpOutcome.SKIP}),
+    # Step 2 §3, S-11. A failed hard check routes to S-08 and ends in the
+    # destination's SKIP; a check nobody could run ends there directly. Neither
+    # degrades: §3 says S-11 "must not repair plans", and proceeding on a plan
+    # whose checks failed or never ran would be repairing it by omission.
+    StateCode.PLAN_CHECK_FAILED: frozenset({ArpOutcome.REPLAN, ArpOutcome.SKIP}),
+    StateCode.PLAN_CHECK_UNAVAILABLE: frozenset({ArpOutcome.SKIP}),
 }
 
 
