@@ -50,3 +50,7 @@ __pycache__/
 venv/
 *.egg-info/
 .DS_Store
+
+# Written by the delivery orchestrator's builder after it pushes; evidence about a
+# build, not a file of this product. It leaked into PR #345 because nothing ignored it.
+.orch-preflight.json
