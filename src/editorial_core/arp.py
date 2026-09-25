@@ -295,6 +295,17 @@ class StateCode(str, Enum):
     #: did not run" is the whole value of recording it.
     PLAN_CHECK_UNAVAILABLE = "plan_check_unavailable"
 
+    # -- S-12 · Writer (Step 2 §3, ARP) ------------------------------------
+    #: The one write call produced no text this stage may read: the transport
+    #: failed, the answer did not satisfy the contract, or what came back is
+    #: not the plan's segments. Like S-08's, S-10's and S-11's machinery states
+    #: it says nothing about the plan, and it is deliberately **not**
+    #: `plan_does_not_hold`: that state is the Writer's own finding that the
+    #: plan cannot be executed honestly, and a provider outage recorded under
+    #: it would send a destination back to S-08 to re-plan against a judgment
+    #: nobody made.
+    TEXT_GENERATION_FAILED = "text_generation_failed"
+
 
 #: Which outcomes each state may end in. The union of two columns: the outcome
 #: map §6.2 gives the state, and the terminal outcome Step 2 §5.3 gives its
@@ -437,6 +448,11 @@ _PERMITTED_OUTCOMES: Mapping[StateCode, frozenset[ArpOutcome]] = {
     # whose checks failed or never ran would be repairing it by omission.
     StateCode.PLAN_CHECK_FAILED: frozenset({ArpOutcome.REPLAN, ArpOutcome.SKIP}),
     StateCode.PLAN_CHECK_UNAVAILABLE: frozenset({ArpOutcome.SKIP}),
+    # Step 2 §3, S-12. Nothing to degrade to and nothing to replan: no text was
+    # produced and no judgment about the plan was made, so the destination is
+    # skipped. `plan_does_not_hold` keeps the map's own row above, because the
+    # Writer's refusal is a finding and this is the absence of one.
+    StateCode.TEXT_GENERATION_FAILED: frozenset({ArpOutcome.SKIP}),
 }
 
 

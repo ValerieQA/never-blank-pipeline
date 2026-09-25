@@ -279,6 +279,13 @@ _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     # the map's own rows, which are already `boundary` and `coordination`.
     StateCode.PLAN_CHECK_FAILED: ReasonCategory.PLAN,
     StateCode.PLAN_CHECK_UNAVAILABLE: ReasonCategory.PROVIDER,
+    # S-12 (Step 2 §3). The one write call producing no text is a condition of
+    # the machinery, counted where S-08's, S-10's and S-11's are.
+    # `plan_does_not_hold` is not here because it is already `plan`: that state
+    # is the Writer reading the approved plan and refusing it, which is an
+    # editorial fact about the plan, and a dead provider recorded under it
+    # would be counted as a plan the prose could not carry.
+    StateCode.TEXT_GENERATION_FAILED: ReasonCategory.PROVIDER,
 }
 
 
