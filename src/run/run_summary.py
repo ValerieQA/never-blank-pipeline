@@ -259,6 +259,13 @@ _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     StateCode.HARD_PLATFORM_POLICY_FORBIDS: ReasonCategory.KNOWLEDGE,
     StateCode.DESTINATION_DEFERRED_BY_CADENCE: ReasonCategory.CADENCE,
     StateCode.NO_ELIGIBLE_DESTINATION: ReasonCategory.COORDINATION,
+    # S-08 (Step 2 §1). The one call producing no candidate set is a condition
+    # of the machinery, counted where S-01's, S-02's, S-04's and S-06's are.
+    # `no_admissible_strategy` is not here because it is already `strategy`:
+    # that state is candidates the engine produced and then refused, which is
+    # an editorial fact, and keeping the two apart is what stops a provider
+    # outage from reading as a destination nothing could be said on.
+    StateCode.STRATEGY_GENERATION_FAILED: ReasonCategory.PROVIDER,
 }
 
 
