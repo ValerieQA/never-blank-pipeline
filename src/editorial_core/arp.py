@@ -222,6 +222,39 @@ class StateCode(str, Enum):
     #: boundary stands either way — what is low is what it lets a text assert.
     ONLY_LOW_STRENGTH_INTERPRETATION = "only_low_strength_interpretation"
 
+    # -- S-06 · Anchor (Step 2 §1, ARP) ------------------------------------
+    #: The one anchor call produced no answer this stage may read, or an answer
+    #: that did not judge every candidate, or one whose leading material cites
+    #: nothing that supports the reading it chose. Like S-01's, S-02's and
+    #: S-04's machinery states it says nothing about the material: every
+    #: admissible interpretation rests on at least one evidence claim (E-08), so
+    #: an item that supports the anchor always exists, and an answer that named
+    #: none did not discover otherwise — it failed to cite. "No provable anchor"
+    #: is a finding about the material, and it keeps the state S-04 records a
+    #: boundary with nothing admissible in.
+    ANCHOR_SELECTION_FAILED = "anchor_selection_failed"
+
+    # -- S-07 · Destinations (Step 2 §1, ARP; AD-02) -----------------------
+    #: The Client Contract does not take this destination for this unit: the row
+    #: is disabled, or it refuses the unit's topic. Kept apart from
+    #: `high_stakes_outside_risk_level`, which is the same table refusing a risk
+    #: level, because AD-02 gives every exclusion its own rule and the skip rate
+    #: is read per reason (map §6.3).
+    DESTINATION_OUTSIDE_CONTRACT = "destination_outside_contract"
+    #: A tier-1 hard platform policy record forbids this material on this
+    #: destination. Not a model judgment and not a fit decision (AD-02 §4): the
+    #: record's own `## Applies when` decided it, and the reference is recorded
+    #: with the tier that gives it authority.
+    HARD_PLATFORM_POLICY_FORBIDS = "hard_platform_policy_forbids"
+    #: Cadence deferred this destination for this unit (AD-02 §2). Its own state
+    #: because an intended gap in the calendar and a contract that does not cover
+    #: the material are different facts about a skip rate.
+    DESTINATION_DEFERRED_BY_CADENCE = "destination_deferred_by_cadence"
+    #: No destination the contract declares is eligible, so the unit has nowhere
+    #: to go (§1, ARP: "Zero eligible destinations → `SKIP` unit, reason
+    #: `no_eligible_destination`").
+    NO_ELIGIBLE_DESTINATION = "no_eligible_destination"
+
 
 #: Which outcomes each state may end in. The union of two columns: the outcome
 #: map §6.2 gives the state, and the terminal outcome Step 2 §5.3 gives its
@@ -332,6 +365,18 @@ _PERMITTED_OUTCOMES: Mapping[StateCode, frozenset[ArpOutcome]] = {
     StateCode.BOUNDARY_GENERATION_FAILED: frozenset({ArpOutcome.SKIP}),
     StateCode.BOUNDARY_PROBE_FAILED: frozenset({ArpOutcome.SKIP}),
     StateCode.ONLY_LOW_STRENGTH_INTERPRETATION: frozenset({ArpOutcome.DEGRADE}),
+    # Step 2 §1, S-06. The call producing no usable answer leaves nothing to
+    # degrade to, and S-06's own counter is spent by the routes that re-enter it
+    # rather than by an execution of its own, so the state does not replan.
+    StateCode.ANCHOR_SELECTION_FAILED: frozenset({ArpOutcome.SKIP}),
+    # Step 2 §1, S-07. Every exclusion is terminal for that destination: S-07 is
+    # deterministic and has no counter ("Limits: —"), so asking the same rules
+    # again would get the same answer, and there is no weaker destination to
+    # degrade to.
+    StateCode.DESTINATION_OUTSIDE_CONTRACT: frozenset({ArpOutcome.SKIP}),
+    StateCode.HARD_PLATFORM_POLICY_FORBIDS: frozenset({ArpOutcome.SKIP}),
+    StateCode.DESTINATION_DEFERRED_BY_CADENCE: frozenset({ArpOutcome.SKIP}),
+    StateCode.NO_ELIGIBLE_DESTINATION: frozenset({ArpOutcome.SKIP}),
 }
 
 

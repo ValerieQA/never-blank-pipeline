@@ -170,6 +170,14 @@ class ReasonCategory(str, Enum):
     #: turned away or as thin evidence — the indicators would otherwise read an
     #: outage as editorial selectivity.
     PROVIDER = "provider"
+    #: The calendar, not the material: per-destination cadence and portfolio
+    #: pressure deferred a destination for this unit (AD-02 §2, the reason AD-02
+    #: names `cadence`). Its own category because a cadence deferral is an
+    #: *intended* gap in the calendar, while every other skip is one the engine
+    #: would rather not have had — and map §6.3 reads the skip rate precisely to
+    #: tell a system that has become too permissive from one whose calendar is
+    #: emptying. Counting a deferral as contract fit would blur the two.
+    CADENCE = "cadence"
 
 
 #: Every state code, in its category. Total on purpose: a state with no
@@ -238,6 +246,19 @@ _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     StateCode.BOUNDARY_GENERATION_FAILED: ReasonCategory.PROVIDER,
     StateCode.BOUNDARY_PROBE_FAILED: ReasonCategory.PROVIDER,
     StateCode.ONLY_LOW_STRENGTH_INTERPRETATION: ReasonCategory.BOUNDARY,
+    # S-06 (Step 2 §1). The one call producing no usable answer is a condition of
+    # the machinery, counted where S-01's, S-02's and S-04's are. "No provable
+    # anchor" is not here because it is not a state of its own: S-06 records it
+    # with `no_asset_or_admissible_interpretation`, which is already `evidence`.
+    StateCode.ANCHOR_SELECTION_FAILED: ReasonCategory.PROVIDER,
+    # S-07 (Step 2 §1, AD-02). Three exclusions and one unit-level state, each
+    # grouped by whose rule refused: the contract's own table, a tier-1 platform
+    # record, the calendar. A unit with nowhere to go is a fact about its
+    # destinations as a set, which is what `coordination` groups.
+    StateCode.DESTINATION_OUTSIDE_CONTRACT: ReasonCategory.CONTRACT_FIT,
+    StateCode.HARD_PLATFORM_POLICY_FORBIDS: ReasonCategory.KNOWLEDGE,
+    StateCode.DESTINATION_DEFERRED_BY_CADENCE: ReasonCategory.CADENCE,
+    StateCode.NO_ELIGIBLE_DESTINATION: ReasonCategory.COORDINATION,
 }
 
 
