@@ -941,6 +941,11 @@ _UNIT_DESTINATIONS = (
     Destination.TELEGRAM,
 )
 
+#: What the run harness declares for a first barrier round over this fixture:
+#: the unit's current non-skipped destinations. A later round after a real SKIP
+#: is a shorter set, which is what `_EXPECTED - {…}` spells below.
+_EXPECTED = frozenset(_UNIT_DESTINATIONS)
+
 
 def _unit_plans(
     boundary: InterpretationBoundary,
@@ -980,6 +985,7 @@ def test_v_p03_replans_only_the_deviating_destination():
     barrier = run_barrier(
         unit_id=unit.unit_id,
         anchor=_anchor(unit, boundary),
+        expected_destinations=_EXPECTED,
         plans=plans,
         verdicts=verdicts,
         boundary=boundary,
@@ -1031,6 +1037,7 @@ def test_a_contradiction_sends_back_only_the_destination_it_names():
     barrier = run_barrier(
         unit_id=unit.unit_id,
         anchor=_anchor(unit, boundary),
+        expected_destinations=_EXPECTED,
         plans=plans,
         verdicts=verdicts,
         boundary=boundary,
@@ -1053,6 +1060,7 @@ def test_a_barrier_round_that_passes_routes_nothing():
     barrier = run_barrier(
         unit_id=unit.unit_id,
         anchor=_anchor(unit, boundary),
+        expected_destinations=_EXPECTED,
         plans=plans,
         verdicts=verdicts,
         boundary=boundary,
@@ -1076,6 +1084,7 @@ def test_a_barrier_round_nobody_could_answer_does_not_pass():
     barrier = run_barrier(
         unit_id=unit.unit_id,
         anchor=_anchor(unit, boundary),
+        expected_destinations=_EXPECTED,
         plans=plans,
         verdicts=verdicts,
         boundary=boundary,
@@ -1104,6 +1113,7 @@ def test_a_round_that_judged_fewer_plans_than_it_compared_is_refused():
     barrier = run_barrier(
         unit_id=unit.unit_id,
         anchor=_anchor(unit, boundary),
+        expected_destinations=_EXPECTED,
         plans=plans,
         verdicts=verdicts,
         boundary=boundary,
@@ -1114,6 +1124,126 @@ def test_a_round_that_judged_fewer_plans_than_it_compared_is_refused():
 
     assert barrier.passed is False
     assert barrier.check.result is CheckOutcome.NOT_ANSWERED
+
+
+class _CountingBudget:
+    """A budget that would allow the call, and records whether it was asked."""
+
+    def __init__(self) -> None:
+        self.spends = 0
+
+    def spend(
+        self, *, scope: OutcomeScope, scope_key: str
+    ) -> Optional[OutcomeRecord]:
+        self.spends += 1
+        return None
+
+
+def _answer_over(destinations: Sequence[Destination]) -> dict[str, Any]:
+    """A V-P03 answer covering exactly these destinations, all carrying it."""
+
+    return {
+        "plans": [
+            {"destination": item.value, "carries_anchor": True, "detail": None}
+            for item in destinations
+        ],
+        "contradictions": [],
+    }
+
+
+def test_a_barrier_round_missing_a_destination_is_refused_before_the_call():
+    """The harness declares three participants and only two plans arrive.
+
+    B1's precondition is that *every* non-skipped destination holds a passed
+    plan. Before this check the stage could only inspect the plans it was
+    handed, so a caller that omitted one got a barrier evaluated over the
+    subset — and a PASS over a subset establishes I-07 for a unit whose missing
+    destination was never compared.
+    """
+
+    boundary = _two_readings()
+    unit = _unit(boundary)
+    plans, verdicts = _unit_plans(boundary)
+    transport = _Transport(_barrier_answer())
+    budget = _CountingBudget()
+
+    with pytest.raises(PlanCheckError) as refusal:
+        run_barrier(
+            unit_id=unit.unit_id,
+            anchor=_anchor(unit, boundary),
+            expected_destinations=_EXPECTED,
+            plans=plans[:2],
+            verdicts=verdicts[:2],
+            boundary=boundary,
+            checks=CHECKS,
+            counters=_ledger(),
+            transport=transport,
+            budget=budget,
+        )
+
+    assert "no plan for telegram" in str(refusal.value)
+    assert transport.calls == 0
+    assert budget.spends == 0
+
+
+def test_a_barrier_round_with_an_unexpected_destination_is_refused():
+    """The other direction: a plan the round was never assembled to compare."""
+
+    boundary = _two_readings()
+    unit = _unit(boundary)
+    plans, verdicts = _unit_plans(boundary)
+    transport = _Transport(_barrier_answer())
+
+    with pytest.raises(PlanCheckError) as refusal:
+        run_barrier(
+            unit_id=unit.unit_id,
+            anchor=_anchor(unit, boundary),
+            expected_destinations=_EXPECTED - {Destination.TELEGRAM},
+            plans=plans,
+            verdicts=verdicts,
+            boundary=boundary,
+            checks=CHECKS,
+            counters=_ledger(),
+            transport=transport,
+        )
+
+    assert "a plan for telegram" in str(refusal.value)
+    assert transport.calls == 0
+
+
+def test_a_later_round_evaluates_the_shorter_set_a_skip_left():
+    """After a real SKIP upstream the harness declares fewer participants.
+
+    "If B1 can never pass (the deviating destination is skipped), B1
+    re-evaluates without it" — so the shorter round is the normal path and must
+    still run, which is what separates this check from one that simply demands
+    every declared destination forever.
+    """
+
+    boundary = _two_readings()
+    unit = _unit(boundary)
+    plans, verdicts = _unit_plans(boundary)
+    remaining = (Destination.WIX, Destination.LINKEDIN)
+    transport = _Transport(_answer_over(remaining))
+
+    barrier = run_barrier(
+        unit_id=unit.unit_id,
+        anchor=_anchor(unit, boundary),
+        expected_destinations=_EXPECTED - {Destination.TELEGRAM},
+        plans=plans[:2],
+        verdicts=verdicts[:2],
+        boundary=boundary,
+        checks=CHECKS,
+        counters=_ledger(),
+        transport=transport,
+        round_index=2,
+    )
+
+    assert barrier.passed is True
+    assert barrier.destinations == remaining
+    assert barrier.round_index == 2
+    assert barrier.outcomes == ()
+    assert transport.calls == 1
 
 
 def test_the_barrier_refuses_a_plan_whose_approval_no_longer_holds():
@@ -1127,6 +1257,7 @@ def test_the_barrier_refuses_a_plan_whose_approval_no_longer_holds():
         run_barrier(
             unit_id=unit.unit_id,
             anchor=_anchor(unit, boundary),
+            expected_destinations=_EXPECTED,
             plans=plans,
             verdicts=verdicts,
             boundary=_one_reading(),
@@ -1159,6 +1290,7 @@ def test_the_barrier_refuses_a_draft():
         run_barrier(
             unit_id=unit.unit_id,
             anchor=_anchor(unit, boundary),
+            expected_destinations=frozenset({drafted.plan.destination}),
             plans=(drafted.plan,),
             verdicts=(),
             boundary=boundary,
@@ -2190,6 +2322,7 @@ def test_a_barrier_round_is_written_by_s11(tmp_path: Path):
     barrier = run_barrier(
         unit_id=unit.unit_id,
         anchor=_anchor(unit, boundary),
+        expected_destinations=_EXPECTED,
         plans=plans,
         verdicts=verdicts,
         boundary=boundary,
@@ -2327,6 +2460,7 @@ def test_the_barrier_round_records_what_it_compared():
     barrier = run_barrier(
         unit_id=unit.unit_id,
         anchor=_anchor(unit, boundary),
+        expected_destinations=_EXPECTED,
         plans=plans,
         verdicts=verdicts,
         boundary=boundary,

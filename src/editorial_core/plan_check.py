@@ -1336,6 +1336,7 @@ def run_barrier(
     *,
     unit_id: str,
     anchor: Anchor,
+    expected_destinations: frozenset[Destination],
     plans: Sequence[ExecutablePlan],
     verdicts: Sequence[PlanVerdict],
     boundary: InterpretationBoundary,
@@ -1347,13 +1348,20 @@ def run_barrier(
 ) -> BarrierRound:
     """One round of barrier B1: V-P03 over the unit's approved plans.
 
-    ``plans`` is every non-skipped destination of the unit, which is the
-    barrier's precondition and is checked rather than assumed: "it runs only
-    when every destination that has not been skipped holds a plan that has
-    passed its per-destination checks". A destination that was skipped is
-    simply absent — "if B1 can never pass (the deviating destination is
-    skipped), B1 re-evaluates without it" — so a later round is this function
-    called again with a shorter list and the next ``round_index``.
+    ``expected_destinations`` is the unit's current non-skipped destinations for
+    this round, **declared by the run harness** rather than worked out here. The
+    harness makes no editorial decision in supplying it: it assembles the set
+    deterministically from lifecycle state already established upstream, and
+    S-11 neither infers eligibility nor reads the set off ``plans``. This stage
+    then holds the barrier's precondition as a real check — "it runs only when
+    every destination that has not been skipped holds a plan that has passed its
+    per-destination checks" — by requiring the plans to represent exactly that
+    set, before any budget is spent and before the V-P03 call.
+
+    A destination that was skipped is simply absent from both — "if B1 can never
+    pass (the deviating destination is skipped), B1 re-evaluates without it" — so
+    a later round is this function called again with the shorter expected set,
+    the matching plans, and the next ``round_index``.
 
     A failure sends back **only** the destinations the answer names as
     deviating. The rest keep their approval, and nothing here touches their
@@ -1363,6 +1371,7 @@ def run_barrier(
     _barrier_precondition(
         unit_id=unit_id,
         anchor=anchor,
+        expected_destinations=expected_destinations,
         plans=plans,
         verdicts=verdicts,
         boundary=boundary,
@@ -1863,6 +1872,7 @@ def _barrier_precondition(
     *,
     unit_id: str,
     anchor: Anchor,
+    expected_destinations: frozenset[Destination],
     plans: Sequence[ExecutablePlan],
     verdicts: Sequence[PlanVerdict],
     boundary: InterpretationBoundary,
@@ -1872,10 +1882,16 @@ def _barrier_precondition(
 
     A precondition and not a judgment: a barrier that concluded anything from
     the plans it happened to be shown would be a barrier a caller can open by
-    passing fewer of them. What it cannot check is which destinations were
-    skipped — that is the caller's round to assemble — so what it does check is
-    that everything it *was* given is an approved plan whose approval still
-    holds against the boundary in front of it.
+    passing fewer of them. So the round's participants are **declared** rather
+    than inferred here: ``expected_destinations`` is the harness's assembly of
+    the unit's current non-skipped destinations for this round, and this stage
+    refuses any round whose plans do not represent exactly that set. S-11 does
+    not decide eligibility and does not derive the set from ``plans``, which
+    would be the same assumption wearing a check's clothes.
+
+    Both directions are refused, and both before anything is spent: a missing
+    destination is a barrier opened over a subset, and an unexpected one is a
+    plan the round was never assembled to compare.
     """
 
     if not unit_id.strip():
@@ -1903,6 +1919,28 @@ def _barrier_precondition(
             f"{unit_id} entered barrier {BARRIER_ID} with two plans for "
             + ", ".join(duplicated)
             + "; one round holds one plan per destination"
+        )
+    if not expected_destinations:
+        raise PlanCheckError(
+            f"{unit_id} entered barrier {BARRIER_ID} with no expected "
+            "destination; the round's participants are the harness's to declare, "
+            "and a barrier over an undeclared set is the assumption B1 exists to "
+            "refuse"
+        )
+    represented = frozenset(named)
+    if represented != expected_destinations:
+        missing = sorted(item.value for item in expected_destinations - represented)
+        unexpected = sorted(item.value for item in represented - expected_destinations)
+        raise PlanCheckError(
+            f"{unit_id} entered barrier {BARRIER_ID} round {round_index} with "
+            + (f"no plan for {', '.join(missing)}" if missing else "")
+            + ("; and " if missing and unexpected else "")
+            + (f"a plan for {', '.join(unexpected)}, which this round does not "
+               "expect" if unexpected else "")
+            + f"; §0.2 runs V-P03 only when every destination that has not been "
+            "skipped holds a passed plan, so a round that compares a subset has "
+            "not established I-07 for the unit and a round that compares a "
+            "stranger did not compare this unit"
         )
     by_plan = {verdict.approved_plan_ref: verdict for verdict in verdicts}
     for plan in plans:
