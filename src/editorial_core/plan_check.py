@@ -30,6 +30,16 @@ The same rule runs the other way for I-12: a soft check can neither fail nor
 carry a route, so V-P05 is a hint and is structurally incapable of becoming a
 threshold.
 
+The Reference Library is the one input that may be missing
+----------------------------------------------------------
+§3 lists it among the Inputs and it is the only one an execution can do
+without: exemplars are material the plan carries to the Writer (I-11), not
+authority a check rests on. An absent library therefore approves the plan
+without examples and records ``reference_library_unavailable`` as a
+``DEGRADE``, while a library that was read and holds nothing for this
+destination and format records nothing at all. The two are different facts, and
+only one of them is a run executing on less than it was configured with.
+
 A verdict keeps no authority a commit has taken away
 ----------------------------------------------------
 PlanVerdict records ``boundary_ref`` — the E-09 version the plan was checked
@@ -108,6 +118,7 @@ from src.editorial_core.strategy_selection import promised_points
 from src.knowledge.loader import KnowledgeBase, LoadedCheck
 from src.run.run_manifest import EntityIndexEntry
 from src.run.run_workspace import RunWorkspace
+from src.strategy.reference_library import ReferenceLibrary
 
 #: The stage this module is, as the topology registry and §2.3 spell it.
 STAGE: Final[str] = "S-11"
@@ -666,6 +677,23 @@ class PlanCheckDecision:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class ExemplarSelection:
+    """What the exemplar lookup made of one plan and one Reference Library.
+
+    Two fields and not one, because "no exemplar was attached" has two causes
+    that must not be counted as each other: a library that was read and holds
+    nothing for this surface, which is a fact about the shelf, and a library
+    that was not there, which is the soft input degrading. Only the second
+    carries an outcome.
+    """
+
+    exemplars: tuple[Exemplar, ...] = ()
+    #: The ``DEGRADE`` the absent library is recorded as. ``None`` whenever the
+    #: library was read, however many items it offered this plan.
+    degraded: Optional[OutcomeRecord] = None
+
+
 # ===========================================================================
 # Barrier B1 (§0.2)
 # ===========================================================================
@@ -752,39 +780,12 @@ class BarrierRound:
 
 # ===========================================================================
 # What the stage is handed
+#
+# The Reference Library is handed in as
+# :class:`~src.strategy.reference_library.ReferenceLibrary`, which lives with
+# the loader that reads it: it is a client document like the Client Contract
+# and the Audience Profile, and the core reads no file (CE-1).
 # ===========================================================================
-
-
-@dataclass(frozen=True, slots=True)
-class ReferenceItem:
-    """One Reference Library item, as the exemplar lookup reads it (§3, Inputs).
-
-    ``K-EXM-*`` in the register's terms. The take and do-not-copy notes belong
-    to the item and not to the plan that borrowed it: an example handed to a
-    Writer without the second note is a template, which is the thing the
-    reference library exists not to be.
-    """
-
-    item_id: str
-    destination: Destination
-    format: PlanFormat
-    take: str
-    do_not_copy: str
-
-    def __post_init__(self) -> None:
-        if not self.item_id.strip():
-            raise PlanCheckError("a reference library item is named by its item ID")
-        if not self.take.strip() or not self.do_not_copy.strip():
-            raise PlanCheckError(
-                f"{self.item_id} carries no take note or no do-not-copy note; "
-                "both travel with the item, and one without the other is an "
-                "example nobody bounded"
-            )
-
-    def as_exemplar(self) -> Exemplar:
-        return Exemplar(
-            item_id=self.item_id, take=self.take, do_not_copy=self.do_not_copy
-        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -1072,7 +1073,7 @@ def check_plan(
     checks: Mapping[str, LoadedCheck],
     counters: AttemptCounterLedger,
     transport: PlanCheckTransport,
-    library: Sequence[ReferenceItem] = (),
+    library: Optional[ReferenceLibrary] = None,
     portfolio: Sequence[PlanFingerprint] = (),
     budget: Optional[CallBudget] = None,
 ) -> PlanCheckDecision:
@@ -1089,6 +1090,15 @@ def check_plan(
     asking a model a second question, and the checks whose model half was
     therefore never asked are recorded as ``not_answered`` rather than as
     anything that could be read as a pass.
+
+    ``library`` is the one input of this stage that may be missing: §3 lists the
+    Reference Library among the Inputs, and an absent one degrades rather than
+    blocking — the plan is approved on its checks, and the examples are material
+    the Writer would have been handed and not authority any check rests on.
+    ``None`` is a caller that read no library, and it reaches the same
+    :data:`~src.editorial_core.arp.StateCode.REFERENCE_LIBRARY_UNAVAILABLE`
+    record as a library that was looked for and was not there, because they are
+    the same fact about this run.
     """
 
     _precondition(
@@ -1154,7 +1164,8 @@ def check_plan(
         )
 
     assert chain is not None  # a chain with findings would have refused above
-    approved = plan.approved_with(select_exemplars(plan, library))
+    selection = select_exemplars(plan, library)
+    approved = plan.approved_with(selection.exemplars)
     results = (
         _passed(checks["V-P01"], CheckMethod.CODE_AND_MODEL),
         _passed(checks["V-P02"], CheckMethod.CODE),
@@ -1177,13 +1188,14 @@ def check_plan(
             chain=chain,
         ),
         approved=approved,
+        outcomes=() if selection.degraded is None else (selection.degraded,),
         calls=1,
     )
 
 
 def select_exemplars(
-    plan: ExecutablePlan, library: Sequence[ReferenceItem]
-) -> tuple[Exemplar, ...]:
+    plan: ExecutablePlan, library: Optional[ReferenceLibrary]
+) -> ExemplarSelection:
     """The exemplar lookup (§3, Decider: ``code``).
 
     Items of this destination in this format, in the order the library offers
@@ -1191,12 +1203,37 @@ def select_exemplars(
     the material would be a second editorial decision taken after the plan was
     approved, and the take / do-not-copy notes travel with the item rather than
     being written here.
+
+    A library that was read and offers this surface nothing returns no exemplar
+    and no outcome: the shelf answered, and the answer was none. A library that
+    was not there returns the same empty list and a ``DEGRADE``, because the
+    question was never put to anything — the distinction the whole soft-input
+    rule rests on, and the one an empty tuple on its own cannot carry.
     """
 
-    return tuple(
-        item.as_exemplar()
-        for item in library
-        if item.destination is plan.destination and item.format is plan.format
+    if library is None or not library.available:
+        return ExemplarSelection(
+            degraded=OutcomeRecord(
+                outcome=ArpOutcome.DEGRADE,
+                state_code=StateCode.REFERENCE_LIBRARY_UNAVAILABLE,
+                scope=OutcomeScope.DESTINATION,
+                scope_key=plan.scope_key,
+                reason=(
+                    f"{plan.plan_id} is approved with no exemplar: "
+                    + (
+                        "no Reference Library was supplied to the stage"
+                        if library is None
+                        else str(library.unavailable_reason)
+                    )
+                ),
+            )
+        )
+    return ExemplarSelection(
+        exemplars=tuple(
+            item.as_exemplar()
+            for item in library.items
+            if item.destination is plan.destination and item.format is plan.format
+        )
     )
 
 

@@ -119,11 +119,11 @@ from src.editorial_core.plan_check import (
     BARRIER_ID,
     BarrierRound,
     PlanVerdict,
-    ReferenceItem,
     check_plan,
     plan_check_records,
     run_barrier,
 )
+from src.strategy.reference_library import ReferenceItem, ReferenceLibrary
 from src.editorial_core.relevance_screen import AudienceTransfer, DecisionRef
 from src.editorial_core.strategy_selection import StrategySelection, selection_id
 from src.editorial_core.topology import CANONICAL_TOPOLOGY
@@ -637,14 +637,21 @@ PASSING_CHECK: dict[str, Any] = {
 
 CHECKS = plan_check_records(load_register(_REPO_ROOT / "knowledge", today=TODAY))
 
-LIBRARY = (
-    ReferenceItem(
-        item_id="K-EXM-07",
-        destination=Destination.LINKEDIN,
-        format=PlanFormat.POST,
-        take="the first line names the mechanism",
-        do_not_copy="the closing question",
+LIBRARY = ReferenceLibrary(
+    library_id="test-library",
+    version="1",
+    items=(
+        ReferenceItem(
+            item_id="REF-001",
+            destination=Destination.LINKEDIN,
+            format=PlanFormat.POST,
+            take="the first line names the mechanism",
+            do_not_copy="the closing question",
+            source="linkedin_posts.md",
+        ),
     ),
+    path="tests/library.md",
+    digest="sha256:" + "0" * 64,
 )
 
 
@@ -653,7 +660,7 @@ def _approved(
     *,
     boundary: Optional[InterpretationBoundary] = None,
     plan_format: PlanFormat = PlanFormat.POST,
-    library: Sequence[ReferenceItem] = LIBRARY,
+    library: Optional[ReferenceLibrary] = LIBRARY,
 ) -> tuple[EditorialStrategy, ExecutablePlan, PlanVerdict]:
     """S-10 then S-11 over one destination: an approved plan and its verdict."""
 
@@ -786,7 +793,7 @@ def _write(
     plan_format: PlanFormat = PlanFormat.POST,
     boundary: Optional[InterpretationBoundary] = None,
     current: Optional[InterpretationBoundary] = None,
-    library: Sequence[ReferenceItem] = LIBRARY,
+    library: Optional[ReferenceLibrary] = LIBRARY,
     counters: Optional[AttemptCounterLedger] = None,
     budget: Any = None,
     brief: Optional[VoiceBrief] = None,
@@ -841,7 +848,7 @@ def test_the_writer_receives_no_sibling_text_no_label_or_raw_research():
             )
         ),
         destination=Destination.WIX,
-        library=(),
+        library=None,
         boundary=boundary,
     )
     assert sibling.text is not None
@@ -876,7 +883,7 @@ def test_the_writer_receives_no_sibling_text_no_label_or_raw_research():
         "obs-ev-2",
         "obs-ev-3",
     }
-    assert inputs.exemplar_refs == ("K-EXM-07",)
+    assert inputs.exemplar_refs == ("REF-001",)
     assert inputs.voice_brief_ref == VOICE
 
 
@@ -1214,7 +1221,7 @@ def test_a_barrier_that_did_not_compare_this_destination_opens_no_prose():
         Destination.LINKEDIN, boundary=boundary
     )
     _, other, other_verdict = _approved(
-        Destination.TELEGRAM, boundary=boundary, library=()
+        Destination.TELEGRAM, boundary=boundary, library=None
     )
     elsewhere = _barrier((other,), (other_verdict,), boundary=boundary)
 
@@ -1327,7 +1334,7 @@ def test_an_article_states_a_title_and_a_dek_and_a_post_does_not():
         ),
         destination=Destination.WIX,
         plan_format=PlanFormat.ARTICLE,
-        library=(),
+        library=None,
     )
     assert article.text is not None
     assert article.text.title == "The network behind the minutes"
@@ -1337,7 +1344,7 @@ def test_an_article_states_a_title_and_a_dek_and_a_post_does_not():
         transport=_Transport(_prose()),
         destination=Destination.WIX,
         plan_format=PlanFormat.ARTICLE,
-        library=(),
+        library=None,
     )
     titled_post = _write(transport=_Transport(_prose(title="A headline", dek="A dek")))
 
