@@ -36,6 +36,7 @@ from src.editorial_core.executable_plan import (
     ForbiddenKind,
 )
 from src.knowledge.loader import load_register
+from src.knowledge.vocabulary import load_vocabularies
 from src.publishing.release_scope import R1_PUBLISH_CHANNELS
 from src.editorial_core.destinations import (
     Eligibility,
@@ -177,6 +178,35 @@ def test_s10_adapts_under_the_client_s_own_forbidden_list(contract):
     assert len(decision.plan.forbidden) == 30
 
 
+def test_s10_adapts_under_the_client_s_own_voice_document(contract):
+    """Real S-10 consumption of the voice brief (#337 acceptance).
+
+    The other half of the acceptance: the typed voice value has to reach S-10 as
+    well as S-12. S-10 does not read the prose — the Writer does — but it records
+    which voice the plan was adapted under, and that reference is what S-12 later
+    refuses a mismatch against. So the value proven here is the *loaded* one, from
+    `config/brand_voice.md` through `voice_brief()`, not a fixture default.
+
+    S-10's interface already supports this; nothing in the stage changed.
+    """
+
+    from src.editorial_core.executable_plan import AdaptationContract
+    from tests.test_305_executable_plan_and_check import _drafted
+
+    brief = voice_brief(contract, root=_REPO_ROOT)
+    adaptation = AdaptationContract(
+        voice_brief_ref=brief.brief_ref, forbidden=contract.forbidden
+    )
+    _, decision = _drafted(contract=adaptation)
+
+    assert decision.plan is not None
+    assert decision.plan.voice_brief_ref == brief.brief_ref == "never-blank-voice v1"
+
+    # the approved version carries it too, which is what S-12 compares against
+    approved = decision.plan.approved_with(())
+    assert approved.voice_brief_ref == brief.brief_ref
+
+
 def test_s12_receives_the_loaded_brief_and_compares_it_with_the_plan(contract):
     """Real S-12 consumption: the loaded `VoiceBrief` reaches `write_prose`.
 
@@ -199,6 +229,55 @@ def test_s12_receives_the_loaded_brief_and_compares_it_with_the_plan(contract):
 
     # refused before the call, so nothing was paid for the comparison
     assert transport.calls == 0
+
+
+def _permitted_destination_names() -> set[str]:
+    """The permitted destination names, from the register's own vocabulary.
+
+    `knowledge/vocab/destinations.md` is the authority (#337 acceptance): derived
+    through `load_vocabularies`, never restated as a list in test code, so a
+    surface added or renamed there is a surface these tests see.
+    """
+
+    return set(load_vocabularies(_REPO_ROOT / "knowledge").get("destinations").names)
+
+
+def test_the_configured_destinations_come_from_the_register_vocabulary(contract):
+    """#337 acceptance: the permitted names are the register's, not the enum's.
+
+    The enum agreeing with the vocabulary is checked by the register validator's
+    own mirror rule; what this asserts is the **client configuration** against the
+    vocabulary that governs it, so a contract naming a surface the register does
+    not define fails here rather than at the first run that meets it.
+    """
+
+    permitted = _permitted_destination_names()
+
+    assert permitted
+    assert {item.value for item in contract.enabled} <= permitted
+    # nothing this client configured is outside the register's vocabulary
+    assert not {item.value for item in contract.enabled} - permitted
+
+
+def test_a_configured_destination_outside_the_vocabulary_is_refused(tmp_path: Path):
+    """The same authority, from the failing side."""
+
+    permitted = _permitted_destination_names()
+    outside = "mastodon"
+    assert outside not in permitted
+
+    _lists(tmp_path)
+    _written(
+        tmp_path,
+        f"## Enabled destinations\n\n- wix\n- {outside}\n",
+        contract_id="c",
+        version="1",
+        voice_ref="config/brand_voice.md",
+        forbidden_ref="fixture-forbidden",
+    )
+
+    with pytest.raises(ClientConfigurationError, match=outside):
+        client_contract(directory=tmp_path)
 
 
 def test_the_contract_reaches_s07_and_decides_all_six_destinations(contract):
@@ -321,7 +400,7 @@ def test_enabled_destinations_are_not_the_rollout_scope(contract):
     enabled = {item.value for item in contract.enabled}
     rollout = set(R1_PUBLISH_CHANNELS)
 
-    assert enabled == {item.value for item in Destination}
+    assert enabled == _permitted_destination_names()
     assert rollout < enabled
     assert enabled - rollout == {"facebook", "instagram", "threads", "telegram"}
 
