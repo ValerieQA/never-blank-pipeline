@@ -76,7 +76,7 @@ _ROW = (
 
 @pytest.fixture(scope="module")
 def never_blank() -> ReferenceLibrary:
-    """The client's real directory, as a run would read it today."""
+    """The client's own library, loaded from the artifact on disk."""
 
     return reference_library(directory=NEVER_BLANK)
 
@@ -108,51 +108,111 @@ def _loaded(tmp_path: Path, rows: Sequence[Sequence[str]]) -> ReferenceLibrary:
     return load_reference_library(_write(tmp_path / "reference", rows))
 
 
-# ── the client has no library yet, and that is a state ────────────────────
+# ── the client's corpus, and the surfaces it does not cover ───────────────
 
 
-def test_never_blank_has_no_reference_library_and_the_run_records_why(
+def test_never_blank_has_a_linkedin_corpus_and_the_run_can_read_it(
     never_blank: ReferenceLibrary,
 ):
-    """The honest state of this client today (#338 repair).
+    """The state of this client since #353.
 
-    `clients/never_blank/editorial/reference/` holds research material about
-    readability — the source the architecture was written from — and **no
-    exemplar texts**. An exemplar is a reference a Writer learns register and
-    form from (`K-EXM-01`); a research note about form is not one, and indexing
-    those documents as items would hand S-11 exemplars this product does not
-    have.
-
-    So Never Blank goes through the supported absent path, which the loader
-    keeps distinct from an empty index: an empty one is refused loudly, and
-    absence states its reason. Authoring a real corpus is editorial content
-    work with its own timeline, not something a loader can produce.
+    Three exemplars, all `linkedin`/`post`, from the one body of genuine Never
+    Blank prose the repository holds. `K-EXM-01` puts the ceiling at 2–5 examples
+    and selects "by text type, not by topic", which is what one destination and
+    one format is.
     """
 
-    assert not never_blank.available
-    assert never_blank.unavailable_reason
-    assert never_blank.digest is None
-    assert never_blank.items == ()
-    assert never_blank.library_id == ""
-    assert never_blank.version == ""
+    assert never_blank.available
+    assert never_blank.library_id == "never-blank-reference"
+    assert never_blank.digest is not None
+    assert [item.item_id for item in never_blank.items] == [
+        "REF-001",
+        "REF-002",
+        "REF-003",
+    ]
+    for item in never_blank.items:
+        assert item.destination is Destination.LINKEDIN
+        assert item.format is PlanFormat.POST
+        assert item.take.strip() and item.do_not_copy.strip()
 
 
-def test_an_exemplar_cannot_be_resolved_against_a_library_that_was_never_read(
+def test_the_readability_research_is_not_indexed_as_an_exemplar(
     never_blank: ReferenceLibrary,
 ):
-    """An absent library answers no question about items (I-03 in spirit)."""
+    """The #338 blocker, kept closed (#353).
 
-    with pytest.raises(ReferenceLibraryError):
+    The directory also holds the readability research the architecture was
+    written from. It is not an exemplar: `K-EXM-01` makes an exemplar a reference
+    a Writer learns register and form from, and a research note *about* form is
+    not one. Indexing it would hand S-11 exemplars this product does not have.
+    """
+
+    sources = {item.source for item in never_blank.items}
+    research = {
+        "article_readability_research.md",
+        "12_—_Структура_статьи:_рама,_сменная_середина,_обязательства.md",
+    }
+
+    assert sources.isdisjoint(research)
+    # and the research really is still there, so this is a choice not an absence
+    for name in research:
+        assert (NEVER_BLANK / "editorial" / "reference" / name).is_file()
+
+
+def test_the_surfaces_with_no_genuine_text_get_no_exemplar(
+    never_blank: ReferenceLibrary,
+):
+    """Coverage is partial on purpose, and partial is a supported state.
+
+    No Never Blank article body is stored in this repository — the published
+    index keeps each article's hook and echo, not its prose — and nothing exists
+    for the four remaining surfaces. So those destinations get no exemplar rather
+    than a manufactured one, which is the difference between a library that is
+    honest about its coverage and one that is padded to look complete.
+    """
+
+    covered = {(item.destination, item.format) for item in never_blank.items}
+
+    assert covered == {(Destination.LINKEDIN, PlanFormat.POST)}
+    for destination in Destination:
+        if destination is Destination.LINKEDIN:
+            continue
+        assert not [
+            item for item in never_blank.items if item.destination is destination
+        ]
+    # the primary surface is among the uncovered ones, and that is the gap #353
+    # reports rather than fills
+    assert not [
+        item for item in never_blank.items if item.format is PlanFormat.ARTICLE
+    ]
+
+
+def test_an_exemplar_resolves_against_the_client_s_own_library(
+    never_blank: ReferenceLibrary,
+):
+    """An item the library holds resolves; one it does not is refused."""
+
+    item = never_blank.items[0]
+    resolved = never_blank.resolve(
+        Exemplar(
+            item_id=item.item_id, take=item.take, do_not_copy=item.do_not_copy
+        )
+    )
+    assert resolved.item_id == item.item_id
+
+    with pytest.raises(ReferenceLibraryError, match="REF-999"):
         never_blank.resolve(
             Exemplar(item_id="REF-999", take="anything", do_not_copy="anything")
         )
 
 
 def test_an_exemplar_the_library_does_not_hold_is_refused(tmp_path: Path):
-    """The same refusal on a library that *was* read — proven synthetically.
+    """The same refusal on a library that *was* read, on a fixture.
 
-    The mechanism is proven on a fixture rather than on the client's artifact,
-    because this product has no exemplar corpus to prove it on.
+    A fixture here so the refusal can be driven by an ID chosen to be absent,
+    without depending on which IDs the client's corpus happens to hold. The
+    client's own library answers the same question in
+    :func:`test_an_exemplar_resolves_against_the_client_s_own_library`.
     """
 
     library = _loaded(tmp_path, [_ROW])
@@ -190,6 +250,47 @@ def test_only_items_for_this_destination_and_format_are_attached(tmp_path: Path)
         library.resolve(exemplar).format is plan_format
         for exemplar in approved.exemplars
     )
+
+
+def test_s11_attaches_a_real_never_blank_exemplar_and_it_resolves_back(
+    never_blank: ReferenceLibrary,
+):
+    """#353's last acceptance: S-11 attaches a **real** exemplar and resolves it.
+
+    The synthetic case above proves the destination/format filter. This proves the
+    chain the issue asks for end to end on the production artifact: the library
+    loaded from `clients/never_blank/`, handed to the real S-11 path, attaching an
+    indexed `REF-*` item to the approved E-14 — and every attached exemplar
+    resolving back through that same library to the row it came from.
+
+    No fixture corpus: the library here is the one a run reads.
+    """
+
+    destination, plan_format = DRAFTED
+
+    _, _, decision = _checked(library=never_blank)
+
+    approved = decision.approved
+    assert approved is not None
+
+    # 1. at least one real item is attached
+    attached = approved.exemplars
+    assert attached
+    assert all(item.item_id.startswith("REF-") for item in attached)
+    assert {item.item_id for item in attached} <= {
+        item.item_id for item in never_blank.items
+    }
+
+    for exemplar in attached:
+        # 2. it resolves back through the same real library
+        resolved = never_blank.resolve(exemplar)
+        # 3. and it is an example for this destination and format
+        assert resolved.destination is destination
+        assert resolved.format is plan_format
+        # 4. the notes carried are the indexed ones
+        assert exemplar.take == resolved.take
+        assert exemplar.do_not_copy == resolved.do_not_copy
+        assert resolved.source == "sample_linkedin_articles_2026-07-21.md"
 
 
 # ── absent degrades, empty does not ────────────────────────────────────────

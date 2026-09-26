@@ -14,7 +14,7 @@ voice and under which sourcing policy. Edit these files to change it.
 | `lenses/portable_noun.md` | Mint our own, reuse our own, or none — and the cut test (#268) |
 | `lists/machine_tells.md` | Constructions Never Blank never publishes (#268) |
 | `audience.md` | Who Never Blank writes for, in the attributes `knowledge/vocab/audience_attributes.md` declares (#335). The only client context the interpretation boundary reads |
-| `editorial/reference/library.md` | **Not present yet.** The index the Reference Library loader reads (#338): one row per item, with the ID S-11 attaches to an approved plan and its "take" / "do not copy" notes. Until a real exemplar corpus is authored, this client has no library and S-11 degrades — see below |
+| `editorial/reference/library.md` | The index the Reference Library loader reads (#338, populated in #353): one row per item, with the ID S-11 attaches to an approved plan and its "take" / "do not copy" notes. Covers **linkedin / post only** — see below |
 | `lenses/revision.md` | How a revision may change an article (D10, temporary until #253) |
 | `lenses/evidence_tension_lens.md` | **Conditional**, `activates_on: [evidence_tension]` (#263): what Never Blank does when a signal's own research evidence contradicts the source's claim — the Evidence Tension Lens |
 | `rules/` | The same rules as knowledge records, in the Step 4 §2 format with front matter (#296). Not read by the Engine yet; `rules/README.md` says what they are for |
@@ -23,18 +23,32 @@ How the Engine reads these files is Engine documentation:
 `docs/engine/CLIENT_CONTRACTS.md` and `docs/engine/EDITORIAL_PLAN.md`.
 
 The editorial source of truth these policies were written from is in
-`editorial/reference/`. **This client has no Reference Library yet.** What the
-directory holds today is research material about readability — the source the
-architecture was written from — and not exemplar texts. An exemplar is a
-reference a Writer learns register and form from (`K-EXM-01`), so a research
-note *about* form is not one, and indexing those documents as items would hand
-S-11 exemplars this product does not have.
+`editorial/reference/`, indexed by `editorial/reference/library.md`.
 
-Until a corpus exists the loader reports the library as absent, S-11 attaches no
-exemplar and the destination degrades — a supported state, recorded with its
-reason, not an error. Note the loader keeps *absent* and *empty* apart: a
-`library.md` holding no rows is refused loudly, so a half-written index can
-never look like an unwritten one.
+**What is in the library.** Three exemplars, all `linkedin` / `post`
+(`REF-001`…`REF-003`), from `sample_linkedin_articles_2026-07-21.md` — genuine
+Never Blank prose written to demonstrate the editorial system, carrying its own
+`cta_mode`, earned-versus-absent Echo and CTA placement. `K-EXM-01` puts the
+ceiling at 2–5 examples and selects "by text type, not by topic", which is what
+one destination and one format is.
+
+**What is deliberately not in it.** The readability research in the same
+directory — `article_readability_research.md` and
+`12_—_Структура_статьи…` — is the source the architecture was written from, and
+it is **not** indexed. An exemplar is a reference a Writer learns register and
+form from; a research note *about* form is not one. #338's first attempt indexed
+these and was blocked for that reason.
+
+**What is still missing, and what would close it.** There is no exemplar for
+`wix` / `article` — the primary surface — and none for facebook, instagram,
+threads or telegram. The repository holds four genuinely published Never Blank
+articles in `strategy/published_content_index.jsonl`, but only their `hook`,
+`echo`, `topic` and `cta_mode`; the prose itself is not stored, and the only
+`generated.json` artifacts belong to test signals. Closing the gap needs
+**editorial input, not code**: the body text of one or two published articles for
+`wix` / `article`, and a real post per remaining surface, each with its take and
+do-not-copy notes. Until then S-11 attaches no exemplar for those destinations,
+which is the supported state rather than a fault.
 
 **Authoring the corpus is editorial content work with its own timeline**, not
 part of the loader. When it exists, add `editorial/reference/library.md` with one
