@@ -159,6 +159,38 @@ enables nothing, a front-matter field the contract does not declare, or a
 raises rather than degrading** — unlike the Reference Library, there is no honest
 default for which destinations a run writes for.
 
+### How the enabled list becomes S-07's input
+
+`contract_destinations()` turns the loaded contract into the
+`ContractDestinations` S-07 requires. **The contract is authoritative over the six
+canonical destinations**, so it produces a row for every one of them and never
+leaves one out. S-07 keeps three states apart, and two of them are easy to
+confuse:
+
+| State | Row | S-07's answer |
+|---|---|---|
+| declared and **enabled** — listed | `enabled=True` | decided, eligible unless another rule excludes it |
+| declared and **disabled** — not listed | `enabled=False` | excluded as `CONTRACT_DISABLED`, citing the contract's rule |
+| **undeclared** | no row | recorded in `DestinationDecisionSet.undeclared` |
+
+A destination missing from the enabled list is the **second** row, not the third.
+`ContractDestinations` says why the difference matters: the destinations it does
+not declare "are not excluded: they are unknown to the contract … so a reader can
+tell a destination the client turned off from one it never mentioned". The client
+wrote a contract covering its surfaces and said no to that one, so dropping the
+row would report a deliberate choice as an oversight. This producer therefore
+never yields `undeclared`.
+
+`rule_id` names the contract's row **for that destination**
+(`<contract_id>-destination-<destination> v<version>`), not the contract as a
+whole: §1 Post asks for one decision with one rule, and `ContractDestinations`
+refuses two rows sharing an ID because "a name two rows answer to names neither".
+
+The producer reads **no** capability and **no** rollout scope. Whether an enabled
+destination publishes or only generates is S-07's own resolution from its other
+inputs — which is why today's Wix + LinkedIn split survives a contract that
+enables all six.
+
 ### Forbidden wording
 
 `forbidden_ref` names a shared list in `lists/` by its `list_id`; the entries

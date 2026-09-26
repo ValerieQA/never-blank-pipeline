@@ -37,10 +37,17 @@ from src.editorial_core.executable_plan import (
 )
 from src.knowledge.loader import load_register
 from src.publishing.release_scope import R1_PUBLISH_CHANNELS
+from src.editorial_core.destinations import (
+    Eligibility,
+    ExclusionRule,
+    DestinationMode,
+    ModeRule,
+)
 from src.strategy.client_contract import (
     CONTRACT_FILE,
     ClientConfigurationError,
     client_contract,
+    contract_destinations,
     forbidden_from,
     load_voice_brief,
     voice_brief,
@@ -192,6 +199,111 @@ def test_s12_receives_the_loaded_brief_and_compares_it_with_the_plan(contract):
 
     # refused before the call, so nothing was paid for the comparison
     assert transport.calls == 0
+
+
+def test_the_contract_reaches_s07_and_decides_all_six_destinations(contract):
+    """Real S-07 consumption: `contract.md` → loader → producer → `decide_destinations`.
+
+    The claim this slice makes, end to end and on the client's own file. Without
+    the producer the chain stopped at a typed value S-07 does not accept.
+    """
+
+    from tests.test_303_anchor_and_destinations import _decided, _unit
+
+    unit = _unit()
+    decided = _decided(unit, contract=contract_destinations(contract))
+
+    # every one of the six is decided, and none is reported as unknown
+    assert [item.destination for item in decided.decisions] == list(Destination)
+    assert decided.undeclared == ()
+    for decision in decided.decisions:
+        assert decision.eligibility is Eligibility.ELIGIBLE
+        assert decision.rule_ref.startswith("never-blank-destination-")
+
+
+def test_publish_versus_generate_only_comes_from_capability_and_rollout(contract):
+    """Today's Wix/LinkedIn split is not the Client Contract's doing.
+
+    All six are enabled by the client, so if the remaining four are
+    `generate_only` that can only have come from capability and the rollout
+    scope — which is the separation AD-02 §3 asks to be kept, made checkable.
+    """
+
+    from tests.test_303_anchor_and_destinations import _decided, _unit
+
+    decided = _decided(_unit(), contract=contract_destinations(contract))
+    modes = {item.destination: item for item in decided.decisions}
+
+    publishing = {
+        item.destination.value
+        for item in decided.decisions
+        if item.mode is DestinationMode.PUBLISH
+    }
+    assert publishing == {"wix", "linkedin"}
+
+    for name in ("facebook", "instagram", "threads", "telegram"):
+        decision = modes[Destination(name)]
+        assert decision.mode is DestinationMode.GENERATE_ONLY
+        # the reason is the engine's, never the contract's
+        assert decision.mode_rule is not ModeRule.CONTRACT_GENERATE_ONLY
+
+    # and the contract said yes to all six
+    assert all(row.enabled for row in contract_destinations(contract).rows)
+
+
+def test_a_destination_the_client_turned_off_is_disabled_not_undeclared(
+    tmp_path: Path,
+):
+    """The collapse this producer exists to avoid.
+
+    `ContractDestinations` keeps the two apart on purpose — the destinations it
+    does not declare "are not excluded: they are unknown to the contract … so a
+    reader can tell a destination the client turned off from one it never
+    mentioned". A destination left out of the *enabled* list is the first of
+    those: the client wrote a contract covering its surfaces and said no to this
+    one. Dropping the row would report that choice as an oversight.
+    """
+
+    from tests.test_303_anchor_and_destinations import _decided, _unit
+
+    _lists(tmp_path)
+    _written(
+        tmp_path,
+        "## Enabled destinations\n\n- wix\n- linkedin\n",
+        contract_id="partial",
+        version="1",
+        voice_ref="config/brand_voice.md",
+        forbidden_ref="fixture-forbidden",
+    )
+    partial = client_contract(directory=tmp_path)
+    rows = contract_destinations(partial)
+
+    # still six rows: four of them switched off, none of them missing
+    assert len(rows.rows) == len(list(Destination))
+    off = {row.destination.value for row in rows.rows if not row.enabled}
+    assert off == {"facebook", "instagram", "threads", "telegram"}
+
+    decided = _decided(_unit(), contract=rows)
+    assert decided.undeclared == ()
+    excluded = {
+        item.destination.value: item
+        for item in decided.decisions
+        if item.eligibility is Eligibility.EXCLUDED
+    }
+    assert set(excluded) == off
+    for name, decision in excluded.items():
+        assert decision.exclusion_rule is ExclusionRule.CONTRACT_DISABLED
+        assert decision.rule_ref == f"partial-destination-{name} v1"
+
+
+def test_every_row_cites_its_own_rule(contract):
+    """§1 Post: one decision, one rule. Two rows sharing an ID name neither."""
+
+    rows = contract_destinations(contract).rows
+    ids = [row.rule_id for row in rows]
+
+    assert len(set(ids)) == len(ids)
+    assert all(row.rule_id.endswith(f"v{contract.version}") for row in rows)
 
 
 # ── the three things that are not each other (AD-02 §3) ────────────────────

@@ -60,7 +60,11 @@ from pathlib import Path
 from typing import Final, Optional
 
 from src.editorial_core.arp import KnowledgeTier
-from src.editorial_core.destinations import Destination
+from src.editorial_core.destinations import (
+    ContractDestination,
+    ContractDestinations,
+    Destination,
+)
 from src.editorial_core.executable_plan import ForbiddenItem, ForbiddenKind
 from src.editorial_core.writer import VoiceBrief
 from src.knowledge.markdown import (
@@ -340,6 +344,57 @@ def voice_brief(
 
     base = root if root is not None else Path.cwd()
     return load_voice_brief(base / contract.voice_ref)
+
+
+def contract_destinations(contract: ClientContract) -> ContractDestinations:
+    """The contract as S-07's declared-destination input (§1, required).
+
+    **The client contract is authoritative over the six canonical destinations**,
+    so this produces a row for every one of them and never leaves one out. That
+    is the whole care this function takes, because S-07 keeps three states apart
+    and two of them are easy to confuse:
+
+    * **declared and enabled** — the client switched it on: ``enabled=True``.
+    * **declared and disabled** — the client switched it off: ``enabled=False``,
+      which S-07 excludes as ``CONTRACT_DISABLED``, citing this contract's rule.
+    * **undeclared** — the contract never mentioned it, recorded by S-07 as
+      :attr:`DestinationDecisionSet.undeclared`.
+
+    ``ContractDestinations``' own docstring is why the difference matters: the
+    destinations it does not declare "are not excluded: they are unknown to the
+    contract … so a reader can tell a destination the client turned off from one
+    it never mentioned". A destination missing from the contract's *enabled* list
+    is the first of those, not the second — the client did mention it, by writing
+    a contract that covers its surfaces — so omitting the row would report a
+    deliberate choice as an oversight. This producer therefore never yields
+    ``undeclared``; a contract that covers all six has nothing unknown in it.
+
+    ``rule_id`` names the contract's row **for that destination**, not the
+    contract as a whole: §1 Post asks for "exactly one decision, eligible or
+    excluded, each with a rule and a tier", and ``ContractDestinations`` refuses
+    two rows sharing an ID because "a name two rows answer to names neither". The
+    version travels with it, so a decision recorded today still names the contract
+    version that made it.
+
+    Nothing here reads capability or the rollout scope. Whether an enabled
+    destination *publishes* or only generates is S-07's own resolution from its
+    other two inputs, and today's Wix + LinkedIn behaviour comes from there
+    rather than from this file.
+    """
+
+    return ContractDestinations(
+        rows=tuple(
+            ContractDestination(
+                destination=destination,
+                rule_id=(
+                    f"{contract.contract_id}-destination-{destination.value} "
+                    f"v{contract.version}"
+                ),
+                enabled=contract.enables(destination),
+            )
+            for destination in Destination
+        )
+    )
 
 
 def _shared_list(directory: Path, list_id: str, *, contract: str) -> SharedList:
