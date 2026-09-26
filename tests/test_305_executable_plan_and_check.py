@@ -147,7 +147,6 @@ from src.editorial_core.plan_check import (
     PlanCheckError,
     PlanFingerprint,
     PlanVerdict,
-    ReferenceItem,
     VerdictResult,
     approval_holds,
     barrier_round_relative_path,
@@ -178,6 +177,7 @@ from src.run.boundary_commit import Admissibility
 from src.run.run_context import create_run_id
 from src.run.run_summary import ReasonCategory, reason_category
 from src.run.run_workspace import RunWorkspace, owner_of
+from src.strategy.reference_library import ReferenceItem, ReferenceLibrary
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -725,7 +725,7 @@ def _checked(
     rules: Optional[DestinationRules] = None,
     contract: Optional[AdaptationContract] = None,
     counters: Optional[AttemptCounterLedger] = None,
-    library: Sequence[ReferenceItem] = (),
+    library: Optional[ReferenceLibrary] = None,
     portfolio: Sequence[PlanFingerprint] = (),
     check_answer: Optional[Any] = None,
     fails: bool = False,
@@ -2013,21 +2013,29 @@ def test_a_soft_check_cannot_be_built_as_a_failure_or_with_a_route():
 
 
 def test_the_approved_version_is_v2_and_carries_its_exemplars():
-    library = (
-        ReferenceItem(
-            item_id="K-EXM-LI-01",
-            destination=Destination.LINKEDIN,
-            format=PlanFormat.POST,
-            take="the way the first line withholds the figure",
-            do_not_copy="the closing question",
+    library = ReferenceLibrary(
+        library_id="test-library",
+        version="1",
+        items=(
+            ReferenceItem(
+                item_id="REF-001",
+                destination=Destination.LINKEDIN,
+                format=PlanFormat.POST,
+                take="the way the first line withholds the figure",
+                do_not_copy="the closing question",
+                source="linkedin_posts.md",
+            ),
+            ReferenceItem(
+                item_id="REF-002",
+                destination=Destination.WIX,
+                format=PlanFormat.ARTICLE,
+                take="the subheading rhythm",
+                do_not_copy="the summary box",
+                source="articles.md",
+            ),
         ),
-        ReferenceItem(
-            item_id="K-EXM-WIX-01",
-            destination=Destination.WIX,
-            format=PlanFormat.ARTICLE,
-            take="the subheading rhythm",
-            do_not_copy="the summary box",
-        ),
+        path="tests/library.md",
+        digest="sha256:" + "0" * 64,
     )
     _, draft, decision = _checked(library=library)
 
@@ -2036,7 +2044,7 @@ def test_the_approved_version_is_v2_and_carries_its_exemplars():
     assert approved.version == APPROVED_VERSION
     assert approved.stage_of_version is PlanStage.APPROVED
     assert approved.supersedes == (draft.plan_id, DRAFT_VERSION)
-    assert [item.item_id for item in approved.exemplars] == ["K-EXM-LI-01"]
+    assert [item.item_id for item in approved.exemplars] == ["REF-001"]
     assert draft.exemplars == ()
     # Nothing else moved: S-11 must not repair plans.
     assert approved.segments == draft.segments

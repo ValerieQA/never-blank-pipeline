@@ -294,6 +294,15 @@ class StateCode(str, Enum):
     #: plan, and the difference between "the check found nothing" and "the check
     #: did not run" is the whole value of recording it.
     PLAN_CHECK_UNAVAILABLE = "plan_check_unavailable"
+    #: There was no Reference Library to select exemplars from, so the plan was
+    #: approved with none. The only input of §3 an execution can do without —
+    #: exemplars are material the plan carries to the Writer (I-11), not
+    #: authority a check rests on — which is why it is the one S-11 state that
+    #: degrades instead of ending the destination. A library that *was* read and
+    #: holds nothing for this destination and format is not this state: that is
+    #: a shelf answering, and recording it here would count a client's own
+    #: coverage as the engine running on less than it was given.
+    REFERENCE_LIBRARY_UNAVAILABLE = "reference_library_unavailable"
 
     # -- S-12 · Writer (Step 2 §3, ARP) ------------------------------------
     #: The one write call produced no text this stage may read: the transport
@@ -453,6 +462,12 @@ _PERMITTED_OUTCOMES: Mapping[StateCode, frozenset[ArpOutcome]] = {
     # skipped. `plan_does_not_hold` keeps the map's own row above, because the
     # Writer's refusal is a finding and this is the absence of one.
     StateCode.TEXT_GENERATION_FAILED: frozenset({ArpOutcome.SKIP}),
+    # Exactly one outcome, and the other direction from its two neighbours: the
+    # plan stands, because no check rested on the library. There is nothing to
+    # replan — asking S-08 for another strategy would not put a document on the
+    # shelf — and nothing to skip, because a destination skipped for want of an
+    # example would make a soft input a gate.
+    StateCode.REFERENCE_LIBRARY_UNAVAILABLE: frozenset({ArpOutcome.DEGRADE}),
 }
 
 

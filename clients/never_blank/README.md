@@ -14,6 +14,7 @@ voice and under which sourcing policy. Edit these files to change it.
 | `lenses/portable_noun.md` | Mint our own, reuse our own, or none — and the cut test (#268) |
 | `lists/machine_tells.md` | Constructions Never Blank never publishes (#268) |
 | `audience.md` | Who Never Blank writes for, in the attributes `knowledge/vocab/audience_attributes.md` declares (#335). The only client context the interpretation boundary reads |
+| `editorial/reference/library.md` | The index over the reference documents (#338): one row per item, with the ID S-11 attaches to an approved plan and its "take" / "do not copy" notes |
 | `lenses/revision.md` | How a revision may change an article (D10, temporary until #253) |
 | `lenses/evidence_tension_lens.md` | **Conditional**, `activates_on: [evidence_tension]` (#263): what Never Blank does when a signal's own research evidence contradicts the source's claim — the Evidence Tension Lens |
 | `rules/` | The same rules as knowledge records, in the Step 4 §2 format with front matter (#296). Not read by the Engine yet; `rules/README.md` says what they are for |
@@ -22,7 +23,11 @@ How the Engine reads these files is Engine documentation:
 `docs/engine/CLIENT_CONTRACTS.md` and `docs/engine/EDITORIAL_PLAN.md`.
 
 The editorial source of truth these policies were written from is in
-`editorial/reference/`. Two points there are deliberately superseded by the
+`editorial/reference/`, indexed by `editorial/reference/library.md` so that
+S-11 can hand a plan an example from it by ID (#338). Adding a document there
+means adding a row; item IDs are permanent and are never renumbered, because an
+exemplar an earlier run recorded still names the item it named then.
+Two points there are deliberately superseded by the
 owner decisions in #266 and #268: the article no longer ends with a CTA after
 the Kicker, and "one deliberate deviation" is now the moment of authorial
 risk — editorial judgement, with nothing checking it mechanically.

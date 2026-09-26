@@ -18,6 +18,7 @@ another directory — no Engine code changes. That is the Replace-the-client tes
   lenses/*.md    0..N lenses
   lists/*.md     0..N shared lists
   audience.md    the Audience Profile, exactly one
+  editorial/reference/library.md   the Reference Library index, 0 or 1
 ```
 
 ## Stream contract
@@ -128,6 +129,36 @@ Profile to the interpretation boundary and admits no other client context with
 it, so the client's positions, its lenses and its portfolio have no attribute to
 arrive under. What those two stages get is what `audience <attribute> is
 <value>` conditions are evaluated against (Step 4 §4).
+
+## Reference Library
+
+The examples S-11 attaches to an approved plan. Implementation:
+`src/strategy/reference_library.py`; configuration like everything else here.
+The index is `editorial/reference/library.md`, beside the documents it points
+at. Front matter, both required, nothing else accepted: `library_id`, `version`.
+Body: a `#` title and notes for people if wanted, then one `## Items` table —
+`Item ID | Destination | Format | Take | Do not copy | Source`.
+
+One row is one item: the ID an exemplar names, the destination and format it is
+an example **for**, what a Writer may carry across, what belongs to that
+document alone, and the file in the same directory it is from. `Take` without
+`Do not copy` is refused — an example handed over without the second note is a
+template.
+
+**Item IDs are `REF-` and three digits, and they are permanent.** They spell out
+nothing about the item, so nothing forces them to change: an item re-pointed at
+another destination, re-worded or moved in the table keeps its name, adding an
+item renumbers none of the others, and an exemplar an earlier run recorded still
+names the same item. Two rows claiming one ID stops the run, as does an ID in
+any other shape, a destination or format the Engine does not have, or a `Source`
+that is not a file of the reference directory.
+
+**It is the one input that may be missing.** A client with no index runs
+without exemplars, and S-11 records the absence per destination
+(`reference_library_unavailable`, a `DEGRADE`). An index that *is* there and
+does not load stops the run like every other document below — a library read as
+empty would strip the exemplars out of every plan of every run and say nothing
+about why.
 
 ## Notes for people
 

@@ -286,6 +286,11 @@ _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     # editorial fact about the plan, and a dead provider recorded under it
     # would be counted as a plan the prose could not carry.
     StateCode.TEXT_GENERATION_FAILED: ReasonCategory.PROVIDER,
+    # A configured input that was not there, counted where the other two
+    # missing-knowledge states are and not under `provider`: nothing refused
+    # and nothing timed out, the client has not put a reference library on the
+    # shelf, and reading that as an outage would hide the one fix there is.
+    StateCode.REFERENCE_LIBRARY_UNAVAILABLE: ReasonCategory.KNOWLEDGE,
 }
 
 
