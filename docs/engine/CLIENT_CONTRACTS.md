@@ -145,6 +145,15 @@ document alone, and the file in the same directory it is from. `Take` without
 `Do not copy` is refused — an example handed over without the second note is a
 template.
 
+**A client may have no library, and that is a state rather than a fault.** With
+no `library.md` the loader reports the library absent with its reason, S-11
+attaches no exemplar and the destination degrades; the run records it. *Absent*
+and *empty* are kept apart: an index holding no rows is refused loudly, so a
+half-written library can never pass as an unwritten one. Never Blank is in the
+absent state today — `editorial/reference/` holds research material about
+readability rather than exemplar texts, and authoring a corpus is editorial
+content work, not part of this loader.
+
 **Item IDs are `REF-` and three digits, and they are permanent.** They spell out
 nothing about the item, so nothing forces them to change: an item re-pointed at
 another destination, re-worded or moved in the table keeps its name, adding an

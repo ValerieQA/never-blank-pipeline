@@ -76,7 +76,7 @@ _ROW = (
 
 @pytest.fixture(scope="module")
 def never_blank() -> ReferenceLibrary:
-    """The client's own library, loaded from the artifact on disk."""
+    """The client's real directory, as a run would read it today."""
 
     return reference_library(directory=NEVER_BLANK)
 
@@ -108,106 +108,57 @@ def _loaded(tmp_path: Path, rows: Sequence[Sequence[str]]) -> ReferenceLibrary:
     return load_reference_library(_write(tmp_path / "reference", rows))
 
 
-# ── the client's artifact loads ────────────────────────────────────────────
+# ── the client has no library yet, and that is a state ────────────────────
 
 
-def test_the_client_library_is_a_configured_input_and_not_documents_on_disk(
+def test_never_blank_has_no_reference_library_and_the_run_records_why(
     never_blank: ReferenceLibrary,
 ):
-    """The artifact loads into typed items, or it is still just documents."""
+    """The honest state of this client today (#338 repair).
 
-    assert never_blank.available
-    assert never_blank.library_id
-    assert never_blank.version
-    assert never_blank.digest is not None
-    assert never_blank.items
-    for item in never_blank.items:
-        assert isinstance(item.destination, Destination)
-        assert isinstance(item.format, PlanFormat)
-        assert item.take.strip() and item.do_not_copy.strip()
-        assert (NEVER_BLANK / LIBRARY_FILE).parent.joinpath(item.source).is_file()
+    `clients/never_blank/editorial/reference/` holds research material about
+    readability — the source the architecture was written from — and **no
+    exemplar texts**. An exemplar is a reference a Writer learns register and
+    form from (`K-EXM-01`); a research note about form is not one, and indexing
+    those documents as items would hand S-11 exemplars this product does not
+    have.
+
+    So Never Blank goes through the supported absent path, which the loader
+    keeps distinct from an empty index: an empty one is refused loudly, and
+    absence states its reason. Authoring a real corpus is editorial content
+    work with its own timeline, not something a loader can produce.
+    """
+
+    assert not never_blank.available
+    assert never_blank.unavailable_reason
+    assert never_blank.digest is None
+    assert never_blank.items == ()
+    assert never_blank.library_id == ""
+    assert never_blank.version == ""
 
 
-def test_every_item_of_the_client_library_has_its_own_id(
+def test_an_exemplar_cannot_be_resolved_against_a_library_that_was_never_read(
     never_blank: ReferenceLibrary,
 ):
-    named = [item.item_id for item in never_blank.items]
-    assert len(set(named)) == len(named)
-    for item_id in named:
-        assert never_blank.item(item_id) is not None
+    """An absent library answers no question about items (I-03 in spirit)."""
 
-
-# ── the whole chain, to an E-14 exemplar and back ──────────────────────────
-
-
-def test_an_approved_plan_carries_exemplars_from_the_client_library(
-    never_blank: ReferenceLibrary,
-):
-    """Artifact → loader → typed input → S-11 → `E-14.exemplars`."""
-
-    destination, plan_format = DRAFTED
-    expected = [
-        item.item_id
-        for item in never_blank.items
-        if item.destination is destination and item.format is plan_format
-    ]
-    assert expected, (
-        "the client library has no example for the drafted surface, so this "
-        "test would pass on an engine that attached nothing"
-    )
-
-    _, draft, decision = _checked(library=never_blank)
-
-    approved = decision.approved
-    assert approved is not None
-    assert draft.exemplars == ()
-    assert [item.item_id for item in approved.exemplars] == expected
-
-
-def test_an_exemplar_on_an_approved_plan_resolves_to_a_real_library_item(
-    never_blank: ReferenceLibrary,
-):
-    """The ID is a reference, not a label: it goes back to the item."""
-
-    _, _, decision = _checked(library=never_blank)
-    approved = decision.approved
-    assert approved is not None
-    assert approved.exemplars
-
-    for exemplar in approved.exemplars:
-        item = never_blank.resolve(exemplar)
-        assert item.item_id == exemplar.item_id
-        assert item.take == exemplar.take
-        assert item.do_not_copy == exemplar.do_not_copy
-        assert (NEVER_BLANK / LIBRARY_FILE).parent.joinpath(item.source).is_file()
-
-
-def test_the_exemplars_survive_into_the_written_plan(
-    never_blank: ReferenceLibrary,
-):
-    """What outlives the run is the E-14 body, not the object in memory."""
-
-    _, _, decision = _checked(library=never_blank)
-    approved = decision.approved
-    assert approved is not None
-
-    written = approved.as_entity()["exemplars"]
-    assert written == [
-        {
-            "item_id": item.item_id,
-            "take": item.take,
-            "do_not_copy": item.do_not_copy,
-        }
-        for item in (never_blank.resolve(entry) for entry in approved.exemplars)
-    ]
-    assert written
-
-
-def test_an_exemplar_the_library_does_not_hold_is_refused(
-    never_blank: ReferenceLibrary,
-):
-    with pytest.raises(ReferenceLibraryError, match="REF-999"):
+    with pytest.raises(ReferenceLibraryError):
         never_blank.resolve(
+            Exemplar(item_id="REF-999", take="anything", do_not_copy="anything")
+        )
+
+
+def test_an_exemplar_the_library_does_not_hold_is_refused(tmp_path: Path):
+    """The same refusal on a library that *was* read — proven synthetically.
+
+    The mechanism is proven on a fixture rather than on the client's artifact,
+    because this product has no exemplar corpus to prove it on.
+    """
+
+    library = _loaded(tmp_path, [_ROW])
+
+    with pytest.raises(ReferenceLibraryError, match="REF-999"):
+        library.resolve(
             Exemplar(item_id="REF-999", take="anything", do_not_copy="anything")
         )
 
