@@ -130,6 +130,67 @@ it, so the client's positions, its lenses and its portfolio have no attribute to
 arrive under. What those two stages get is what `audience <attribute> is
 <value>` conditions are evaluated against (Step 4 §4).
 
+## Client Contract
+
+What the client switched on, and where its voice and its forbidden wording live.
+Implementation: `src/strategy/client_contract.py`. The file is `contract.md` in
+the client directory. Front matter, all four required and nothing else accepted:
+`contract_id`, `version`, `voice_ref`, `forbidden_ref`. Body: a `#` title, notes
+for people if wanted, then one `## Enabled destinations` section listing one
+destination per bullet.
+
+**Three things that are not each other** (AD-02 §3), and the contract supplies
+only the first:
+
+* **Enabled** — this list. The destinations the client wants published to.
+* **Capable** — whether the Engine has a publisher, package and preflight for a
+  destination. Declared in code, never here.
+* **Rollout scope** — which capable destinations today's deployment publishes to
+  (`src/publishing/release_scope.py`). A deployment setting, temporary by
+  contract, and not a client decision.
+
+A destination enabled here and outside the rollout scope is **not** an error: it
+is generated and not published (`generate_only`). The loader reads no rollout
+scope and decides no mode; S-07 resolves the three in order.
+
+A destination the Engine does not have stops the run, as does a contract that
+enables nothing, a front-matter field the contract does not declare, or a
+`forbidden_ref` no list in `lists/` declares. **A client with no `contract.md`
+raises rather than degrading** — unlike the Reference Library, there is no honest
+default for which destinations a run writes for.
+
+### Forbidden wording
+
+`forbidden_ref` names a shared list in `lists/` by its `list_id`; the entries
+live there, so phrases are added to the list rather than to the contract. Each
+entry becomes one `E-14` `forbidden` item at **tier 2** — Step 1 §4's "resolved
+from the contract (tier 2) and hard policy (tier 1)", which the register names
+`APPROVED_CLIENT_RULE`. `rule_ref` is the list and its version, not the entry:
+the entry is what was broken, the list is what forbade it, and V-P04's route is
+decided by the tier of the rule broken.
+
+Every entry of a shared list is a **phrase**, matched by code, case- and
+whitespace-insensitively. A **construction type** is not a string — V-T06 sends
+those to the model, "however it is worded" — so nothing is inferred as one.
+
+Tier 1 is hard *platform* policy from the register (a `K-DST-*` record at tier 1).
+No record forbids wording today, so the tier-1 contribution is empty, which is an
+honest state rather than a gap. `config/machine_tells/shared.yaml` is **not** a
+source: every entry there is `tier: directional` — advisory, in the legacy
+machine-tells vocabulary — and it also holds regex patterns and lede moves, which
+are not phrases. It stays where it is, read by `src/editorial/machine_tells.py`
+for the pre-canonical path.
+
+### Voice brief
+
+`voice_ref` is a **reference**, relative to the repository root. The voice
+document stays human-editable prose where it is and is never copied into the
+contract. It declares its own `voice_id` and `version` in front matter, and
+`E-14.voice_brief_ref` is `<voice_id> v<version>` — a reference to a *version*,
+which is why an unversioned document cannot be referenced at all. S-12 compares
+the brief it is handed against the plan's reference and refuses a voice the plan
+was not approved against.
+
 ## Reference Library
 
 The examples S-11 attaches to an approved plan. Implementation:

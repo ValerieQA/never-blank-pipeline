@@ -1,3 +1,8 @@
+---
+voice_id: never-blank-voice
+version: 1
+---
+
 # Never Blank — Brand Voice
 
 ## What Never Blank Is
