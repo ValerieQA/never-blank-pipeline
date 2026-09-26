@@ -76,7 +76,7 @@ _ROW = (
 
 @pytest.fixture(scope="module")
 def never_blank() -> ReferenceLibrary:
-    """The client's real directory, as a run would read it today."""
+    """The client's own library, loaded from the artifact on disk."""
 
     return reference_library(directory=NEVER_BLANK)
 
@@ -108,41 +108,99 @@ def _loaded(tmp_path: Path, rows: Sequence[Sequence[str]]) -> ReferenceLibrary:
     return load_reference_library(_write(tmp_path / "reference", rows))
 
 
-# ── the client has no library yet, and that is a state ────────────────────
+# ── the client's corpus, and the surfaces it does not cover ───────────────
 
 
-def test_never_blank_has_no_reference_library_and_the_run_records_why(
+def test_never_blank_has_a_linkedin_corpus_and_the_run_can_read_it(
     never_blank: ReferenceLibrary,
 ):
-    """The honest state of this client today (#338 repair).
+    """The state of this client since #353.
 
-    `clients/never_blank/editorial/reference/` holds research material about
-    readability — the source the architecture was written from — and **no
-    exemplar texts**. An exemplar is a reference a Writer learns register and
-    form from (`K-EXM-01`); a research note about form is not one, and indexing
-    those documents as items would hand S-11 exemplars this product does not
-    have.
-
-    So Never Blank goes through the supported absent path, which the loader
-    keeps distinct from an empty index: an empty one is refused loudly, and
-    absence states its reason. Authoring a real corpus is editorial content
-    work with its own timeline, not something a loader can produce.
+    Three exemplars, all `linkedin`/`post`, from the one body of genuine Never
+    Blank prose the repository holds. `K-EXM-01` puts the ceiling at 2–5 examples
+    and selects "by text type, not by topic", which is what one destination and
+    one format is.
     """
 
-    assert not never_blank.available
-    assert never_blank.unavailable_reason
-    assert never_blank.digest is None
-    assert never_blank.items == ()
-    assert never_blank.library_id == ""
-    assert never_blank.version == ""
+    assert never_blank.available
+    assert never_blank.library_id == "never-blank-reference"
+    assert never_blank.digest is not None
+    assert [item.item_id for item in never_blank.items] == [
+        "REF-001",
+        "REF-002",
+        "REF-003",
+    ]
+    for item in never_blank.items:
+        assert item.destination is Destination.LINKEDIN
+        assert item.format is PlanFormat.POST
+        assert item.take.strip() and item.do_not_copy.strip()
 
 
-def test_an_exemplar_cannot_be_resolved_against_a_library_that_was_never_read(
+def test_the_readability_research_is_not_indexed_as_an_exemplar(
     never_blank: ReferenceLibrary,
 ):
-    """An absent library answers no question about items (I-03 in spirit)."""
+    """The #338 blocker, kept closed (#353).
 
-    with pytest.raises(ReferenceLibraryError):
+    The directory also holds the readability research the architecture was
+    written from. It is not an exemplar: `K-EXM-01` makes an exemplar a reference
+    a Writer learns register and form from, and a research note *about* form is
+    not one. Indexing it would hand S-11 exemplars this product does not have.
+    """
+
+    sources = {item.source for item in never_blank.items}
+    research = {
+        "article_readability_research.md",
+        "12_—_Структура_статьи:_рама,_сменная_середина,_обязательства.md",
+    }
+
+    assert sources.isdisjoint(research)
+    # and the research really is still there, so this is a choice not an absence
+    for name in research:
+        assert (NEVER_BLANK / "editorial" / "reference" / name).is_file()
+
+
+def test_the_surfaces_with_no_genuine_text_get_no_exemplar(
+    never_blank: ReferenceLibrary,
+):
+    """Coverage is partial on purpose, and partial is a supported state.
+
+    No Never Blank article body is stored in this repository — the published
+    index keeps each article's hook and echo, not its prose — and nothing exists
+    for the four remaining surfaces. So those destinations get no exemplar rather
+    than a manufactured one, which is the difference between a library that is
+    honest about its coverage and one that is padded to look complete.
+    """
+
+    covered = {(item.destination, item.format) for item in never_blank.items}
+
+    assert covered == {(Destination.LINKEDIN, PlanFormat.POST)}
+    for destination in Destination:
+        if destination is Destination.LINKEDIN:
+            continue
+        assert not [
+            item for item in never_blank.items if item.destination is destination
+        ]
+    # the primary surface is among the uncovered ones, and that is the gap #353
+    # reports rather than fills
+    assert not [
+        item for item in never_blank.items if item.format is PlanFormat.ARTICLE
+    ]
+
+
+def test_an_exemplar_resolves_against_the_client_s_own_library(
+    never_blank: ReferenceLibrary,
+):
+    """An item the library holds resolves; one it does not is refused."""
+
+    item = never_blank.items[0]
+    resolved = never_blank.resolve(
+        Exemplar(
+            item_id=item.item_id, take=item.take, do_not_copy=item.do_not_copy
+        )
+    )
+    assert resolved.item_id == item.item_id
+
+    with pytest.raises(ReferenceLibraryError, match="REF-999"):
         never_blank.resolve(
             Exemplar(item_id="REF-999", take="anything", do_not_copy="anything")
         )
