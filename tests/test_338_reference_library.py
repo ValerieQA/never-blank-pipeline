@@ -207,10 +207,12 @@ def test_an_exemplar_resolves_against_the_client_s_own_library(
 
 
 def test_an_exemplar_the_library_does_not_hold_is_refused(tmp_path: Path):
-    """The same refusal on a library that *was* read — proven synthetically.
+    """The same refusal on a library that *was* read, on a fixture.
 
-    The mechanism is proven on a fixture rather than on the client's artifact,
-    because this product has no exemplar corpus to prove it on.
+    A fixture here so the refusal can be driven by an ID chosen to be absent,
+    without depending on which IDs the client's corpus happens to hold. The
+    client's own library answers the same question in
+    :func:`test_an_exemplar_resolves_against_the_client_s_own_library`.
     """
 
     library = _loaded(tmp_path, [_ROW])
@@ -248,6 +250,47 @@ def test_only_items_for_this_destination_and_format_are_attached(tmp_path: Path)
         library.resolve(exemplar).format is plan_format
         for exemplar in approved.exemplars
     )
+
+
+def test_s11_attaches_a_real_never_blank_exemplar_and_it_resolves_back(
+    never_blank: ReferenceLibrary,
+):
+    """#353's last acceptance: S-11 attaches a **real** exemplar and resolves it.
+
+    The synthetic case above proves the destination/format filter. This proves the
+    chain the issue asks for end to end on the production artifact: the library
+    loaded from `clients/never_blank/`, handed to the real S-11 path, attaching an
+    indexed `REF-*` item to the approved E-14 — and every attached exemplar
+    resolving back through that same library to the row it came from.
+
+    No fixture corpus: the library here is the one a run reads.
+    """
+
+    destination, plan_format = DRAFTED
+
+    _, _, decision = _checked(library=never_blank)
+
+    approved = decision.approved
+    assert approved is not None
+
+    # 1. at least one real item is attached
+    attached = approved.exemplars
+    assert attached
+    assert all(item.item_id.startswith("REF-") for item in attached)
+    assert {item.item_id for item in attached} <= {
+        item.item_id for item in never_blank.items
+    }
+
+    for exemplar in attached:
+        # 2. it resolves back through the same real library
+        resolved = never_blank.resolve(exemplar)
+        # 3. and it is an example for this destination and format
+        assert resolved.destination is destination
+        assert resolved.format is plan_format
+        # 4. the notes carried are the indexed ones
+        assert exemplar.take == resolved.take
+        assert exemplar.do_not_copy == resolved.do_not_copy
+        assert resolved.source == "sample_linkedin_articles_2026-07-21.md"
 
 
 # ── absent degrades, empty does not ────────────────────────────────────────
