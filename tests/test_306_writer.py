@@ -661,19 +661,26 @@ def _approved(
     boundary: Optional[InterpretationBoundary] = None,
     plan_format: PlanFormat = PlanFormat.POST,
     library: Optional[ReferenceLibrary] = LIBRARY,
+    contract: Optional[AdaptationContract] = None,
 ) -> tuple[EditorialStrategy, ExecutablePlan, PlanVerdict]:
-    """S-10 then S-11 over one destination: an approved plan and its verdict."""
+    """S-10 then S-11 over one destination: an approved plan and its verdict.
+
+    ``contract`` defaults to this module's fixture. #337's chain test passes the
+    one its own loader produced, so the approved plan carries the client's real
+    voice reference and its real forbidden list rather than a stand-in.
+    """
 
     snapshot = boundary or _two_readings()
     unit = _unit(snapshot)
     strategy = _strategy(unit, destination, boundary=snapshot)
     rules = _rules(destination, plan_format=plan_format)
+    adaptation = contract or _contract()
     drafted = adapt_strategy(
         strategy=strategy,
         selection=_selection(strategy),
         decision=_decision(unit, destination),
         rules=rules,
-        contract=_contract(),
+        contract=adaptation,
         boundary=snapshot,
         core=_core(),
         counters=_ledger(),
@@ -694,7 +701,7 @@ def _approved(
         boundary=snapshot,
         core=_core(),
         rules=rules,
-        contract=_contract(),
+        contract=adaptation,
         checks=CHECKS,
         counters=_ledger(),
         transport=_Transport(PASSING_CHECK),

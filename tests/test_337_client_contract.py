@@ -597,3 +597,207 @@ def test_a_rule_ref_names_the_list_and_its_version_not_the_entry(tmp_path: Path)
     assert items
     assert {item.rule_ref for item in items} == {"fixture-forbidden v1"}
     assert {item.value for item in items} == {"game changer", "at the end of the day"}
+
+
+# ── the chain #337 could not prove until S-13 existed (#307) ───────────────
+
+
+def _chain_fixtures(contract):
+    """The producers, and an approved plan carrying them. One fixture family."""
+
+    from src.editorial_core.executable_plan import AdaptationContract
+    from tests.test_306_writer import _approved, _two_readings
+
+    brief = voice_brief(contract, root=_REPO_ROOT)
+    boundary = _two_readings()
+    adaptation = AdaptationContract(
+        voice_brief_ref=brief.brief_ref, forbidden=contract.forbidden
+    )
+    strategy, approved, verdict = _approved(boundary=boundary, contract=adaptation)
+    return brief, boundary, strategy, approved, verdict
+
+
+def _write_body(text_body, *, brief, boundary, strategy, approved, verdict):
+    from tests.test_306_writer import (
+        SEGMENT_NAMES,
+        _barrier,
+        _core as _core_306,
+        _ledger,
+        _prose,
+        _Transport as _WriterTransport,
+    )
+    from src.editorial_core.writer import write_prose
+
+    return write_prose(
+        plan=approved,
+        verdict=verdict,
+        barrier=_barrier([approved], [verdict], boundary=boundary),
+        strategy=strategy,
+        boundary=boundary,
+        core=_core_306(),
+        brief=brief,
+        counters=_ledger(),
+        transport=_WriterTransport(
+            _prose(
+                parts=[
+                    {"name": SEGMENT_NAMES[0], "text": text_body},
+                    {"name": SEGMENT_NAMES[1], "text": "The wait is the cost."},
+                ]
+            )
+        ),
+    )
+
+
+def _check(text, *, approved, boundary, forbidden, counters=None):
+    from src.editorial_core.text_check import check_text, text_check_records
+    from src.knowledge.loader import load_register
+    from tests.test_306_writer import _core as _core_306, _ledger
+
+    return check_text(
+        text=text,
+        plan=approved,
+        boundary=boundary,
+        core=_core_306(),
+        forbidden=forbidden,
+        checks=text_check_records(load_register(_REPO_ROOT / "knowledge")),
+        counters=counters if counters is not None else _ledger(),
+        transport=_TextTransport(),
+    )
+
+
+def test_the_client_contract_reaches_v_t06_and_routes_an_edit(contract):
+    """The whole chain, on the client's real configuration.
+
+    client config → `VoiceBrief` + `forbidden` + `AdaptationContract`
+    → `write_prose` → `check_text` / V-T06 → `L_edit` → `revise_prose`
+
+    This is the half of #337's acceptance that was impossible before #307: V-T06
+    belongs to S-13, and S-13 did not exist. Nothing here is a fixture contract —
+    the phrase the text trips over is one of the thirty this client actually
+    authored, and the voice reference is the one its own document declares.
+    """
+
+    from src.editorial_core.plan_check import CheckOutcome
+    from src.editorial_core.text_check import EDIT_COUNTER, TextResult, edit_scope_key
+    from src.editorial_core.writer import revise_prose
+    from tests.test_306_writer import (
+        SEGMENT_NAMES,
+        _barrier,
+        _core as _core_306,
+        _ledger,
+        _prose,
+        _Transport as _WriterTransport,
+    )
+
+    # 1 · the producers, from the client's own files
+    brief, boundary, strategy, approved, verdict = _chain_fixtures(contract)
+    forbidden = contract.phrases()
+    assert forbidden and brief.brief_ref == "never-blank-voice v1"
+    tripped = next(item for item in forbidden if item.value == "game changer")
+
+    # 2 · the approved plan carries the real voice reference and the real rules
+    assert approved.voice_brief_ref == brief.brief_ref
+    assert tripped in approved.forbidden
+
+    # 3 · S-12 writes prose that breaks the client's rule, under the real brief
+    offending = f"This is a {tripped.value} for small operators."
+    written = _write_body(
+        offending, brief=brief, boundary=boundary, strategy=strategy,
+        approved=approved, verdict=verdict,
+    )
+    text = written.text
+    assert text is not None
+    assert tripped.value in text.body
+    assert text.inputs.voice_brief_ref == brief.brief_ref
+
+    # 4 · S-13: V-T06 consumes the produced rules and fails on the real phrase
+    counters = _ledger()
+    decision = _check(
+        text, approved=approved, boundary=boundary,
+        forbidden=forbidden, counters=counters,
+    )
+    v_t06 = next(item for item in decision.verdict.checks if item.check_id == "V-T06")
+    assert v_t06.result is CheckOutcome.FAIL
+    # the finding cites the client's own rule, by its list and version
+    assert any(finding.rule_ref == tripped.rule_ref for finding in v_t06.findings)
+
+    # 5 · the route is L_edit, at the approved plan's key
+    assert decision.verdict.result is TextResult.EDIT
+    assert decision.verdict.counter == EDIT_COUNTER
+    assert decision.verdict.outcome is not None
+    assert decision.verdict.outcome.route_target == "S-12"
+    assert decision.verdict.outcome.scope_key == edit_scope_key(approved.plan_ref)
+    assert counters.used(EDIT_COUNTER, edit_scope_key(approved.plan_ref)) == 1
+
+    # 6 · revise_prose: same approved plan, next version
+    repaired = revise_prose(
+        prior=text,
+        findings=tuple(finding.detail for finding in v_t06.findings),
+        plan=approved,
+        verdict=verdict,
+        barrier=_barrier([approved], [verdict], boundary=boundary),
+        strategy=strategy,
+        boundary=boundary,
+        core=_core_306(),
+        brief=brief,
+        counters=_ledger(),
+        transport=_WriterTransport(
+            _prose(
+                parts=[
+                    {"name": SEGMENT_NAMES[0], "text": "A shift for small operators."},
+                    {"name": SEGMENT_NAMES[1], "text": "The wait is the cost."},
+                ]
+            )
+        ),
+    )
+    assert repaired.text is not None
+    assert repaired.text.plan_ref == approved.plan_ref
+    assert repaired.text.text_id == text.text_id
+    assert repaired.text.version == text.version + 1
+    assert repaired.text.supersedes == text.text_ref
+    assert tripped.value not in repaired.text.body
+    assert repaired.calls == 1
+
+
+def test_a_phrase_this_client_does_not_forbid_does_not_route_an_edit(contract):
+    """The other direction: V-T06 fires on the client's list, not on prose it dislikes."""
+
+    from src.editorial_core.text_check import TextResult
+
+    brief, boundary, strategy, approved, verdict = _chain_fixtures(contract)
+    clean = "The settlement network is named in the filing."
+    assert not any(item.matches(clean) for item in contract.phrases())
+
+    written = _write_body(
+        clean, brief=brief, boundary=boundary, strategy=strategy,
+        approved=approved, verdict=verdict,
+    )
+    decision = _check(
+        written.text, approved=approved, boundary=boundary,
+        forbidden=contract.phrases(),
+    )
+
+    assert decision.verdict.result is TextResult.ACCEPTED
+
+
+class _TextTransport:
+    """Both S-13 model calls answering "nothing found"."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def complete(self, *, instructions: str, request: str) -> str:
+        import json
+
+        self.calls += 1
+        if self.calls == 1:
+            return json.dumps({
+                "v_t01": {"holds": True, "findings": []},
+                "v_t02": {"holds": True, "findings": []},
+                "v_t03": {"holds": True, "findings": []},
+            })
+        return json.dumps({
+            "v_t06": {"holds": True, "findings": []},
+            "v_t07": {"holds": True, "findings": []},
+            "v_t08": {"holds": True, "findings": []},
+        })
