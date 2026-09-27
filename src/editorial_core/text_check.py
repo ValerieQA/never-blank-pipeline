@@ -1112,3 +1112,225 @@ def text_check_records(knowledge: Any) -> Mapping[str, LoadedCheck]:
             "fewer"
         )
     return {check_id: loaded[check_id] for check_id in REQUIRED_CHECKS}
+
+
+# ===========================================================================
+# F-4: the boundary moved, and the siblings were accepted under the old one
+# ===========================================================================
+
+#: The one check a sibling re-check asks about. Not the whole truth call's set:
+#: §5.4 asks for "a targeted re-run of the S-13 **truth** call", and what a new
+#: boundary version can change is admissibility.
+SIBLING_RECHECK_CHECKS: Final[tuple[str, ...]] = ("V-T02",)
+
+#: One call per affected sibling (§5.4), not S-13's usual two. The execution call
+#: is not re-run because nothing about the plan's execution changed — the boundary
+#: did.
+CALLS_PER_SIBLING_RECHECK: Final[int] = 1
+
+SIBLING_RECHECK_INSTRUCTIONS: Final[str] = """\
+A text was accepted against an earlier version of the interpretation boundary, and
+the boundary has since changed. Re-answer one question against the NEW boundary
+only.
+
+V-T02 (admissibility): does the text assert any reading the new boundary records as
+inadmissible, OR any reading it never admitted at all? The recorded inadmissible
+list is a detection aid and not the limit of the question. A reading that was
+admissible under the old version and is not under the new one is a failure now.
+
+Return JSON only:
+{"v_t02": {"holds": true, "findings": [{"detail": "...", "interpretation_ref":
+"..."}]}}
+"""
+
+
+def affected_siblings(
+    verdicts: Sequence[TextVerdict], boundary: InterpretationBoundary
+) -> tuple[TextVerdict, ...]:
+    """The accepted verdicts a boundary commit put in question (§5.4, F-4).
+
+    Accepted, and checked against an **older** version of this boundary. A verdict
+    already at the current version needs nothing: it was judged against what is
+    now true. A verdict against a *different* boundary is not this unit's business
+    and is left alone.
+    """
+
+    current = (boundary.boundary_id, boundary.version)
+    return tuple(
+        verdict
+        for verdict in verdicts
+        if verdict.accepted
+        and verdict.boundary_ref[0] == current[0]
+        and verdict.boundary_ref[1] < current[1]
+    )
+
+
+def recheck_siblings_after_boundary_commit(
+    *,
+    boundary: InterpretationBoundary,
+    accepted: Sequence[tuple[Text, TextVerdict]],
+    core: EvidenceCore,
+    plans: Mapping[Destination, ExecutablePlan],
+    checks: Mapping[str, LoadedCheck],
+    counters: AttemptCounterLedger,
+    transport: TextCheckTransport,
+) -> tuple[TextDecision, ...]:
+    """Re-check every sibling text an S-04 re-entry left judged against an old boundary.
+
+    §5.4, defect **F-4**, the half this stage owns: "Texts already accepted for
+    sibling destinations get a targeted re-run of the S-13 **truth** call (1 call
+    each) before S-14."
+
+    Why it is needed at all: one destination can discover an inadmissible reading,
+    route to S-04, and leave the boundary at a new version — while the sibling that
+    was accepted ten minutes earlier is still accepted **against the version that
+    no longer holds**. Nothing else would catch it. S-11's code checks re-run on
+    the plans, and the S-12 precondition compares versions, but a text that already
+    passed S-13 has no reason to be looked at again unless this does it.
+
+    One call per sibling, and only V-T02. Re-running the execution call would pay
+    for an answer that cannot have changed: the plan's execution is what it was, and
+    what moved is which readings the boundary admits.
+
+    On failure the route is taken through the ledger rather than chosen here, and
+    that is the point: V-T02's declared route is S-04 on ``L_boundary``, which the
+    re-entry that produced this new version has already spent. So the ledger returns
+    that route's own ``on_exhaustion`` — the destination is skipped — without this
+    function deciding anything. A second boundary test would be re-testing the
+    boundary that was just committed.
+
+    Returns one decision per affected sibling, in the order given. A sibling whose
+    re-check passes is returned re-accepted **at the new version**, so that the
+    verdict a later reader finds says which boundary it was judged against.
+    """
+
+    decisions: list[TextDecision] = []
+    for text, previous in accepted:
+        if previous not in affected_siblings([previous], boundary):
+            continue
+        plan = plans.get(text.destination)
+        if plan is None or plan.plan_ref != text.plan_ref:
+            raise TextCheckError(
+                f"{text.text_id} is being re-checked without the approved plan it "
+                "executes; a re-check that cannot see the plan cannot say what the "
+                "text was allowed to assert"
+            )
+
+        answer = _ask(
+            transport,
+            instructions=SIBLING_RECHECK_INSTRUCTIONS,
+            request=_request(text, plan, boundary, core),
+            expected=SIBLING_RECHECK_CHECKS,
+        )
+        if answer is None:
+            results = (
+                _result(
+                    checks["V-T02"],
+                    method=CheckMethod.MODEL_EXPLICIT_CRITERION,
+                    outcome=CheckOutcome.NOT_ANSWERED,
+                    findings=(
+                        Finding(
+                            detail=(
+                                "the sibling truth re-check produced no answer, so "
+                                "this text is not known to hold against the new "
+                                "boundary version and may not reach S-14"
+                            ),
+                            refs=(text.text_id,),
+                        ),
+                    ),
+                ),
+            )
+            decisions.append(
+                TextDecision(
+                    verdict=_verdict(
+                        text,
+                        boundary,
+                        results,
+                        TextResult.SKIP,
+                        outcome=OutcomeRecord(
+                            outcome=ArpOutcome.SKIP,
+                            state_code=StateCode.TEXT_CHECK_UNAVAILABLE,
+                            scope=OutcomeScope.PUBLICATION,
+                            scope_key=f"{text.text_id}/v{text.version}",
+                            reason=(
+                                "the targeted truth re-check after a boundary "
+                                "commit produced no answer"
+                            ),
+                        ),
+                        calls=CALLS_PER_SIBLING_RECHECK,
+                    )
+                )
+            )
+            continue
+
+        rows = answer.findings.get("V-T02", ())
+        if not rows:
+            decisions.append(
+                TextDecision(
+                    verdict=_verdict(
+                        text,
+                        boundary,
+                        (
+                            _result(
+                                checks["V-T02"],
+                                method=CheckMethod.MODEL_EXPLICIT_CRITERION,
+                                outcome=CheckOutcome.PASS,
+                                findings=(),
+                            ),
+                        ),
+                        TextResult.ACCEPTED,
+                        calls=CALLS_PER_SIBLING_RECHECK,
+                    )
+                )
+            )
+            continue
+
+        findings = tuple(
+            Finding(
+                detail=str(
+                    row.get("detail")
+                    or "the text asserts a reading the new boundary does not admit"
+                ),
+                refs=tuple(
+                    item
+                    for item in (row.get("interpretation_ref"),)
+                    if isinstance(item, str)
+                ),
+            )
+            for row in rows
+        )
+        failed = _result(
+            checks["V-T02"],
+            method=CheckMethod.MODEL_EXPLICIT_CRITERION,
+            outcome=CheckOutcome.FAIL,
+            findings=findings,
+            route=BOUNDARY_CAUSE,
+        )
+        outcome = counters.route(
+            source=STAGE,
+            cause=BOUNDARY_CAUSE,
+            scope_key=text.unit_id,
+            state_code=StateCode.INVENTED_OR_INADMISSIBLE_INTERPRETATION,
+            reason=(
+                f"{text.text_id} v{text.version} was accepted against "
+                f"{previous.boundary_ref[0]} v{previous.boundary_ref[1]} and asserts "
+                f"a reading v{boundary.version} does not admit"
+            ),
+        )
+        decisions.append(
+            TextDecision(
+                verdict=_verdict(
+                    text,
+                    boundary,
+                    (failed,),
+                    TextResult.REPLAN
+                    if outcome.outcome is ArpOutcome.REPLAN
+                    else TextResult.SKIP,
+                    route=BOUNDARY_CAUSE,
+                    counter=BOUNDARY_COUNTER,
+                    outcome=outcome,
+                    calls=CALLS_PER_SIBLING_RECHECK,
+                )
+            )
+        )
+    return tuple(decisions)

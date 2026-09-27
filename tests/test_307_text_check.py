@@ -42,8 +42,11 @@ from src.editorial_core.text_check import (
     PriorPublication,
     TextCheckError,
     TextResult,
+    affected_siblings,
     check_text,
     edit_scope_key,
+    recheck_siblings_after_boundary_commit,
+    CALLS_PER_SIBLING_RECHECK,
     shingles,
     text_check_records,
 )
@@ -726,4 +729,189 @@ def test_the_edit_entry_refuses_an_edit_with_nothing_to_repair():
             brief=_brief(),
             counters=_ledger(),
             transport=_WriterTransport(_prose()),
+        )
+
+
+# ── F-4: the boundary moved after a sibling was already accepted ───────────
+
+
+def _at_version(boundary, version: int):
+    """The same boundary, at a later version — what an S-04 re-entry leaves."""
+
+    import dataclasses
+
+    return dataclasses.replace(boundary, version=version)
+
+
+def test_a_sibling_accepted_at_the_old_version_is_re_checked_at_the_new_one():
+    """§5.4, defect F-4 — the scenario in full.
+
+    boundary vN → sibling A accepted under vN → sibling B triggers V-T02 and an
+    S-04 re-entry → boundary becomes vN+1 → A gets the **targeted truth re-check**
+    against vN+1 → and if that fails, A cannot remain publishable.
+
+    Without this, A stays accepted against a version that no longer holds: S-11's
+    code checks re-run on plans and the S-12 precondition compares versions, but a
+    text that already passed S-13 is looked at again by nothing else.
+    """
+
+    boundary = _two_readings()
+    counters = _ledger()
+
+    # A is accepted under vN
+    a_decision, _, a_plan, a_text = _checked(
+        destination=Destination.LINKEDIN, counters=counters
+    )
+    assert a_decision.verdict.accepted
+    assert a_decision.verdict.boundary_ref == (boundary.boundary_id, boundary.version)
+
+    # B discovers an inadmissible reading and routes to S-04, which commits vN+1
+    b_decision, _, _, b_text = _checked(
+        destination=Destination.WIX,
+        truth={
+            "v_t01": {"holds": True, "findings": []},
+            "v_t02": {"holds": False, "findings": [{"detail": "a reading the boundary refuses"}]},
+            "v_t03": {"holds": True, "findings": []},
+        },
+        counters=counters,
+    )
+    assert b_decision.verdict.counter == BOUNDARY_COUNTER
+    assert counters.used(BOUNDARY_COUNTER, b_text.unit_id) == 1
+
+    committed = _at_version(boundary, boundary.version + 1)
+
+    # A is now affected: accepted, and judged against an older version
+    assert affected_siblings([a_decision.verdict], committed) == (a_decision.verdict,)
+
+    # the targeted re-check: one call, and only V-T02
+    transport = _Transport()
+    transport.answers = [{"v_t02": {"holds": False,
+                                    "findings": [{"detail": "no longer admissible"}]}}]
+    rechecked = recheck_siblings_after_boundary_commit(
+        boundary=committed,
+        accepted=((a_text, a_decision.verdict),),
+        core=_core(),
+        plans={a_text.destination: a_plan},
+        checks=CHECKS,
+        counters=counters,
+        transport=transport,
+    )
+
+    assert len(rechecked) == 1
+    verdict = rechecked[0].verdict
+    # A cannot remain publishable
+    assert not verdict.accepted
+    assert verdict.result is not TextResult.ACCEPTED
+    # and the verdict now says which boundary judged it
+    assert verdict.boundary_ref == (committed.boundary_id, committed.version)
+    # exactly one call, not the usual two
+    assert transport.calls == CALLS_PER_SIBLING_RECHECK == 1
+
+
+def test_a_sibling_that_still_holds_is_re_accepted_at_the_new_version():
+    """A passing re-check is not a no-op: the verdict moves to the new version."""
+
+    boundary = _two_readings()
+    counters = _ledger()
+    decision, _, plan, text = _checked(counters=counters)
+    committed = _at_version(boundary, boundary.version + 1)
+
+    transport = _Transport()
+    transport.answers = [{"v_t02": {"holds": True, "findings": []}}]
+    rechecked = recheck_siblings_after_boundary_commit(
+        boundary=committed,
+        accepted=((text, decision.verdict),),
+        core=_core(),
+        plans={text.destination: plan},
+        checks=CHECKS,
+        counters=counters,
+        transport=transport,
+    )
+
+    verdict = rechecked[0].verdict
+    assert verdict.accepted
+    assert verdict.boundary_ref == (committed.boundary_id, committed.version)
+    assert transport.calls == 1
+    # a passing re-check spends no counter
+    assert counters.used(BOUNDARY_COUNTER, text.unit_id) == 0
+
+
+def test_a_sibling_already_at_the_current_version_is_not_re_checked():
+    """It was judged against what is now true; a call would buy nothing."""
+
+    boundary = _two_readings()
+    decision, _, plan, text = _checked()
+
+    assert affected_siblings([decision.verdict], boundary) == ()
+
+    transport = _Transport()
+    rechecked = recheck_siblings_after_boundary_commit(
+        boundary=boundary,
+        accepted=((text, decision.verdict),),
+        core=_core(),
+        plans={text.destination: plan},
+        checks=CHECKS,
+        counters=_ledger(),
+        transport=transport,
+    )
+
+    assert rechecked == ()
+    assert transport.calls == 0
+
+
+def test_a_sibling_that_was_not_accepted_is_not_re_checked():
+    """Only accepted texts can reach S-14, so only they need protecting from drift."""
+
+    boundary = _two_readings()
+    decision, _, plan, text = _checked(
+        truth={
+            "v_t01": {"holds": False,
+                      "findings": [{"detail": "phrasing", "branch": "removable"}]},
+            "v_t02": {"holds": True, "findings": []},
+            "v_t03": {"holds": True, "findings": []},
+        }
+    )
+    assert not decision.verdict.accepted
+
+    committed = _at_version(boundary, boundary.version + 1)
+    assert affected_siblings([decision.verdict], committed) == ()
+
+
+def test_a_re_check_that_cannot_be_read_does_not_leave_the_sibling_publishable():
+    """An unanswered re-check is not a passing one."""
+
+    boundary = _two_readings()
+    decision, _, plan, text = _checked()
+    committed = _at_version(boundary, boundary.version + 1)
+
+    rechecked = recheck_siblings_after_boundary_commit(
+        boundary=committed,
+        accepted=((text, decision.verdict),),
+        core=_core(),
+        plans={text.destination: plan},
+        checks=CHECKS,
+        counters=_ledger(),
+        transport=_Transport(fails=True),
+    )
+
+    verdict = rechecked[0].verdict
+    assert not verdict.accepted
+    assert verdict.outcome is not None
+    assert verdict.outcome.state_code is StateCode.TEXT_CHECK_UNAVAILABLE
+
+
+def test_the_re_check_refuses_to_run_without_the_plan_the_text_executes():
+    boundary = _two_readings()
+    decision, _, _, text = _checked()
+    committed = _at_version(boundary, boundary.version + 1)
+
+    with pytest.raises(TextCheckError, match="without the approved plan"):
+        recheck_siblings_after_boundary_commit(
+            boundary=committed,
+            accepted=((text, decision.verdict),),
+            core=_core(),
+            plans={},
+            checks=CHECKS,
+            counters=_ledger(),
+            transport=_Transport(),
         )
