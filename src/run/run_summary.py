@@ -286,6 +286,21 @@ _REASON_CATEGORIES: Mapping[StateCode, ReasonCategory] = {
     # editorial fact about the plan, and a dead provider recorded under it
     # would be counted as a plan the prose could not carry.
     StateCode.TEXT_GENERATION_FAILED: ReasonCategory.PROVIDER,
+    # S-13 (Step 2 §3). A check nobody could run is a condition of the
+    # machinery, counted where S-11's `plan_check_unavailable` is. A near-exact
+    # republication is the tier-1 record `K-DIV-06` refusing it, counted where
+    # the other tier-1 refusal (`hard_platform_policy_forbids`) is: it says
+    # nothing about this text, and counting it under `text` would read as a text
+    # that failed a check about itself. The three states the map §6.2 already
+    # names for S-13 — `structural_text_failure`,
+    # `invented_or_inadmissible_interpretation`, `fact_or_phrasing_failure` —
+    # keep their own rows above.
+    StateCode.TEXT_CHECK_UNAVAILABLE: ReasonCategory.PROVIDER,
+    StateCode.NEAR_EXACT_REPUBLICATION: ReasonCategory.KNOWLEDGE,
+    # S-13. A finding in the prose, not in the decision: the plan stood and the
+    # text executed it imperfectly. `text` rather than `plan`, because grouping it
+    # under the plan would read an editing round as a planning failure.
+    StateCode.TEXT_REQUIRES_EDIT: ReasonCategory.TEXT,
     # A configured input that was not there, counted where the other two
     # missing-knowledge states are and not under `provider`: nothing refused
     # and nothing timed out, the client has not put a reference library on the
