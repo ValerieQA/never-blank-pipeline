@@ -40,6 +40,13 @@ jobs:
       # The ten rules over the register as shipped, including rule 7's
       # version-increase half against the branch this PR targets. It fails
       # closed: a base ref it cannot read stops the job rather than passing.
+      # macOS commits a decomposed filename that git precomposes when reading the
+      # directory, so a duplicate index entry is invisible where it is made and
+      # only appears as two files on a Linux checkout (#325, and #288/#289/#321
+      # before it). Cheap, and it runs before the suite so the failure is legible.
+      - name: Tracked paths are NFC, with no normalization duplicates
+        run: python3 scripts/ci/check_path_normalization.py
+
       - name: Knowledge register (rules 1-10, versions against the base)
         # PYTHONPATH: running a script by path puts scripts/ci on sys.path,
         # not the repository root, so `import src...` would fail (#274).

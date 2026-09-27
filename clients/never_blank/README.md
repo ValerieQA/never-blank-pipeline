@@ -68,3 +68,29 @@ Still configured outside this directory for now, and moving here in #255:
 Monday's prohibitions, voice, channel rules and calls to action
 (`strategy/current/business_strategy.json`), and the acceptance rubric
 (`config/prompts/editorial_acceptance/never_blank.yaml`).
+
+## Filenames with non-ASCII characters
+
+Some documents here are named in Russian, and that needs one rule (#325).
+
+**Tracked paths are NFC.** macOS stores `ресёрч` decomposed — `е` + U+0308 — and
+git precomposes it to `ё` when it reads the directory, because
+`core.precomposeunicode` defaults to true there. If a decomposed spelling is ever
+committed, the index ends up holding **two** entries for one file, and on macOS
+`git status` stays clean: the filesystem satisfies both from the single file on
+disk. The duplicate is invisible exactly where it is made, and appears as two
+copies of the document on a Linux checkout.
+
+That is why it came back three times (#321, #288, #289) — any `git add -A` in a
+worktree still holding the other spelling re-adds it. `scripts/ci/check_path_normalization.py`
+runs in *PR Tests* and fails on a duplicate or on any tracked path that is not
+NFC, printing the code points so the two spellings can be told apart.
+
+If you ever need to drop such a duplicate, git precomposes pathspec arguments
+too, so the spelling has to be passed literally:
+
+```
+git -c core.precomposeunicode=false rm --cached -- '<the NFD path>'
+```
+
+The file on disk is untouched; only the duplicate index entry goes.
