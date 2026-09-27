@@ -1191,12 +1191,21 @@ def _inputs(
     )
 
 
-def _answer(transport: WriterTransport, request: str) -> Optional[WriterAnswer]:
-    """One call, parsed, or ``None``. Never the provider's own text."""
+def _answer(
+    transport: WriterTransport,
+    request: str,
+    *,
+    instructions: str = WRITER_INSTRUCTIONS,
+) -> Optional[WriterAnswer]:
+    """One call, parsed, or ``None``. Never the provider's own text.
+
+    ``instructions`` defaults to the write path's. The edit path passes its own
+    (#307), because an edit is told not to reopen the plan and a write is not.
+    """
 
     try:
         raw = transport.complete(
-            instructions=WRITER_INSTRUCTIONS, request=request
+            instructions=instructions, request=request
         )
     except Exception:  # noqa: BLE001 — sanitized, never the provider's text
         return None
@@ -1211,3 +1220,150 @@ def _spend(budget: Optional[CallBudget], scope_key: str) -> Optional[OutcomeReco
     if budget is None:
         return None
     return budget.spend(scope=OutcomeScope.DESTINATION, scope_key=scope_key)
+
+
+# ===========================================================================
+# The edit entry point (§3: "Calls: 1 per write **or edit**")
+# ===========================================================================
+
+REVISION_INSTRUCTIONS: Final[str] = (
+    WRITER_INSTRUCTIONS
+    + """
+You are editing an existing text against findings from the text check, on the
+SAME approved plan. The plan is not reopened and no editorial decision is yours:
+repair exactly what the findings name and change nothing else. A finding you
+cannot repair without changing what the plan decided is one you leave, and say so
+in `reason` — that is a plan problem and not an editing problem (I-09).
+"""
+)
+
+
+def revise_prose(
+    *,
+    prior: Text,
+    findings: Sequence[str],
+    plan: ExecutablePlan,
+    verdict: PlanVerdict,
+    barrier: BarrierRound,
+    strategy: EditorialStrategy,
+    boundary: InterpretationBoundary,
+    core: EvidenceCore,
+    brief: VoiceBrief,
+    counters: AttemptCounterLedger,
+    transport: WriterTransport,
+    budget: Optional[CallBudget] = None,
+) -> WriterDecision:
+    """Edit one text against S-13's findings, on the same approved plan (#307).
+
+    The other half of §3's "1 per write **or edit**". It exists because S-13's
+    ``L_edit`` route sends a text fault back here, and a route with nothing to
+    route to is not a route.
+
+    What makes this an edit and not a second write: the plan is the same object,
+    the produced text is the **next version of the same text** — ``supersedes`` its
+    predecessor, as §2.5 requires — and no counter is spent here. ``L_edit`` is
+    "counted at S-13", so by the time this is called the allowance is already
+    spent against the approved plan; charging it again would turn one permitted
+    edit into none.
+
+    It decides nothing editorial, exactly as the write path does not: a finding
+    that cannot be repaired without reopening the plan comes back as
+    ``plan_holds = false`` and routes to S-08 on ``L_strategy``, which is I-09
+    putting the decision error back where it was made.
+    """
+
+    _precondition(
+        plan=plan,
+        verdict=verdict,
+        barrier=barrier,
+        strategy=strategy,
+        boundary=boundary,
+        core=core,
+        brief=brief,
+    )
+    if prior.plan_ref != plan.plan_ref:
+        raise WriterError(
+            f"{prior.text_id} was written from {prior.plan_ref!r} and is being "
+            f"edited against {plan.plan_ref!r}; an edit is of the same plan, and "
+            "one across plans is a rewrite nobody approved"
+        )
+    if not findings:
+        raise WriterError(
+            f"{prior.text_id} is being edited with no finding to repair; an edit "
+            "answers a text check, and one with nothing to answer is a second "
+            "write charged to the wrong counter"
+        )
+
+    referenced = referenced_core(plan, strategy, core)
+    refusal = _spend(budget, plan.scope_key)
+    if refusal is not None:
+        return WriterDecision(
+            unit_id=plan.unit_id,
+            destination=plan.destination,
+            outcomes=(refusal,),
+        )
+
+    request = _request(
+        plan=plan, strategy=strategy, referenced=referenced, brief=brief
+    )
+    request = json.dumps(
+        {
+            "edit": {
+                "prior_text": prior.body,
+                "prior_version": prior.version,
+                "findings": list(findings),
+            },
+            "original_request": json.loads(request),
+        },
+        ensure_ascii=False,
+    )
+    inputs = _inputs(plan=plan, referenced=referenced, request=request)
+    answer = _answer(transport, request, instructions=REVISION_INSTRUCTIONS)
+    if answer is None:
+        return _unreadable(
+            plan=plan,
+            inputs=inputs,
+            reason=(
+                f"the edit call for {prior.text_id} v{prior.version} produced "
+                "nothing this stage may read"
+            ),
+        )
+    if not answer.plan_holds:
+        signal = _signal(answer)
+        return WriterDecision(
+            unit_id=plan.unit_id,
+            destination=plan.destination,
+            signal=signal,
+            inputs=inputs,
+            outcomes=(
+                counters.route(
+                    source=STAGE,
+                    cause=PLAN_DOES_NOT_HOLD_CAUSE,
+                    scope_key=plan.scope_key,
+                    state_code=StateCode.PLAN_DOES_NOT_HOLD,
+                    reason=signal.reason,
+                ),
+            ),
+            calls=1,
+        )
+
+    revised = _text(plan=plan, referenced=referenced, answer=answer, inputs=inputs)
+    return WriterDecision(
+        unit_id=plan.unit_id,
+        destination=plan.destination,
+        text=Text(
+            text_id=prior.text_id,
+            version=prior.version + 1,
+            unit_id=revised.unit_id,
+            destination=revised.destination,
+            plan_ref=revised.plan_ref,
+            segments=revised.segments,
+            writer_signal=revised.writer_signal,
+            inputs=revised.inputs,
+            links=revised.links,
+            title=revised.title,
+            dek=revised.dek,
+            supersedes=prior.text_ref,
+        ),
+        calls=1,
+    )

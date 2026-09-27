@@ -255,6 +255,22 @@ class Finding:
         }
 
 
+class FaultOwner(str, Enum):
+    """Which layer a finding belongs to (patch R2, V-T01 and V-T08).
+
+    The branch decision S-13 records per finding. ``WRITER`` means the approved
+    plan was sound and the prose executed it wrongly, so the repair is an edit of
+    the same plan on ``L_edit``. ``PLAN`` means the plan itself asked for
+    something the material cannot carry, so the repair is a new strategy on
+    ``L_strategy``. §3's own instruction when the evidence is thin is to
+    **default to the plan branch**: charging a decision error to the Writer would
+    ask prose to fix a decision it never made (I-09).
+    """
+
+    WRITER = "writer"
+    PLAN = "plan"
+
+
 @dataclass(frozen=True, slots=True)
 class CheckResult:
     """One check, as it was run (Step 1 §4, shared by PlanVerdict/TextVerdict).
@@ -276,10 +292,34 @@ class CheckResult:
     #: The route the finding took, by the cause the topology declares. Only a
     #: failing hard check takes one.
     route: Optional[str] = None
+    #: Which layer the fault belongs to, for the checks whose route depends on
+    #: that and not on the finding alone (patch R2: V-T01 and V-T08). Recorded
+    #: rather than inferred, because the same finding routes to S-12 or to S-08
+    #: depending on it, and a reader who could not see the branch could not tell
+    #: which of the two happened. ``None`` on every check that has one route.
+    fault_owner: Optional["FaultOwner"] = None
+    #: The branch the decision took, by name, and the criterion it was decided
+    #: against. Both required when ``fault_owner`` is set: patch R2 asks for the
+    #: owner, the branch name and the criterion applied, so that a branch nobody
+    #: could reconstruct is not recorded as one.
+    branch: Optional[str] = None
+    criterion: Optional[str] = None
 
     def __post_init__(self) -> None:
         if not self.check_id.strip():
             raise PlanCheckError("a check result names the check it is the result of")
+        if self.fault_owner is not None and not (self.branch and self.criterion):
+            raise PlanCheckError(
+                f"{self.check_id} records a fault owner without its branch and "
+                "criterion; patch R2 asks for all three, and an owner without "
+                "the branch that chose it is a verdict nobody can re-read"
+            )
+        if self.fault_owner is None and (self.branch or self.criterion):
+            raise PlanCheckError(
+                f"{self.check_id} names a branch without a fault owner; a branch "
+                "is what decided the owner, so one without the other is half a "
+                "decision"
+            )
         if self.result is not CheckOutcome.PASS and not self.findings:
             raise PlanCheckError(
                 f"{self.check_id} is recorded as {self.result.value} with no "

@@ -315,6 +315,29 @@ class StateCode(str, Enum):
     #: nobody made.
     TEXT_GENERATION_FAILED = "text_generation_failed"
 
+    # -- S-13 · Text check (Step 2 §3, ARP) --------------------------------
+    #: A hard text check produced no answer at all: the truth call or the
+    #: execution call could not be made or could not be read. Deliberately not
+    #: an acceptance — §3 lets only an accepted text reach S-14, and a text
+    #: whose checks nobody ran is not a checked text. It ends the publication
+    #: and not the destination: nothing was found wrong with the plan, so
+    #: spending `L_strategy` on a provider outage would send a destination back
+    #: to S-08 for a reason that was never about the material.
+    TEXT_CHECK_UNAVAILABLE = "text_check_unavailable"
+    #: V-T05: the text is a near-exact republication of something already
+    #: published on this destination (`K-DIV-06`, tier 1). Terminal by the
+    #: check's own route table — no edit and no re-plan, because the finding is
+    #: not about this text but about what is already on the surface — and
+    #: re-confirmed from the other side by S-14's idempotency authority.
+    NEAR_EXACT_REPUBLICATION = "near_exact_republication"
+    #: V-T01 `removable` / V-T04 / V-T06 phrases / V-T08 `execution`: the finding
+    #: is in the prose and not in the decision, so the same approved plan is
+    #: executed again. Its own state rather than `plan_does_not_hold`, because
+    #: that one is the Writer refusing a plan and this is a plan the Writer
+    #: executed imperfectly — the indicators read the first as a decision problem
+    #: and must not read the second as one (I-09).
+    TEXT_REQUIRES_EDIT = "text_requires_edit"
+
 
 #: Which outcomes each state may end in. The union of two columns: the outcome
 #: map §6.2 gives the state, and the terminal outcome Step 2 §5.3 gives its
@@ -462,6 +485,15 @@ _PERMITTED_OUTCOMES: Mapping[StateCode, frozenset[ArpOutcome]] = {
     # skipped. `plan_does_not_hold` keeps the map's own row above, because the
     # Writer's refusal is a finding and this is the absence of one.
     StateCode.TEXT_GENERATION_FAILED: frozenset({ArpOutcome.SKIP}),
+    # Step 2 §3, S-13. A check nobody could run and a republication the platform
+    # rule refuses both end the publication. Neither degrades: an unchecked text
+    # is not a weaker text, and a duplicate is not published in a safer form.
+    # Neither replans: no judgment about the plan was made in the first case,
+    # and in the second no plan S-08 came back with could make this text
+    # publishable — what stands in its way is already published.
+    StateCode.TEXT_CHECK_UNAVAILABLE: frozenset({ArpOutcome.SKIP}),
+    StateCode.NEAR_EXACT_REPUBLICATION: frozenset({ArpOutcome.SKIP}),
+    StateCode.TEXT_REQUIRES_EDIT: frozenset({ArpOutcome.REPLAN, ArpOutcome.SKIP}),
     # Exactly one outcome, and the other direction from its two neighbours: the
     # plan stands, because no check rested on the library. There is nothing to
     # replan — asking S-08 for another strategy would not put a document on the
