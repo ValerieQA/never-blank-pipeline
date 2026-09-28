@@ -801,3 +801,150 @@ class _TextTransport:
             "v_t07": {"holds": True, "findings": []},
             "v_t08": {"holds": True, "findings": []},
         })
+
+
+# ── the artifact on disk is what the stage receives ────────────────────────
+
+
+def _voice_document(path: Path, *, version: int, text: str) -> None:
+    """Write the referenced voice artifact, as a person editing it would."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"---\nvoice_id: fixture-voice\nversion: {version}\n---\n\n"
+        f"# A voice\n\n{text}\n",
+        encoding="utf-8",
+    )
+
+
+def _received_voice(root: Path, client: Path):
+    """Load through the production path and run S-12. Returns (ref, request).
+
+    The request is what the stage was actually handed — `_request` puts the brief
+    in as ``{"voice_brief": {"ref": ..., "text": ...}}`` — so asserting on it is
+    asserting on the stage's input rather than on what the loader returned.
+    """
+
+    from src.editorial_core.executable_plan import AdaptationContract
+    from src.editorial_core.writer import write_prose
+    from tests.test_306_writer import (
+        SEGMENT_NAMES,
+        _approved,
+        _barrier,
+        _core as _core_306,
+        _ledger,
+        _prose,
+        _Transport as _WriterTransport,
+        _two_readings,
+    )
+
+    contract = client_contract(directory=client)
+    brief = voice_brief(contract, root=root)
+
+    boundary = _two_readings()
+    strategy, approved, verdict = _approved(
+        boundary=boundary,
+        contract=AdaptationContract(
+            voice_brief_ref=brief.brief_ref, forbidden=contract.forbidden
+        ),
+    )
+    transport = _WriterTransport(
+        _prose(
+            parts=[
+                {"name": SEGMENT_NAMES[0], "text": "The filing names the network."},
+                {"name": SEGMENT_NAMES[1], "text": "The wait is the cost."},
+            ]
+        )
+    )
+    written = write_prose(
+        plan=approved,
+        verdict=verdict,
+        barrier=_barrier([approved], [verdict], boundary=boundary),
+        strategy=strategy,
+        boundary=boundary,
+        core=_core_306(),
+        brief=brief,
+        counters=_ledger(),
+        transport=transport,
+    )
+    assert written.text is not None
+    assert transport.requests, "the stage made no call, so it received nothing"
+    return brief.brief_ref, transport.requests[0], written.text
+
+
+def test_editing_the_voice_artifact_changes_what_the_stage_receives(tmp_path: Path):
+    """#337's last acceptance item, and the only one a loader test cannot cover.
+
+    The chain is only real if the **document on disk** is what the stage ends up
+    with. A test that asserted on `voice_brief()`'s return value would pass with a
+    loader that read the right file once and cached it, or with one whose value
+    never left the producer — so this one edits the artifact between two runs and
+    looks at what S-12 was handed, not at what the loader said.
+
+    `_request` puts the brief into the call as
+    ``{"voice_brief": {"ref": ..., "text": ...}}``, so the captured request is the
+    stage's own input.
+    """
+
+    client = tmp_path / "client"
+    voice = tmp_path / "voice" / "brand_voice.md"
+    _lists(client)
+    _written(
+        client,
+        "## Enabled destinations\n\n- wix\n- linkedin\n",
+        contract_id="fixture",
+        version="1",
+        voice_ref="voice/brand_voice.md",
+        forbidden_ref="fixture-forbidden",
+    )
+
+    first = "Plain sentences. Name the mechanism before the benefit."
+    _voice_document(voice, version=1, text=first)
+    ref_one, request_one, text_one = _received_voice(tmp_path, client)
+
+    assert ref_one == "fixture-voice v1"
+    assert first in request_one
+    assert text_one.inputs.voice_brief_ref == "fixture-voice v1"
+
+    # a person edits the referenced artifact: new wording, next version
+    second = "Short lines. No metaphor, and no adjective that does no work."
+    _voice_document(voice, version=2, text=second)
+
+    ref_two, request_two, text_two = _received_voice(tmp_path, client)
+
+    # the stage now receives the edited document
+    assert ref_two == "fixture-voice v2"
+    assert second in request_two
+    # and the wording that was replaced is gone from the stage's input
+    assert first not in request_two
+    assert text_two.inputs.voice_brief_ref == "fixture-voice v2"
+
+    # the two runs really were different inputs, not one cached value
+    assert request_one != request_two
+    assert ref_one != ref_two
+
+
+def test_the_stage_receives_the_referenced_document_and_not_another(tmp_path: Path):
+    """`voice_ref` selects the artifact: a second document beside it is not read."""
+
+    client = tmp_path / "client"
+    _lists(client)
+    _written(
+        client,
+        "## Enabled destinations\n\n- wix\n",
+        contract_id="fixture",
+        version="1",
+        voice_ref="voice/brand_voice.md",
+        forbidden_ref="fixture-forbidden",
+    )
+    _voice_document(
+        tmp_path / "voice" / "brand_voice.md", version=1, text="The referenced voice."
+    )
+    _voice_document(
+        tmp_path / "voice" / "other_voice.md", version=9, text="The wrong voice entirely."
+    )
+
+    _, request, _ = _received_voice(tmp_path, client)
+
+    assert "The referenced voice." in request
+    assert "The wrong voice entirely." not in request
