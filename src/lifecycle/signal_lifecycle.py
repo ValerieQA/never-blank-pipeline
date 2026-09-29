@@ -91,6 +91,11 @@ _KNOWN_JSONL_KEYS: frozenset = frozenset({
     "SCORE_RECOMMENDED_FOR_ARTICLE", "FORCE_PUBLISH_OVERRIDE",
     # Stage 1.5 fields (written going forward):
     "FACTUAL_READINESS", "ADMISSION_STATUS",
+    # Stage 4 editorial classification (#365; absent in pre-#365 records, and
+    # absence stays absence — see from_dict). The _OUTCOME fields say what
+    # became of the classification and are read by no fit rule:
+    "EDITORIAL_DOMAIN", "EDITORIAL_DOMAIN_OUTCOME",
+    "EDITORIAL_RISK", "EDITORIAL_RISK_OUTCOME",
     # NOT in known keys → passthrough:
     #   WHY_IT_MATTERS_TO_BUSINESSES (typo variant in some records)
     #   ARTICLE_STATUS, READINESS_REASON (ghost fields from ТЗ drafts)
@@ -183,6 +188,17 @@ class ResearchContext:
     strategy_view: "ResearchStrategyView | None" = field(
         default=None, repr=False, compare=False
     )
+
+    # Stage 4 editorial classification (#365), written by scripts/research/enrich.py.
+    # None means the record states nothing: a record classified outside the
+    # client's admitted vocabulary, one whose classification failed, and one
+    # written before this slice all carry no value, and S-00 refuses all three.
+    # Never "" and never a stand-in value — the ARTICLE_READY=None → False
+    # normalisation would here hand a fit rule a classification nothing made.
+    editorial_domain: str | None = field(default=None)
+    editorial_domain_outcome: str | None = field(default=None)
+    editorial_risk: str | None = field(default=None)
+    editorial_risk_outcome: str | None = field(default=None)
 
     # Unknown legacy keys: preserved for JSONL output, never used for decisions
     _passthrough: dict = field(default_factory=dict, repr=False, compare=False)
@@ -342,6 +358,18 @@ class ResearchContext:
             "FACTUAL_READINESS":             self.factual_readiness,
             "ADMISSION_STATUS":              self.admission_status,
         }
+        # Stage 4 editorial classification (#365): written only where there is
+        # something to write. A key holding null would be a record that states
+        # the field and states nothing in it, which is the one reading of
+        # absence this slice exists to prevent.
+        for key, value in (
+            ("EDITORIAL_DOMAIN",          self.editorial_domain),
+            ("EDITORIAL_DOMAIN_OUTCOME",  self.editorial_domain_outcome),
+            ("EDITORIAL_RISK",            self.editorial_risk),
+            ("EDITORIAL_RISK_OUTCOME",    self.editorial_risk_outcome),
+        ):
+            if value is not None:
+                typed[key] = value
         # Passthrough fields last; typed fields take precedence on collision
         return {**self._passthrough, **typed}
 
@@ -414,6 +442,10 @@ class ResearchContext:
           BUSINESS_RESPONSES_OBSERVED: list → json.dumps(list)
           ARTICLE_READINESS_SCORE: str|None → int (0 if absent/invalid)
           CHANNEL_FIT_SCORE: str|None       → int (0 if absent/invalid)
+
+        Deliberately *not* normalized (#365):
+          EDITORIAL_DOMAIN / EDITORIAL_RISK and their _OUTCOME fields, absent
+          in every pre-#365 record, stay None rather than becoming "".
         """
 
         def _bool(v) -> bool:
@@ -440,6 +472,17 @@ class ResearchContext:
             if isinstance(v, list):
                 return _json.dumps(v, ensure_ascii=False)
             return _str(v)
+
+        def _classification(v) -> str | None:
+            """Absent stays absent (#365) — deliberately not `_str`.
+
+            Every other reader here turns a missing field into a value the
+            record never carried. These two are read by S-00's fit rules, where
+            the difference between "the classifier said nothing" and "" is the
+            difference between a refusal and a claim, so nothing is supplied
+            for a record that states nothing.
+            """
+            return v if isinstance(v, str) and v.strip() else None
 
         force_override = (
             _bool(d.get("FORCE_PUBLISH_OVERRIDE"))
@@ -499,6 +542,10 @@ class ResearchContext:
             force_override=force_override,
             approved_override_raw=_str(d.get("APPROVED_OVERRIDE")),
             run_id=_str(d.get("run_id")),
+            editorial_domain=_classification(d.get("EDITORIAL_DOMAIN")),
+            editorial_domain_outcome=_classification(d.get("EDITORIAL_DOMAIN_OUTCOME")),
+            editorial_risk=_classification(d.get("EDITORIAL_RISK")),
+            editorial_risk_outcome=_classification(d.get("EDITORIAL_RISK_OUTCOME")),
             _passthrough=passthrough,
         )
 

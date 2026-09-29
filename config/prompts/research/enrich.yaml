@@ -15,7 +15,17 @@ system: |
   CORE_FACT, WHY_IT_MATTERS_TO_BUSINESS, BUSINESS_RESPONSES_OBSERVED, REAL_COMPANY_EXAMPLE,
   PROBLEM_FACED, RESPONSE_TAKEN, OUTCOME_IF_KNOWN, SOURCE_FOR_CASE, BUSINESS_LESSON,
   DID_IT_WORK, EVIDENCE_OF_OUTCOME, TIME_HORIZON, COUNTER_EXAMPLE, WHY_THIS_CASE_IS_INTERESTING,
-  CORE_TENSION, CONFIDENCE, NOTES
+  CORE_TENSION, CONFIDENCE, NOTES,
+  EDITORIAL_DOMAIN, EDITORIAL_RISK
+
+  EDITORIAL CLASSIFICATION — the client's own editorial terms, not the signal's:
+  - EDITORIAL_DOMAIN: one of [{editorial_domains}]
+  - EDITORIAL_RISK: one of [{editorial_risk_levels}]
+  Answer with one of the listed values. If none of them describes this signal,
+  say in one or two words what it actually is instead of forcing a listed value
+  — an unlisted answer is recorded as outside the admitted set and never becomes
+  one of the listed values. If you cannot classify the signal at all, omit the
+  field rather than guessing.
 
 user: |
   Enrich this business signal:
