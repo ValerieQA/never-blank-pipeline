@@ -45,13 +45,14 @@ ADMITTED         = "admitted"
 OUTSIDE_ADMITTED = "outside_admitted"
 CANNOT_ANSWER    = "cannot_answer"
 
-#: The one answer other than a listed value. The classifier chooses among the
-#: configured values and is never asked to invent a category of its own, so a
-#: deliberate "none of these" needs a way to be said: this token, substituted
-#: into the rendered prompt from here and from nowhere else. It is a protocol
-#: token and never a category — it is recorded as OUTSIDE_ADMITTED like any
-#: value the contract does not list, and is never written to a value field.
-OUTSIDE_ADMITTED_TOKEN = "NONE_OF_THE_LISTED_VALUES"
+#: The one answer other than a listed value, owner-approved 2026-09-29. The
+#: classifier chooses among the configured values and is never asked to invent
+#: a category of its own, so a deliberate "none of these" needs a way to be
+#: said: this token, substituted into the rendered prompt from here and from
+#: nowhere else. It is a protocol token and never a category — it is the only
+#: answer recorded as OUTSIDE_ADMITTED, it is never written to a value field,
+#: and it is never added to the Client Contract, which stays a pure allow-list.
+OUTSIDE_ADMITTED_TOKEN = "none_of_these"
 
 
 def determine_article_readiness(signal: dict) -> tuple[bool, str]:
@@ -121,35 +122,35 @@ def classify_against(
 ) -> tuple[str | None, str]:
     """One classification as the record will carry it: (value, outcome).
 
-    A value comes back only with ADMITTED, and it is the contract's own
-    spelling rather than the model's — the record states one configured value
-    or it states nothing at all.
+    A value comes back only with ADMITTED, and only for an answer that is
+    exactly one of the configured values — the record states one configured
+    value, in the contract's own spelling, or it states nothing at all. A
+    respelling is not a configured value: admitting one would be this stage
+    deciding what the contract meant, and the contract admits what it lists.
 
     Three inputs, three outcomes, and the distinction that must survive:
-      - a listed value                          → ADMITTED, value present
-      - OUTSIDE_ADMITTED_TOKEN, and equally any
-        other value the contract does not list  → OUTSIDE_ADMITTED, absent
-      - no classification made (failure, no
-        field, an unusable answer, no vocabulary
-        to classify against)                    → CANNOT_ANSWER, absent
+      - exactly a listed value                  → ADMITTED, value present
+      - exactly OUTSIDE_ADMITTED_TOKEN          → OUTSIDE_ADMITTED, absent
+      - anything else: no field, a non-string,
+        an empty one, a respelling, an invented
+        category, a failure, no vocabulary to
+        classify against                        → CANNOT_ANSWER, absent
+
+    Only the sanctioned token is a deliberate "outside the vocabulary". An
+    unusable answer is not a judgment that the signal sits outside it, and
+    recording one as the other would launder a failure into a decision.
     """
     if failed or not admits:
         return None, CANNOT_ANSWER
-    if not isinstance(stated, str) or not stated.strip():
-        # The answer carried no classification. Nothing was placed outside the
-        # vocabulary; nothing was decided at all.
+    if not isinstance(stated, str):
         return None, CANNOT_ANSWER
-    admitted = {_comparable(value): value for value in admits}
-    configured = admitted.get(_comparable(stated))
-    if configured is None:
+    if stated == OUTSIDE_ADMITTED_TOKEN:
         return None, OUTSIDE_ADMITTED
-    return configured, ADMITTED
-
-
-def _comparable(value: str) -> str:
-    """One comparable spelling, as `FitRule.check` compares: whitespace
-    collapsed, case folded. What is admitted here is admitted there."""
-    return " ".join(value.split()).casefold()
+    if stated not in admits:
+        # The answer carried no usable classification. Nothing was deliberately
+        # placed outside the vocabulary; nothing was decided at all.
+        return None, CANNOT_ANSWER
+    return stated, ADMITTED
 
 
 def enrich_signal(signal: dict) -> dict:

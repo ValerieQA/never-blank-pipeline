@@ -14,7 +14,10 @@ and nothing else, and each is written so that a bypass fails it:
 
 * a literal vocabulary in the prompt or in ``enrich.py`` fails the two tests
   that edit the contract or read those files;
-* persisting the model's own string fails the unadmitted-answer test;
+* persisting the model's own string fails the invented-category test;
+* reading an invented category as a deliberate "outside the vocabulary" fails
+  that same test, which is where the two are held apart;
+* normalising case or whitespace before admitting fails the respelling test;
 * restoring the bare ``except Exception: enriched = {}`` fails the failure test,
   because ``cannot_answer`` would collapse into silence;
 * any default, ``or`` or ``setdefault`` for an absent classification fails the
@@ -78,6 +81,12 @@ CLASSIFICATION_KEYS = (
 #: contract does not admit. It is never written to any record — that is what
 #: the tests below assert.
 UNADMITTED = "celebrity_gossip"
+
+#: The classifier protocol token, owner-approved 2026-09-29, spelled here as
+#: the literal the owner approved rather than read from `enrich`. A constant
+#: compared against itself agrees with whatever it was changed to, and this
+#: token is the owner's decision and not the implementation's to restate.
+NONE_OF_THESE = "none_of_these"
 
 
 # ── the provider, replaced ───────────────────────────────────────────────────
@@ -264,8 +273,15 @@ def test_the_vocabulary_is_written_in_no_second_place():
 # ===========================================================================
 
 
-def test_an_unadmitted_answer_is_not_persisted_as_a_value(monkeypatch):
-    """Acceptance 2: the field is left absent and the outcome says why."""
+def test_an_invented_category_is_cannot_answer_and_never_a_value(monkeypatch):
+    """Acceptance 2: the field is left absent, and the outcome is not a verdict.
+
+    An answer naming something the contract does not list is not persisted, and
+    it is not read as a deliberate "outside the vocabulary" either — only the
+    sanctioned token is that. Recording ``outside_admitted`` here would launder
+    an unusable answer into a decision about the signal, which is exactly the
+    ``cannot_answer`` defect this slice exists to hold apart.
+    """
 
     record = _enriched(
         monkeypatch,
@@ -274,28 +290,31 @@ def test_an_unadmitted_answer_is_not_persisted_as_a_value(monkeypatch):
 
     assert DOMAIN_FIELD not in record
     assert RISK_FIELD not in record
-    assert record[DOMAIN_OUTCOME_FIELD] == OUTSIDE_ADMITTED
-    assert record[RISK_OUTCOME_FIELD] == OUTSIDE_ADMITTED
+    assert record[DOMAIN_OUTCOME_FIELD] == CANNOT_ANSWER
+    assert record[RISK_OUTCOME_FIELD] == CANNOT_ANSWER
     assert UNADMITTED not in json.dumps(record), (
         "the model's own category reached the record under some other key"
     )
 
 
-def test_the_prompt_offers_one_way_to_say_none_of_the_listed_values(monkeypatch):
+def test_the_prompt_offers_the_owner_approved_token_and_only_that(monkeypatch):
     """Owner decision 4: the classifier chooses only among configured values.
 
     A deliberate "outside the admitted set" is offered explicitly, so no answer
-    has to be an invented category. The token has one definition, in
+    has to be an invented category. The token is asserted as the owner's exact
+    literal rather than through ``enrich.OUTSIDE_ADMITTED_TOKEN``, which would
+    agree with whatever that constant was changed to. It has one definition, in
     ``enrich.py``, and the prompt is rendered with it rather than spelling it a
-    second time — a literal in the document fails the second assertion.
+    second time — a literal in the document fails the last assertion.
     """
 
     answer = _Answer(_payload())
 
     _enriched(monkeypatch, answer)
 
-    assert enrich.OUTSIDE_ADMITTED_TOKEN in answer.prompts[0][0]
-    assert enrich.OUTSIDE_ADMITTED_TOKEN not in PROMPT.read_text(encoding="utf-8")
+    assert enrich.OUTSIDE_ADMITTED_TOKEN == NONE_OF_THESE
+    assert NONE_OF_THESE in answer.prompts[0][0]
+    assert NONE_OF_THESE not in PROMPT.read_text(encoding="utf-8")
 
 
 def test_the_offered_token_is_an_outcome_and_never_a_value(monkeypatch):
@@ -309,8 +328,8 @@ def test_the_offered_token_is_an_outcome_and_never_a_value(monkeypatch):
         monkeypatch,
         _Answer(
             _payload(
-                EDITORIAL_DOMAIN=enrich.OUTSIDE_ADMITTED_TOKEN,
-                EDITORIAL_RISK=enrich.OUTSIDE_ADMITTED_TOKEN,
+                EDITORIAL_DOMAIN=NONE_OF_THESE,
+                EDITORIAL_RISK=NONE_OF_THESE,
             )
         ),
     )
@@ -319,26 +338,51 @@ def test_the_offered_token_is_an_outcome_and_never_a_value(monkeypatch):
     assert RISK_FIELD not in record
     assert record[DOMAIN_OUTCOME_FIELD] == OUTSIDE_ADMITTED
     assert record[RISK_OUTCOME_FIELD] == OUTSIDE_ADMITTED
-    assert enrich.OUTSIDE_ADMITTED_TOKEN not in json.dumps(record)
-    assert enrich.OUTSIDE_ADMITTED_TOKEN not in CONTRACT.read_text(encoding="utf-8")
+    assert NONE_OF_THESE not in json.dumps(record)
+    assert NONE_OF_THESE not in CONTRACT.read_text(encoding="utf-8")
 
 
-def test_an_admitted_answer_is_persisted_in_the_contracts_spelling(monkeypatch):
+def test_an_exactly_listed_answer_is_persisted_as_the_contracts_value(monkeypatch):
     """The value a record states is one configured value, not the answer's prose."""
 
     domains, risks = enrich.admitted_vocabularies()
     record = _enriched(
         monkeypatch,
-        _Answer(
-            _payload(
-                EDITORIAL_DOMAIN=f"  {domains[0].upper()} ", EDITORIAL_RISK=risks[0]
-            )
-        ),
+        _Answer(_payload(EDITORIAL_DOMAIN=domains[0], EDITORIAL_RISK=risks[0])),
     )
 
     assert record[DOMAIN_FIELD] == domains[0]
     assert record[RISK_FIELD] == risks[0]
     assert record[DOMAIN_OUTCOME_FIELD] == ADMITTED
+    assert record[RISK_OUTCOME_FIELD] == ADMITTED
+
+
+@pytest.mark.parametrize(
+    "respell",
+    [
+        lambda value: value.upper(),
+        lambda value: value.capitalize(),
+        lambda value: f"  {value} ",
+    ],
+    ids=["uppercase", "capitalized", "padded"],
+)
+def test_a_respelling_of_a_listed_value_is_not_admitted(monkeypatch, respell):
+    """Only an exactly configured value is admitted; a near miss is no answer.
+
+    `FitRule.check` folds case and collapses whitespace, so a stage that
+    normalised before admitting would write a value S-00 goes on to accept.
+    It is still not the value the contract lists, and treating it as one is
+    this stage deciding what the contract meant. Restoring the normalisation
+    fails here, and fails it for a reason no later stage could recover.
+    """
+
+    domains, _ = enrich.admitted_vocabularies()
+    record = _enriched(
+        monkeypatch, _Answer(_payload(EDITORIAL_DOMAIN=respell(domains[0])))
+    )
+
+    assert DOMAIN_FIELD not in record
+    assert record[DOMAIN_OUTCOME_FIELD] == CANNOT_ANSWER
 
 
 # ===========================================================================
@@ -379,9 +423,16 @@ def test_cannot_answer_and_outside_admitted_are_two_records_not_one(monkeypatch)
     failed = _enriched(monkeypatch, _unavailable)
     outside = _enriched(
         monkeypatch,
-        _Answer(_payload(EDITORIAL_DOMAIN=UNADMITTED, EDITORIAL_RISK="extreme")),
+        _Answer(
+            _payload(
+                EDITORIAL_DOMAIN=NONE_OF_THESE,
+                EDITORIAL_RISK=NONE_OF_THESE,
+            )
+        ),
     )
 
+    assert failed[DOMAIN_OUTCOME_FIELD] == CANNOT_ANSWER
+    assert outside[DOMAIN_OUTCOME_FIELD] == OUTSIDE_ADMITTED
     assert failed[DOMAIN_OUTCOME_FIELD] != outside[DOMAIN_OUTCOME_FIELD]
     assert failed[RISK_OUTCOME_FIELD] != outside[RISK_OUTCOME_FIELD]
 
@@ -440,7 +491,10 @@ def test_a_value_is_present_exactly_when_the_outcome_is_admitted(
             _payload(EDITORIAL_DOMAIN=domains[0], EDITORIAL_RISK=risks[0])
         ),
         OUTSIDE_ADMITTED: _Answer(
-            _payload(EDITORIAL_DOMAIN=UNADMITTED, EDITORIAL_RISK="extreme")
+            _payload(
+                EDITORIAL_DOMAIN=NONE_OF_THESE,
+                EDITORIAL_RISK=NONE_OF_THESE,
+            )
         ),
         CANNOT_ANSWER: _unavailable,
     }
