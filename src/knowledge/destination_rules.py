@@ -31,9 +31,8 @@ platform knowledge, so a value arrives from either side of the split: an
 admissible :class:`~src.editorial_core.executable_plan.PlatformRule` at tier 1 or
 4, or a :class:`~src.editorial_core.executable_plan.ClientRule` at tier 2. Which
 of two competing rules governs a field is decided by the ladder that already
-exists — ``arp.tier_rank()``, strongest first, with Step 4 §5.1 rule 2 inside a
-tier so a record nobody re-checked does not beat one somebody did. No new
-ordering is written here:
+exists — ``arp.tier_rank()``, strongest first. No new ordering is written here,
+and nothing inside a tier separates two rules:
 
 1. a tier-1 hard platform policy beats a tier-2 client rule;
 2. a tier-2 client rule beats a tier-4 platform ranking;
@@ -192,7 +191,9 @@ class BoundRule:
     source: str
     #: Step 4 §5: the record's review has lapsed and the loader demoted it. A
     #: client rule is never one — the contract carries no review date, and
-    #: inventing an expiry for it here would be a rule nobody wrote.
+    #: inventing an expiry for it here would be a rule nobody wrote. Carried as
+    #: register metadata and deliberately **not** consulted by :func:`_authority`:
+    #: it must not break a tie inside a tier (#363).
     weak: bool = False
 
     def value_for(self, field: str) -> Optional[FixedValue]:
@@ -586,11 +587,11 @@ def _resolve(
 ) -> tuple[BoundRule, FixedValue, tuple[FixingRule, ...]]:
     """Which rule fixes this field, and which lost it.
 
-    The ladder is ``arp.tier_rank()`` and nothing else, with Step 4 §5.1 rule 2
-    inside a tier: a record whose review has lapsed loses to one whose has not,
-    at the same tier. Two rules of equal authority refuse: neither is entitled
-    to decide, and picking either would be this module inventing a tie-break the
-    architecture does not have.
+    The ladder is ``arp.tier_rank()`` and nothing else. Two rules of equal
+    authority refuse: neither is entitled to decide, and picking either would be
+    this module inventing a tie-break the architecture does not have. Nothing
+    inside a tier separates them — not review freshness, not confidence, not
+    file order.
     """
 
     offers: list[tuple[BoundRule, FixedValue]] = []
@@ -624,8 +625,16 @@ def _resolve(
     return winner, value, tuple(item.rule for item, _ in ranked[1:])
 
 
-def _authority(item: BoundRule) -> tuple[int, int]:
-    """Where this rule sits on the existing ladder. Smaller is stronger."""
+def _authority(item: BoundRule) -> int:
+    """Where this rule sits on the existing ladder. Smaller is stronger.
+
+    ``arp.tier_rank()`` and nothing else. An earlier version of this function
+    also ranked a lapsed record below a current one at the same tier, which
+    quietly made review freshness a second precedence dimension: a weak tier-4
+    rule and a current tier-4 rule fixing one field stopped being equal, so the
+    current one won instead of the pair refusing. #363 authorizes one ordering,
+    and ``weak`` is register metadata that does not decide a field here.
+    """
 
     rank = tier_rank(item.rule.tier)
     if rank is None:  # pragma: no cover - both rule types refuse such a tier
@@ -634,7 +643,7 @@ def _authority(item: BoundRule) -> tuple[int, int]:
             "§5 ladder does not place; a rule nobody can rank cannot win or lose "
             "a field"
         )
-    return rank, 1 if item.weak else 0
+    return rank
 
 
 # ----------------------------------------------------------------------

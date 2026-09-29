@@ -737,6 +737,36 @@ def test_two_records_of_equal_rank_on_one_field_refuse(tmp_path):
     assert "same authority" in message
 
 
+def test_a_lapsed_record_does_not_break_a_tie_inside_its_tier(tmp_path):
+    """Review freshness is not a second precedence dimension (#363 repair).
+
+    `_authority()` briefly returned `(tier_rank, 1 if weak else 0)`, which made
+    a current rule outrank a lapsed one at the same tier. That is an ordering
+    #363 does not authorize: `tier_rank()` is the only one, and equal rank on
+    one field fails closed. The defect was invisible from the outside — the
+    field still resolved, to the fresher rule — so the regression is the pair
+    that must refuse rather than resolve.
+
+    Reverting the repair makes `destination_rules()` return LinkedIn's format
+    from `K-DST-LI-01` and this test fails on the missing refusal.
+    """
+
+    register = tmp_path / "knowledge"
+    _copy_register(register)
+    (register / "records" / "dst" / "K-DST-LI-05.md").write_text(
+        _LAPSED_RIVAL_RECORD, encoding="utf-8"
+    )
+
+    with pytest.raises(DestinationRulesError) as raised:
+        destination_rules(
+            Destination.LINKEDIN, register=register, contract=CONTRACT
+        )
+
+    message = str(raised.value)
+    assert "K-DST-LI-01" in message and "K-DST-LI-05" in message
+    assert "same authority" in message
+
+
 def test_two_client_rows_fixing_one_field_refuse(tmp_path):
     """The contract's own half of the same rule, refused where the field is known."""
 
@@ -895,6 +925,41 @@ def test_a_contract_with_no_destination_rules_section_raises(tmp_path):
 #: A second tier-4 LinkedIn record fixing the format `K-DST-LI-01` fixes. It
 #: exists only inside a copied register, for the one test that needs two equal
 #: authorities on one field — which Never Blank's own configuration has none of.
+_LAPSED_RIVAL_RECORD = """---
+id: K-DST-LI-05
+version: 1
+status: descriptive
+tier: 4
+evidence_class: VEND
+confidence: low
+verified_on: 2024-01-10
+review_by: 2024-06-30
+---
+
+# A constructed rival to K-DST-LI-01 whose review has lapsed
+
+## Statement
+A fixture record at the same tier as `K-DST-LI-01`, with a `review_by` in the
+past so the loader demotes it. It exists to prove that being stale does not
+make it lose a field it has equal authority over.
+
+## Applies when
+destination is linkedin
+
+## Influences
+- S-10 · `E-14.format` — the article as the form. [fixes: article]
+
+## Conflicts
+It disagrees with `K-DST-LI-01` on purpose, at the same tier.
+
+## Source
+Written by `tests/test_363_configuration_producers.py`; never shipped.
+
+## Change log
+- v1, 2026-09-29: created as a test fixture (#363 repair).
+"""
+
+
 _RIVAL_RECORD = """---
 id: K-DST-LI-04
 version: 1
