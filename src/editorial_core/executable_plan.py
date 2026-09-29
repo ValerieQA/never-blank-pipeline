@@ -72,7 +72,7 @@ import json
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Final, Optional, Protocol
+from typing import Any, Final, Optional, Protocol, Union
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -871,6 +871,71 @@ class PlatformRule:
 
 
 @dataclass(frozen=True, slots=True)
+class ClientRule:
+    """One approved client rule fixing a destination value (#363, owner B).
+
+    The other half of :class:`PlatformRule`'s own refusal: a rule from another
+    tier "reaches adaptation **as the contract's, with the contract's
+    authority**", and this is that channel given a type. Some of the three
+    values a destination fixes are legitimately the client's — what length a
+    surface with no platform record is written to, whether this client wants
+    hashtags on it — and relabelling client policy as platform knowledge to
+    fit it through :class:`PlatformRule` would put the client's decision at a
+    tier the client does not hold.
+
+    Tier 2 and nothing else, because the type is the guarantee rather than a
+    convention: a client rule that could be constructed at tier 4 would outrank
+    an approved client rule it is not, and one at tier 1 would let a contract
+    end a destination. For the same reason :attr:`is_hard` is always ``False``
+    — V-P04 ends a destination on a tier-1 **platform** rule, and Step 2's own
+    wording is that "a tier-2 client rule is replanned around however absolute
+    it sounds".
+    """
+
+    rule_id: str
+    text: str
+    tier: KnowledgeTier
+    compliant_variant: bool = True
+    knowledge: Optional[KnowledgeRef] = None
+
+    def __post_init__(self) -> None:
+        if not self.rule_id.strip() or not self.text.strip():
+            raise PlanError(
+                "a client rule is named by the contract rule that declares it "
+                "and states what it fixes; a rule with neither cannot be "
+                "applied or cited"
+            )
+        if self.tier is not KnowledgeTier.APPROVED_CLIENT_RULE:
+            raise PlanError(
+                f"{self.rule_id} is offered as a client rule at tier "
+                f"{self.tier.value}; a client rule carries the contract's own "
+                f"authority, which is tier "
+                f"{KnowledgeTier.APPROVED_CLIENT_RULE.value}, and a contract "
+                "that could be written at another tier would outrank or end a "
+                "destination on its own say-so"
+            )
+        if self.knowledge is not None and self.knowledge.tier is not self.tier:
+            raise PlanError(
+                f"{self.rule_id} is recorded at tier {self.tier.value} and cites "
+                f"{self.knowledge.record_id} at tier {self.knowledge.tier.value}; "
+                "the tier belongs to whoever wrote the record"
+            )
+
+    @property
+    def is_hard(self) -> bool:
+        """Never. A client rule is replanned around, however absolute it reads."""
+
+        return False
+
+
+#: What may fix one of a destination's three mandatory values: the destination's
+#: own record, or the client's own rule. The authority stays visible in the type
+#: — nothing here merges the two into a third thing whose tier a reader would
+#: have to look up.
+FixingRule = Union[PlatformRule, ClientRule]
+
+
+@dataclass(frozen=True, slots=True)
 class DestinationRules:
     """What the destination's own rules fix about its surface (§3, Inputs).
 
@@ -882,6 +947,15 @@ class DestinationRules:
     that could not say which record fixed the value it broke would be routed by
     whoever read it.
 
+    Each of the three is fixed by a :data:`FixingRule` — the destination's own
+    record or the client's own rule — because twelve of this client's eighteen
+    values are tier-2 client policy and only six are platform knowledge. Which
+    of two competing rules governs a field is decided by the producer, where
+    the field is still known: once a losing rule sits in ``other_rules`` its
+    provenance is gone, so this class does not pretend it can reconstruct which
+    field an entry contested. What it still checks is the one thing it can —
+    that one ``rule_id`` does not name two different rules.
+
     ``segment_capacity`` is how many segments the surface counts, where it
     counts them: a carousel's slides and a thread's posts are countable, an
     article's paragraphs are not. It is the one number that can make a reader
@@ -891,16 +965,18 @@ class DestinationRules:
 
     destination: Destination
     format: PlanFormat
-    format_rule: PlatformRule
+    format_rule: FixingRule
     length: LengthTarget
-    length_rule: PlatformRule
+    length_rule: FixingRule
     hashtags: HashtagPolicy
-    hashtag_rule: PlatformRule
+    hashtag_rule: FixingRule
     segments_max: Optional[int] = None
-    #: Everything else the register routed to this destination's adaptation.
-    #: They shape the plan and are recorded in its constraints; the three above
-    #: are the ones a plan can be compared against by code.
-    other_rules: tuple[PlatformRule, ...] = ()
+    #: Everything else the register routed to this destination's adaptation,
+    #: and every rule that lost a field to a stronger one. They shape the plan
+    #: and are recorded in its constraints; the three above are the ones a plan
+    #: can be compared against by code. A rule that lost is kept here rather
+    #: than dropped, so the trace shows both rules and which one governed.
+    other_rules: tuple[FixingRule, ...] = ()
 
     def __post_init__(self) -> None:
         if self.segments_max is not None and self.segments_max < 1:
@@ -910,7 +986,7 @@ class DestinationRules:
                 "publishes nothing, and that is S-07's exclusion rather than a "
                 "length rule"
             )
-        stated: dict[str, PlatformRule] = {}
+        stated: dict[str, FixingRule] = {}
         for rule in (
             self.format_rule,
             self.length_rule,
@@ -926,10 +1002,10 @@ class DestinationRules:
                 )
 
     @property
-    def rules(self) -> tuple[PlatformRule, ...]:
+    def rules(self) -> tuple[FixingRule, ...]:
         """Every rule that reached this adaptation, each of them once."""
 
-        stated: dict[str, PlatformRule] = {}
+        stated: dict[str, FixingRule] = {}
         for rule in (
             self.format_rule,
             self.length_rule,
@@ -955,8 +1031,13 @@ class DestinationRules:
         return None
 
     @property
-    def hard_rules(self) -> tuple[PlatformRule, ...]:
-        """The tier-1 rules: the ones a plan cannot be replanned around."""
+    def hard_rules(self) -> tuple[FixingRule, ...]:
+        """The tier-1 rules: the ones a plan cannot be replanned around.
+
+        A client rule is never one of them: :attr:`ClientRule.is_hard` is
+        ``False`` by construction, so the contract cannot put a rule here by
+        declaring one absolute enough.
+        """
 
         return tuple(rule for rule in self.rules if rule.is_hard)
 

@@ -1,12 +1,13 @@
 ---
 id: K-DST-WIX-01
-version: 1
+version: 2
 status: descriptive
 tier: 3
 evidence_class: RES, INF
 confidence: medium
 verified_on: 2026-09-21
 review_by: 2027-09-21
+supersedes: K-DST-WIX-01 v1
 ---
 
 # The article is read by scanning before it is read by reading
@@ -38,9 +39,14 @@ research in `clients/never_blank/editorial/reference/`.
 ## Notes
 Transcribed into the register from the accepted map rather than re-derived, so
 `verified_on` is the day the map was accepted. The Wix search-ranking record
-(`K-DST-WIX-02`) and the Google policy record (`K-DST-WIX-03`, tier 1) are part
-of the incremental migration and are not in this seed set.
+(`K-DST-WIX-02`, tier 4) and the Google policy record (`K-DST-WIX-03`, tier 1)
+are the other two halves of the row the map's review split this one out of;
+both were transcribed by #363.
 
 ## Change log
+- v2, 2026-09-29: `## Notes` corrected — the two records it said were still to
+  come are now in the register (#363). Nothing else changed: this record's
+  statement, tier, applicability and influences are untouched, and it fixes
+  none of E-14's mandatory values.
 - v1, 2026-09-23: created from the accepted map §8 as the Wix seed record
   (NB-02c).

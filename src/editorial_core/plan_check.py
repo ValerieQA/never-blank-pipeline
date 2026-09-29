@@ -105,10 +105,10 @@ from src.editorial_core.executable_plan import (
     DestinationRules,
     Exemplar,
     ExecutablePlan,
+    FixingRule,
     ForbiddenKind,
     PlanFormat,
     PlanStage,
-    PlatformRule,
     uncarried_moves,
     write_plan,
 )
@@ -1751,13 +1751,17 @@ def _v_p04_code(
     return tuple(findings), terminal
 
 
-def _ends_it(rule: PlatformRule) -> bool:
+def _ends_it(rule: FixingRule) -> bool:
     """Does breaking this rule end the destination (V-P04's route table)?
 
     "A tier-1 hard platform rule is violated with no compliant variant →
     terminal". Both halves, because either alone is the wrong answer: a tier-2
     client rule is replanned around however absolute it sounds, and a tier-1
     rule that admits a compliant variant is replanned around too.
+
+    The annotation widened with #363 and the logic did not: a value fixed by a
+    :class:`~src.editorial_core.executable_plan.ClientRule` was always a tier-2
+    client rule, and ``is_hard`` was already ``False`` for one.
     """
 
     return bool(rule.is_hard) and not bool(rule.compliant_variant)
