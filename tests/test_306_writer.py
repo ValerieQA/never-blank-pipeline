@@ -536,8 +536,10 @@ def _selection(strategy: EditorialStrategy) -> StrategySelection:
     )
 
 
+#: `K-DST-LI-01`, which is a record that exists: these tests used to cite an id
+#: no file under `knowledge/records/dst/` ever declared (#363).
 PLATFORM = PlatformRule(
-    rule_id="K-DST-LI-11",
+    rule_id="K-DST-LI-01",
     text="A LinkedIn post runs 80–220 words and tolerates hashtags.",
     tier=KnowledgeTier.PLATFORM_RANKING,
 )

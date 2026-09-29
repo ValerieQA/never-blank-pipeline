@@ -1,12 +1,13 @@
 ---
 id: K-DST-TH-01
-version: 1
+version: 2
 status: descriptive
 tier: 4
 evidence_class: VEND, PLAT
 confidence: low
 verified_on: 2026-09-21
 review_by: 2026-12-20
+supersedes: K-DST-TH-01 v1
 ---
 
 # Plain text is the weakest thing to post on Threads
@@ -21,7 +22,8 @@ a post's reach depends less on the individual post than it does elsewhere.
 destination is threads
 
 ## Influences
-- S-10 · `E-14.format` — text with an image where one exists in the assets.
+- S-10 · `E-14.format` — a post, carrying an image where one exists in the
+  assets. [fixes: post]
 - S-10 · `E-14.segments` — how the sequence is broken into posts.
 - S-13 — the soft signal V-S10 reads the same association in a finished text.
 
@@ -40,6 +42,14 @@ has least data on, and the figure is a ratio from one vendor. Transcribed from
 the accepted map rather than re-measured, so `verified_on` is the day the map
 was accepted.
 
+`[fixes: post]` is the form, not the media: E-14's format vocabulary has no term
+for "text with an image", and whether an image is attached is the assets' answer
+rather than the format's. What this record fixes is that a Threads unit is one
+post and not a thread of them.
+
 ## Change log
+- v2, 2026-09-29: a `[fixes: …]` clause added to the S-10 format entry, so
+  `DestinationRules` can be built from this record instead of from a fixture
+  (#363). The statement, tier and applicability are unchanged.
 - v1, 2026-09-23: created from the accepted map §8 as the Threads seed record
   (NB-02c).

@@ -91,6 +91,43 @@ policy the parser applies — it is that the grammar has no term for a label.
 check it shapes. Entity fields are written in backticks and must exist in
 `vocab/fields.md`; anything else on the line is prose for a person.
 
+One piece of that prose is read by code, and only one: a trailing
+`[fixes: <value>]` clause. A destination record that fixes one of E-14's three
+mandatory values — `format`, `length_target`, `hashtags` — states the value
+there, so that `src/knowledge/destination_rules.py` reads it instead of guessing
+at the sentence beside it:
+
+```
+- S-10 · `E-14.length_target` — the 250–400 word range. [fixes: 250–400 words]
+```
+
+A value is written the way the engine spells it: a `format` or a `hashtags`
+policy is one term of `vocab/formats.md` or of `required` / `allowed` /
+`forbidden`, and a `length_target` is `<minimum>–<maximum> <unit>` with both
+ends. Anything else is refused rather than interpreted. A record that shapes a
+field without deciding its value carries no clause, which is a normal record:
+`K-DST-FB-02` says what a Facebook caption's hashtags may be about without
+deciding whether the destination carries any.
+
+## Two destination records that are not here, and why (#363)
+
+**`K-DST-TH-02` is deliberately not transcribed.** The map's own row reads:
+"Live author replies give +42%. **Unavailable in an autonomous system** — this
+is knowledge for the Client Contract, not for the production run." Transcribing
+it as an engine record would import knowledge the map routes elsewhere, so the
+register does not hold it. Its absence is a decision, not an oversight.
+
+**`K-DST-META-02` and `K-DST-META-03` are transcribed unbound.** The map does
+not say which destinations they bind to, and `## Applies when` cannot say "the
+Meta destinations" — the six destinations are named one at a time, and grouping
+three of them under a company would be the record inventing a binding. So both
+are written `always`, meaning unbound, and neither reaches a destination's
+`DestinationRules`: they influence S-14 and S-15 rather than S-10. **This is an
+open keeper question**: whether Meta's originality and disclosure policies bind
+facebook, instagram and threads is for whoever verifies the policy to state on
+the record, destination by destination. `K-DST-META-01` is bound, to
+`instagram`, because the map's own row names Instagram in its statement.
+
 ## A probe family (§6)
 
 A record in `records/tempt/` with two extra required sections: `## Probe` (the
