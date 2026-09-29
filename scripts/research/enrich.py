@@ -45,6 +45,14 @@ ADMITTED         = "admitted"
 OUTSIDE_ADMITTED = "outside_admitted"
 CANNOT_ANSWER    = "cannot_answer"
 
+#: The one answer other than a listed value. The classifier chooses among the
+#: configured values and is never asked to invent a category of its own, so a
+#: deliberate "none of these" needs a way to be said: this token, substituted
+#: into the rendered prompt from here and from nowhere else. It is a protocol
+#: token and never a category — it is recorded as OUTSIDE_ADMITTED like any
+#: value the contract does not list, and is never written to a value field.
+OUTSIDE_ADMITTED_TOKEN = "NONE_OF_THE_LISTED_VALUES"
+
 
 def determine_article_readiness(signal: dict) -> tuple[bool, str]:
     """
@@ -119,7 +127,8 @@ def classify_against(
 
     Three inputs, three outcomes, and the distinction that must survive:
       - a listed value                          → ADMITTED, value present
-      - a value the contract does not list      → OUTSIDE_ADMITTED, absent
+      - OUTSIDE_ADMITTED_TOKEN, and equally any
+        other value the contract does not list  → OUTSIDE_ADMITTED, absent
       - no classification made (failure, no
         field, an unusable answer, no vocabulary
         to classify against)                    → CANNOT_ANSWER, absent
@@ -164,6 +173,7 @@ def enrich_signal(signal: dict) -> dict:
         "industry":    signal.get("INDUSTRY", ""),
         "editorial_domains":     ", ".join(domains),
         "editorial_risk_levels": ", ".join(risks),
+        "outside_admitted_token": OUTSIDE_ADMITTED_TOKEN,
     })
 
     # A provider or schema failure is recorded, not inferred from silence: an

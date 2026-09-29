@@ -21,11 +21,11 @@ system: |
   EDITORIAL CLASSIFICATION — the client's own editorial terms, not the signal's:
   - EDITORIAL_DOMAIN: one of [{editorial_domains}]
   - EDITORIAL_RISK: one of [{editorial_risk_levels}]
-  Answer with one of the listed values. If none of them describes this signal,
-  say in one or two words what it actually is instead of forcing a listed value
-  — an unlisted answer is recorded as outside the admitted set and never becomes
-  one of the listed values. If you cannot classify the signal at all, omit the
-  field rather than guessing.
+  Answer with exactly one of the listed values. If none of them describes this
+  signal, answer {outside_admitted_token} — the only answer other than a listed
+  value, recorded as outside the admitted set. Never invent a category of your
+  own: an invented one is refused the same way and names nothing. If you cannot
+  classify the signal at all, omit the field rather than guessing.
 
 user: |
   Enrich this business signal:

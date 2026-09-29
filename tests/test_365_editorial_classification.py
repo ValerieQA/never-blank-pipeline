@@ -281,6 +281,48 @@ def test_an_unadmitted_answer_is_not_persisted_as_a_value(monkeypatch):
     )
 
 
+def test_the_prompt_offers_one_way_to_say_none_of_the_listed_values(monkeypatch):
+    """Owner decision 4: the classifier chooses only among configured values.
+
+    A deliberate "outside the admitted set" is offered explicitly, so no answer
+    has to be an invented category. The token has one definition, in
+    ``enrich.py``, and the prompt is rendered with it rather than spelling it a
+    second time — a literal in the document fails the second assertion.
+    """
+
+    answer = _Answer(_payload())
+
+    _enriched(monkeypatch, answer)
+
+    assert enrich.OUTSIDE_ADMITTED_TOKEN in answer.prompts[0][0]
+    assert enrich.OUTSIDE_ADMITTED_TOKEN not in PROMPT.read_text(encoding="utf-8")
+
+
+def test_the_offered_token_is_an_outcome_and_never_a_value(monkeypatch):
+    """The sanctioned "none of these" is recorded as `outside_admitted`.
+
+    It is not a category, so it reaches no value field and no record — the
+    contract stays an allow-list and gains no inadmissible token.
+    """
+
+    record = _enriched(
+        monkeypatch,
+        _Answer(
+            _payload(
+                EDITORIAL_DOMAIN=enrich.OUTSIDE_ADMITTED_TOKEN,
+                EDITORIAL_RISK=enrich.OUTSIDE_ADMITTED_TOKEN,
+            )
+        ),
+    )
+
+    assert DOMAIN_FIELD not in record
+    assert RISK_FIELD not in record
+    assert record[DOMAIN_OUTCOME_FIELD] == OUTSIDE_ADMITTED
+    assert record[RISK_OUTCOME_FIELD] == OUTSIDE_ADMITTED
+    assert enrich.OUTSIDE_ADMITTED_TOKEN not in json.dumps(record)
+    assert enrich.OUTSIDE_ADMITTED_TOKEN not in CONTRACT.read_text(encoding="utf-8")
+
+
 def test_an_admitted_answer_is_persisted_in_the_contracts_spelling(monkeypatch):
     """The value a record states is one configured value, not the answer's prose."""
 
