@@ -665,7 +665,8 @@ def _proposed(
         boundary=snapshot,
         core=_core(),
         features=features or _features(),
-        contract=contract or StrategyContract(),
+        contract=contract
+        or StrategyContract(positions=(), prohibitions=(), preferences=()),
         transport=_Transport(_answer(*proposals)),
         assets=_assets(),
         knowledge=knowledge,
@@ -680,7 +681,8 @@ def _selected(candidate_set: CandidateSet, **kwargs: Any) -> SelectionDecision:
         boundary=kwargs.pop("boundary", None) or _two_readings(),
         core=_core(),
         features=kwargs.pop("features", None) or _features(),
-        contract=kwargs.pop("contract", None) or StrategyContract(),
+        contract=kwargs.pop("contract", None)
+        or StrategyContract(positions=(), prohibitions=(), preferences=()),
         counters=kwargs.pop("counters", None) or _ledger(),
         assets=_assets(),
         **kwargs,
@@ -751,7 +753,9 @@ def test_openings_differ_across_destinations_while_each_carries_the_leading_mate
             boundary=_two_readings(),
             core=_core(),
             features=_features(),
-            contract=StrategyContract(),
+            contract=StrategyContract(
+                positions=(), prohibitions=(), preferences=()
+            ),
             transport=article,
             assets=_assets(),
         ),
@@ -762,7 +766,9 @@ def test_openings_differ_across_destinations_while_each_carries_the_leading_mate
             boundary=_two_readings(),
             core=_core(),
             features=_features(),
-            contract=StrategyContract(),
+            contract=StrategyContract(
+                positions=(), prohibitions=(), preferences=()
+            ),
             transport=post,
             assets=_assets(),
         ),
@@ -901,7 +907,7 @@ def test_the_s08_request_has_nowhere_to_put_a_sibling_or_a_label():
         boundary=_two_readings(),
         core=_core(),
         features=_features(),
-        contract=StrategyContract(),
+        contract=StrategyContract(positions=(), prohibitions=(), preferences=()),
         transport=transport,
         assets=_assets(),
     )
@@ -942,7 +948,7 @@ def test_one_call_per_destination_per_attempt():
         boundary=_two_readings(),
         core=_core(),
         features=_features(),
-        contract=StrategyContract(),
+        contract=StrategyContract(positions=(), prohibitions=(), preferences=()),
         transport=transport,
         assets=_assets(),
     )
@@ -964,7 +970,7 @@ def test_an_answer_outside_two_to_four_strategies_is_not_an_answer(proposed: int
         boundary=_two_readings(),
         core=_core(),
         features=_features(),
-        contract=StrategyContract(),
+        contract=StrategyContract(positions=(), prohibitions=(), preferences=()),
         transport=_Transport(_answer(*[_proposal() for _ in range(proposed)])),
         assets=_assets(),
     )
@@ -989,7 +995,7 @@ def test_a_provider_that_refused_is_not_recorded_as_no_admissible_strategy():
         boundary=_two_readings(),
         core=_core(),
         features=_features(),
-        contract=StrategyContract(),
+        contract=StrategyContract(positions=(), prohibitions=(), preferences=()),
         transport=_Transport(_answer(), fails=True),
         assets=_assets(),
     )
@@ -1094,7 +1100,9 @@ def test_a_client_position_comes_only_from_the_contract():
                 text="We think settlement time is the thing to measure.",
                 rule_id="CR-POS-01",
             ),
-        )
+        ),
+        prohibitions=(),
+        preferences=(),
     )
 
     refused = _proposed(_proposal(position=FIGURE), _proposal())
@@ -1144,7 +1152,9 @@ def test_s08_refuses_an_anchor_the_newest_boundary_no_longer_admits():
             boundary=narrowed,
             core=_core(),
             features=_features(),
-            contract=StrategyContract(),
+            contract=StrategyContract(
+                positions=(), prohibitions=(), preferences=()
+            ),
             transport=_Transport(_answer()),
             assets=_assets(),
         )
@@ -1180,7 +1190,9 @@ def test_a_second_attempt_without_its_route_is_refused():
             boundary=_two_readings(),
             core=_core(),
             features=_features(),
-            contract=StrategyContract(),
+            contract=StrategyContract(
+                positions=(), prohibitions=(), preferences=()
+            ),
             transport=_Transport(_answer()),
             assets=_assets(),
             attempt=2,
@@ -1200,7 +1212,9 @@ def test_another_destinations_route_bounds_nothing_here():
             boundary=_two_readings(),
             core=_core(),
             features=_features(),
-            contract=StrategyContract(),
+            contract=StrategyContract(
+                positions=(), prohibitions=(), preferences=()
+            ),
             transport=_Transport(_answer()),
             assets=_assets(),
             attempt=2,
@@ -1236,7 +1250,9 @@ def test_an_unkeyed_route_authorizes_no_destination():
             boundary=_two_readings(),
             core=_core(),
             features=_features(),
-            contract=StrategyContract(),
+            contract=StrategyContract(
+                positions=(), prohibitions=(), preferences=()
+            ),
             transport=_Transport(_answer()),
             assets=_assets(),
             attempt=2,
@@ -1259,7 +1275,7 @@ def test_the_route_that_paid_for_the_attempt_names_the_set_it_produces():
         boundary=_two_readings(),
         core=_core(),
         features=_features(),
-        contract=StrategyContract(),
+        contract=StrategyContract(positions=(), prohibitions=(), preferences=()),
         transport=_Transport(_answer()),
         assets=_assets(),
         attempt=2,
@@ -1289,7 +1305,7 @@ def test_s08_spends_no_counter_of_its_own():
         boundary=_two_readings(),
         core=_core(),
         features=_features(),
-        contract=StrategyContract(),
+        contract=StrategyContract(positions=(), prohibitions=(), preferences=()),
         transport=_Transport(_answer()),
         assets=_assets(),
     )
@@ -1309,7 +1325,7 @@ def test_a_budget_refusal_makes_no_call_and_writes_no_set():
         boundary=_two_readings(),
         core=_core(),
         features=_features(),
-        contract=StrategyContract(),
+        contract=StrategyContract(positions=(), prohibitions=(), preferences=()),
         transport=transport,
         assets=_assets(),
         budget=_RefusingBudget(),
@@ -1498,13 +1514,15 @@ def test_a_promise_wider_than_the_boundary_is_excluded_before_any_ranking():
 
 def test_a_tier_two_prohibition_excludes_with_its_rule_and_tier():
     contract = StrategyContract(
+        positions=(),
         prohibitions=(
             ContractRule(
                 rule_id="CR-NO-DELAY",
                 text="This client does not hold the point back.",
                 reveals=(RevealKind.DELAYED,),
             ),
-        )
+        ),
+        preferences=(),
     )
     candidate_set = _proposed(_proposal(reveal="delayed", until_move=2), _proposal())
 
@@ -1520,6 +1538,7 @@ def test_a_tier_two_prohibition_excludes_with_its_rule_and_tier():
 def test_a_prohibition_weaker_than_tier_two_is_refused_as_a_prohibition():
     with pytest.raises(StrategyError, match="deterministic exclusions"):
         StrategyContract(
+            positions=(),
             prohibitions=(
                 ContractRule(
                     rule_id="CR-SOFT",
@@ -1527,7 +1546,8 @@ def test_a_prohibition_weaker_than_tier_two_is_refused_as_a_prohibition():
                     tier=KnowledgeTier.EDITORIAL,
                     reveals=(RevealKind.DELAYED,),
                 ),
-            )
+            ),
+            preferences=(),
         )
 
 
@@ -1561,7 +1581,9 @@ def test_a_weak_candidate_alone_excludes_nothing_and_is_recorded_as_a_hint():
 
     decision = _selected(
         candidate_set,
-        contract=StrategyContract(prohibitions=(rule,)),
+        contract=StrategyContract(
+            positions=(), prohibitions=(rule,), preferences=()
+        ),
         transport=_Transport(_ranking(_row(1, 5), _row(2, 2))),
     )
 
@@ -1586,7 +1608,12 @@ def test_a_reinforced_weak_candidate_acts_at_its_own_weight():
     )
     candidate_set = _proposed(_proposal(reveal="delayed", until_move=2), _proposal())
 
-    decision = _selected(candidate_set, contract=StrategyContract(prohibitions=(rule,)))
+    decision = _selected(
+        candidate_set,
+        contract=StrategyContract(
+            positions=(), prohibitions=(rule,), preferences=()
+        ),
+    )
 
     selection = decision.selection
     assert selection is not None
@@ -1645,7 +1672,9 @@ def test_a_precedence_application_records_which_record_won():
     decision = _selected(
         candidate_set,
         contract=StrategyContract(
-            prohibitions=(prohibition,), preferences=(preference,)
+            positions=(),
+            prohibitions=(prohibition,),
+            preferences=(preference,),
         ),
     )
 
@@ -1702,13 +1731,15 @@ def test_the_degrade_never_reaches_past_the_candidates_the_rules_allowed():
     """Fail-closed: the safest is chosen among the survivors, not among all."""
 
     contract = StrategyContract(
+        positions=(),
         prohibitions=(
             ContractRule(
                 rule_id="CR-NO-DELAY",
                 text="No delayed reveal.",
                 reveals=(RevealKind.DELAYED,),
             ),
-        )
+        ),
+        preferences=(),
     )
     candidate_set = _proposed(
         _proposal(reveal="delayed", until_move=2),
@@ -1750,7 +1781,7 @@ def _failed(
         boundary=_two_readings(),
         core=_core(),
         features=_features(),
-        contract=StrategyContract(),
+        contract=StrategyContract(positions=(), prohibitions=(), preferences=()),
         counters=counters,
         assets=_assets(),
     )

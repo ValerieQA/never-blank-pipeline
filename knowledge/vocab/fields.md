@@ -1,6 +1,6 @@
 ---
 vocab_id: fields
-version: 1
+version: 2
 ---
 
 # Entity fields a record may shape (Step 1)
@@ -38,6 +38,8 @@ records are structure the engine owns; no knowledge record shapes them.
 - `E-14.segments` — which segment carries which move.
 - `E-14.subheadings` — whether the article uses them, and how.
 - `E-14.hashtags` — the policy and the list.
+- `E-14.fixed_slots` — a contract slot the plan carries unchanged as a
+  constraint, such as the ending mode.
 - `E-14.cross_destination_link` — the conditional link and what it promises.
 - `E-14.citations` — which core sources are cited.
 - `E-14.exemplars` — the reference-library items, with their take and do-not-copy

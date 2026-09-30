@@ -31,9 +31,6 @@ _COUNT_RANGE = {
     "threads":   (0, 2),
 }
 
-#: Always first, in this order.
-BRANDED_HASHTAGS = ("#NeverBlank", "#CustomerTrust")
-
 #: Conditional, never automatic: carried only when the article itself is about
 #: Compound Presence. The article structure makes that connection conditional
 #: (clients/never_blank/lenses/structure.md, step 9), so a tag asserting it on
@@ -45,6 +42,27 @@ _COMPOUND_PRESENCE_PHRASE = "compound presence"
 PROHIBITED_HASHTAGS = frozenset({"#presencesystem", "#contentmarketing"})
 
 _URL_SHAPED = re.compile(r"https?|www\.|\.com|\.org|\.net|\.io|://", re.IGNORECASE)
+
+
+def branded_hashtags() -> tuple[str, ...]:
+    """The client's declared static vocabulary, in the order it declares it.
+
+    Always first, in that order. The two words used to be a tuple written here;
+    since #368 they are declared in the client contract's ``## Hashtag
+    vocabulary`` and this module is a **consumer** of them, which leaves one
+    authority for what a Never Blank post is tagged with. Only the static words
+    are there: the Compound Presence tag is conditional on the article and the
+    industry tag is derived from the signal, so both stay computations below.
+
+    The import is inside the function on purpose. The publisher layer does not
+    pull the editorial core in at import time, and a contract this deployment
+    cannot read is reported when tags are asked for rather than when this module
+    is first loaded.
+    """
+
+    from src.strategy.adaptation_contract import client_hashtags
+
+    return client_hashtags()
 
 
 def _camel_tag(text: str) -> str:
@@ -71,11 +89,13 @@ def generate_hashtags(
 ) -> list[str]:
     """Deterministic hashtags for ``platform``.
 
-    Returns [] for platforms that take no hashtags. Order: ``#NeverBlank``;
-    ``#CompoundPresence`` only when ``article_text`` — the canonical accepted
-    article — actually names Compound Presence; ``#CustomerTrust``; then the
-    signal's industry tag. Case-insensitively deduplicated, prohibited tags
-    and company names excluded, bounded by the platform maximum. No model
+    Returns [] for platforms that take no hashtags. Order: the first declared
+    branded tag; :data:`COMPOUND_PRESENCE_HASHTAG` only when ``article_text`` —
+    the canonical accepted article — actually names Compound Presence; the rest of
+    the declared vocabulary; then the signal's industry tag. The branded words come
+    from the client contract (:func:`branded_hashtags`), so that order is the order
+    the contract declares them in. Case-insensitively deduplicated, prohibited
+    tags and company names excluded, bounded by the platform maximum. No model
     transport exists on this path.
 
     Topical tags are no longer derived from free text. The mechanism's first
@@ -95,10 +115,11 @@ def generate_hashtags(
         isinstance(article_text, str)
         and _COMPOUND_PRESENCE_PHRASE in unicodedata.normalize("NFKC", article_text).casefold()
     )
+    branded = branded_hashtags()
     candidates = [
-        BRANDED_HASHTAGS[0],
+        *branded[:1],
         COMPOUND_PRESENCE_HASHTAG if about_compound_presence else "",
-        *BRANDED_HASHTAGS[1:],
+        *branded[1:],
         _camel_tag(signal.get("INDUSTRY", "")),
     ]
 

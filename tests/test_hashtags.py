@@ -20,8 +20,8 @@ import pytest
 import src.publishing.hashtags as hashtags
 from src.publishing.formatting import append_hashtags
 from src.publishing.hashtags import (
-    BRANDED_HASHTAGS,
     PROHIBITED_HASHTAGS,
+    branded_hashtags,
     generate_hashtags,
 )
 from src.utils import llm_client
@@ -53,7 +53,7 @@ def _tags(signal=SIGNAL, platform="linkedin", article_text=ARTICLE):
 def test_identical_input_always_produces_identical_output():
     runs = [_tags() for _ in range(5)]
     assert all(r == runs[0] for r in runs)
-    assert runs[0][:2] == list(BRANDED_HASHTAGS)
+    assert runs[0][:2] == list(branded_hashtags())
 
 
 def test_no_model_transport_is_structurally_possible(monkeypatch):
@@ -101,7 +101,7 @@ def test_malformed_industry_is_refused_deterministically(value):
         assert "http" not in tag.casefold()
         assert "secret" not in tag.casefold()
     # the fixed tags survive any field damage
-    assert tags == list(BRANDED_HASHTAGS)
+    assert tags == list(branded_hashtags())
 
 
 def test_unicode_input_is_normalized_safely():
@@ -225,7 +225,7 @@ def test_cost_safety_contracts_survive(monkeypatch):
     exhausted.spend()
     with activate_call_budget(exhausted):
         tags = _tags()                                 # no charge, no raise
-    assert tags[:2] == list(BRANDED_HASHTAGS)
+    assert tags[:2] == list(branded_hashtags())
     # #172: credentials stripped here
     assert os.environ.get("NB_OPENAI_API_KEY") is None
     # #173: social-model routing no longer has a hashtag consumer; the
