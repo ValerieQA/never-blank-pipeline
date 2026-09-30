@@ -738,6 +738,21 @@ def test_another_clients_accepted_echo_reaches_telegram_and_threads_under_its_na
         "- The signal concerns a bakery's own costs or customers.\n",
         encoding="utf-8",
     )
+    # …including the words its posts are tagged with. Since #368 the hashtag
+    # vocabulary is the client's own declaration and publishing reads it from
+    # here, so a replaced client brings its own tags and the Engine has none of
+    # its own to fall back on.
+    (acme_client / "contract.md").write_text(
+        "---\n"
+        "contract_id: acme-studio\n"
+        "version: 1\n"
+        "---\n\n"
+        "# Client Contract — CLIENT: ACME STUDIO\n\n"
+        "## Hashtag vocabulary\n\n"
+        "- #AcmeStudio\n"
+        "- #IndependentBakeries\n",
+        encoding="utf-8",
+    )
     monkeypatch.setenv("NB_CLIENT_DIR", str(acme_client))
 
     real = load_business_strategy_configuration()

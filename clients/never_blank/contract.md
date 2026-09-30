@@ -35,6 +35,10 @@ Format: docs/engine/CLIENT_CONTRACTS.md. Loader: src/strategy/client_contract.py
 Three sections below `## Enabled destinations` are #363's: the configuration
 S-00's `ContractFitRules` and S-10/S-11's `DestinationRules` are built from.
 Loaders: src/strategy/contract_fit.py and src/knowledge/destination_rules.py.
+
+Four more are #368's: the three declarations S-08's `StrategyContract` is built
+from, and the static hashtag vocabulary S-10's `AdaptationContract` carries.
+Loaders: src/strategy/strategy_contract.py and src/strategy/adaptation_contract.py.
 -->
 
 ## Enabled destinations
@@ -116,3 +120,66 @@ citing one would be claiming an authority it does not own.
 | NB-DST-TG-FORMAT | telegram | E-14.format | channel_post | Telegram is written as a channel post. |
 | NB-DST-TG-LENGTH | telegram | E-14.length_target | 180–300 words | A Never Blank Telegram post runs 180–300 words. |
 | NB-DST-TG-HASHTAGS | telegram | E-14.hashtags | forbidden | The Telegram channel carries no hashtags. |
+
+## Client positions
+
+<!--
+The positional assets a strategy may cite as this client's own position (E-06,
+Step 1 §4: `client_position_ref` comes "only from the contract"). Owner
+decision, 2026-09-30: Never Blank takes **none**, and `none` is how that
+decision is written. It is not the same statement as leaving the section out —
+an absent section is a contract that did not answer, and the loader refuses it.
+
+A declared position is one row: `| position_id | rule_id | statement |`.
+-->
+
+none
+
+## Client prohibitions
+
+<!--
+The client's own tier-2 prohibitions, which S-09 applies as deterministic
+exclusions (`ExclusionReason.CONTRACT_PROHIBITION`). Owner decision,
+2026-09-30: Never Blank declares **none**.
+
+This is the declaration that matters most, and the reason this section exists at
+all. An empty prohibition set is permissive and silent: no candidate is ever
+excluded by the contract, and the trace shows nothing was consulted. Written
+here, "none" is the client's decision; left out, it would have been
+indistinguishable from configuration nobody wrote.
+
+A declared prohibition is one row:
+`| rule_id | focal_subjects | reveals | statement |`, where a structural column
+with nothing in it is written `—`. The tier is not a column: a rule declared
+here is this client's own, which is tier 2, and a contract cannot promote its
+own rule to hard platform policy.
+-->
+
+none
+
+## Client preferences
+
+<!--
+The client's own preferences, which order candidates at §7.3's fifth rung and
+never exclude anything. Owner decision, 2026-09-30: Never Blank declares
+**none**. Same row shape as `## Client prohibitions`.
+-->
+
+none
+
+## Hashtag vocabulary
+
+<!--
+The static, client-owned hashtag words, and nothing else (owner decision,
+2026-09-30). This is **vocabulary, not policy**: whether a surface carries tags
+at all is the destination's decision and stays in `## Destination rules` and the
+`K-DST` records, which #363 owns and this section does not touch.
+
+Two values, because only two are static. `#CompoundPresence` is conditional on
+the accepted article actually naming Compound Presence, and the industry tag is
+derived from the signal: both are computations, and a computed tag declared here
+would be a claim the client never made. They stay where they are computed.
+-->
+
+- #NeverBlank
+- #CustomerTrust

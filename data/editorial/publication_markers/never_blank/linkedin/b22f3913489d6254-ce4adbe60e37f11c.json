@@ -1,0 +1,14 @@
+{
+  "client": "never_blank",
+  "content_digest": "sha256:a10ca7b5f5ec084d34242c6b14ae557fc93dc520201d8ab95f96eaf6ef9761c9",
+  "destination": "linkedin",
+  "external_id": "6abd23672269fad86b84fb3f",
+  "key": "b22f3913489d6254-ce4adbe60e37f11c",
+  "published_at": "2026-09-30T14:57:49.883571+00:00",
+  "run_id": "ba4e932f-036f-413e-90b5-e019d21833f1",
+  "source_signal_ids": [
+    "b22f3913489d6254"
+  ],
+  "url": "",
+  "url_provenance": "unavailable"
+}

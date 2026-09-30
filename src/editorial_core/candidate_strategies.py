@@ -306,11 +306,24 @@ class StrategyContract:
     what ``client_position_ref`` may name, prohibitions are deterministic
     exclusions at S-09 (map §5, tiers 0–2), and preferences are the fifth
     tie-breaker of §7.3 and never exclude anything.
+
+    **All three are required declarations, and none of them has a default.** An
+    explicit ``()`` is the client saying "none", which is an answer; leaving the
+    argument out is the absence of an answer, and the two used to construct the
+    same object. They are not equally harmless when empty: an empty ``positions``
+    fails closed, because a ``client_position_ref`` :meth:`position` cannot answer
+    raises; an empty ``prohibitions`` is **permissive and silent**, because
+    ``strategy_selection`` has no other source of
+    ``CONTRACT_PROHIBITION`` and the trace then shows nothing was consulted; an
+    empty ``preferences`` is inert. So a contract nobody stated read as an empty
+    one is a false statement about the client on exactly one axis, and an
+    invisible one — which is why omitting a field is a ``TypeError`` from this
+    signature rather than a silent construction (#368).
     """
 
-    positions: tuple[ClientPosition, ...] = ()
-    prohibitions: tuple[ContractRule, ...] = ()
-    preferences: tuple[ContractRule, ...] = ()
+    positions: tuple[ClientPosition, ...]
+    prohibitions: tuple[ContractRule, ...]
+    preferences: tuple[ContractRule, ...]
 
     def __post_init__(self) -> None:
         identities = [

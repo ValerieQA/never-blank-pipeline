@@ -137,7 +137,15 @@ Implementation: `src/strategy/client_contract.py`. The file is `contract.md` in
 the client directory. Front matter, all four required and nothing else accepted:
 `contract_id`, `version`, `voice_ref`, `forbidden_ref`. Body: a `#` title, notes
 for people if wanted, then one `## Enabled destinations` section listing one
-destination per bullet.
+destination per bullet, followed by the sections later slices added — each read by
+its own loader, and each described in the contract's own notes beside it:
+
+| Section | Loader | Slice |
+|---|---|---|
+| `## Editorial domain`, `## Risk level` | `src/strategy/contract_fit.py` | #363 |
+| `## Destination rules` | `src/knowledge/destination_rules.py` | #363 |
+| `## Client positions`, `## Client prohibitions`, `## Client preferences` | `src/strategy/strategy_contract.py` | #368 |
+| `## Hashtag vocabulary` | `src/strategy/adaptation_contract.py` | #368 |
 
 **Three things that are not each other** (AD-02 §3), and the contract supplies
 only the first:
@@ -190,6 +198,32 @@ The producer reads **no** capability and **no** rollout scope. Whether an enable
 destination publishes or only generates is S-07's own resolution from its other
 inputs — which is why today's Wix + LinkedIn split survives a contract that
 enables all six.
+
+### The client's own rules: declared empty is an answer, absent is not
+
+The three `## Client …` sections are **required declarations**, and each states
+either a table of rows or the single word `none`. That is not decoration. All
+three `StrategyContract` fields once defaulted to `()`, so a contract nobody had
+written produced the same object as a client that had decided it wanted none —
+and on one of the three axes that is both wrong and invisible: an empty
+`prohibitions` is S-09's only source of `CONTRACT_PROHIBITION`, so nothing is ever
+excluded and the trace shows nothing was consulted. So `none` is the client saying
+"none", a **missing section raises and names itself**, and the type refuses to be
+constructed without all three (#368).
+
+A prohibition or preference row is `| rule_id | focal_subjects | reveals |
+statement |`, with `—` for a structural column the rule names none of; a position
+row is `| position_id | rule_id | statement |`. The tier is not a column: a rule
+declared here is the client's own, which is tier 2.
+
+### The hashtag vocabulary, which is not the hashtag policy
+
+`## Hashtag vocabulary` holds the static, client-owned tag words, one per bullet,
+and nothing else. Whether a surface carries tags at all stays with
+`## Destination rules` and the `K-DST` records (#363). A conditional or derived tag
+is a computation and is never declared here. `src/publishing/hashtags.py` is a
+**consumer** of the declared words, which is the direction that leaves one
+authority for them.
 
 ### Forbidden wording
 

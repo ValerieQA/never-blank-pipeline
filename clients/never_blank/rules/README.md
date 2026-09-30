@@ -39,8 +39,30 @@ universal one (`knowledge/ladders/default.md`) is in force unchanged, and
 a ladder is ever declared in `streams/monday.md`, the register validator checks
 its mappings on every change — that check is already running.
 
-**Nothing here is loaded into a run yet.** The loader that reads records into a
-stage arrives with its own slice; until then these files are the written form
-of rules the Engine gets from `streams/`, `lenses/` and `lists/` as it always
-has. `tests/test_296_knowledge_seed_set.py` holds them to the register's own
-rules, by validating them as records, so the format cannot rot while it waits.
+**These are loaded into a run (#368).** `src/knowledge/client_rules.py` is the
+loader: it runs the register's run-start gate first, then parses every file here
+except this README with the register's own parser and its condition with the
+register's own grammar, so a client rule reaches a producer as the same
+`LoadedRecord` a universal record does. A file it cannot read is a refusal and
+not a record left out — the run does not start on rules nobody could read — and
+this README is the one named exception rather than a file that got skipped for
+looking unparseable.
+
+What reads them today is `src/strategy/adaptation_contract.py`, which takes
+`K-NB-01`'s `ending_mode` from the `[fixes: …]` clause on its own
+`E-14.fixed_slots` influence entry and produces the `FixedSlot` S-10 carries and
+V-P04 enforces. That clause is **required**: editing it away, or retiring the
+record, refuses the contract rather than producing one with no fixed slot, because
+V-P04 with nothing to compare against passes every plan silently. It is also the
+**only** clause accepted, because the owner's decision named one record and one
+slot: renaming the slot, a second clause in this record, or a `[fixes: …]` clause
+in any of the other five is refused as well — V-P04 would enforce any of them
+exactly as if somebody had approved it. The other five records are loaded and
+reach no producer yet: they influence stages S-08…S-13 has no wiring for, which
+is #351's. They are not copied anywhere — the records are the authority, and a
+rule duplicated into a second one would have two.
+
+The pre-canonical path is unchanged: while the Golden Engine is off, the Engine
+still gets these rules from `streams/`, `lenses/` and `lists/` as it always has.
+`tests/test_296_knowledge_seed_set.py` holds the files to the register's own
+rules by validating them as records, so the format cannot rot.
