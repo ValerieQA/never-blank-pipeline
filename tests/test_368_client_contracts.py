@@ -28,6 +28,10 @@ So every test below is written so that a bypass fails it:
 * a producer that composed a contract with no fixed slot when ``K-NB-01`` states
   none fails :func:`test_the_record_losing_its_clause_is_refused_rather_than_unfixed`
   and :func:`test_the_authorized_record_being_absent_is_refused_too`;
+* a producer that counted the slots ``K-NB-01`` states rather than checking which
+  slot it fixed accepts a renamed one and a second record's own, and fails
+  :func:`test_the_authorized_record_fixing_another_slot_instead_is_refused` and
+  :func:`test_another_records_own_fixed_slot_is_refused_rather_than_carried`;
 * dropping the produced slot removes the V-P04 Finding and fails
   :func:`test_v_p04_enforces_the_fixed_slot_end_to_end`;
 * reverting the registry wiring lets the run start and fails
@@ -123,6 +127,10 @@ PRODUCERS = (
     "src/strategy/adaptation_contract.py",
     "src/knowledge/client_rules.py",
 )
+
+#: The one of them that composes the slot, and so the only one the authorized
+#: slot *name* belongs in — once, as the authorization itself.
+ENDING_PRODUCER = "src/strategy/adaptation_contract.py"
 
 
 def _produced(directory: Path = NEVER_BLANK, register: Path = REGISTER):
@@ -426,9 +434,11 @@ def test_the_ending_mode_is_the_records_and_not_a_literal(tmp_path):
     """Acceptance 5. A literal ending mode in `src/` fails this test.
 
     The record is edited in a copied client directory and the produced slot
-    follows it. Nothing in the producers names the slot or the value: the check
-    below reads the code with the module docstring removed, because quoting the
-    record's own clause as documentation is how a reader learns the grammar.
+    follows it. The **value** is named nowhere in the producers, and the slot name
+    only as the authorization decision 3 states — once, as a constant, never as a
+    value composed into a slot. The check reads the code with the module docstring
+    removed, because quoting the record's own clause as documentation is how a
+    reader learns the grammar.
     """
 
     directory = _edited(
@@ -446,16 +456,22 @@ def test_the_ending_mode_is_the_records_and_not_a_literal(tmp_path):
     for relative in PRODUCERS:
         code = _code_outside_the_module_docstring(relative)
         assert ENDING_VALUE not in code, relative
-        assert ENDING_SLOT not in code, relative
+        named = 1 if relative == ENDING_PRODUCER else 0
+        assert code.count(ENDING_SLOT) == named, (
+            f"{relative}: the slot name belongs in a producer once, as the "
+            "authorization, and nowhere else"
+        )
 
 
 def test_only_the_ending_slot_is_produced_and_nothing_is_invented():
     """Owner decision 3: "No other fixed slot is invented."
 
-    The producer is general over every loaded client rule, and exactly one record
-    declares a slot, so exactly one is produced. Both halves matter: a producer
-    that only ever built this one slot would be the literal the test above
-    refuses, and one that invented a second would be deciding client policy.
+    The producer reads every loaded client rule, and against the real
+    configuration exactly one record fixes a slot, so exactly one is produced.
+    Both halves matter: a producer that never read the records would be the
+    literal the test above refuses, and one that carried a second record's slot
+    would be deciding client policy — which the two tests below refuse from
+    either side.
     """
 
     rules = client_rules(directory=NEVER_BLANK, register=REGISTER)
@@ -534,6 +550,59 @@ def test_the_authorized_record_fixing_a_second_slot_is_refused(tmp_path):
 
     message = str(raised.value)
     assert ENDING_RECORD in message
+    assert "one fixed value" in message
+
+
+def test_the_authorized_record_fixing_another_slot_instead_is_refused(tmp_path):
+    """Acceptance 4 names the slot as well as the record, and both are checked.
+
+    The record keeps its clause, its stage, its field and its tier, and renames
+    the slot. A producer that counted the clauses this record states would accept
+    it: exactly one arrives, from the authorized record, and the contract then
+    carries no `ending_mode` at all — a constraint V-P04 cannot compare a plan
+    against, and one it was never approved to enforce, in a single edit.
+    """
+
+    directory = _edited(
+        tmp_path,
+        f"rules/{ENDING_RECORD}.md",
+        f"[fixes: {ENDING_SLOT} = {ENDING_VALUE}]",
+        f"[fixes: closing_style = {ENDING_VALUE}]",
+    )
+
+    with pytest.raises(AdaptationContractError) as raised:
+        _produced(directory=directory)
+
+    message = str(raised.value)
+    assert ENDING_RECORD in message
+    assert ENDING_SLOT in message
+    assert "closing_style" in message
+
+
+def test_another_records_own_fixed_slot_is_refused_rather_than_carried(tmp_path):
+    """Owner decision 3 from the other side: no second record fixes anything.
+
+    `K-NB-02` is a loaded, approved, tier-2 client rule that already influences
+    an `E-14` field at S-10, so a clause in it reads as legitimately as
+    `K-NB-01`'s. It is still a constraint V-P04 would enforce on an approval
+    given to one value in one record, and the same producer that counted only
+    `K-NB-01`'s slots would compose a contract fixing two.
+    """
+
+    directory = _edited(
+        tmp_path,
+        "rules/K-NB-02.md",
+        "- S-10 · `E-14.citations` — a derivative cites only what the core holds.",
+        f"- S-10 · `{FIXED_SLOTS_FIELD}` — a second record's own slot. "
+        "[fixes: opening_mode = anecdote]",
+    )
+
+    with pytest.raises(AdaptationContractError) as raised:
+        _produced(directory=directory)
+
+    message = str(raised.value)
+    assert "K-NB-02" in message
+    assert "opening_mode" in message
     assert "one fixed value" in message
 
 

@@ -53,10 +53,14 @@ What reads them today is `src/strategy/adaptation_contract.py`, which takes
 `E-14.fixed_slots` influence entry and produces the `FixedSlot` S-10 carries and
 V-P04 enforces. That clause is **required**: editing it away, or retiring the
 record, refuses the contract rather than producing one with no fixed slot, because
-V-P04 with nothing to compare against passes every plan silently. The other five
-records are loaded and reach no producer yet: they influence stages S-08…S-13 has
-no wiring for, which is #351's. They are not copied anywhere — the records are the
-authority, and a rule duplicated into a second one would have two.
+V-P04 with nothing to compare against passes every plan silently. It is also the
+**only** clause accepted, because the owner's decision named one record and one
+slot: renaming the slot, a second clause in this record, or a `[fixes: …]` clause
+in any of the other five is refused as well — V-P04 would enforce any of them
+exactly as if somebody had approved it. The other five records are loaded and
+reach no producer yet: they influence stages S-08…S-13 has no wiring for, which
+is #351's. They are not copied anywhere — the records are the authority, and a
+rule duplicated into a second one would have two.
 
 The pre-canonical path is unchanged: while the Golden Engine is off, the Engine
 still gets these rules from `streams/`, `lenses/` and `lists/` as it always has.

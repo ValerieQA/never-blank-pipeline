@@ -21,19 +21,24 @@ end of its own ``## Influences`` entry — the grammar #363 established for
 
     - S-10 · `E-14.fixed_slots` — … [fixes: ending_mode = kicker]
 
-So the value is the record's. Nothing in this module names ``ending_mode`` or
-``kicker``: editing the record changes the produced :class:`FixedSlot`, and a
-literal here would make the record decorative. The clause is read exactly or not
-at all — an unreadable spec, two clauses on one entry, or a clause on an entry
-that names no ``E-14`` field are each a refusal, because a producer that guessed
-would hand V-P04 a constraint nobody wrote.
+So the value is the record's. Nothing in this module names ``kicker``: editing
+the record changes the produced :class:`FixedSlot`, and a literal here would make
+the record decorative. The clause is read exactly or not at all — an unreadable
+spec, two clauses on one entry, or a clause on an entry that names no ``E-14``
+field are each a refusal, because a producer that guessed would hand V-P04 a
+constraint nobody wrote.
 
-The record is also **required**, and not merely read when it happens to be
-there. The owner named that one record the authority, so a load in which it fixes
-nothing — deleted, retired, or with its clause edited away — is a refusal as
-well. A contract carrying no slot is not a looser contract: V-P04 would then
+What the owner authorized is one record fixing one named slot, and that pair is
+**exactly** what this producer composes. Decision 3 names both — ``K-NB-01``, for
+``ending_mode``, "no other fixed slot is invented" — so the slot *name* is named
+below, as the authorization it is, while the value stays the record's. A load
+fixing anything else is a refusal at both ends. Less than the pair — the record
+deleted, retired, its clause edited away, or its slot renamed — and the contract
+carries no ``ending_mode`` at all, which is not a looser contract: V-P04 would
 compare every plan against nothing and pass it, which is exactly the silence this
-slice exists to end, one field along.
+slice exists to end, one field along. More than the pair — a second clause in
+that record, or a slot from any other record — and V-P04 would enforce a
+constraint on the strength of an approval that was given to one value.
 
 Hashtags: the vocabulary is the client's, the policy is the destination's
 ------------------------------------------------------------------------
@@ -105,6 +110,12 @@ FIXING_TIER: Final[KnowledgeTier] = KnowledgeTier.APPROVED_CLIENT_RULE
 #: instead of composing a contract with one constraint fewer than the client
 #: wrote.
 FIXING_RECORD: Final[str] = "K-NB-01"
+
+#: The one slot that record is authorized to fix (decision 3 again: "No other
+#: fixed slot is invented"). The *name* is half of the owner's decision, so it is
+#: checked here; the value it is fixed to stays the record's and is named nowhere
+#: below, which is what keeps an edit to the record changing the produced slot.
+FIXED_SLOT: Final[str] = "ending_mode"
 
 #: The section declaring the static, client-owned hashtag words.
 HASHTAG_SECTION: Final[str] = "Hashtag vocabulary"
@@ -186,9 +197,12 @@ def adaptation_contract(
 def fixed_slots(rules: ClientRuleSet) -> tuple[DeclaredSlot, ...]:
     """Every slot the client's loaded rules fix, read exactly from the records.
 
-    The authorized record's own slot is **required**: this never answers a set
-    without it. An empty answer would be a contract V-P04 can only pass, and
-    nothing downstream could tell that from a client who fixed nothing.
+    Every loaded rule is read, and then the authorized pair is **required and
+    sufficient**: this answers the one slot ``K-NB-01`` fixes or it raises. An
+    answer without it would be a contract V-P04 can only pass, with nothing
+    downstream able to tell that from a client who fixed nothing; an answer
+    carrying more would put a constraint in force on an approval given to one
+    value.
     """
 
     declared: dict[str, DeclaredSlot] = {}
@@ -209,39 +223,69 @@ def fixed_slots(rules: ClientRuleSet) -> tuple[DeclaredSlot, ...]:
 
 
 def _authorized(slots: tuple[DeclaredSlot, ...], rules: ClientRuleSet) -> None:
-    """The authorized record fixed its one slot, and this load carries it.
+    """This load fixes the one authorized slot, by the authorized record, only.
 
-    Both ends are checked. None of it and the contract constrains nothing, which
-    reads downstream as a client who fixed nothing rather than a record that left
-    the run; two of them and the second is a constraint V-P04 would enforce on the
-    authority of an approval that covers one.
+    The pair is checked, not the count. A slot named anything else, or fixed by
+    any other record, is not the one the owner approved even when exactly one
+    arrives — and the contract would then carry a constraint nobody authorized
+    and lack the one somebody did, each of which V-P04 would enforce exactly as
+    if it had been written down.
     """
 
-    held = [item for item in slots if item.record_id == FIXING_RECORD]
-    if not held:
-        # Which of the two it is is the keeper's next move, so the message says
-        # which: a clause edited away is a record to fix, and a record the load
-        # never saw is one to restore or to approve again (§9.2).
-        if any(item.identity == FIXING_RECORD for item in rules.records):
-            state = "is loaded and states no `[fixes: …]` clause"
-        else:
-            state = "is not one of the rules this run loaded — absent or retired"
-        raise AdaptationContractError(
-            f"{rules.path}: {FIXING_RECORD} fixes no slot: it {state}. The owner "
-            "authorized it as the client authority for the one value this contract "
-            "fixes, so this is a refusal rather than a contract composed without "
-            "it: no slot is not a looser constraint, it is one V-P04 can only "
-            "pass, and no plan checked against it would show that the rule had "
-            "stopped being read"
+    authorized = next(
+        (
+            item
+            for item in slots
+            if item.record_id == FIXING_RECORD and item.slot.name == FIXED_SLOT
+        ),
+        None,
+    )
+    if authorized is None:
+        raise AdaptationContractError(_unfixed(slots, rules))
+    beyond = [item for item in slots if item is not authorized]
+    if beyond:
+        named = ", ".join(
+            f"`{item.slot.name}` ({item.record_id})" for item in beyond
         )
-    if len(held) > 1:
-        named = ", ".join(f"`{item.slot.name}`" for item in held)
         raise AdaptationContractError(
-            f"{rules.path}: {FIXING_RECORD} fixes {named}. It is the authority for "
-            "one fixed value, and a second one carries the weight of an approval "
-            "that was given to the first — which is the keeper's decision to take, "
-            "on a record of its own, rather than this producer's to extend"
+            f"{rules.path}: this load fixes {named} as well as `{FIXED_SLOT}`. "
+            f"{FIXING_RECORD} is the authority for one fixed value, and a second "
+            "one carries the weight of an approval that was given to the first — "
+            "which is the keeper's decision to take, on a record of its own, "
+            "rather than this producer's to extend"
         )
+
+
+def _unfixed(slots: tuple[DeclaredSlot, ...], rules: ClientRuleSet) -> str:
+    """Why the authorized slot is not in this load, in the keeper's own terms.
+
+    Which of the three it is is the keeper's next move, so the message says
+    which: a slot under another name is a record to put back the way it was
+    approved, a clause edited away is a record to fix, and a record the load never
+    saw is one to restore or to approve again (§9.2).
+    """
+
+    mine = [item for item in slots if item.record_id == FIXING_RECORD]
+    if mine:
+        named = ", ".join(f"`{item.slot.name}`" for item in mine)
+        state = f"fixes {named} instead"
+    elif any(item.identity == FIXING_RECORD for item in rules.records):
+        state = (
+            "fixes no slot at all: it is loaded and states no `[fixes: …]` clause"
+        )
+    else:
+        state = (
+            "fixes no slot at all: it is not one of the rules this run loaded — "
+            "absent or retired"
+        )
+    return (
+        f"{rules.path}: {FIXING_RECORD} does not fix `{FIXED_SLOT}` — it {state}. "
+        "The owner authorized it as the client authority for the one value this "
+        "contract fixes, so this is a refusal rather than a contract composed "
+        "without it: no slot is not a looser constraint, it is one V-P04 can only "
+        "pass, and no plan checked against it would show that the rule had "
+        "stopped being read"
+    )
 
 
 def _declared_by(loaded: LoadedRecord) -> tuple[DeclaredSlot, ...]:
