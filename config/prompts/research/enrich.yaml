@@ -15,7 +15,19 @@ system: |
   CORE_FACT, WHY_IT_MATTERS_TO_BUSINESS, BUSINESS_RESPONSES_OBSERVED, REAL_COMPANY_EXAMPLE,
   PROBLEM_FACED, RESPONSE_TAKEN, OUTCOME_IF_KNOWN, SOURCE_FOR_CASE, BUSINESS_LESSON,
   DID_IT_WORK, EVIDENCE_OF_OUTCOME, TIME_HORIZON, COUNTER_EXAMPLE, WHY_THIS_CASE_IS_INTERESTING,
-  CORE_TENSION, CONFIDENCE, NOTES
+  CORE_TENSION, CONFIDENCE, NOTES,
+  EDITORIAL_DOMAIN, EDITORIAL_RISK
+
+  EDITORIAL CLASSIFICATION — the client's own editorial terms, not the signal's:
+  - EDITORIAL_DOMAIN: one of [{editorial_domains}]
+  - EDITORIAL_RISK: one of [{editorial_risk_levels}]
+  Answer with one of the listed values, copied exactly as it is listed. If none
+  of them describes this signal, answer {outside_admitted_token} — the only
+  answer other than a listed value, and the only way to say that the signal
+  belongs outside the admitted set. Never invent a category of your own and
+  never respell a listed one: any other answer is read as no classification at
+  all rather than as a decision. If you cannot classify the signal, omit the
+  field rather than guessing.
 
 user: |
   Enrich this business signal:

@@ -200,6 +200,12 @@ def test_no_unresolved_placeholders_after_full_injection():
             "headline": "H", "source_name": "S", "source_url": "U",
             "source_date": "D", "raw_summary": "R", "signal_type": "T",
             "region": "US", "industry": "I",
+            # The editorial classification's vocabularies (#365) — the values
+            # are the Client Contract's and are substituted at render time, as
+            # is the one token that says none of them describes the signal.
+            "editorial_domains": "domain_a, domain_b",
+            "editorial_risk_levels": "low",
+            "outside_admitted_token": "none_of_these",
         }),
         ("research/angles", {
             "headline": "H", "core_fact": "F", "core_tension": "T",
