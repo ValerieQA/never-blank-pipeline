@@ -207,7 +207,7 @@ def test_from_package_reuse_makes_zero_new_image_work(tmp_path):
 def test_cost_safety_contracts_survive_the_reorder():
     import os
     from src.editorial.source_eligibility import SourceEligibilityError
-    from src.publishing.hashtags import BRANDED_HASHTAGS, generate_hashtags
+    from src.publishing.hashtags import branded_hashtags, generate_hashtags
     from src.run.call_budget import DEFAULT_CEILING
 
     assert SourceEligibilityError("x").scope == "candidate"   # #170
@@ -215,7 +215,7 @@ def test_cost_safety_contracts_survive_the_reorder():
     assert os.environ.get("NB_OPENAI_API_KEY") is None         # #172
     tags = generate_hashtags({"INDUSTRY": "retail"}, "linkedin",
                              article_text="The Queue")
-    assert tags[:2] == list(BRANDED_HASHTAGS)                  # #176
+    assert tags[:2] == list(branded_hashtags())                 # #176
 
 
 # ===========================================================================

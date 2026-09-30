@@ -398,7 +398,7 @@ def load_register(
             condition = parse_condition(record.applies_when, vocabularies)
         except ConditionError as exc:
             raise LoaderError(f"{record.path}: {exc}") from exc
-        loaded.append(_loaded_record(record, condition, when))
+        loaded.append(loaded_record(record, condition, when))
 
     checks: list[LoadedCheck] = []
     for path in sorted((register_dir / CHECKS_DIR_NAME).glob("*.md")):
@@ -845,13 +845,21 @@ def outcome_scope(stage: str) -> OutcomeScope:
 
 
 # ----------------------------------------------------------------------
-# Internals
+# One record, as this run counts it (§5)
 # ----------------------------------------------------------------------
 
 
-def _loaded_record(
+def loaded_record(
     record: KnowledgeRecord, condition: Condition, when: date
 ) -> LoadedRecord:
+    """One parsed record as it counts on ``when`` (§5). Raises :class:`LoaderError`.
+
+    Public because a client's rule files are read from outside this module and
+    must arrive as the same type on the same rules — §1 keeps them in the client
+    folder, and ``client_rules.py`` is the loader this module's own notes said
+    would arrive with its own slice (#368).
+    """
+
     file_status = _status(record.status, record.path)
     if file_status is KnowledgeStatus.WEAK_CANDIDATE:
         # Rule 1 of §8 refuses this, and a run reaches here only on a register
@@ -880,6 +888,11 @@ def _loaded_record(
         effective_status=status,
         expired_review=expired,
     )
+
+
+# ----------------------------------------------------------------------
+# Internals
+# ----------------------------------------------------------------------
 
 
 def _applied_at(check: CheckRecord) -> Optional[str]:

@@ -42,6 +42,7 @@ from src.editorial.plan_decisions import (
     resolve_plan_decisions,
 )
 from src.strategy.business_config import load_business_strategy_configuration
+from src.strategy.client_contract import CONTRACT_FILE
 from src.strategy.client_contracts import contracts_for_role
 from tests import test_generate_and_publish as legacy
 from tests.test_decision_lifecycle import _entry_patches, _evaluator, _model_output
@@ -475,6 +476,36 @@ def test_an_open_contract_with_no_decider_stops_the_run():
 # ── the production path: the real entrypoint, the real composer ─────────────
 
 
+def _tagged(tmp_path: Path, client: Path) -> Path:
+    """``client``, with the words its posts are tagged with declared in it.
+
+    Since #368 the branded hashtags are the client's own declaration and
+    ``generate_hashtags`` — the real one on these runs — reads them from the
+    client's contract. The fixture client is documents only and states no
+    contract, so the declaration is written per run: into the run's own copy when
+    there is one, and otherwise into a copy made here, because the words are this
+    test's and not a second client's configuration kept in the tree.
+    """
+
+    if (client / CONTRACT_FILE).is_file():
+        return client
+    if client == FIXTURE_CLIENT:
+        target = tmp_path / "tagged_client"
+        shutil.copytree(client, target, dirs_exist_ok=True)
+        client = target
+    (client / CONTRACT_FILE).write_text(
+        "---\n"
+        "contract_id: gearworks-supply\n"
+        "version: 1\n"
+        "---\n\n"
+        "# Client Contract — CLIENT: GEARWORKS SUPPLY (fixture)\n\n"
+        "## Hashtag vocabulary\n\n"
+        "- #GearworksSupply\n",
+        encoding="utf-8",
+    )
+    return client
+
+
 def _entrypoint(
     tmp_path,
     monkeypatch,
@@ -487,7 +518,7 @@ def _entrypoint(
     revisor=None,
 ):
     """Run the canonical entrypoint (dry run) under ``client``'s documents."""
-    monkeypatch.setenv("NB_CLIENT_DIR", str(client))
+    monkeypatch.setenv("NB_CLIENT_DIR", str(_tagged(tmp_path, client)))
     draft = _draft()
     draft["platforms"]["long"]["body"] = FINAL_ARTICLE
     argv, patches = _entry_patches(tmp_path)  # dry run

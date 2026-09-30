@@ -1,11 +1,12 @@
 ---
 id: K-NB-01
-version: 1
+version: 2
 status: approved-rule
 tier: 2
 evidence_class: CLIENT, OWNER
 confidence: high
 review_by: 2027-09-23
+supersedes: K-NB-01 v1
 approved_by: client setup (Never Blank), 2026-09-23 (#266, #268)
 ---
 
@@ -22,6 +23,8 @@ always
 ## Influences
 - S-08 · `E-13.ending_intention` — what the ending is for.
 - S-10 · `E-14.segments` — the last segment is the Kicker and carries nothing else.
+- S-10 · `E-14.fixed_slots` — the client's own ending mode, carried unchanged as
+  a constraint so V-P04 compares rather than asks. [fixes: ending_mode = kicker]
 - S-13 · `E-15.text` — V-T08 judges the ending against this.
 
 ## Conflicts
@@ -34,5 +37,10 @@ this record is the superseding rule.
 `clients/never_blank/lenses/structure.md` (Editorial Policy v2, #268).
 
 ## Change log
+- v2, 2026-09-30: the `E-14.fixed_slots` influence entry, with the `[fixes: …]`
+  clause that makes this record the authority a producer reads `ending_mode`
+  from. The rule itself is unchanged; what is new is that it is now machine
+  readable, so `ending_mode` comes from here rather than from a literal in
+  `src/` (#368).
 - v1, 2026-09-23: the client's `ending_mode` written as a rule record with Step 4
   §2.2 front matter (NB-02c).

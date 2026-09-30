@@ -75,6 +75,7 @@ from tests.test_plan_decisions import (
     ScriptedDecider,
     _revision_client,
     _run_answer,
+    _tagged,
 )
 from tests.test_research_artifact_lifecycle import ReadyProvider
 from tests.test_social_derivation_invariant import (
@@ -148,7 +149,9 @@ def _entrypoint(
     unlike every other suite — the REAL factual gate: the harness patch that
     switches it off is deleted here, which is the only place it is.
     """
-    monkeypatch.setenv("NB_CLIENT_DIR", str(client or FIXTURE_CLIENT))
+    monkeypatch.setenv(
+        "NB_CLIENT_DIR", str(_tagged(tmp_path, client or FIXTURE_CLIENT))
+    )
     draft = _draft()
     draft["platforms"]["long"]["body"] = article or TRACEABLE_ARTICLE
     argv, patches = _entry_patches(tmp_path)  # dry run
