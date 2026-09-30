@@ -25,6 +25,9 @@ So every test below is written so that a bypass fails it:
   *missing* case pass, and fails :func:`test_a_missing_declaration_raises_and_names_itself`
   and :func:`test_configured_empty_and_absent_differ_at_the_producer_boundary`;
 * a literal ending mode in ``src/`` fails :func:`test_the_ending_mode_is_the_records_and_not_a_literal`;
+* a producer that composed a contract with no fixed slot when ``K-NB-01`` states
+  none fails :func:`test_the_record_losing_its_clause_is_refused_rather_than_unfixed`
+  and :func:`test_the_authorized_record_being_absent_is_refused_too`;
 * dropping the produced slot removes the V-P04 Finding and fails
   :func:`test_v_p04_enforces_the_fixed_slot_end_to_end`;
 * reverting the registry wiring lets the run start and fails
@@ -461,6 +464,77 @@ def test_only_the_ending_slot_is_produced_and_nothing_is_invented():
     assert ENDING_RECORD in named
     assert len(named) >= 6, "the whole K-NB set is loaded, not one record"
     assert [slot.name for slot in _produced().fixed_slots] == [ENDING_SLOT]
+
+
+def test_the_record_losing_its_clause_is_refused_rather_than_unfixed(tmp_path):
+    """Acceptance 4: the authorized slot is required, not read only if present.
+
+    Deleting the clause leaves a record that still shapes `E-14.fixed_slots`,
+    still reads as a normal record everywhere else, and fixes nothing. The
+    mutation this catches is the producer that accepted it: an empty
+    `fixed_slots()` composes a contract V-P04 can only pass — the same silence
+    this slice closes one field along — and no plan checked against it shows that
+    the rule had stopped being read.
+    """
+
+    directory = _edited(
+        tmp_path,
+        f"rules/{ENDING_RECORD}.md",
+        f" [fixes: {ENDING_SLOT} = {ENDING_VALUE}]",
+        "",
+    )
+
+    with pytest.raises(AdaptationContractError) as raised:
+        _produced(directory=directory)
+
+    message = str(raised.value)
+    assert ENDING_RECORD in message
+    assert "fixes no slot" in message
+
+
+def test_the_authorized_record_being_absent_is_refused_too(tmp_path):
+    """The same refusal by the other route: the record never reaches the load.
+
+    A deleted or retired record (§9.2) is not loaded at all, so a producer reading
+    only what arrived would compose a contract whose one constraint had quietly
+    left the run. The message distinguishes this from a record that is loaded and
+    states no clause, because the two are different things for the keeper to do.
+    """
+
+    directory = _copied_client(tmp_path)
+    (directory / "rules" / f"{ENDING_RECORD}.md").unlink()
+
+    with pytest.raises(AdaptationContractError) as raised:
+        _produced(directory=directory)
+
+    message = str(raised.value)
+    assert ENDING_RECORD in message
+    assert "absent or retired" in message
+
+
+def test_the_authorized_record_fixing_a_second_slot_is_refused(tmp_path):
+    """The other end of the same bound: one approval, one fixed value.
+
+    Owner decision 3 authorized this record for the ending mode and no other
+    slot. A second clause in it would be a constraint V-P04 enforces on the
+    strength of an approval that was given to the first, so it is the keeper's
+    decision on a record of its own rather than this producer's to extend.
+    """
+
+    directory = _edited(
+        tmp_path,
+        f"rules/{ENDING_RECORD}.md",
+        "- S-13 · `E-15.text`",
+        f"- S-10 · `{FIXED_SLOTS_FIELD}` — a second value the record states. "
+        "[fixes: opening_mode = anecdote]\n- S-13 · `E-15.text`",
+    )
+
+    with pytest.raises(AdaptationContractError) as raised:
+        _produced(directory=directory)
+
+    message = str(raised.value)
+    assert ENDING_RECORD in message
+    assert "one fixed value" in message
 
 
 def test_a_malformed_fixes_clause_raises_rather_than_being_completed(tmp_path):
