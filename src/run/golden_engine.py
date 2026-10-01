@@ -1883,6 +1883,26 @@ class _Run:
                 self.lanes[destination]
                 for destination in sorted(expected, key=lambda item: item.value)
             ]
+            # F-4, the half §5.4 gives the harness: when the boundary version
+            # moves, S-11's code checks re-run on **every approved plan of the
+            # unit** (0 model calls) — not only on the one about to be written.
+            # The barrier compares siblings, so a round that admitted one plan
+            # approved against the version a commit replaced would carry a stale
+            # approval past the barrier, which is the defect itself. A plan whose
+            # re-check fails routes back to S-08 like any other failed hard check
+            # and the round is declared again — shorter, or with its new plan.
+            stale = [
+                lane
+                for lane in planned
+                if lane.verdict is not None
+                and not approval_holds(lane.verdict, boundary)
+            ]
+            if stale:
+                for lane in stale:
+                    if self._recheck_plan(lane) or lane.skipped:
+                        continue
+                    self._plan(lane.destination)
+                continue
             without = [lane for lane in planned if lane.plan is None]
             if without:
                 raise GoldenEngineError(
@@ -2233,6 +2253,12 @@ class _Run:
                 "expressed, and one that cannot say what it was would ask the "
                 "boundary about nothing"
             )
+        if verdict.outcome is None:
+            raise GoldenEngineError(
+                f"{verdict.verdict_id} routes to S-04 on {BOUNDARY_COUNTER} and "
+                "carries no outcome; the re-entry is taken on the record that "
+                "spent the counter, and one that cannot name it bounded nothing"
+            )
         mark = self.meters.boundary.mark()
         reentry = re_enter_boundary(
             boundary=boundary,
@@ -2240,13 +2266,24 @@ class _Run:
             audience=self.cfg.audience,
             detected=DetectedInterpretation(
                 statement=statement,
-                destination=lane.destination.value,
+                # The destination **scope key**, not the destination's name:
+                # `DetectedInterpretation.destination` is the scope §0.3 skips,
+                # and the onward L_strategy route keys on it, so S-08 refuses a
+                # route it cannot match to this destination's own key. The bare
+                # value had never been exercised, because until the counter
+                # ownership was fixed no re-entry ever reached the onward route.
+                destination=self._scope(lane),
                 text_ref=text.text_id,
             ),
             unit_id=unit.unit_id,
             transport=self.meters.boundary,
             ladder=self.cfg.ladder,
             counters=self.counters,
+            # S-13's own REPLAN, carried rather than re-spent. §5.3 lists the
+            # S-13 → S-04 edge once and gives it one `L_boundary`, so the record
+            # that paid for this re-entry is the one S-13 already wrote; the
+            # harness hands it over exactly as `_replan_to` hands S-08 its own.
+            authorizing=verdict.outcome,
             anchor_interpretation_id=(
                 None if self.anchor is None else self.anchor.interpretation_ref[0]
             ),

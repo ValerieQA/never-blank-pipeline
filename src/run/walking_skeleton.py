@@ -99,7 +99,11 @@ from src.run.boundary_commit import (
     boundary_relative_path,
     commit_boundary,
 )
-from src.run.call_budget import DEFAULT_CEILING, RunCallBudget
+from src.run.call_budget import (
+    DEFAULT_CEILING,
+    GOLDEN_ENGINE_MAX_CEILING,
+    RunCallBudget,
+)
 from src.run.call_budget_arp import ArpCallBudget
 from src.run.code_identity import CodeIdentity, resolve_code_identity
 from src.run.golden_engine import (
@@ -910,7 +914,7 @@ def run_golden_engine(
     started_at: Optional[datetime] = None,
     destinations: Sequence[str] = CANONICAL_DESTINATIONS,
     client: Optional[str] = None,
-    call_budget_limit: int = DEFAULT_CEILING,
+    call_budget_limit: int = GOLDEN_ENGINE_MAX_CEILING,
     counters: Optional[AttemptCounterLedger] = None,
     now: Optional[datetime] = None,
     portfolio: Sequence[PortfolioFingerprint] = (),
@@ -931,6 +935,13 @@ def run_golden_engine(
     is nowhere here for a fallback provider or a defaulted client value to
     appear — and nothing in it can reach :class:`RefusingProvider` either.
 
+    ``call_budget_limit`` defaults to the canonical path's own ceiling and not to
+    the legacy one. Step 2 §0.3 records 40 as "AS-IS: the current engine's
+    ceiling", and §6 puts the six-destination minimum at 44 and the normal case
+    at 61, so a complete canonical run has never fitted ``R1_MAX_CEILING``. It is
+    a runaway guard rather than a target spend: the final number is SL-7's to set
+    from measured data.
+
     ``commit`` is off by default, for the reason the pass-through run's is. With
     it on, a failed commit is recorded in the report and the run still returns
     normally (§3.1).
@@ -950,7 +961,15 @@ def run_golden_engine(
     identity = (
         code_identity if code_identity is not None else resolve_code_identity()
     )
-    budget = ArpCallBudget(RunCallBudget(call_budget_limit))
+    # The canonical path's own ceiling, not the legacy one: a clean
+    # six-destination run records 50 model calls (Step 2 §6 puts the
+    # six-destination minimum at 44 and the normal case at 61), so
+    # `R1_MAX_CEILING` cannot admit one. Named explicitly, so the
+    # legacy default, Wednesday's 56 and `R1_MAX_CEILING` are all
+    # untouched and no other caller inherits 60.
+    budget = ArpCallBudget(
+        RunCallBudget(call_budget_limit, hard_max=GOLDEN_ENGINE_MAX_CEILING)
+    )
     workspace = RunWorkspace.create(
         Path(runs_root) if runs_root is not None else EDITORIAL_RUNS_ROOT,
         context.run_id,

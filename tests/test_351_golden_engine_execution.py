@@ -16,16 +16,20 @@ nothing writes into the run workspace but the engine. The doubles live in
 ``tests/golden_engine_boundary.py`` and each answers the request the production
 stage composed, in terms of the identifiers that request carries.
 
-**Two production-contract defects this execution found.** Both are recorded here
-as the behaviour they currently are, not as behaviour anyone wants, and each
-test says what has to change for it to be inverted:
+**Two production-contract defects this execution found, and their repairs.**
+Both were found by running the chain rather than by reading it, and both were
+resolved by owner decision on 2026-10-01:
 
-1. one re-entry spends the single declared ``L_boundary`` route twice, so the F-4
-   sibling truth re-check — one of the four orchestration behaviours this
-   module's subject exists for — is unreachable;
-2. the canonical six-destination topology costs 50 logical model calls at its
-   cheapest, and ``R1_MAX_CEILING`` is 40, so a complete canonical run cannot be
-   sealed through ``run_golden_engine``.
+1. one re-entry spent the single declared ``L_boundary`` route twice, so the F-4
+   sibling truth re-check was unreachable. The layer that authorizes the REPLAN
+   now spends it once and passes that authorization forward; ``re_enter_boundary``
+   verifies it and spends nothing, exactly as ``propose_strategies`` already does
+   for ``L_strategy``. F-4 is exercised here, not asserted;
+2. the canonical six-destination topology costs 50 logical model calls where
+   ``R1_MAX_CEILING`` is 40, so no complete run could be sealed. The canonical
+   path now has its own finite ceiling of 60 — a runaway guard and not a target
+   spend — while the legacy default, ``R1_MAX_CEILING`` and Wednesday's 56 are
+   untouched.
 
 Nothing here reaches a network, a provider, a credential or a publication, and
 S-14 is not executed.
@@ -33,6 +37,7 @@ S-14 is not executed.
 
 from __future__ import annotations
 
+import inspect
 import json
 from collections import Counter
 from pathlib import Path
@@ -43,12 +48,28 @@ import pytest
 from src.editorial_core.arp import (
     CANONICAL_TOPOLOGY,
     ArpOutcome,
-    AttemptCounterLedger,
     StateCode,
 )
-from src.editorial_core.destinations import Destination
-from src.run.call_budget import R1_MAX_CEILING, WEDNESDAY_MAX_CEILING
-from src.run.walking_skeleton import CANONICAL_DESTINATIONS, PASS_THROUGH_MARKER
+from src.run.run_workspace import DeciderKind
+from src.editorial_core.text_check import (
+    EXECUTION_INSTRUCTIONS,
+    SIBLING_RECHECK_INSTRUCTIONS,
+    TRUTH_INSTRUCTIONS,
+)
+from src.run.call_budget import (
+    DEFAULT_CEILING,
+    GOLDEN_ENGINE_MAX_CEILING,
+    R1_MAX_CEILING,
+    WEDNESDAY_MAX_CEILING,
+    CallBudgetConfigurationError,
+    RunCallBudget,
+)
+from src.run.walking_skeleton import (
+    CANONICAL_DESTINATIONS,
+    PASS_THROUGH_MARKER,
+    run_golden_engine,
+    run_walking_skeleton,
+)
 from tests.golden_engine_boundary import (
     Ledger,
     TextCheck,
@@ -327,36 +348,23 @@ def test_a_replan_class_finding_sends_the_destination_back_to_s08():
 
 
 # ===========================================================================
-# The two defects this execution found, recorded as what they are
+# The boundary re-entry, and the F-4 sibling truth re-check behind it
 # ===========================================================================
 
 
-def test_one_reentry_spends_l_boundary_twice_so_f4_cannot_run():
-    """RECORDED DEFECT. The F-4 sibling re-check is unreachable.
+def test_a_boundary_reentry_spends_l_boundary_once_and_recommits():
+    """One V-T02 failure, one `L_boundary`, one new boundary version.
 
-    One V-T02 failure is one logical re-entry, and the **same declared route** is
-    spent for it twice. ``topology.py`` declares exactly one ``L_boundary`` route
-    — ``S-13 → S-04`` on cause ``interpretation_inadmissible_or_unlisted``, scoped
-    per unit, ``default_limit=1``. Both of these spend it:
+    `§5.3` lists the `S-13 → S-04` edge once and gives it one unit-scoped
+    attempt, so the route S-13 decided is the route S-04 is handed: S-13 records
+    the REPLAN at attempt 1 of 1, and the re-entry verifies it rather than
+    charging it again. The onward edge out of the new version is the second,
+    separate route the same row declares — `L_strategy` back into S-08, because
+    the anchor survived the commit.
 
-    * ``text_check.py``'s ``_ROUTE_BY_CHECK["V-T02"]`` routes the failing check on
-      ``L_boundary`` at ``scope_key=text.unit_id``;
-    * ``interpretation_boundary.py``'s ``re_enter_boundary`` then calls
-      ``counters.route`` again with ``source=REENTRY_SOURCE`` — which **is**
-      ``"S-13"`` — the same cause, the same counter and the same
-      ``scope_key=unit_id``.
-
-    So the first spend consumes the only attempt and the re-entry it routes to is
-    refused as ``boundary_reentry_exhausted``. The boundary is never re-committed,
-    no sibling is ever put in question, and
-    ``recheck_siblings_after_boundary_commit`` is never called — although this
-    slice's own subject names the F-4 sibling re-check as one of the four
-    behaviours it exists to orchestrate.
-
-    Raising the limit is not a workaround; the test below shows why. Invert this
-    test when one layer is made the owner of the route — either S-13 routes
-    without spending, or the re-entry consumes the route S-13 already paid for.
-    Both are stage semantics and neither is this slice's to choose.
+    The sixth text is the one that fails, so five siblings are already accepted
+    when the boundary moves. All six are accepted in the end: the causing
+    destination is re-planned against version 2 and its new text passes.
     """
 
     ledger = Ledger()
@@ -365,88 +373,169 @@ def test_one_reentry_spends_l_boundary_twice_so_f4_cannot_run():
     )
     execution, _, _ = execute(run)
 
-    # Five siblings were accepted before the sixth text failed, which is exactly
-    # the situation F-4 exists for.
-    assert [item.value for item in execution.accepted] == [
-        "facebook",
-        "instagram",
-        "linkedin",
-        "telegram",
-        "threads",
+    # Both edges of the row record the same state code, so they are told apart
+    # by the stage that wrote each and the counter each spent — which is the
+    # distinction the fix is about.
+    spent = [
+        outcome
+        for record in execution.records
+        if record.stage == "S-13"
+        for outcome in record.outcomes
+        if outcome.counter == "L_boundary"
     ]
-    route = _only(execution, StateCode.INVENTED_OR_INADMISSIBLE_INTERPRETATION)
-    assert (route.counter, route.attempt, route.route_target) == ("L_boundary", 1, "S-04")
-    exhausted = _only(execution, StateCode.BOUNDARY_REENTRY_EXHAUSTED)
-    assert exhausted.outcome is ArpOutcome.SKIP
-    assert exhausted.counter == "L_boundary"
-    # And the sibling re-check never happened: twelve text-check calls is six
-    # texts × two questions, with no V-T02-only call beside them.
-    assert run.ledger.count("text_check") == 12
+    assert len(spent) == 1, "one V-T02 failure spends L_boundary exactly once"
+    route = spent[0]
+    assert route.state_code is StateCode.INVENTED_OR_INADMISSIBLE_INTERPRETATION
+    assert (route.attempt, route.limit) == (1, 1)
+    assert route.route_target == "S-04"
+    # The onward edge, on its own record and against its own counter.
+    onward = [
+        outcome
+        for record in execution.records
+        if record.stage == "S-04"
+        for outcome in record.outcomes
+        if outcome.outcome is ArpOutcome.REPLAN
+    ]
+    assert len(onward) == 1
+    assert onward[0].counter == "L_strategy"
+    assert onward[0].route_target == "S-08"
+    # Two S-04 records: the first boundary, and the version the re-entry made.
+    assert sum(1 for record in execution.records if record.stage == "S-04") == 2
+    assert len(set(execution.accepted)) == 6
+    # Three calls to the boundary: generate, probe, and the re-entry's test.
+    assert run.ledger.count("boundary") == 3
 
 
-def test_raising_the_boundary_limit_produces_an_undeclared_s04_to_s04_route():
-    """RECORDED DEFECT, the other half. Configuration cannot rescue it.
+def test_the_f4_sibling_recheck_runs_one_vt02_only_call_per_accepted_sibling():
+    """§5.4, defect F-4: the half no stage can do.
 
-    With ``L_boundary=2`` the second spend succeeds and returns the route table's
-    ``S-13 → S-04`` record. The harness files that record on the StageRecord of
-    the stage it is re-entering — ``trace.record(stage="S-04", …)`` — so the
-    workspace sees an S-04 record whose ``route_target`` is ``"S-04"``, and the
-    route table declares no such route. The run raises rather than writing it.
+    A text accepted ten minutes earlier is still accepted against the boundary
+    version the commit replaced, and nothing else would catch it — S-11's code
+    checks re-run on the plans and the S-12 precondition compares versions, but a
+    text that already passed S-13 has no reason to be looked at again unless this
+    does it. So after the commit, every already-accepted sibling is re-checked:
+    **one call each, V-T02 only**, routed by the production
+    `SIBLING_RECHECK_INSTRUCTIONS` rather than by call order.
+
+    Five siblings were accepted before the sixth text failed, so five re-checks.
+    Re-running the execution call would pay for an answer that cannot have
+    changed, which is why the count is five and not ten.
     """
 
-    from src.run.golden_engine import execute_canonical_topology
-    from src.run.call_budget import RunCallBudget
-    from src.run.call_budget_arp import ArpCallBudget
-    from src.run.run_workspace import RunWorkspace
+    ledger = Ledger()
+    checker = TextCheck(ledger, fails="V-T02", from_call=6)
+    run = canonical_run(_tmp(), text_check=checker)
+    execution, _, _ = execute(run)
+
+    assert checker.answered[SIBLING_RECHECK_INSTRUCTIONS] == 5
+    # The six first texts, plus the re-planned destination's second text.
+    assert checker.answered[TRUTH_INSTRUCTIONS] == 7
+    assert checker.answered[EXECUTION_INSTRUCTIONS] == 7
+    assert len(set(execution.accepted)) == 6
+
+
+def test_a_commit_re_establishes_every_plan_of_the_unit_before_the_barrier():
+    """§5.4: the code half of F-4 covers the whole unit, not one lane.
+
+    "On a new boundary version, S-11's code checks (V-P02, chain) re-run on
+    **every approved plan of the unit** (0 model calls)." The barrier compares
+    siblings, so a round that admitted a plan approved against the version the
+    commit replaced would carry a stale approval past the barrier — which is the
+    defect itself. The re-checks are code and cost nothing, so they are visible
+    as S-11 records that made no call.
+    """
 
     ledger = Ledger()
     run = canonical_run(
         _tmp(), text_check=TextCheck(ledger, fails="V-T02", from_call=6)
     )
-    workspace = RunWorkspace.create(run.runs_root, run.run_context.run_id)
-    with pytest.raises(Exception, match="S-04 → S-04 is not a declared REPLAN route"):
-        execute_canonical_topology(
-            workspace=workspace,
-            run_context=run.run_context,
-            seams=run.seams,
-            configuration=run.configuration,
-            signal=run.signal,
-            binding=run.binding,
-            budget=ArpCallBudget(
-                RunCallBudget(WEDNESDAY_MAX_CEILING, hard_max=WEDNESDAY_MAX_CEILING)
-            ),
-            counters=AttemptCounterLedger(limits={"L_boundary": 2}),
-            now=run.now,
-        )
+    execution, _, _ = execute(run)
+
+    free = [
+        record
+        for record in execution.records
+        if record.stage == "S-11" and record.calls["count"] == 0
+    ]
+    assert free, "a boundary commit re-establishes approvals without paying"
+    assert all(
+        record.created_by.decider is DeciderKind.CODE for record in free
+    )
+    # Every barrier round that ran, ran against plans whose approval held: the
+    # run reached accepted texts for all six, which it could not have done if a
+    # stale approval had reached the barrier.
+    assert len(set(execution.accepted)) == 6
 
 
-def test_a_complete_canonical_run_costs_more_calls_than_r1_admits(executed):
-    """RECORDED DEFECT. ``run_golden_engine`` cannot seal a complete run.
+# ===========================================================================
+# The run seals inside the Golden Engine's own ceiling
+# ===========================================================================
 
-    The arithmetic, and it is a floor rather than a typical cost — the clean run
-    above re-plans nothing and still records:
 
-    * 7 at signal and unit scope (S-00, S-01 ×2, S-02, S-04 ×2, S-06);
-    * 4 per destination through planning (S-08, S-09, S-10, S-11) — 24;
-    * 1 for barrier B1;
-    * 3 per destination to write and check (S-12, S-13 ×2) — 18.
+def test_a_complete_canonical_run_seals_inside_the_golden_engine_ceiling(tmp_path):
+    """`run_golden_engine` writes a manifest, verifies and summarizes the run.
 
-    That is 50. ``R1_MAX_CEILING`` is 40 and ``run_golden_engine`` builds
-    ``RunCallBudget(call_budget_limit)`` with that as its hard maximum, so no
-    admissible ``call_budget_limit`` covers the run; and ``RunSummary`` refuses a
-    summary whose ``calls_total`` exceeds the limit, on the stated ground that
-    the budget would have refused the call. The Wednesday role's declared 56
-    covers it, but ``run_golden_engine`` takes no role and never reaches for it.
-
-    Invert this test when the canonical run is given a ceiling that admits its
-    own cost. Choosing that number is a spend decision and not this slice's.
+    The ceiling is the canonical path's own: Step 2 §0.3 records 40 as "AS-IS:
+    the current engine's ceiling", and §6 puts the six-destination minimum at 44
+    and the normal case at 61, so `R1_MAX_CEILING` was never this run's number.
+    A clean run records 50 — §6's minimum of 44 plus one S-09 ranking per
+    destination, which the minimum assumes away — and `RunSummary` accepts it
+    because the limit it is compared against is now 60 (owner decision,
+    2026-10-01): a runaway guard, not a target spend.
     """
 
-    _, execution, _, _ = executed
-    recorded = sum(record.calls["count"] for record in execution.records)
-    assert recorded == 50
-    assert recorded > R1_MAX_CEILING
-    assert recorded <= WEDNESDAY_MAX_CEILING
+    run = canonical_run(tmp_path)
+    sealed = run_golden_engine(
+        seams=run.seams,
+        configuration=run.configuration,
+        signal=run.signal,
+        binding=run.binding,
+        runs_root=run.runs_root,
+        started_at=run.now,
+        now=run.now,
+    )
+
+    summary = sealed.summary
+    assert summary.calls_total == 50
+    assert summary.call_budget_limit == GOLDEN_ENGINE_MAX_CEILING == 60
+    assert summary.calls_total > R1_MAX_CEILING, (
+        "the canonical run does not fit the legacy ceiling, which is why it has "
+        "one of its own"
+    )
+    assert sum(entry.calls for entry in summary.stage_calls) == summary.calls_total
+    assert sealed.verification.verified_stage_records == len(sealed.records)
+    assert sealed.summary_path.exists()
+    assert len(set(sealed.execution.accepted)) == 6
+
+
+def test_the_legacy_and_wednesday_ceilings_are_untouched():
+    """Three ceilings, three paths, and no path inherits another's.
+
+    The Golden Engine's 60 is reached only by naming it. `DEFAULT_CEILING` and
+    `R1_MAX_CEILING` stay 40 for every legacy caller, Wednesday's exception stays
+    56, and a limit above a path's own hard maximum is refused rather than
+    clamped — the posture `NB_OPENAI_MAX_RETRIES` established.
+    """
+
+    assert (DEFAULT_CEILING, R1_MAX_CEILING) == (40, 40)
+    assert WEDNESDAY_MAX_CEILING == 56
+    assert GOLDEN_ENGINE_MAX_CEILING == 60
+    for limit, hard_max in (
+        (41, R1_MAX_CEILING),
+        (57, WEDNESDAY_MAX_CEILING),
+        (61, GOLDEN_ENGINE_MAX_CEILING),
+    ):
+        with pytest.raises(CallBudgetConfigurationError, match="must be between"):
+            RunCallBudget(limit, hard_max=hard_max)
+    # The pass-through harness keeps the legacy default; only the canonical
+    # entrypoint reaches for 60.
+    assert (
+        inspect.signature(run_golden_engine).parameters["call_budget_limit"].default
+        == GOLDEN_ENGINE_MAX_CEILING
+    )
+    assert (
+        inspect.signature(run_walking_skeleton).parameters["call_budget_limit"].default
+        == DEFAULT_CEILING
+    )
 
 
 # ===========================================================================
