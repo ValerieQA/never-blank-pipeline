@@ -111,7 +111,11 @@ from src.research.lifecycle import (
     validate_research_envelope,
 )
 from src.run import ExecutionMode, RunContext
-from src.run.call_budget import RunCallBudget
+from src.run.call_budget import (
+    RunCallBudget,
+    activate_call_budget,
+    charge_active_call_budget,
+)
 from src.run.call_budget_arp import ArpCallBudget
 from src.run.run_summary import ReasonCategory, reason_category
 from src.run.run_workspace import (
@@ -213,6 +217,10 @@ class _Answering:
         self.requests: list[str] = []
 
     def complete(self, *, instructions: str, request: str) -> str:
+        # One charge per call, before the answer: the accounting obligation of a
+        # production transport, which `llm_client.chat` discharges by charging
+        # the active budget before it reaches the provider (§0.3).
+        charge_active_call_budget()
         self.instructions.append(instructions)
         self.requests.append(request)
         if self.error is not None:
@@ -1156,10 +1164,19 @@ def test_a_refused_call_is_never_made_and_the_signal_is_skipped(tmp_path: Path):
 
 
 def test_the_stage_spends_one_call_for_the_assessment(tmp_path: Path):
+    """One extended assessment, charged once — by the call, not by the stage.
+
+    §0.3 gives the run counter one consumer, "Every model call", so the charge is
+    made where the call is made and the stage's own ``spend`` only asks whether
+    there is a call left to make. The budget is activated here because that is
+    what ``llm_client.chat`` reads (#351 review).
+    """
+
     context = _run(tmp_path)
     budget = RunCallBudget(4)
 
-    build = _retrieve(context, budget=ArpCallBudget(budget))
+    with activate_call_budget(budget):
+        build = _retrieve(context, budget=ArpCallBudget(budget))
 
     assert build.continues is True
     assert budget.used == 1

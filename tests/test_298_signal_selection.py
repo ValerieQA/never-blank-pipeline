@@ -40,7 +40,11 @@ from src.editorial_core.signal_selection import (
     select_from_queue,
     select_signal,
 )
-from src.run.call_budget import RunCallBudget
+from src.run.call_budget import (
+    RunCallBudget,
+    activate_call_budget,
+    charge_active_call_budget,
+)
 from src.run.call_budget_arp import ArpCallBudget
 from src.run.run_context import create_run_id
 from src.run.run_summary import ReasonCategory, reason_category
@@ -114,6 +118,10 @@ class _Transport:
         self.requests: list[str] = []
 
     def complete(self, *, instructions: str, request: str) -> str:
+        # One charge per call, before the answer: the accounting obligation of a
+        # production transport, discharged by `llm_client.chat` before it reaches
+        # the provider (§0.3, "Every model call").
+        charge_active_call_budget()
         self.requests.append(request)
         return json.dumps({"eligible": self.eligible, "reason": self.reason})
 
@@ -344,9 +352,16 @@ def test_a_refused_call_is_never_made_and_the_signal_is_skipped():
 
 
 def test_a_budget_with_room_pays_for_the_one_call():
+    """One eligibility judgment, charged once — by the call, not by the stage.
+
+    The wrap asks whether a call is affordable; the call pays (§0.3, "Every model
+    call"). The budget is activated because that is what the charge reads.
+    """
+
     budget = RunCallBudget(4)
 
-    selection = _select(budget=ArpCallBudget(budget))
+    with activate_call_budget(budget):
+        selection = _select(budget=ArpCallBudget(budget))
 
     assert selection.selected is True
     assert budget.used == 1

@@ -103,6 +103,7 @@ from src.run.call_budget import (
     DEFAULT_CEILING,
     GOLDEN_ENGINE_MAX_CEILING,
     RunCallBudget,
+    activate_call_budget,
 )
 from src.run.call_budget_arp import ArpCallBudget
 from src.run.code_identity import CodeIdentity, resolve_code_identity
@@ -967,26 +968,32 @@ def run_golden_engine(
     # `R1_MAX_CEILING` cannot admit one. Named explicitly, so the
     # legacy default, Wednesday's 56 and `R1_MAX_CEILING` are all
     # untouched and no other caller inherits 60.
-    budget = ArpCallBudget(
-        RunCallBudget(call_budget_limit, hard_max=GOLDEN_ENGINE_MAX_CEILING)
+    run_budget = RunCallBudget(
+        call_budget_limit, hard_max=GOLDEN_ENGINE_MAX_CEILING
     )
+    budget = ArpCallBudget(run_budget)
     workspace = RunWorkspace.create(
         Path(runs_root) if runs_root is not None else EDITORIAL_RUNS_ROOT,
         context.run_id,
     )
-    execution = execute_canonical_topology(
-        workspace=workspace,
-        run_context=context,
-        seams=seams,
-        configuration=configuration,
-        signal=signal,
-        binding=binding,
-        budget=budget,
-        counters=counters,
-        now=now,
-        portfolio=portfolio,
-        priors=priors,
-    )
+    # #171's counter is charged inside `llm_client.chat`, and only while a budget
+    # is active. Without this the ceiling would bound nothing on the canonical
+    # path: `ArpCallBudget` asks whether a unit of work can start, and §0.3 gives
+    # the counter one consumer — "Every model call" (#351 review, 2026-10-01).
+    with activate_call_budget(run_budget):
+        execution = execute_canonical_topology(
+            workspace=workspace,
+            run_context=context,
+            seams=seams,
+            configuration=configuration,
+            signal=signal,
+            binding=binding,
+            budget=budget,
+            counters=counters,
+            now=now,
+            portfolio=portfolio,
+            priors=priors,
+        )
     decided_every_destination(execution.records, names)
 
     manifest = workspace.write_manifest(

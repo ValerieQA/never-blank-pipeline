@@ -479,12 +479,23 @@ def test_a_counter_is_spent_per_scope_key_and_needs_one():
 # ===========================================================================
 
 
-def test_the_refused_call_is_never_paid_for():
+def test_the_wrap_admits_work_and_charges_nothing_itself():
+    """§0.3: the run counter is consumed by "Every model call", not by a stage.
+
+    So the wrap asks whether the next call is affordable and the calls do the
+    charging — here stood in for by ``RunCallBudget.spend``, which is what
+    ``llm_client.chat`` calls once per application-level call. A wrap that
+    charged per unit of work would bound units of work, and one that charged as
+    well as the call would charge every call twice (#351 review).
+    """
+
     budget = RunCallBudget(2)
     wrap = ArpCallBudget(budget)
 
     assert wrap.spend(scope=OutcomeScope.SIGNAL, scope_key="sig-292") is None
-    assert wrap.spend(scope=OutcomeScope.SIGNAL, scope_key="sig-292") is None
+    assert budget.used == 0, "asking is not paying"
+    budget.spend()
+    budget.spend()
     refused = wrap.spend(scope=OutcomeScope.DESTINATION, scope_key="unit-292/linkedin")
 
     assert budget.used == 2, "the refused call must not have been charged"
@@ -511,6 +522,7 @@ def test_budget_exhaustion_keeps_the_accepted_text_and_skips_the_unstarted():
     budget = RunCallBudget(1)
     wrap = ArpCallBudget(budget)
     assert wrap.spend(scope=OutcomeScope.DESTINATION, scope_key="unit-292/wix") is None
+    budget.spend()  # the call that work made, charged where §0.3 charges it
 
     progress = _progress(
         wix=DestinationState.TEXT_ACCEPTED,
@@ -541,8 +553,10 @@ def test_nothing_is_skipped_for_exhaustion_while_calls_remain():
 
 
 def test_a_destination_has_one_state_in_the_progress_list():
-    wrap = ArpCallBudget(RunCallBudget(1))
+    budget = RunCallBudget(1)
+    wrap = ArpCallBudget(budget)
     assert wrap.spend(scope=OutcomeScope.SIGNAL, scope_key="sig-292") is None
+    budget.spend()
     doubled = (
         DestinationProgress(destination="wix", state=DestinationState.NOT_STARTED),
         DestinationProgress(destination="wix", state=DestinationState.TEXT_ACCEPTED),

@@ -16,20 +16,37 @@ nothing writes into the run workspace but the engine. The doubles live in
 ``tests/golden_engine_boundary.py`` and each answers the request the production
 stage composed, in terms of the identifiers that request carries.
 
-**Two production-contract defects this execution found, and their repairs.**
-Both were found by running the chain rather than by reading it, and both were
-resolved by owner decision on 2026-10-01:
+**Three production-contract defects this execution found, and their repairs.**
+All three were found by running the chain rather than by reading it, and all
+three were resolved by owner decision:
 
 1. one re-entry spent the single declared ``L_boundary`` route twice, so the F-4
    sibling truth re-check was unreachable. The layer that authorizes the REPLAN
    now spends it once and passes that authorization forward; ``re_enter_boundary``
    verifies it and spends nothing, exactly as ``propose_strategies`` already does
    for ``L_strategy``. F-4 is exercised here, not asserted;
-2. the canonical six-destination topology costs 50 logical model calls where
-   ``R1_MAX_CEILING`` is 40, so no complete run could be sealed. The canonical
-   path now has its own finite ceiling of 60 — a runaway guard and not a target
-   spend — while the legacy default, ``R1_MAX_CEILING`` and Wednesday's 56 are
-   untouched.
+2. the canonical six-destination topology costs more than ``R1_MAX_CEILING``
+   admits, so no complete run could be sealed. The canonical path now has its own
+   finite ceiling of 60 — a runaway guard and not a target spend — while the
+   legacy default, ``R1_MAX_CEILING`` and Wednesday's 56 are untouched;
+3. that ceiling bounded the wrong thing. §0.3 gives the run counter one consumer,
+   "Every model call", but the canonical path never activated the budget, so
+   ``llm_client.chat`` charged nothing and the only consumer was the stage-side
+   wrap — which spends once per unit of work while S-04, S-11 and S-13 each make
+   more than one call inside one. 50 calls were being counted as 38. The wrap now
+   **asks** whether the next call is affordable and the calls do the charging, the
+   canonical entrypoint activates its budget, and a refusal that arrives from
+   inside a transport becomes §0.4's ARP outcomes instead of an exception out of a
+   run that has already accepted work. Actual calls and recorded calls are now
+   the same number.
+
+**Absent inputs.** The two the issue names are regressions here: a run with no
+Reference Library approves every plan with empty exemplars **and** one
+``REFERENCE_LIBRARY_UNAVAILABLE`` degrade per destination, and the client's real
+library — which is present — records none, so the degrade is a fact about the
+input rather than noise. V-T05 against an empty prior set passes as a ``code``
+check that ran, and the same check given a real prior refuses that destination's
+publication, so the empty set is an answer and not a bypass.
 
 Nothing here reaches a network, a provider, a credential or a publication, and
 S-14 is not executed.
@@ -47,9 +64,14 @@ import pytest
 
 from src.editorial_core.arp import (
     CANONICAL_TOPOLOGY,
+    RUN_CALL_BUDGET_COUNTER,
     ArpOutcome,
     StateCode,
 )
+from src.editorial_core.arp import OutcomeScope
+from src.editorial_core.destinations import Destination
+from src.editorial_core.text_check import PriorPublication
+from src.run.run_inputs import NO_REFERENCE_LIBRARY, InputKind, run_inputs
 from src.run.run_workspace import DeciderKind
 from src.editorial_core.text_check import (
     EXECUTION_INSTRUCTIONS,
@@ -58,6 +80,7 @@ from src.editorial_core.text_check import (
 )
 from src.run.call_budget import (
     DEFAULT_CEILING,
+    active_call_budget,
     GOLDEN_ENGINE_MAX_CEILING,
     R1_MAX_CEILING,
     WEDNESDAY_MAX_CEILING,
@@ -265,20 +288,132 @@ def test_the_executed_run_contains_no_pass_through_anywhere(executed):
             assert PASS_THROUGH_MARKER not in path.read_text(encoding="utf-8")
 
 
-def test_the_run_charges_the_production_budget_for_the_calls_it_made(executed):
-    """The budget was spent by the stages, not by the harness around them.
+def test_the_ceiling_bounds_actual_model_calls_one_for_one(executed):
+    """The hard ceiling counts calls, and the trace counts the same calls.
 
-    38 spends against 50 model calls is not an inconsistency: a stage spends once
-    per unit of work it is about to do, and S-04, S-11 and S-13 each make more
-    than one call inside one. It is pinned here because the difference is what
-    the recorded ceiling defect below is about.
+    §0.3 names the run counter's consumer — "Every model call" — and that charge
+    is made inside ``llm_client.chat`` before the provider is reached. So the
+    number the ceiling bounds and the number the trace records are the same
+    number, and this asserts they are equal rather than merely close. Before the
+    repair they were 50 and 38: the stages were charging once per unit of work
+    while S-04, S-11 and S-13 each make more than one call inside one, so the
+    ceiling bounded units of work and not calls (#351 review).
     """
 
     run, execution, _, budget = executed
     recorded = sum(record.calls["count"] for record in execution.records)
     assert recorded == 50
-    assert budget.used == 38
-    assert len(run.ledger.calls) == recorded + 1  # the research retrieval beside them
+    assert budget.used == recorded, (
+        "every recorded call was charged, and nothing was charged twice"
+    )
+    assert budget.limit == GOLDEN_ENGINE_MAX_CEILING
+    # One boundary invocation more than the charge: the research retrieval, which
+    # §6 excludes — "Model calls only. Retrieval providers, publishers and the
+    # label job are not counted."
+    assert len(run.ledger.calls) == recorded + 1
+    assert run.ledger.count("research") == 1
+
+
+def test_the_canonical_entrypoint_activates_the_budget_it_built(tmp_path):
+    """Without activation the ceiling would bound nothing on this path.
+
+    ``charge_active_call_budget`` charges the budget in the ``ContextVar`` and
+    no other, so a run that never activates its own is a run whose calls are
+    charged to nobody. Asserted from inside the run, through a transport that
+    reads the active budget at the moment it is called — which is where
+    ``chat`` reads it.
+    """
+
+    seen: list[object] = []
+    run = canonical_run(tmp_path)
+
+    class _Watching:
+        """Stands where `chat` stands: reads the active budget at call time."""
+
+        def complete(self, *, instructions: str, request: str) -> str:
+            seen.append(active_call_budget())
+            # A transport failure is a recorded state and not a crash (S-00
+            # normalizes it), so this neither stops the run nor hides the answer.
+            raise RuntimeError("the question here is the budget, not the verdict")
+
+    object.__setattr__(run.seams, "eligibility", _Watching())
+    run_golden_engine(
+        seams=run.seams,
+        configuration=run.configuration,
+        signal=run.signal,
+        binding=run.binding,
+        runs_root=run.runs_root,
+        started_at=run.now,
+        now=run.now,
+    )
+
+    assert seen, "the run reached a transport"
+    assert seen[0] is not None, "the run's own budget was active at the call"
+    assert seen[0].limit == GOLDEN_ENGINE_MAX_CEILING
+
+
+def test_the_call_past_the_ceiling_is_refused_before_the_boundary_is_reached(
+    tmp_path,
+):
+    """§0.4.1: the call that would exceed the budget is not made.
+
+    The ceiling is set to the cost of the run's first few calls, so a later one
+    is refused. The refusal is raised by ``charge_active_call_budget`` before the
+    double produces an answer — mirroring ``chat``, which charges before
+    ``client.chat.completions.create`` — so the boundary that was about to be
+    asked records no request for the refused call. #171's own
+    ``test_refusal_happens_before_any_transport_is_invoked`` proves the same
+    property of the production transport; this proves the canonical path is
+    inside it.
+    """
+
+    run = canonical_run(tmp_path)
+    execution, _, budget = execute(run, limit=5)
+
+    assert budget.used == 5, "the ceiling was reached and never passed"
+    assert len(run.ledger.calls) == 6, (
+        "five charged calls, plus the uncharged research retrieval, and nothing "
+        "for the refused one"
+    )
+    # Fail-closed: a run that cannot pay stops with recorded outcomes rather
+    # than with an exception, and names no accepted text.
+    assert execution.accepted == ()
+    states = {
+        outcome.state_code
+        for record in execution.records
+        for outcome in record.outcomes
+    }
+    assert StateCode.BUDGET_EXHAUSTED in states
+
+
+def test_exhaustion_preserves_accepted_work_and_skips_the_rest(tmp_path):
+    """§0.4.2–0.4.4, over a real run rather than over the wrap alone.
+
+    A ceiling that admits some destinations and not the rest: the ones that
+    reached an accepted text keep it, the destination whose next call was refused
+    is skipped, and the destinations that never started are skipped in reverse
+    order — the ones others link to and the ones actually published are the last
+    to be given up. Nothing raises out of the run.
+    """
+
+    run = canonical_run(tmp_path)
+    execution, _, budget = execute(run, limit=45)
+
+    assert budget.exhausted
+    assert execution.accepted, "work already paid for and accepted is kept"
+    assert len(set(execution.accepted)) < 6, "not every destination could be served"
+    exhausted = [
+        outcome
+        for record in execution.records
+        for outcome in record.outcomes
+        if outcome.state_code is StateCode.BUDGET_EXHAUSTED
+    ]
+    assert exhausted, "the stop is recorded as ARP outcomes"
+    assert {outcome.outcome for outcome in exhausted} == {ArpOutcome.SKIP}
+    assert {outcome.counter for outcome in exhausted} == {RUN_CALL_BUDGET_COUNTER}
+    # No destination is both accepted and skipped for budget.
+    skipped = {outcome.scope_key for outcome in exhausted}
+    assert not ({item.value for item in execution.accepted} & skipped)
 
 
 # ===========================================================================
@@ -290,61 +425,77 @@ def test_an_edit_class_finding_opens_exactly_one_edit_and_then_stops():
     """``L_edit`` routes S-13 → S-12 once per approved plan, and once only.
 
     V-T06 is the edit class, so a failing one sends the text back to be edited
-    rather than re-planned. The second failure on the same approved plan has no
-    attempt to spend — ``L_edit`` is counted at ``<plan_id>/v<version>`` — so the
-    destination is skipped. Twelve writer calls for six destinations is the
-    bound: one write and one edit each, never a third.
+    rather than re-planned. It is failed for the **first** text only: a scenario
+    that failed all six would cost more than the run's own ceiling, and the guard
+    rather than the route would then be what the test measured.
+
+    One extra write and two extra checks is the whole of the loop — seven writer
+    calls for six destinations, fourteen text checks for seven text versions —
+    and the edited text is accepted, which is what makes it an edit and not a
+    re-plan.
     """
 
     ledger = Ledger()
-    run = canonical_run(_tmp(), text_check=TextCheck(ledger, fails="V-T06"))
-    execution, _, _ = execute(run)
+    run = canonical_run(
+        _tmp(), text_check=TextCheck(ledger, fails="V-T06", from_call=1)
+    )
+    execution, _, budget = execute(run)
 
-    assert execution.accepted == ()
-    assert run.ledger.count("writer") == 12
-    routes = [
-        (record.scope_key, outcome.counter, outcome.route_target, outcome.outcome)
+    assert run.ledger.count("writer") == 7
+    assert run.ledger.count("text_check") == 14
+    edits = [
+        outcome
         for record in execution.records
         for outcome in record.outcomes
         if outcome.state_code is StateCode.TEXT_REQUIRES_EDIT
     ]
-    assert [item[1] for item in routes] == ["L_edit"] * 12
-    # Per destination: one REPLAN into S-12, then one SKIP with nothing left.
-    assert [item[3] for item in routes].count(ArpOutcome.REPLAN) == 6
-    assert [item[3] for item in routes].count(ArpOutcome.SKIP) == 6
-    assert {item[2] for item in routes} == {"S-12", None}
+    assert len(edits) == 1
+    assert (edits[0].counter, edits[0].attempt, edits[0].limit) == ("L_edit", 1, 1)
+    assert edits[0].route_target == "S-12"
+    assert edits[0].outcome is ArpOutcome.REPLAN
+    # The edit answered the finding, so every destination still ends accepted.
+    assert len(set(execution.accepted)) == 6
+    assert budget.used == sum(
+        record.calls["count"] for record in execution.records
+    )
 
 
 def test_a_replan_class_finding_sends_the_destination_back_to_s08():
     """``L_strategy`` routes S-13 → S-08, and the destination is re-planned.
 
     V-T03 is the chain check and its failure is the plan's fault, not the
-    prose's, so the route goes back to where the decision was made. The proof
-    that the route was *taken* rather than recorded is that S-08 ran again:
-    eleven strategy calls where a clean run makes six.
+    prose's, so the route goes back to where the decision was made. Failed for
+    the first text only, for the reason the edit test gives. The proof that the
+    route was *taken* rather than recorded is that S-08 ran again: seven strategy
+    rounds where a clean run makes six, and the re-planned destination ends
+    accepted on its new plan.
     """
 
     ledger = Ledger()
-    run = canonical_run(_tmp(), text_check=TextCheck(ledger, fails="V-T03"))
-    execution, _, _ = execute(run)
+    run = canonical_run(
+        _tmp(), text_check=TextCheck(ledger, fails="V-T03", from_call=1)
+    )
+    execution, _, budget = execute(run)
 
-    assert execution.accepted == ()
-    assert run.ledger.count("strategy") > 6
+    assert run.ledger.count("strategy") == 7
     replans = [
         outcome
         for record in execution.records
         for outcome in record.outcomes
         if outcome.state_code is StateCode.STRUCTURAL_TEXT_FAILURE
     ]
-    assert len(replans) == 6
-    assert {outcome.counter for outcome in replans} == {"L_strategy"}
-    assert {outcome.route_target for outcome in replans} == {"S-08"}
+    assert len(replans) == 1
+    assert replans[0].counter == "L_strategy"
+    assert replans[0].route_target == "S-08"
     # The record the next attempt must be able to name: #304's `_authorized`
     # refuses a re-entry that cannot say which counter paid for it, at which
     # scope, so the attempt and the scope travel with the route.
-    for outcome in replans:
-        assert outcome.attempt == 1
-        assert outcome.scope_key.startswith("unit-core-sig-351-exec/")
+    assert replans[0].attempt == 1
+    assert replans[0].scope_key.startswith("unit-core-sig-351-exec/")
+    assert len(set(execution.accepted)) == 6
+    assert budget.used == sum(
+        record.calls["count"] for record in execution.records
+    )
 
 
 # ===========================================================================
@@ -363,8 +514,11 @@ def test_a_boundary_reentry_spends_l_boundary_once_and_recommits():
     the anchor survived the commit.
 
     The sixth text is the one that fails, so five siblings are already accepted
-    when the boundary moves. All six are accepted in the end: the causing
-    destination is re-planned against version 2 and its new text passes.
+    when the boundary moves, which is the situation F-4 exists for. The causing
+    destination is then re-planned against version 2 — and this scenario runs the
+    canonical ceiling out, so the five accepted siblings are preserved (§0.4.4)
+    and the re-planned destination is the one the budget gives up. That is two
+    behaviours in one run, and both are asserted.
     """
 
     ledger = Ledger()
@@ -401,9 +555,10 @@ def test_a_boundary_reentry_spends_l_boundary_once_and_recommits():
     assert onward[0].route_target == "S-08"
     # Two S-04 records: the first boundary, and the version the re-entry made.
     assert sum(1 for record in execution.records if record.stage == "S-04") == 2
-    assert len(set(execution.accepted)) == 6
     # Three calls to the boundary: generate, probe, and the re-entry's test.
     assert run.ledger.count("boundary") == 3
+    # The five siblings accepted before the commit are kept.
+    assert len(set(execution.accepted)) == 5
 
 
 def test_the_f4_sibling_recheck_runs_one_vt02_only_call_per_accepted_sibling():
@@ -419,7 +574,8 @@ def test_the_f4_sibling_recheck_runs_one_vt02_only_call_per_accepted_sibling():
 
     Five siblings were accepted before the sixth text failed, so five re-checks.
     Re-running the execution call would pay for an answer that cannot have
-    changed, which is why the count is five and not ten.
+    changed, which is why the count is five and not ten — and why the re-check is
+    one call per sibling beside the six full checks, not a seventh full check.
     """
 
     ledger = Ledger()
@@ -428,10 +584,9 @@ def test_the_f4_sibling_recheck_runs_one_vt02_only_call_per_accepted_sibling():
     execution, _, _ = execute(run)
 
     assert checker.answered[SIBLING_RECHECK_INSTRUCTIONS] == 5
-    # The six first texts, plus the re-planned destination's second text.
-    assert checker.answered[TRUTH_INSTRUCTIONS] == 7
-    assert checker.answered[EXECUTION_INSTRUCTIONS] == 7
-    assert len(set(execution.accepted)) == 6
+    assert checker.answered[TRUTH_INSTRUCTIONS] == 6
+    assert checker.answered[EXECUTION_INSTRUCTIONS] == 6
+    assert len(set(execution.accepted)) == 5
 
 
 def test_a_commit_re_establishes_every_plan_of_the_unit_before_the_barrier():
@@ -461,9 +616,10 @@ def test_a_commit_re_establishes_every_plan_of_the_unit_before_the_barrier():
         record.created_by.decider is DeciderKind.CODE for record in free
     )
     # Every barrier round that ran, ran against plans whose approval held: the
-    # run reached accepted texts for all six, which it could not have done if a
-    # stale approval had reached the barrier.
-    assert len(set(execution.accepted)) == 6
+    # run re-planned the causing destination and kept the five accepted ones,
+    # which it could not have done if a stale approval had reached the barrier —
+    # that raises rather than passing.
+    assert len(set(execution.accepted)) == 5
 
 
 # ===========================================================================
@@ -536,6 +692,151 @@ def test_the_legacy_and_wednesday_ceilings_are_untouched():
         inspect.signature(run_walking_skeleton).parameters["call_budget_limit"].default
         == DEFAULT_CEILING
     )
+
+
+# ===========================================================================
+# Absent inputs, stated as absent rather than passed over
+# ===========================================================================
+
+
+def test_no_reference_library_degrades_with_the_record_that_says_so(tmp_path):
+    """The soft input §3 lets degrade, degrading — and saying it did.
+
+    §3 lists the Reference Library among S-11's inputs and lets it be absent,
+    which is exactly why its absence has to be *recorded*: a plan approved with
+    no exemplar and no outcome is indistinguishable from a plan whose library
+    answered with nothing, and the whole soft-input rule rests on that
+    distinction. So a run with no library at all approves every plan with empty
+    exemplars **and** one ``DEGRADE`` per destination carrying
+    ``REFERENCE_LIBRARY_UNAVAILABLE``, and the run still reaches six accepted
+    texts, because a soft input is not a gate.
+    """
+
+    run = canonical_run(tmp_path, library=None)
+    assert run.configuration.library is None
+    execution, workspace, _ = execute(run)
+
+    degraded = [
+        outcome
+        for record in execution.records
+        for outcome in record.outcomes
+        if outcome.state_code is StateCode.REFERENCE_LIBRARY_UNAVAILABLE
+    ]
+    assert len(degraded) == 6, "one per destination, not one per run"
+    assert {outcome.outcome for outcome in degraded} == {ArpOutcome.DEGRADE}
+    assert {outcome.scope for outcome in degraded} == {OutcomeScope.DESTINATION}
+    assert all("no Reference Library" in (outcome.reason or "") for outcome in degraded)
+    assert len(set(execution.accepted)) == 6
+
+    approved = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted(workspace.run_dir.rglob("plan-*.json"))
+    ]
+    assert approved, "the run approved plans"
+    assert all(item["exemplars"] == [] for item in approved)
+
+
+def test_a_library_that_answered_with_nothing_is_not_an_absent_library(tmp_path):
+    """The distinction the record exists for, asserted from both sides.
+
+    The client's real library is present and holds items, so the canonical run
+    records no ``REFERENCE_LIBRARY_UNAVAILABLE`` at all. Without this the test
+    above would pass just as well against a run that always degrades, and the
+    DEGRADE would be noise rather than a fact about the input.
+    """
+
+    run = canonical_run(tmp_path)
+    library = run.configuration.library
+    assert library is not None and library.available
+    execution, _, _ = execute(run)
+
+    assert not [
+        outcome
+        for record in execution.records
+        for outcome in record.outcomes
+        if outcome.state_code is StateCode.REFERENCE_LIBRARY_UNAVAILABLE
+    ]
+
+
+def test_an_absent_reference_library_is_declared_in_the_run_inputs():
+    """§4.1: a run that read no library states that, rather than omitting it."""
+
+    entry = run_inputs().reference_library
+    assert entry.kind is InputKind.REFERENCE_LIBRARY
+    assert entry.identities == ()
+    assert entry.digest is None
+    assert entry.absent_reason == NO_REFERENCE_LIBRARY
+
+
+def test_no_prior_publication_makes_vt05_pass_rather_than_unanswered(executed):
+    """V-T05 against an empty prior set is an answer, not an absence.
+
+    "An empty prior set is the honest first-run answer: the check ran and found
+    nothing to compare against, which is a pass and not an absence of a check."
+    So every text version records V-T05 as a ``code`` check that passed — never
+    ``NOT_ANSWERED``, which is what a check nobody ran would be.
+    """
+
+    _, _, workspace, _ = executed
+    verdicts = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted(workspace.run_dir.rglob("text_*.json"))
+    ]
+    assert len(verdicts) == 6
+    for verdict in verdicts:
+        results = {item["check_id"]: item for item in verdict["checks"]}
+        assert results["V-T05"]["result"] == "pass"
+        assert not results["V-T05"].get("findings")
+        # V-T04 beside it: the other code check over the core, so a verdict
+        # whose code half did not run at all would fail here too.
+        assert results["V-T04"]["result"] == "pass"
+
+
+def test_vt05_still_refuses_a_republication_when_a_prior_exists():
+    """The empty prior set is an answer, not a bypass.
+
+    Two passes over the real path. The first produces the texts and the trace
+    records each one's content digest, which is what V-T05 compares. The second
+    is given one of them back as a prior E-16 — which is what a prior *is*, the
+    fingerprint of something this client already published — and V-T05 refuses
+    that destination's publication while the other five are unaffected.
+
+    Nothing is hand-authored: the digest comes from the first run's own trace, so
+    the check is asked about a text the engine really wrote.
+    """
+
+    first = canonical_run(_tmp())
+    first_execution, _, _ = execute(first)
+    published = {
+        record.scope_key.rsplit("/", 1)[-1]: ref.digest
+        for record in first_execution.records
+        if record.stage == "S-13"
+        for ref in record.inputs
+        if ref.entity_type == "E-15"
+    }
+    assert len(published) == 6
+
+    prior = PriorPublication(
+        fingerprint_id="fp-351-prior",
+        destination=Destination.WIX,
+        content_digest=published["wix"],
+    )
+    second = canonical_run(_tmp())
+    second_execution, _, _ = execute(second, priors=(prior,))
+
+    accepted = {item.value for item in second_execution.accepted}
+    assert "wix" not in accepted, "the republication is refused"
+    assert len(accepted) == 5, "only the destination with a prior is affected"
+    refused = [
+        outcome
+        for record in second_execution.records
+        for outcome in record.outcomes
+        if outcome.state_code is StateCode.NEAR_EXACT_REPUBLICATION
+    ]
+    assert len(refused) == 1
+    assert refused[0].outcome is ArpOutcome.SKIP
+    assert refused[0].scope is OutcomeScope.PUBLICATION
+    assert refused[0].counter is None, "V-T05 is terminal and spends no counter"
 
 
 # ===========================================================================

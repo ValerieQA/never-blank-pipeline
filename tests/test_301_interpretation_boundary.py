@@ -116,7 +116,11 @@ from src.run.boundary_commit import (
     orphan_interpretation_versions,
     write_interpretation_version,
 )
-from src.run.call_budget import RunCallBudget
+from src.run.call_budget import (
+    RunCallBudget,
+    activate_call_budget,
+    charge_active_call_budget,
+)
 from src.run.call_budget_arp import ArpCallBudget
 from src.run.run_context import create_run_id
 from src.run.run_summary import ReasonCategory, reason_category
@@ -432,6 +436,10 @@ class _Replaying:
         self.requests: list[str] = []
 
     def complete(self, *, instructions: str, request: str) -> str:
+        # The accounting obligation of a production transport: one charge per
+        # call, before the answer. §0.3 gives the run counter one consumer —
+        # "Every model call" — and `llm_client.chat` makes that charge.
+        charge_active_call_budget()
         self.instructions.append(instructions)
         self.requests.append(request)
         if self.error is not None:
@@ -943,14 +951,20 @@ def test_a_generate_call_that_does_not_answer_skips_the_signal():
 
 
 def test_a_budget_that_runs_out_before_the_probe_leaves_no_boundary():
-    """The fail-closed edge: a generated, unprobed set is never recorded."""
+    """The fail-closed edge: a generated, unprobed set is never recorded.
+
+    One call left, and the stage makes two: the generate call spends it and the
+    probe is refused before it is attempted. The budget is activated because that
+    is where the charge happens — the wrap asks, the call pays (§0.3).
+    """
 
     budget = RunCallBudget(1)
     transport = _transport("ramp_stablecoin")
 
-    decision = _decide(
-        "ramp_stablecoin", transport=transport, budget=ArpCallBudget(budget)
-    )
+    with activate_call_budget(budget):
+        decision = _decide(
+            "ramp_stablecoin", transport=transport, budget=ArpCallBudget(budget)
+        )
 
     assert transport.instructions == [GENERATE_INSTRUCTIONS]
     assert decision.boundary is None

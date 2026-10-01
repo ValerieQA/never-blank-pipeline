@@ -197,7 +197,12 @@ from src.knowledge.loader import KnowledgeBase, LoadedCheck, load_register
 from src.knowledge.validator import DEFAULT_LADDER_NAME, LADDERS_DIR_NAME
 from src.research.assessment import EvidenceJudgmentTransport
 from src.research.provider import ResearchProvider, ResearchProviderRequest
-from src.run.call_budget_arp import ArpCallBudget
+from src.run.call_budget import RunCallBudgetExceededError
+from src.run.call_budget_arp import (
+    ArpCallBudget,
+    DestinationProgress,
+    DestinationState,
+)
 from src.run.expected_destinations import (
     ExpectedDestinationsError,
     expected_destinations,
@@ -884,6 +889,12 @@ def _replan_to(
     )
 
 
+#: The scope key for a refusal that arrived before S-00 named the signal. It
+#: cannot normally happen — S-00 sets the id before it spends — and exists so
+#: that an exhaustion record never carries an empty scope key.
+_UNIDENTIFIED: Final[str] = "unidentified-signal"
+
+
 @dataclass
 class _Lane:
     """One destination's state through S-08…S-13."""
@@ -947,6 +958,11 @@ class _Run:
         self.workspace = workspace
 
         self.signal_id: str = ""
+        #: The stage currently executing. Only §0.4's exhaustion handler reads
+        #: it: a refusal that arrives from inside a transport has to be recorded
+        #: against the stage that asked for the call, and guessing which one from
+        #: the lane state would attribute it to whichever stage looks plausible.
+        self.executing: str = "S-00"
         self.core: Optional[EvidenceCore] = None
         self.features: Optional[MaterialFeatures] = None
         self.assets: tuple[Asset, ...] = ()
@@ -967,6 +983,17 @@ class _Run:
     # ------------------------------------------------------------------
 
     def execute(self) -> CanonicalExecution:
+        try:
+            return self._execute()
+        except RunCallBudgetExceededError as exhausted:
+            # §0.4, and the one case `ArpCallBudget` cannot refuse in advance: a
+            # stage is admitted while a call remains and makes two. #171 refuses
+            # the second before the provider — that property is not negotiable —
+            # and the stop becomes ARP outcomes here rather than an exception out
+            # of a run that has already paid for accepted work (R-3, §0.4.4).
+            return self._budget_exhausted(exhausted)
+
+    def _execute(self) -> CanonicalExecution:
         for stage, step in (
             ("S-00", self._s00),
             ("S-01", self._s01),
@@ -977,6 +1004,7 @@ class _Run:
             ("S-06", self._s06),
             ("S-07", self._s07),
         ):
+            self.executing = stage
             if not step():
                 return self._finished(stopped_at=stage)
         for destination in self._order():
@@ -985,6 +1013,82 @@ class _Run:
             return self._finished(stopped_at="S-11")
         self._produce_texts()
         return self._finished()
+
+    # ------------------------------------------------------------------
+    # Budget exhaustion the wrap could not refuse in advance (§0.4)
+    # ------------------------------------------------------------------
+
+    def _budget_exhausted(
+        self, exhausted: RunCallBudgetExceededError
+    ) -> CanonicalExecution:
+        """Record §0.4's four points and finish, rather than raising out.
+
+        1. the refused call was not made — #171 refused it before the provider;
+        2. the unit of work that needed it ends in ``SKIP``, which is the
+           destination that was mid-flight when the refusal came, or the signal
+           when nothing destination-scoped had started;
+        3. destinations not yet started end in ``SKIP`` in **reverse**
+           destination order, which :meth:`ArpCallBudget.exhaustion_outcomes`
+           decides from the progress list;
+        4. texts already accepted stay accepted — ``_finished`` reads them from
+           the lanes, so nothing here has to preserve them.
+        """
+
+        progress = self._progress()
+        mid = [
+            item
+            for item in progress
+            if item.state is DestinationState.IN_PROGRESS
+        ]
+        refused = [
+            self.budget.spend(
+                scope=OutcomeScope.DESTINATION, scope_key=item.destination
+            )
+            for item in mid
+        ] or [
+            self.budget.spend(
+                scope=OutcomeScope.SIGNAL,
+                scope_key=self.signal_id or _UNIDENTIFIED,
+            )
+        ]
+        outcomes = tuple(item for item in refused if item is not None)
+        outcomes += self.budget.exhaustion_outcomes(progress)
+        for item in mid:
+            lane = self.lanes.get(Destination(item.destination))
+            if lane is not None:
+                lane.skipped = True
+        self.trace.record(
+            stage=self.executing,
+            scope_key=self.signal_id or _UNIDENTIFIED,
+            decider=DeciderKind.CODE,
+            calls=0,
+            outcomes=outcomes,
+        )
+        return self._finished(stopped_at=self.executing)
+
+    def _progress(self) -> tuple[DestinationProgress, ...]:
+        """How far each destination got, in the three states §0.4 distinguishes.
+
+        Read off the lanes rather than tracked beside them: a destination holding
+        an accepted verdict is ``TEXT_ACCEPTED``, one that was skipped or never
+        reached a plan is ``NOT_STARTED``, and anything else is mid-flight — and
+        mid-flight is where a refusal lands.
+        """
+
+        states: list[DestinationProgress] = []
+        for lane in self._ordered_lanes():
+            if lane.accepted is not None:
+                state = DestinationState.TEXT_ACCEPTED
+            elif lane.skipped or lane.plan is None:
+                state = DestinationState.NOT_STARTED
+            else:
+                state = DestinationState.IN_PROGRESS
+            states.append(
+                DestinationProgress(
+                    destination=lane.destination.value, state=state
+                )
+            )
+        return tuple(states)
 
     def _finished(
         self, *, stopped_at: Optional[str] = None
@@ -1587,6 +1691,7 @@ class _Run:
             self._s11(lane, chosen[0], plan)
 
     def _s08(self, lane: _Lane) -> Optional[CandidateSet]:
+        self.executing = "S-08"
         assert self.unit is not None and self.anchor is not None
         assert self.boundary is not None and self.core is not None
         assert self.features is not None
@@ -1856,6 +1961,7 @@ class _Run:
         and a round the barrier sends back is re-planned and declared again —
         shorter — which is §0.2's "B1 re-evaluates without it".
         """
+        self.executing = "S-11"
 
         unit = self._unit()
         decisions = self.decisions
@@ -2018,6 +2124,7 @@ class _Run:
                 return
 
     def _text(self, lane: _Lane) -> None:
+        self.executing = "S-12"
         boundary, core = self._material()
         barrier = self._passed_barrier()
         _, verdict, _ = self._approved_plan(lane)
@@ -2072,6 +2179,7 @@ class _Run:
         its own count would mint a fresh allowance with every text version,
         which is exactly the defect ``edit_scope_key`` exists to prevent.
         """
+        self.executing = "S-13"
 
         boundary, core = self._material()
         while True:
@@ -2132,6 +2240,7 @@ class _Run:
         at S-13 — so charging it again here would turn one permitted edit into
         none.
         """
+        self.executing = "S-12"
 
         boundary, core = self._material()
         barrier = self._passed_barrier()
@@ -2228,6 +2337,7 @@ class _Run:
         already-accepted sibling verdict of this unit is re-checked against it —
         one truth call each, V-T02 only — **before** anything may reach S-14.
         """
+        self.executing = "S-04"
 
         boundary, core = self._material()
         unit = self._unit()
@@ -2336,6 +2446,7 @@ class _Run:
         records is the StageRecord, which carries the result and its outcome,
         rather than a file overwriting the verdict it supersedes.
         """
+        self.executing = "S-13"
 
         boundary, core = self._material()
         accepted: list[tuple[Text, TextVerdict]] = []
@@ -2395,6 +2506,7 @@ class _Run:
         new version and :func:`approval_holds` starts answering ``True`` for it;
         one that does not routes back to S-08 like any other failed hard check.
         """
+        self.executing = "S-11"
 
         boundary, core = self._material()
         plan, approved, strategy = self._approved_plan(lane)

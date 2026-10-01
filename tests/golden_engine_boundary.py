@@ -32,10 +32,11 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from collections.abc import Sequence
+from typing import Any, Final, Mapping, Optional
 
 from src.editorial.decision_lens_evaluator import (
     DEFAULT_INSTRUCTIONS_PATH,
@@ -48,6 +49,7 @@ from src.editorial_core.interpretation_boundary import (
     GENERATE_INSTRUCTIONS,
     PROBE_INSTRUCTIONS,
 )
+from src.editorial_core.arp import AttemptCounterLedger
 from src.editorial_core.material_features import MaterialFeature
 from src.editorial_core.writer import (
     REVISION_INSTRUCTIONS,
@@ -76,7 +78,12 @@ from src.research.provider import (
     SourceRetrievalOutcome,
 )
 
-from src.run.call_budget import WEDNESDAY_MAX_CEILING, RunCallBudget
+from src.run.call_budget import (
+    GOLDEN_ENGINE_MAX_CEILING,
+    RunCallBudget,
+    activate_call_budget,
+    charge_active_call_budget,
+)
 from src.run.call_budget_arp import ArpCallBudget
 from src.run.golden_engine import (
     GoldenEngineConfiguration,
@@ -102,6 +109,10 @@ CLIENT_DIR = Path("clients/never_blank")
 #: from — the other two are that module's refusal cases.
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "evidence_core_299"
 CASE = "ups_cold_chain_investment"
+
+#: "Leave the configuration's own value alone", distinguishable from ``None``,
+#: which is itself a value a caller may want to pass.
+_KEEP: Final[object] = object()
 
 #: The production role, resolved rather than authored: ``wednesday-golden`` is
 #: the declared role that states eligibility criteria, so S-00's eligibility
@@ -164,7 +175,18 @@ class Ledger:
 
 
 class _Boundary:
-    """A recorded boundary. Subclasses answer; this one only remembers."""
+    """A recorded boundary. Subclasses answer; this one accounts and remembers.
+
+    It carries the one accounting obligation a production transport has.
+    ``src/run/transports.py`` states it plainly — "The transport's whole
+    accounting obligation is therefore one thing: go through ``chat``" — and what
+    ``chat`` does is charge the active run budget **once per call, before the
+    provider is reached**. So these doubles charge once per call, before
+    answering, through the same ``charge_active_call_budget`` the production path
+    uses. Without it a deterministic run would be unaccounted and the hard
+    ceiling would bound nothing in the test that is supposed to prove it bounds
+    something.
+    """
 
     name = "boundary"
 
@@ -172,6 +194,10 @@ class _Boundary:
         self.ledger = ledger
 
     def complete(self, *, instructions: str, request: str) -> str:
+        # Charged first, and the answer is produced only afterwards: a refused
+        # call must leave no trace of work, exactly as a refused `chat` leaves no
+        # provider request.
+        charge_active_call_budget()
         self.ledger.record(self.name, request)
         return self.answer(instructions=instructions, request=request)
 
@@ -222,6 +248,9 @@ class Research:
         self.identity = identity
 
     def research(self, request: ResearchProviderRequest) -> CompleteResearchResult:
+        # Not charged, and that is §6's rule rather than an omission: "Model
+        # calls only. Retrieval providers, publishers and the label job are not
+        # counted."
         self.ledger.record("research", request.signal_id)
         artifact = recorded_artifact().model_copy(update={
             "run_id": request.run_id,
@@ -1065,6 +1094,7 @@ def canonical_run(
     text_check: Optional[TextCheck] = None,
     barrier: Optional[Barrier] = None,
     signal_id: str = "sig-351-exec",
+    library: Any = _KEEP,
 ) -> CanonicalRun:
     """Assemble one canonical run: production configuration, authored answers.
 
@@ -1090,6 +1120,11 @@ def canonical_run(
     golden = golden_engine_configuration(
         register_dir=REGISTER_DIR, client_dir=CLIENT_DIR, role=role
     )
+    if library is not _KEEP:
+        # The one soft input §3 lets degrade. Overridable here so a run with no
+        # library at all can be executed — a different state from the client's
+        # real library answering with nothing, and the one the issue asks about.
+        golden = replace(golden, library=library)
     context = StrategyExecutionContext.from_configuration(configuration)
     strategy_view = context.decision_lens_editorial
     signal = {
@@ -1171,27 +1206,40 @@ def canonical_run(
     )
 
 
-def execute(run: CanonicalRun, *, limit: int = WEDNESDAY_MAX_CEILING):
+def execute(
+    run: CanonicalRun,
+    *,
+    limit: int = GOLDEN_ENGINE_MAX_CEILING,
+    counters: Optional[AttemptCounterLedger] = None,
+    priors: Sequence[Any] = (),
+):
     """Execute the canonical topology over ``run``, and return its result.
 
-    The call budget is the production one and is charged by the stages through
-    the production wrap; ``limit`` is a ceiling and never a target. It is the
-    Wednesday role's declared ceiling because that is the role this scenario
-    resolves, and because the canonical six-destination topology costs more
-    logical calls than ``R1_MAX_CEILING`` admits — see the module note in
-    ``tests/test_351_golden_engine_execution.py``.
+    The budget is the production one and is **activated**, exactly as
+    ``run_golden_engine`` activates it: §0.3 gives the run counter one consumer,
+    "Every model call", and the charge is made inside the transport layer. The
+    boundary doubles carry that obligation, so a run executed here is accounted
+    the way a run executed with real transports is accounted.
+
+    ``limit`` is a safety ceiling and never a target. It defaults to the
+    canonical path's own, so a scenario that overruns it is refused here for the
+    same reason it would be refused in production.
     """
 
     workspace = RunWorkspace.create(run.runs_root, run.run_context.run_id)
-    budget = ArpCallBudget(RunCallBudget(limit, hard_max=WEDNESDAY_MAX_CEILING))
-    execution = execute_canonical_topology(
-        workspace=workspace,
-        run_context=run.run_context,
-        seams=run.seams,
-        configuration=run.configuration,
-        signal=run.signal,
-        binding=run.binding,
-        budget=budget,
-        now=run.now,
-    )
+    run_budget = RunCallBudget(limit, hard_max=GOLDEN_ENGINE_MAX_CEILING)
+    budget = ArpCallBudget(run_budget)
+    with activate_call_budget(run_budget):
+        execution = execute_canonical_topology(
+            workspace=workspace,
+            run_context=run.run_context,
+            seams=run.seams,
+            configuration=run.configuration,
+            signal=run.signal,
+            binding=run.binding,
+            budget=budget,
+            counters=counters,
+            priors=priors,
+            now=run.now,
+        )
     return execution, workspace, budget
