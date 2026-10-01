@@ -1,53 +1,78 @@
-"""The walking skeleton: the whole topology, end to end (Issue #293, slice SL-1).
+"""The run harness: SL-1's walking skeleton, and SL-6.5's canonical run.
 
-SL-1's goal is "a walking skeleton of the one canonical engine: every stage
+SL-1's goal was "a walking skeleton of the one canonical engine: every stage
 S-00…S-15 exists as a typed pass-through, run end to end on a fixture signal
-with fake providers" (Step 6 §2). This module is that run. It is the harness
-the earlier SL-1 pieces were built for, and it holds **no stage logic at all**:
-each stage writes the entities §2.2 gives it, records what it did, and hands
-on. What a stage decides arrives in SL-3 … SL-6.
+with fake providers" (Step 6 §2). :func:`run_walking_skeleton` is that run, and
+it holds **no stage logic at all**.
 
-What it proves, and how
------------------------
+#351 added the other entry point. :func:`run_golden_engine` runs the **real**
+S-00…S-13 through :mod:`src.run.golden_engine`, over #361's production
+transport bindings, and it is the canonical shadow run: there is no
+pass-through in it, no fixture stands in for a stage, and
+``PASS_THROUGH_MARKER`` never appears in its trace. The two share everything
+below the stages — the workspace, the manifest, the verification, the
+public-safe RunSummary and the ledger commit — because those are the same facts
+about a run whichever executed it.
+
+**Which is which, and why both.** The pass-through run is SL-1's own acceptance
+evidence and keeps proving what it proved: that the topology executes, that six
+destinations are covered, that the manifest verifies and that a failed ledger
+commit does not fail a run. It is a fixture proof and says so — every entity it
+writes carries :data:`PASS_THROUGH_MARKER`, so no reader and no later slice can
+mistake one of its workspaces for a canonical run. What it may not be is the
+evidence for a *canonical* run, which is why #351 did not extend it:
+``PASS_THROUGH_MARKER count == 0`` is a property of
+:func:`run_golden_engine` alone.
+
+What they prove, and how
+------------------------
 **The topology executes.** The stages come from ``CANONICAL_TOPOLOGY`` in the
-registry's own order, and a stage the registry declares without a pass-through
-here stops the run (:class:`SkeletonError`). The skeleton cannot execute a
-different engine from the one the digest names, because it keeps no second
+registry's own order, and a stage the registry declares that the run has no
+implementation for stops the run — :class:`SkeletonError` here, and
+:class:`~src.run.golden_engine.StageNotWiredError` there. Neither can execute a
+different engine from the one the digest names, because neither keeps a second
 list of stages.
 
-**Six destinations.** Every destination-scoped stage loops over all six
-(Principle B, Step 6 §0.2), from the one list the repository already keeps.
-The six destination folders in the workspace are what that looks like on disk.
+**Six destinations.** Every destination-scoped stage covers all six (Principle
+B, Step 6 §0.2), from the one list the repository already keeps. The six
+destination folders in the workspace are what that looks like on disk, and the
+canonical run checks afterwards that S-07 really decided about each one
+(:func:`decided_every_destination`).
 
 **The manifest verifies.** Entities go through :class:`RunWorkspace`, so
-create-once, the version in the key and §2.3 write ownership hold; the
-manifest is written last, and ``verify_run_workspace`` is run over the sealed
-result before the run reports success. It states its §4.1 input versions too
-(#336) — and for a fixture run with pass-through stages that statement is
-that it read none of them, which is the honest one.
+create-once, the version in the key and §2.3 write ownership hold; the manifest
+is written last, and ``verify_run_workspace`` is run over the sealed result
+before the run reports success. It states its §4.1 input versions too (#336) —
+and for a fixture run with pass-through stages that statement is that it read
+none of them, which is the honest one.
 
-**The ledger takes the summary.** The run ends with a public-safe RunSummary
-in ``data/editorial/`` (§3.2) and, when the caller asks for it, a commit. A
-commit that fails is recorded and the run still ends normally (§3.1) — which
-is the one behaviour of this harness that production will depend on.
+**The ledger takes the summary.** The run ends with a public-safe RunSummary in
+``data/editorial/`` (§3.2) and, when the caller asks for it, a commit. A commit
+that fails is recorded and the run still ends normally (§3.1) — which is the one
+behaviour of this harness that production will depend on.
 
 Production safety
 -----------------
 Shadow only, and unable to be otherwise:
 
-- there are no model calls. The run carries an :class:`ArpCallBudget` and
-  spends nothing from it, and the provider it carries is
-  :class:`RefusingProvider`, which raises if anything asks it for text;
-- there is no external publish call and no publication marker. S-14 runs in
-  shadow: it writes the run's own publication record and fingerprint, and
-  consults no idempotency authority, because it publishes nothing;
-- the ledger commit is off unless a caller turns it on, so running the
-  skeleton on a developer's machine or in a test cannot touch the repository.
+- the pass-through run makes **no** model call. It carries an
+  :class:`ArpCallBudget` and spends nothing from it, and the provider it carries
+  is :class:`RefusingProvider`, which raises if anything asks it for text;
+- the canonical run constructs **no** transport and reads no model
+  configuration: its seams are handed in, so a test supplies typed doubles and
+  cannot make a paid call, and ``NB_GOLDEN_ENGINE_MODEL`` stays a requirement of
+  whoever builds real transports, with no default anywhere;
+- there is no external publish call and no publication marker. The canonical
+  run does not execute S-14 at all (#308 owns it), and S-14 in the pass-through
+  run writes the run's own publication record and fingerprint, consults no
+  idempotency authority, and publishes nothing;
+- the ledger commit is off unless a caller turns it on, so running either on a
+  developer's machine or in a test cannot touch the repository.
 
 S-15 is post-run: in the target it is a scheduled observation job (SL-12) over
-already-published destinations. It runs here, in order, as the pass-through
-the slice asks for — writing no entity, because §2.3 gives it no workspace
-path and the workspace writer would refuse one.
+already-published destinations. It runs in the pass-through harness, in order,
+as the pass-through the slice asks for — writing no entity, because §2.3 gives
+it no workspace path and the workspace writer would refuse one.
 
 Sources: ``docs/editorial/architecture/07_STEP6_VERTICAL_SLICES.md`` §2 (SL-1)
 and §0.2; ``docs/editorial/architecture/04_STEP3_STORAGE_AND_RUN_TRACE.md``
@@ -56,13 +81,15 @@ and §0.2; ``docs/editorial/architecture/04_STEP3_STORAGE_AND_RUN_TRACE.md``
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, NamedTuple, Optional
 
-from src.editorial_core.arp import OutcomeScope
+from src.editorial_core.arp import AttemptCounterLedger, OutcomeScope
+from src.editorial_core.signal_selection import PortfolioFingerprint
+from src.editorial_core.text_check import PriorPublication
 from src.editorial_core.topology import CANONICAL_TOPOLOGY
 from src.publishing.publication_markers import DESTINATIONS, active_client
 from src.run.boundary_commit import (
@@ -75,6 +102,13 @@ from src.run.boundary_commit import (
 from src.run.call_budget import DEFAULT_CEILING, RunCallBudget
 from src.run.call_budget_arp import ArpCallBudget
 from src.run.code_identity import CodeIdentity, resolve_code_identity
+from src.run.golden_engine import (
+    CanonicalExecution,
+    GoldenEngineConfiguration,
+    GoldenEngineSeams,
+    ResearchBinding,
+    execute_canonical_topology,
+)
 from src.run.ledger import (
     DEFAULT_PUSH_ATTEMPTS,
     DEFAULT_RETRY_SECONDS,
@@ -117,8 +151,15 @@ CANONICAL_DESTINATIONS: tuple[str, ...] = DESTINATIONS
 #: its decider is ``code`` and it has no model or rule identity.
 SKELETON_COMPONENT = "walking-skeleton"
 
-#: Written into every entity body. A reader that finds one of these files must
-#: be able to tell at a glance that it carries no editorial content.
+#: What a canonical run records as the strategy that produced it. Distinct from
+#: :data:`SKELETON_COMPONENT` so that a RunSummary says which of the two runs it
+#: summarizes without a reader having to open the workspace.
+GOLDEN_ENGINE_STRATEGY_REF = "golden-engine"
+
+#: Written into every entity body **of the pass-through run**. A reader that
+#: finds one of these files must be able to tell at a glance that it carries no
+#: editorial content — and, since #351, that the workspace holding it is not a
+#: canonical run. The canonical run writes this nowhere.
 PASS_THROUGH_MARKER = "pass_through"
 
 #: What the manifest states for every §4.1 input when the caller supplies no
@@ -129,6 +170,16 @@ PASS_THROUGH_MARKER = "pass_through"
 SKELETON_READS_NO_INPUT = (
     "the walking skeleton is a fixture shadow run: every stage is a typed "
     "pass-through and reads no editorial input"
+)
+
+#: What the manifest states when a **canonical** run's caller recorded no §4.1
+#: input versions. Deliberately a different sentence from
+#: :data:`SKELETON_READS_NO_INPUT`: the canonical stages do read editorial
+#: inputs, so the honest statement is about the caller's record of them and not
+#: about the engine.
+CANONICAL_INPUTS_NOT_STATED = (
+    "this run's caller recorded no §4.1 input versions; the inputs the "
+    "canonical stages read are not stated by this manifest"
 )
 
 #: §2.1: the workspace is one Actions artifact per run, 90 days.
@@ -144,28 +195,32 @@ _BOUNDARY_ENTITY_TYPE = "E-09"
 
 
 class SkeletonError(RuntimeError):
-    """The skeleton was asked for a run it cannot honestly make."""
+    """The harness was asked for a run it cannot honestly make."""
 
 
 class ProviderRefused(RuntimeError):
-    """Something asked the shadow run's provider for text."""
+    """Something asked the pass-through run's provider for text."""
 
 
 class RefusingProvider:
     """The "fake provider" of the walking skeleton: it answers nothing.
 
-    A stage of this slice has no logic, so nothing in the run has anything to
-    ask a model. Carrying a provider that refuses — rather than no provider at
-    all — is what makes "no model calls" a property the run enforces instead of
-    one it happens to have: a stage that grows a call before its slice arrives
-    fails loudly here, in shadow, rather than quietly spending a budget.
+    A stage of SL-1 has no logic, so nothing in that run has anything to ask a
+    model. Carrying a provider that refuses — rather than no provider at all —
+    is what makes "no model calls" a property the run enforces instead of one it
+    happens to have: a stage that grows a call before its slice arrives fails
+    loudly here, in shadow, rather than quietly spending a budget.
+
+    It is **not** reachable from the canonical run. :func:`run_golden_engine`
+    takes its model boundaries as an argument and builds none, so there is
+    nowhere for this to be substituted for a real transport.
     """
 
     def complete(self, *args: Any, **kwargs: Any) -> str:
         raise ProviderRefused(
             "the walking skeleton makes no model calls: every stage is a typed "
-            "pass-through, and the stage logic that needs a provider arrives "
-            "in SL-3 and later"
+            "pass-through, and the real stages run through run_golden_engine "
+            "over the production transport bindings instead"
         )
 
 
@@ -591,7 +646,7 @@ def _pass_throughs(
 
 
 # ===========================================================================
-# The run
+# The pass-through run (SL-1)
 # ===========================================================================
 
 
@@ -642,6 +697,11 @@ def run_walking_skeleton(
     inputs: Optional[RunInputs] = None,
 ) -> SkeletonRun:
     """Run the canonical topology end to end as pass-throughs, and report.
+
+    SL-1's run, unchanged by #351 and deliberately so: it is the acceptance
+    evidence for the harness below the stages, and every entity it writes
+    declares itself a pass-through, so a workspace it produced can never be
+    read as a canonical run. The canonical run is :func:`run_golden_engine`.
 
     ``commit`` is off by default: a shadow run that wrote to the repository
     because nobody said otherwise would be a production effect, and this slice
@@ -708,12 +768,25 @@ def run_walking_skeleton(
         context=context,
         manifest=manifest,
         records=tuple(records),
-        fixture=signal,
-        destinations=names,
+        signal_ids=(signal.signal_id,),
+        unit_ids=(signal.unit_id,),
+        scopes=_scopes(signal, names),
         run_dir=workspace.run_dir,
         client=client or active_client(),
         budget=budget,
         code_identity=identity,
+        # Every plan was approved at the first attempt and every text accepted
+        # at version 1, because a pass-through has nothing to fail at. The
+        # flags are recorded so that the rate is computable from the ledger.
+        first_pass=tuple(
+            DestinationFirstPass(
+                destination=name,
+                plan_first_pass=True,
+                text_first_pass=True,
+            )
+            for name in names
+        ),
+        fingerprint_ids=tuple(signal.fingerprint_id(name) for name in names),
         ledger_dir=ledger_dir,
         commit=commit,
         repo_root=repo_root,
@@ -767,6 +840,219 @@ def _execute(
     return record
 
 
+# ===========================================================================
+# The canonical run (#351)
+# ===========================================================================
+
+
+class GoldenEngineRun(NamedTuple):
+    """One completed canonical run and the evidence it produced.
+
+    Beside :class:`SkeletonRun` rather than instead of it, and the two are
+    deliberately different types: a caller holding one of these has a run over
+    the real stages, and no field of it can be satisfied by a pass-through.
+    There is no ``provider`` here, because the canonical run builds none — its
+    model boundaries are handed in.
+    """
+
+    run_context: RunContext
+    run_dir: Path
+    manifest: RunManifest
+    verification: RunWorkspaceReport
+    records: tuple[StageRecord, ...]
+    summary: RunSummary
+    summary_path: Path
+    #: What the execution itself reported: the identities, the scopes and the
+    #: first-pass flags no single StageRecord carries.
+    execution: CanonicalExecution
+    records_commit: LedgerCommitReport
+    summary_commit: LedgerCommitReport
+
+    @property
+    def destination_dirs(self) -> tuple[Path, ...]:
+        """The destination folders the run created, sorted by name."""
+
+        return tuple(sorted(
+            path
+            for path in (self.run_dir / "units").glob("*/destinations/*")
+            if path.is_dir()
+        ))
+
+
+def canonical_run_context(signal_id: str, started_at: datetime) -> RunContext:
+    """The identity of one canonical shadow run.
+
+    Built directly rather than through ``RunContext.from_assignment`` for the
+    callers that have no ContentAssignment to hand — a diagnostic run over one
+    intake record. The run is a dry run by construction: the canonical engine
+    does not publish until SL-11, and this harness does not execute S-14 at all.
+    """
+
+    return RunContext(
+        run_id=create_run_id(),
+        assignment_id=signal_id,
+        started_at=started_at,
+        strategy_ref=GOLDEN_ENGINE_STRATEGY_REF,
+        strategy_version="1.0",
+        execution_mode=ExecutionMode.DRY_RUN,
+        schema_version="1.0",
+    )
+
+
+def run_golden_engine(
+    *,
+    seams: GoldenEngineSeams,
+    configuration: GoldenEngineConfiguration,
+    signal: Mapping[str, Any],
+    binding: ResearchBinding,
+    runs_root: Optional[Path] = None,
+    run_context: Optional[RunContext] = None,
+    started_at: Optional[datetime] = None,
+    destinations: Sequence[str] = CANONICAL_DESTINATIONS,
+    client: Optional[str] = None,
+    call_budget_limit: int = DEFAULT_CEILING,
+    counters: Optional[AttemptCounterLedger] = None,
+    now: Optional[datetime] = None,
+    portfolio: Sequence[PortfolioFingerprint] = (),
+    priors: Sequence[PriorPublication] = (),
+    ledger_dir: Optional[Path] = None,
+    commit: bool = False,
+    repo_root: Optional[Path] = None,
+    commit_attempts: int = DEFAULT_PUSH_ATTEMPTS,
+    commit_retry_seconds: float = DEFAULT_RETRY_SECONDS,
+    code_identity: Optional[CodeIdentity] = None,
+    inputs: Optional[RunInputs] = None,
+) -> GoldenEngineRun:
+    """Run the real S-00…S-13 over one intake record, seal it, and report.
+
+    ``seams`` and ``configuration`` are required and have no defaults. That is
+    the production-safety property of this signature: this function constructs
+    no transport, reads no model configuration and loads no contract, so there
+    is nowhere here for a fallback provider or a defaulted client value to
+    appear — and nothing in it can reach :class:`RefusingProvider` either.
+
+    ``commit`` is off by default, for the reason the pass-through run's is. With
+    it on, a failed commit is recorded in the report and the run still returns
+    normally (§3.1).
+
+    Raises only when the run cannot honestly be made: a destination list that is
+    not the canonical six, a registry stage the engine has no implementation
+    for, a destination set S-07 did not decide about, or a sealed workspace that
+    does not verify. None of those is a run with a defect in it; each is a run
+    that must not be offered as evidence.
+    """
+
+    names = _checked_destinations(destinations)
+    context = run_context or canonical_run_context(
+        str(signal.get("SIGNAL_ID") or "unidentified-signal"),
+        started_at or datetime.now(tz=timezone.utc),
+    )
+    identity = (
+        code_identity if code_identity is not None else resolve_code_identity()
+    )
+    budget = ArpCallBudget(RunCallBudget(call_budget_limit))
+    workspace = RunWorkspace.create(
+        Path(runs_root) if runs_root is not None else EDITORIAL_RUNS_ROOT,
+        context.run_id,
+    )
+    execution = execute_canonical_topology(
+        workspace=workspace,
+        run_context=context,
+        seams=seams,
+        configuration=configuration,
+        signal=signal,
+        binding=binding,
+        budget=budget,
+        counters=counters,
+        now=now,
+        portfolio=portfolio,
+        priors=priors,
+    )
+    decided_every_destination(execution.records, names)
+
+    manifest = workspace.write_manifest(
+        context,
+        identity,
+        inputs=(
+            inputs
+            if inputs is not None
+            else RunInputs.stated_absent(CANONICAL_INPUTS_NOT_STATED)
+        ),
+    )
+    verification = verify_run_workspace(workspace.run_dir.parent, context.run_id)
+
+    ledger = _write_ledger(
+        context=context,
+        manifest=manifest,
+        records=execution.records,
+        # A run refused at S-00 still names the signal it refused: the summary's
+        # signal list is what the run was about, not what it accepted.
+        signal_ids=execution.signal_ids or (context.assignment_id,),
+        unit_ids=execution.unit_ids,
+        scopes=execution.scopes,
+        run_dir=workspace.run_dir,
+        client=client or active_client(),
+        budget=budget,
+        code_identity=identity,
+        first_pass=execution.first_pass,
+        # None, and that is the honest value: E-16 is S-14's output and S-14 is
+        # not executed here. A fingerprint listed by a run that produced none
+        # would be a learning record nobody can open.
+        fingerprint_ids=(),
+        split_candidate=execution.split_candidate,
+        ledger_dir=ledger_dir,
+        commit=commit,
+        repo_root=repo_root,
+        commit_attempts=commit_attempts,
+        commit_retry_seconds=commit_retry_seconds,
+    )
+    return GoldenEngineRun(
+        run_context=context,
+        run_dir=workspace.run_dir,
+        manifest=manifest,
+        verification=verification,
+        records=execution.records,
+        summary=ledger.summary,
+        summary_path=ledger.summary_path,
+        execution=execution,
+        records_commit=ledger.records_commit,
+        summary_commit=ledger.summary_commit,
+    )
+
+
+def decided_every_destination(
+    records: Sequence[StageRecord], destinations: Sequence[str]
+) -> None:
+    """S-07 decided about every destination the run declared, or the run fails.
+
+    The other half of Principle B, and the half a destination list alone cannot
+    give: the declaration says six, and this says the run really produced six
+    decisions, each citing a rule and a tier (§1, Post). A run that reached S-07
+    and decided about five would otherwise seal a verified manifest over a unit
+    one surface short, and nothing downstream would notice.
+
+    A run that stopped **before** S-07 is not short of decisions — it has none,
+    recorded as the ``SKIP`` that ended it — so there is nothing here to check.
+    """
+
+    decided = [record for record in records if record.stage == "S-07"]
+    if not decided:
+        return
+    produced = sum(len(record.outputs) for record in decided)
+    if produced != len(destinations):
+        raise SkeletonError(
+            f"S-07 wrote {produced} destination decision(s) and the run declared "
+            f"{len(destinations)}. §1 asks for exactly one decision per declared "
+            "destination, eligible or excluded; a run short of one has a surface "
+            "nobody decided about"
+        )
+
+
+# ===========================================================================
+# What both runs share
+# ===========================================================================
+
+
 def _checked_destinations(destinations: Sequence[str]) -> tuple[str, ...]:
     """The six, in publication order, or a refusal (Principle B, §0.2).
 
@@ -800,17 +1086,21 @@ def _write_ledger(
     context: RunContext,
     manifest: RunManifest,
     records: tuple[StageRecord, ...],
-    fixture: SkeletonFixture,
-    destinations: Sequence[str],
+    signal_ids: Sequence[str],
+    unit_ids: Sequence[str],
+    scopes: Sequence[RunScope],
     run_dir: Path,
     client: str,
     budget: ArpCallBudget,
     code_identity: Optional[CodeIdentity],
+    first_pass: Sequence[DestinationFirstPass],
+    fingerprint_ids: Sequence[str],
     ledger_dir: Optional[Path],
     commit: bool,
     repo_root: Optional[Path],
     commit_attempts: int,
     commit_retry_seconds: float,
+    split_candidate: bool = False,
 ) -> _LedgerStep:
     """Write the RunSummary to the ledger, and commit if asked (§3.1, §3.2).
 
@@ -821,9 +1111,14 @@ def _write_ledger(
     caller rather than written into the file that failed to be committed.
 
     What §3.1 promises holds either way: the records are on disk, the run does
-    not wait, and nothing is undone. This slice writes no learning record yet —
+    not wait, and nothing is undone. Neither run writes a learning record yet —
     fingerprints arrive with S-14 in SL-7 and observations with S-15 in SL-12 —
     so the first step normally has nothing to commit, and says so.
+
+    The identities and the scopes are arguments rather than derived, because the
+    two runs know them differently: the pass-through run derives them from its
+    fixture, and the canonical run is told them by the stages that produced
+    them. Everything below that is identical, which is why it is one function.
     """
 
     records_commit = _commit(
@@ -841,10 +1136,10 @@ def _write_ledger(
         run_context=context,
         manifest=manifest,
         records=records,
-        scopes=_scopes(fixture, destinations),
+        scopes=scopes,
         client=client,
-        signal_ids=(fixture.signal_id,),
-        unit_ids=(fixture.unit_id,),
+        signal_ids=signal_ids,
+        unit_ids=unit_ids,
         workspace=WorkspaceRef(
             artifact_name=f"editorial-run-{context.run_id}",
             retention_days=WORKSPACE_RETENTION_DAYS,
@@ -854,20 +1149,9 @@ def _write_ledger(
         call_budget_limit=budget.limit,
         ledger_commit=records_commit.status,
         code_identity=code_identity,
-        # Every plan was approved at the first attempt and every text accepted
-        # at version 1, because a pass-through has nothing to fail at. The
-        # flags are recorded so that the rate is computable from the ledger.
-        first_pass=tuple(
-            DestinationFirstPass(
-                destination=name,
-                plan_first_pass=True,
-                text_first_pass=True,
-            )
-            for name in destinations
-        ),
-        fingerprint_ids=tuple(
-            fixture.fingerprint_id(name) for name in destinations
-        ),
+        first_pass=first_pass,
+        fingerprint_ids=fingerprint_ids,
+        split_candidate=split_candidate,
     )
     summary_path = write_run_summary(summary, root=ledger_dir)
     summary_commit = _commit(
@@ -906,12 +1190,15 @@ def _commit(
 def _scopes(
     fixture: SkeletonFixture, destinations: Sequence[str]
 ) -> tuple[RunScope, ...]:
-    """Every scope this run had, for the summary's final-state table (§3.3).
+    """Every scope the pass-through run had, for the §3.3 final-state table.
 
     The signal, the unit and the six destinations — and no publication scope,
     because a shadow run makes no external call and a publication that never
     happened must not appear in the ledger as one that resolved. When S-14
     publishes for real (SL-11), its scopes join this list.
+
+    The canonical run declares its own (``CanonicalExecution.scopes``), from
+    what it actually reached rather than from a fixture's names.
     """
 
     return (

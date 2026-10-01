@@ -133,6 +133,25 @@ def selection_candidate(record: Mapping[str, Any]) -> SelectionCandidate:
     )
 
 
+def stated_single_value(
+    record: Mapping[str, Any], field: str
+) -> Optional[str]:
+    """The one value this record states for ``field``, or ``None``.
+
+    Public because the same question is asked twice about the same record, in
+    two places that must not answer it differently: this module lifts the
+    domain for S-00's ``topic_key``, and the harness lifts the same two fields
+    for S-07's ``UnitFacts``. One function, so "what does this record state"
+    has one answer — and so a later change to the discipline below (a list of
+    one states that one; a list of several states nothing) reaches both.
+
+    It states and never decides: ``None`` is "the record says nothing here",
+    which every consumer of it reads as fail-closed rather than as a value.
+    """
+
+    return _single_value(record.get(field))
+
+
 # ----------------------------------------------------------------------
 # The two facts portfolio pressure compares (U-2 rule 4.2)
 # ----------------------------------------------------------------------
