@@ -102,10 +102,16 @@ _ENGINE_SOURCE = (_REPO_ROOT / "src" / "run" / "golden_engine.py").read_text(
 
 
 def test_the_wired_stages_are_the_editorial_core_of_the_registry():
-    """S-00…S-13, derived from the registry rather than listed a second time."""
+    """S-00…S-13 from the registry, and S-14 beside them (#308).
 
-    assert WIRED_STAGES == CANONICAL_TOPOLOGY.editorial_core_stage_ids
-    assert UNWIRED_STAGES == ("S-14", "S-15")
+    The editorial core is derived rather than listed a second time, and
+    publication is named beside it: S-14 is not an editorial-core stage — it
+    decides nothing and makes no model call — so it is the one member of this
+    tuple the registry's ``editorial_core_stage_ids`` does not supply.
+    """
+
+    assert WIRED_STAGES == (*CANONICAL_TOPOLOGY.editorial_core_stage_ids, "S-14")
+    assert UNWIRED_STAGES == ("S-15",)
     assert not set(WIRED_STAGES) & set(UNWIRED_STAGES)
     assert set(WIRED_STAGES) | set(UNWIRED_STAGES) == set(
         CANONICAL_TOPOLOGY.stage_ids
@@ -126,16 +132,17 @@ def test_a_stage_the_harness_does_not_wire_stops_the_run(monkeypatch):
 
     monkeypatch.setattr(golden_engine, "WIRED_STAGES", WIRED_STAGES[:-1])
 
-    with pytest.raises(StageNotWiredError, match="S-13"):
+    with pytest.raises(StageNotWiredError, match="S-14"):
         check_every_stage_is_wired()
 
 
-def test_the_unwired_stages_are_the_two_this_slice_does_not_own():
-    """S-14 is #308's and S-15 is SL-12's, and neither has an implementation.
+def test_the_unwired_stage_is_the_one_this_engine_does_not_own():
+    """S-15 is SL-12's and has no implementation.
 
-    Named rather than silently absent: "the run ends at S-13" is a statement
-    the module makes, so a later slice that implements S-14 has to move it out
-    of this tuple and into the wiring, in the open.
+    Named rather than silently absent: "the run ends at S-14" is a statement
+    the module makes, so the slice that implements S-15 has to move it out of
+    this tuple and into the wiring, in the open — which is what #308 did with
+    S-14.
     """
 
     for stage in UNWIRED_STAGES:
@@ -191,6 +198,18 @@ STAGE_ENTRIES: dict[str, tuple[str, str]] = {
         "src.editorial_core.text_check",
         "recheck_siblings_after_boundary_commit",
     ),
+    # Outside ``editorial_core`` on purpose: the registry's own
+    # ``editorial_core_stage_ids`` ends at S-13, publication is where
+    # destination capability legitimately decides what happens, and the CE-1
+    # placement rule governs the core and not this module.
+    #
+    # In ``src/run/`` and not in ``src/publishing/`` beside the six publishers,
+    # which is the other place it could have gone: this stage is made of core
+    # types, and AD-05's wall — asserted in ``test_351_golden_engine_seams`` —
+    # lets nothing under ``src/publishing/`` or ``src/editorial/`` import the
+    # editorial core. Putting it there would have given the legacy publishing
+    # layer an import of an engine it does not run.
+    "S-14": ("src.run.shadow_publication", "publish_in_shadow"),
 }
 
 
@@ -673,16 +692,20 @@ def test_the_execution_reports_where_it_stopped_rather_than_how_far_it_got():
 
 
 def test_the_execution_reports_what_was_accepted_and_claims_no_publication():
-    """E-16 and a publication are S-14's, and S-14 is not executed here.
+    """S-14 runs here (#308) and it publishes nothing, which the shape says.
 
     ``accepted`` is a list of destinations holding an accepted text, which is
-    not the same claim: a text S-13 accepted may be published and has not been.
-    A field named for publication would let a reader of the ledger count a run
-    that published nothing as one that did.
+    not the same claim as a publication: a text S-13 accepted may be published
+    and has not been. ``fingerprints`` and ``publications`` are S-14's output
+    and carry that distinction in their own types — every
+    :class:`~src.run.shadow_publication.DestinationPublication` refuses
+    to be constructed as published — so no field here can let a reader of the
+    ledger count a run that published nothing as one that did.
     """
 
     fields = golden_engine.CanonicalExecution._fields
 
     assert "accepted" in fields
-    assert not [name for name in fields if "publication" in name]
-    assert not [name for name in fields if "fingerprint" in name]
+    assert "fingerprints" in fields
+    assert "publications" in fields
+    assert not [name for name in fields if "published" in name]

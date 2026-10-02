@@ -1,0 +1,154 @@
+# Canonical shadow run (NB-07a, SL-7).
+#
+# Runs the complete canonical engine — S-00 → S-14, all six destinations — on
+# real signals, on a schedule, and publishes nothing. Its purpose is the SL-7
+# baseline: measure what the architecture really costs per stage and per
+# destination before anything is optimized (Step 6, SL-7 and SL-10).
+#
+# Why it cannot publish
+# ---------------------
+# Three independent reasons, and none of them is a flag this job sets:
+#
+#   1. S-14 runs in shadow mode (`src/run/shadow_publication.py`). It
+#      constructs no publisher, consults no idempotency authority and writes no
+#      marker. There is no input to this workflow that changes that;
+#   2. this job has **no publisher credential in its environment**. Wix,
+#      LinkedIn, Meta, Threads and Telegram secrets are deliberately absent, so
+#      even a defect that reached a publisher would have nothing to publish
+#      with. Compare `daily_signal_research.yml`, which carries all of them
+#      because it may publish;
+#   3. there is no "persist publication markers" step. The daily research
+#      workflow has one because a marker must outlive a partial failure
+#      (S3-I1); a run that publishes nothing produces none, and a step that
+#      committed one would be recording a publication that did not happen.
+#
+# What it does write: the durable learning ledger (Step 3 §3.2) — one
+# RunSummary and one fingerprint per accepted text, both public-safe by
+# construction and neither carrying any text. That is the point of the run:
+# the 90-day workspace artifact expires and Portfolio Memory must not.
+#
+# Its own ceiling
+# ---------------
+# `NB_CANONICAL_SHADOW_CALL_BUDGET` is this path's `RunCallBudget` ceiling and
+# nothing else's. It defaults to the canonical engine's own maximum (60) and is
+# refused below the measured cost of a clean six-destination run, because a
+# ceiling that stops the run partway makes the measurement a measurement of the
+# stop. `NB_RUN_TEXT_CALL_BUDGET`, the legacy engine's, is untouched.
+
+name: Canonical shadow run
+
+on:
+  schedule:
+    # 09:00 UTC, an hour after Daily Signal Research: Stage 4 enrichment writes
+    # the two editorial classifications S-00's fit rules read, so by this hour
+    # the stream normally holds a candidate the engine can run end to end.
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+    inputs:
+      signals:
+        description: "How many candidates to run, most recent first"
+        required: false
+        type: string
+        default: "1"
+      any_signal:
+        description: >-
+          Run the most recent candidates even when their record states no
+          editorial classification (measures the S-00 refusal path)
+        required: false
+        type: boolean
+        default: false
+
+# The durable ledger is committed (Step 3 §3.1). Nothing else is written.
+permissions:
+  contents: write
+
+# One canonical shadow run at a time: two concurrent runs would each spend a
+# full ceiling, and the baseline is read per run rather than per hour.
+concurrency:
+  group: canonical-shadow-run
+  cancel-in-progress: false
+
+jobs:
+  shadow-run:
+    name: Canonical engine S-00 to S-14, no publication
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Identify the committer of the learning records
+        run: |
+          git config user.name  "never-blank-bot"
+          git config user.email "bot@never-blank.com"
+
+      - name: Run the canonical engine in shadow
+        id: shadow
+        env:
+          # The model boundaries. NB_GOLDEN_ENGINE_MODEL has no fallback: the
+          # canonical stages must not inherit whatever the legacy pipeline is
+          # set to (#361).
+          NB_OPENAI_API_KEY:   ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_GOLDEN_ENGINE_MODEL: ${{ secrets.NB_GOLDEN_ENGINE_MODEL }}
+          # S-00's eligibility judgment, S-01's evidence assessment and the
+          # Decision Lens are the three boundaries outside that bundle; all
+          # three go through the shared client's enrichment model.
+          NB_ENRICH_MODEL:     ${{ secrets.NB_ENRICH_MODEL }}
+          NB_OPENAI_CHAT_MODEL: ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          # Retrieval. Absent is a recorded `research_failed`, not a stub.
+          NB_EXA_API_KEY:      ${{ secrets.NB_EXA_API_KEY }}
+          # This path's ceiling, and no other path's. Unset renders as an empty
+          # string here (#173), which the reader treats as "not configured" and
+          # not as an invalid value.
+          NB_CANONICAL_SHADOW_CALL_BUDGET: ${{ vars.NB_CANONICAL_SHADOW_CALL_BUDGET }}
+          # Through the environment rather than interpolated into the command:
+          # a dispatch input is a string somebody typed, and a string somebody
+          # typed never becomes part of a shell line.
+          SIGNALS: ${{ inputs.signals || '1' }}
+          ANY_SIGNAL: ${{ inputs.any_signal && '1' || '' }}
+        run: |
+          args=(--signals "${SIGNALS}" --commit)
+          if [ -n "${ANY_SIGNAL}" ]; then
+            args+=(--any-signal)
+          fi
+          set +e
+          python3 scripts/run_canonical_shadow.py "${args[@]}" \
+            > shadow-run.md 2> shadow-run.err
+          status=$?
+          set -e
+          cat shadow-run.md >> "$GITHUB_STEP_SUMMARY"
+          cat shadow-run.err
+          # 3 is "the stream holds no candidate this run can measure", which is
+          # a state of the data and not a failure: the historical signals carry
+          # no editorial classification, and a workflow that went red for that
+          # would train everybody to ignore the colour (#231).
+          if [ "${status}" = "3" ]; then
+            {
+              echo "### Nothing to measure"
+              echo
+              sed 's/^/> /' shadow-run.err
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          exit "${status}"
+
+      # §2.1: the run workspace is one Actions artifact per run, 90 days.
+      # Everything that must outlive it is in the ledger this job committed.
+      - name: Upload the run workspaces
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: canonical-shadow-${{ github.run_id }}
+          path: reports/editorial_runs/
+          retention-days: 90
+          if-no-files-found: ignore

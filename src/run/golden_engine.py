@@ -60,11 +60,15 @@ what it needs to:
 
 Where the run stops
 -------------------
-At S-13. S-14 and S-15 are #308's and SL-12's, and a stage of the topology that
-has no implementation stops the run rather than being papered over
-(:class:`StageNotWiredError`) — the one rule this module keeps from the
-pass-through harness it replaces, and the reason a pass-through cannot reappear
-quietly.
+At S-14, **in shadow mode** (#308, SL-7). The stage is
+:mod:`src.run.shadow_publication`: it fingerprints every accepted text,
+packages where a canonical packager exists, writes no marker and makes no
+external publish call — and it constructs no publisher, so there is no state in
+which this engine could reach a platform. S-15 is SL-12's and has no
+implementation, and a stage of the topology that has none stops the run rather
+than being papered over (:class:`StageNotWiredError`) — the one rule this module
+keeps from the pass-through harness it replaces, and the reason a pass-through
+cannot reappear quietly.
 
 Sources: ``docs/editorial/architecture/03_STEP2_STAGE_CONTRACTS.md`` §0.2–§0.4,
 §1–§5.4; ``docs/editorial/architecture/04_STEP3_STORAGE_AND_RUN_TRACE.md`` §2.2,
@@ -224,6 +228,14 @@ from src.run.run_workspace import (
     StageStatus,
     file_digest,
 )
+from src.run.shadow_publication import (
+    FINGERPRINT_ENTITY_TYPE,
+    PUBLICATION_ENTITY_TYPE,
+    AcceptedText,
+    DestinationPublication,
+    Fingerprint,
+    publish_in_shadow,
+)
 from src.run.signal_adapter import (
     DOMAIN_FIELD,
     RISK_FIELD,
@@ -299,13 +311,15 @@ WIRED_STAGES: Final[tuple[str, ...]] = (
     "S-11",
     "S-12",
     "S-13",
+    "S-14",
 )
 
-#: The two stages of the topology this slice does not execute. S-14 is #308's
-#: and S-15 is SL-12's, and neither has an implementation to call — so the run
-#: ends at S-13 and says so, rather than standing a pass-through in for them,
-#: which is exactly what this slice exists to remove.
-UNWIRED_STAGES: Final[tuple[str, ...]] = ("S-14", "S-15")
+#: The one stage of the topology this engine does not execute. S-15 is SL-12's
+#: — it is an observation job over already-published destinations, after the
+#: run — and it has no implementation to call, so the run ends at S-14 and says
+#: so rather than standing a pass-through in for it, which is exactly what #351
+#: removed.
+UNWIRED_STAGES: Final[tuple[str, ...]] = ("S-15",)
 
 
 class GoldenEngineError(RuntimeError):
@@ -523,7 +537,21 @@ class GoldenEngineConfiguration:
     text_checks: Mapping[str, LoadedCheck]
     knowledge: KnowledgeBase
     register_dir: Path
+    client_dir: Path
     library: Optional[ReferenceLibrary] = None
+
+    @property
+    def client(self) -> str:
+        """The client this run executed for: its client directory's name.
+
+        The same answer :func:`~src.publishing.publication_markers.active_client`
+        gives, reached through the directory this configuration was loaded from
+        rather than through the deployment's: a run states the client whose
+        contract it read, and a second source for that would let a fingerprint
+        be filed under a client whose rules the run never applied.
+        """
+
+        return self.client_dir.name
 
     @property
     def approved_positions(self) -> tuple[str, ...]:
@@ -662,6 +690,7 @@ def golden_engine_configuration(
         text_checks=text_check_records(knowledge),
         knowledge=knowledge,
         register_dir=register_dir,
+        client_dir=client_dir,
         library=reference_library(directory=client_dir),
     )
 
@@ -686,9 +715,9 @@ class CanonicalExecution(NamedTuple):
     first_pass: tuple[DestinationFirstPass, ...]
     split_candidate: bool
     #: Destinations holding an accepted text at the end of the run. Not a
-    #: publication: S-14 is #308's, and nothing here publishes.
+    #: publication: S-14 runs in shadow mode here, and nothing publishes.
     accepted: tuple[Destination, ...]
-    #: Where the run stopped, when it stopped before S-13. ``None`` for a run
+    #: Where the run stopped, when it stopped before S-14. ``None`` for a run
     #: that reached the end of the wired topology.
     stopped_at: Optional[str] = None
     #: The verdict behind each accepted text, in destination order. Carried
@@ -696,6 +725,19 @@ class CanonicalExecution(NamedTuple):
     #: the free text stays in the workspace (§3.3) — so what a soft check like
     #: V-S05 actually found is readable from the execution and from nowhere else.
     verdicts: tuple[TextVerdict, ...] = ()
+    #: S-14's output: one ``E-16`` per accepted text, in publication order. The
+    #: harness writes the durable copies from these (§3.2), so they are carried
+    #: as the entities and not only as their IDs.
+    fingerprints: tuple[Fingerprint, ...] = ()
+    #: What S-14 did about each destination, in the same order. Every one of
+    #: them published nothing — see :mod:`src.run.shadow_publication`.
+    publications: tuple[DestinationPublication, ...] = ()
+
+    @property
+    def fingerprint_ids(self) -> tuple[str, ...]:
+        """The E-16 IDs this run produced, for the RunSummary (§3.3)."""
+
+        return tuple(item.fingerprint_id for item in self.fingerprints)
 
 
 # ===========================================================================
@@ -787,6 +829,12 @@ class _Trace:
         self._workspace = workspace
         self._context = context
         self.records: list[StageRecord] = []
+
+    @property
+    def run_id(self) -> str:
+        """The run every record here belongs to."""
+
+        return self._context.run_id
 
     def record(
         self,
@@ -915,6 +963,9 @@ class _Lane:
     attempt: int = 1
     re_entry: Optional[OutcomeRecord] = None
     strategy: Optional[EditorialStrategy] = None
+    #: S-09's selection for the strategy above. Kept because E-16 records the
+    #: ``deciding_tiebreaker`` and nothing downstream of S-09 carries it.
+    selection: Optional[StrategySelection] = None
     plan: Optional[ExecutablePlan] = None
     verdict: Optional[PlanVerdict] = None
     text: Optional[Text] = None
@@ -991,6 +1042,8 @@ class _Run:
         self.barrier_round = 0
         self.split_candidate = False
         self.lineage: dict[str, EntityRef] = {}
+        self.fingerprints: tuple[Fingerprint, ...] = ()
+        self.publications: tuple[DestinationPublication, ...] = ()
 
     # ------------------------------------------------------------------
     # The whole run
@@ -1026,6 +1079,7 @@ class _Run:
         if not self._barrier():
             return self._finished(stopped_at="S-11")
         self._produce_texts()
+        self._s14()
         return self._finished()
 
     # ------------------------------------------------------------------
@@ -1132,6 +1186,8 @@ class _Run:
                 for lane in self._ordered_lanes()
                 if lane.accepted is not None
             ),
+            fingerprints=self.fingerprints,
+            publications=self.publications,
         )
 
     def _scopes(self) -> tuple[RunScope, ...]:
@@ -1140,8 +1196,11 @@ class _Run:
         Declared from what the run actually reached: a destination the run never
         decided about is not a destination that resolved, and listing one would
         make the skip rate count a scope nobody attempted. No publication scope
-        — this run publishes nothing, and a publication that never happened must
-        not appear in the ledger as one that resolved.
+        — S-14 runs in shadow mode and publishes nothing, and a publication that
+        never happened must not appear in the ledger as one that resolved. What
+        the shadow stage did instead is in its own record (``publication.json``)
+        and in the fingerprints, which is where a reader of a *shadow* run looks
+        rather than in a skip rate that would count it as an editorial refusal.
         """
 
         scopes: list[RunScope] = []
@@ -1730,7 +1789,7 @@ class _Run:
             plan = self._s10(lane, chosen[0], chosen[1])
             if plan is None:
                 continue
-            self._s11(lane, chosen[0], plan)
+            self._s11(lane, chosen[0], chosen[1], plan)
 
     def _s08(self, lane: _Lane) -> Optional[CandidateSet]:
         self.executing = "S-08"
@@ -1862,6 +1921,7 @@ class _Run:
         self,
         lane: _Lane,
         strategy: EditorialStrategy,
+        selection: StrategySelection,
         plan: ExecutablePlan,
     ) -> None:
         assert self.boundary is not None and self.core is not None
@@ -1902,6 +1962,7 @@ class _Run:
             self._routed(lane, checked.outcomes)
             return
         lane.strategy = strategy
+        lane.selection = selection
         lane.plan = checked.approved
         lane.verdict = checked.verdict
         # The attempt that produced this plan is over, so the lane is no longer
@@ -1923,6 +1984,7 @@ class _Run:
         lane.plan = None
         lane.verdict = None
         lane.strategy = None
+        lane.selection = None
         lane.plan_first_pass = False
         if route is None:
             # The ledger refused the route, so this destination has ended. It is
@@ -1966,6 +2028,22 @@ class _Run:
                 "state for a stage run out of order"
             )
         return self.boundary, self.core
+
+    def _features(self) -> MaterialFeatures:
+        """The E-05 vector E-16 snapshots, read rather than cached.
+
+        Read, for the reason the boundary is: an enrichment round commits a new
+        features version mid-run, and a fingerprint built from the version the
+        run started with would remember material the text was not written from.
+        """
+
+        if self.features is None:
+            raise GoldenEngineError(
+                "S-14 was reached with no material features; §3 builds the "
+                "fingerprint snapshot from E-05, and §6.2 has no state for a "
+                "stage run out of order"
+            )
+        return self.features
 
     def _approved_plan(
         self, lane: _Lane
@@ -2584,6 +2662,168 @@ class _Run:
             lane, () if verdict.outcome is None else (verdict.outcome,)
         )
         return False
+
+    # ------------------------------------------------------------------
+    # S-14 · publication and fingerprint, in shadow mode (#308)
+    # ------------------------------------------------------------------
+
+    def _s14(self) -> None:
+        """Fingerprint every accepted text, package what can be packaged,
+        publish nothing.
+
+        Reached only after every destination of the unit has ended, which is
+        R-4 — "S-14 publishes after the unit's destinations reach a terminal
+        state" — and which is where ``_produce_texts`` returns: a run still
+        re-planning a destination has a sibling that may yet change, and a
+        fingerprint written before that would remember a text the run went on to
+        drop.
+
+        A run with no accepted text records **no** S-14 execution. This stage
+        runs at publication scope and such a run has no publication scope at
+        all; a record of one would put a scope into the summary that nothing
+        ever reached. Every reason there is no text is already recorded by the
+        stage that decided it.
+
+        The decisions are the whole stage: no model call (§3 Calls: 0), no
+        marker, no publisher and no idempotency lookup. What this method adds to
+        :func:`~src.run.shadow_publication.publish_in_shadow` is the two
+        writes §2.3 gives S-14 and the StageRecord that says they happened.
+        """
+        self.executing = "S-14"
+
+        unit = self._unit()
+        features = self._features()
+        accepted: list[AcceptedText] = []
+        for lane in self._ordered_lanes():
+            verdict = lane.accepted
+            if verdict is None:
+                continue
+            text, plan, strategy = lane.text, lane.plan, lane.strategy
+            if text is None or plan is None or strategy is None:
+                raise GoldenEngineError(
+                    f"{lane.destination.value} holds an accepted verdict and no "
+                    "text, approved plan or strategy; §3 fingerprints the "
+                    "accepted E-15 with the E-14, E-13 and E-05 it came from, "
+                    "and §6.2 has no state for a stage run out of order"
+                )
+            accepted.append(
+                AcceptedText(
+                    decision=lane.decision,
+                    text=text,
+                    verdict=verdict,
+                    plan=plan,
+                    strategy=strategy,
+                    features=features,
+                    selection=lane.selection,
+                )
+            )
+        if not accepted:
+            return
+
+        published = publish_in_shadow(
+            run_id=self.trace.run_id,
+            client=self.cfg.client,
+            unit_id=unit.unit_id,
+            accepted=tuple(accepted),
+        )
+        fingerprints = {
+            item.destination: item for item in published.fingerprints
+        }
+        texts = {item.decision.destination: item.text for item in accepted}
+        self._about_this_unit(unit, texts, published.records)
+        for record in published.records:
+            lane = self.lanes[record.destination]
+            fingerprint = fingerprints[record.destination]
+            outputs = (
+                _ref(
+                    self.workspace.write_entity(
+                        stage="S-14",
+                        relative_path=(
+                            f"fingerprints/{fingerprint.fingerprint_id}.json"
+                        ),
+                        entity_type=FINGERPRINT_ENTITY_TYPE,
+                        entity_id=fingerprint.fingerprint_id,
+                        payload=fingerprint.as_entity(),
+                    )
+                ),
+                _ref(
+                    self.workspace.write_entity(
+                        stage="S-14",
+                        relative_path=(
+                            f"units/{unit.unit_id}/destinations/"
+                            f"{record.destination.value}/publication.json"
+                        ),
+                        entity_type=PUBLICATION_ENTITY_TYPE,
+                        entity_id=record.publication_id,
+                        payload=record.as_entity(),
+                    )
+                ),
+            )
+            self.trace.record(
+                stage="S-14",
+                scope_key=self._scope(lane),
+                # Code, and no call: §3's Decider column is `code` and its Calls
+                # column is 0. A model-deciding S-14 would be deciding something
+                # about a text every editorial stage has already decided.
+                decider=DeciderKind.CODE,
+                inputs=(_text_ref(texts[record.destination]),),
+                outputs=outputs,
+            )
+        self.fingerprints = published.fingerprints
+        self.publications = published.records
+
+    def _about_this_unit(
+        self,
+        unit: EditorialUnit,
+        texts: Mapping[Destination, Text],
+        records: Sequence[DestinationPublication],
+    ) -> None:
+        """What S-14 returned is about the material this run handed it.
+
+        §2.3 makes the engine the writer of ``publication.json`` and
+        ``fingerprints/*``, and the path it writes each to is built from
+        **this** run's unit. A body that named another unit or another text
+        version would be a file whose path and contents disagree — and the
+        workspace verification cannot see it, because digests and write
+        ownership are both satisfied by a record that is internally consistent
+        and about something else. So the one thing the writer can check, it
+        checks: the record it is about to file under this unit's destination
+        says it is about that destination's accepted text.
+        """
+
+        for record in records:
+            text = texts.get(record.destination)
+            if text is None:
+                raise GoldenEngineError(
+                    f"S-14 returned a record for {record.destination.value}, "
+                    "which this unit handed it no accepted text for; a "
+                    "publication record is filed at the destination's own path "
+                    "and cannot be about another"
+                )
+            if record.unit_id != unit.unit_id or record.text_ref != (
+                text.text_id,
+                text.version,
+            ):
+                raise GoldenEngineError(
+                    f"S-14 returned a record naming {record.unit_id} / "
+                    f"{record.text_ref} for {record.destination.value}, and "
+                    f"this run handed it {unit.unit_id} / "
+                    f"({text.text_id!r}, {text.version}); a fingerprint names "
+                    "what it remembers, and one filed under this unit's path "
+                    "while describing another is a record no reader can trust"
+                )
+        missing = sorted(
+            destination.value
+            for destination in texts
+            if destination not in {record.destination for record in records}
+        )
+        if missing:
+            raise GoldenEngineError(
+                "S-14 returned no record for "
+                + ", ".join(missing)
+                + "; every accepted text is remembered, and one left out would "
+                "be a text the portfolio never saw"
+            )
 
     # ------------------------------------------------------------------
     # Views

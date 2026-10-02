@@ -48,8 +48,9 @@ input rather than noise. V-T05 against an empty prior set passes as a ``code``
 check that ran, and the same check given a real prior refuses that destination's
 publication, so the empty set is an answer and not a bypass.
 
-Nothing here reaches a network, a provider, a credential or a publication, and
-S-14 is not executed.
+Nothing here reaches a network, a provider, a credential or a publication.
+S-14 is executed in the shadow mode #308 gave it: it fingerprints the accepted
+texts, constructs no publisher and writes no marker.
 """
 
 from __future__ import annotations
@@ -111,14 +112,14 @@ from tests.golden_engine_boundary import (
     execute,
 )
 
-#: The stages this slice executes. S-14 and S-15 are #308's and SL-12's, so the
-#: set is the topology's own minus those two rather than a list written here: a
-#: stage added to the canonical topology below S-14 makes this fail, which is the
-#: point of deriving it.
+#: The stages a canonical run executes. S-15 is SL-12's, so the set is the
+#: topology's own minus that one rather than a list written here: a stage added
+#: to the canonical topology makes this fail, which is the point of deriving it.
+#: S-14 is in it since #308 wired the shadow publication stage.
 _EXECUTED_STAGES = tuple(
     stage.stage_id
     for stage in CANONICAL_TOPOLOGY.stages
-    if stage.stage_id not in {"S-14", "S-15"}
+    if stage.stage_id not in {"S-15"}
 )
 
 
@@ -141,12 +142,12 @@ def executed(tmp_path_factory):
 # ===========================================================================
 
 
-def test_the_run_executes_every_stage_from_s00_to_s13(executed):
+def test_the_run_executes_every_stage_from_s00_to_s14(executed):
     """Every executed stage of the topology appears in the trace.
 
-    Not "the trace is long" and not "it reached S-13": each stage the topology
-    declares below S-14 recorded at least one StageRecord, so a stage silently
-    skipped over is a failure here rather than a gap nobody notices.
+    Not "the trace is long" and not "it reached the end": each stage the
+    topology declares below S-15 recorded at least one StageRecord, so a stage
+    silently skipped over is a failure here rather than a gap nobody notices.
     """
 
     _, execution, _, _ = executed

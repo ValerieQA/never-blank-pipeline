@@ -10,8 +10,8 @@ The chain, in the order the proofs are written:
 
 * ``S-00 → S-01`` first: the selection the production S-00 wrote is the
   selection the production S-01 read, by entity type, ID and version;
-* then that **plus** the next seam, and so on through ``E-15 → S-13``;
-* then one full ``S-00 → S-13`` regression proof over the same sealed run,
+* then that **plus** the next seam, and so on through ``E-15 → S-14``;
+* then one full ``S-00 → S-14`` regression proof over the same sealed run,
   which is the whole net at once (:func:`composition_findings`).
 
 Every run here is the production path: ``run_golden_engine`` over
@@ -23,8 +23,9 @@ because #365's classifier sits upstream of S-00 and is provider-dependent —
 and its two classifications are read off the client contract's own fit rules
 rather than chosen here.
 
-Nothing reaches a network, a provider, a credential or a publication, and S-14
-is not executed.
+Nothing reaches a network, a provider, a credential or a publication. S-14 is
+executed in the shadow mode #308 gave it: it fingerprints the accepted texts,
+constructs no publisher and writes no marker.
 """
 
 from __future__ import annotations
@@ -118,7 +119,7 @@ def sealed(tmp_path_factory):
 def test_the_seams_into_each_stage_resolve_to_a_production_producer(
     sealed, stage: str
 ):
-    """``S-00 → S-01``, then that plus the next seam, and so on to S-13.
+    """``S-00 → S-01``, then that plus the next seam, and so on to S-14.
 
     Each case is given the prefix of the trace that ends at the **first**
     execution of its stage, so a break at one seam fails the proof named for
@@ -160,7 +161,7 @@ def test_each_step_of_the_chain_resolves_more_than_the_step_before(sealed):
     assert resolved == sorted(set(resolved)), resolved
     assert resolved[0] >= 1
     assert resolved[-1] >= 45, (
-        "the chain through S-13 resolves the references of every stage before "
+        "the chain through S-14 resolves the references of every stage before "
         "it; #351 puts the run's own total at 50 or more"
     )
 
@@ -185,7 +186,7 @@ def test_a_seam_proof_over_a_stage_that_did_not_run_proves_nothing(sealed):
 
 
 # ===========================================================================
-# The one full S-00 → S-13 regression proof
+# The one full S-00 → S-14 regression proof
 # ===========================================================================
 
 
