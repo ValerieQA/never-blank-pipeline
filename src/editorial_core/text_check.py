@@ -168,6 +168,51 @@ class PriorPublication:
             )
 
 
+@dataclass(frozen=True, slots=True)
+class TextFingerprint:
+    """A prior ``E-16`` as **V-S05** compares against it (§3, Inputs).
+
+    A second narrow view beside :class:`PriorPublication`, and a second one
+    deliberately: V-T05 asks whether this text has already been published here
+    and needs the digest and the near-duplicate profile for that; V-S05 asks how
+    close the text is to the portfolio and compares four other things. V-S05's
+    own record draws the line — "Near-exact republication is not this check's
+    business — that is V-T05" — so handing V-T05 these fields would give a hard,
+    blocking check inputs its record says are not its question.
+
+    One field per dimension the record reports, because it requires them
+    "**each reported separately** so that a shared path and a shared phrasing are
+    not added together into one number nobody can act on". Each is optional: a
+    fingerprint written before a field existed answers about the fields it has,
+    and forcing one would make the comparison invent what it did not read.
+
+    These are the **normalized** forms, which is what E-16's ``strategy`` row
+    says it stores ("snapshot of E-13 fields, normalized for comparison"). How a
+    real fingerprint is projected into them is the harness's, like every other
+    projection in this layer, and which fingerprints count as recent is a
+    question about the day the run happens on — a scheduling input the core is
+    handed rather than one it reads (CE-1).
+    """
+
+    fingerprint_id: str
+    destination: Destination
+    #: The ordered part names of the published text: its reader path as executed.
+    reader_path: tuple[str, ...] = ()
+    #: Its first sentence, normalized.
+    opening: Optional[str] = None
+    #: Its last sentence, normalized.
+    ending: Optional[str] = None
+    #: Its word shingles, the n-gram profile — the same form :func:`shingles`
+    #: produces, so the two sides of the comparison are built the same way.
+    shingles: frozenset[str] = frozenset()
+
+    def __post_init__(self) -> None:
+        if not self.fingerprint_id.strip():
+            raise TextCheckError(
+                "a portfolio text is identified by the fingerprint it came from"
+            )
+
+
 class TextCheckTransport(Protocol):
     """The two model calls S-13 makes, as one narrow boundary."""
 
@@ -307,6 +352,168 @@ def shingles(text: str, *, width: int = 5) -> frozenset[str]:
     return frozenset(
         " ".join(words[index : index + width]) for index in range(len(words) - width + 1)
     )
+
+
+# V-S05 has **no** similarity threshold, and this is where one would have gone.
+# Its own record states `threshold: none`, I-12 keeps a soft signal from becoming
+# one without an owner decision, and OPEN-25 leaves the portfolio soft-pressure
+# weights open as an implementation question nobody has answered. So any number
+# here — including a small one chosen to look harmless — would be this layer
+# deciding that some measured resemblance is too slight to tell anyone about.
+# V-S05 reports what it measured. :data:`NEAR_DUPLICATE_OVERLAP` stays what it
+# is: V-T05's hard threshold, which blocks, and which is a different question.
+
+
+def normalized_sentence(value: str) -> str:
+    """One sentence as both sides of a V-S05 comparison spell it.
+
+    The same normalization :func:`shingles` applies, for the same reason: an
+    opening repeated with the casing or the spacing changed is the same opening,
+    and a comparison that missed it would report no resemblance where a reader
+    sees one.
+    """
+
+    return " ".join(re.findall(r"[a-z0-9']+", value.lower()))
+
+
+def text_opening(text: Text) -> Optional[str]:
+    """The text's first sentence, normalized, or ``None`` when it has none."""
+
+    return _edge_sentence(text, first=True)
+
+
+def text_ending(text: Text) -> Optional[str]:
+    """The text's last sentence, normalized, or ``None`` when it has none."""
+
+    return _edge_sentence(text, first=False)
+
+
+def text_reader_path(text: Text) -> tuple[str, ...]:
+    """The text's reader path as it executes it: its part names, in order.
+
+    The names are the plan's — the Writer returns one part per plan segment,
+    named exactly as the plan names it — so two texts that walk the reader
+    through the same shape share this tuple.
+    """
+
+    return tuple(normalized_sentence(item.name) for item in text.segments)
+
+
+def _edge_sentence(text: Text, *, first: bool) -> Optional[str]:
+    sentences = [
+        part for part in re.split(r"(?<=[.!?])\s+", text.body.strip()) if part.strip()
+    ]
+    if not sentences:
+        return None
+    return normalized_sentence(sentences[0 if first else -1]) or None
+
+
+def _v_s05(
+    check: LoadedCheck,
+    text: Text,
+    portfolio: Sequence[TextFingerprint],
+) -> CheckResult:
+    """V-S05: how close this text is to the portfolio, recorded and never acted on.
+
+    The soft half of map §10 — "memory presses, it does not forbid". Built as
+    ``plan_check._v_p05`` is built, for the same reasons and with the same
+    guarantees: the result is always a pass carrying hints, :class:`CheckResult`
+    refuses to build a soft check that could be anything else, and
+    :class:`TextVerdict` refuses a soft check among the checks that decided it.
+    So this cannot become a threshold by somebody deciding to read it as one.
+
+    The four dimensions are reported **separately**, which the record requires:
+    a shared path and a shared phrasing are different facts about different
+    decisions, and one number over both is a number nobody can act on. Near-exact
+    republication is not asked about here — that is V-T05, which is hard and does
+    block.
+
+    **No threshold anywhere.** The record says ``threshold: none``, and the
+    n-gram dimension therefore reports whatever overlap it measured rather than
+    only the overlaps some number calls large enough. Deciding that a measured
+    resemblance is too small to record would be exactly the soft-signal-turned-
+    threshold I-12 forbids without an owner decision, and OPEN-25 leaves that
+    decision open.
+
+    An empty portfolio is answered rather than skipped. The hint then says the
+    comparison was made and found nothing, which is the difference between a
+    check that ran against nothing and a check nobody ran — the distinction every
+    soft input in this layer turns on.
+    """
+
+    here = [item for item in portfolio if item.destination is text.destination]
+    opening = text_opening(text)
+    ending = text_ending(text)
+    path = text_reader_path(text)
+    profile = shingles(text.body)
+    hints: list[Finding] = []
+    for entry in here:
+        if entry.reader_path and entry.reader_path == path:
+            hints.append(
+                _resembles(entry, text, "the reader path", str(len(path)) + " parts")
+            )
+        if entry.opening is not None and opening is not None and (
+            entry.opening == opening
+        ):
+            hints.append(_resembles(entry, text, "the opening", entry.opening))
+        if entry.ending is not None and ending is not None and (
+            entry.ending == ending
+        ):
+            hints.append(_resembles(entry, text, "the ending", entry.ending))
+        shared = profile & entry.shingles
+        if shared:
+            # Any shared n-gram is an observation; how much sharing matters is
+            # not this layer's to say (`threshold: none`, I-12, OPEN-25). Zero
+            # shared n-grams is the same state as an opening that does not match:
+            # nothing found, so nothing to report about this dimension.
+            overlap = _overlap(profile, entry.shingles)
+            hints.append(
+                _resembles(
+                    entry,
+                    text,
+                    "n-gram overlap",
+                    f"{len(shared)} shared of {len(profile)}, {overlap:.2f} of "
+                    "the smaller profile",
+                )
+            )
+    if not hints:
+        hints.append(
+            Finding(
+                detail=(
+                    f"no recent publication on {text.destination.value} shares "
+                    "this text's reader path, opening, ending or n-grams; the "
+                    f"comparison was made over {len(here)} prior publication(s) "
+                    "and found nothing"
+                ),
+                refs=(text.text_id,),
+            )
+        )
+    return _result(
+        check, method=CheckMethod.CODE, outcome=CheckOutcome.PASS, findings=tuple(hints)
+    )
+
+
+def _resembles(
+    entry: TextFingerprint, text: Text, dimension: str, detail: str
+) -> Finding:
+    """One dimension, named, and never added to another."""
+
+    return Finding(
+        detail=(
+            f"{entry.fingerprint_id} on {text.destination.value} shares "
+            f"{dimension} with this text ({detail}); a hint, and never a reason "
+            "to block, edit or replan anything"
+        ),
+        refs=(entry.fingerprint_id,),
+    )
+
+
+def _overlap(left: frozenset[str], right: frozenset[str]) -> float:
+    """What share of the smaller profile the two texts have in common."""
+
+    if not left or not right:
+        return 0.0
+    return len(left & right) / min(len(left), len(right))
 
 
 def _figures(text: str) -> set[str]:
@@ -705,6 +912,7 @@ def check_text(
     counters: AttemptCounterLedger,
     transport: TextCheckTransport,
     priors: Sequence[PriorPublication] = (),
+    portfolio: Sequence[TextFingerprint] = (),
     soft_hints: Sequence[CheckResult] = (),
 ) -> TextDecision:
     """Verify one text version and route its failure to the layer that decided it.
@@ -720,6 +928,17 @@ def check_text(
     """
 
     _precondition(text=text, plan=plan, boundary=boundary)
+
+    # V-S05 before anything else can return. It is `code` and costs no model
+    # call, it blocks nothing, and it is evaluated **unconditionally** so that
+    # every verdict this stage writes carries it — including the ones that stop
+    # at V-T05 or at an unreadable answer. A soft check evaluated only on the
+    # paths that happen to reach the end is a soft check whose absence means two
+    # different things.
+    hints = (
+        *soft_hints,
+        _v_s05(checks[SOFT_CHECKS[0]], text, portfolio),
+    )
 
     results: list[CheckResult] = []
     routed: list[tuple[str, str, CheckResult]] = []  # (counter, cause, result)
@@ -794,7 +1013,7 @@ def check_text(
                         "other side"
                     ),
                 ),
-                hints=tuple(soft_hints),
+                hints=hints,
             )
         )
     results.append(
@@ -880,7 +1099,7 @@ def check_text(
                         "a checked text and may not reach S-14"
                     ),
                 ),
-                hints=tuple(soft_hints),
+                hints=hints,
                 calls=calls,
             )
         )
@@ -948,7 +1167,7 @@ def check_text(
         return TextDecision(
             verdict=_verdict(
                 text, boundary, tuple(results), TextResult.ACCEPTED,
-                hints=tuple(soft_hints), calls=calls,
+                hints=hints, calls=calls,
             )
         )
 
@@ -978,7 +1197,7 @@ def check_text(
         verdict=_verdict(
             text, boundary, tuple(results), decided,
             route=cause, counter=counter, outcome=outcome,
-            hints=tuple(soft_hints), calls=calls,
+            hints=hints, calls=calls,
         )
     )
 
@@ -1076,6 +1295,12 @@ def _request(
     )
 
 
+#: The soft check records S-13 applies. One, and it is loaded exactly as S-11
+#: loads V-P05 among its own five (``plan_check.PLAN_CHECKS``): a stage that is
+#: not handed its soft check's record cannot apply it, and until this existed
+#: every canonical TextVerdict carried no hint at all.
+SOFT_CHECKS: Final[tuple[str, ...]] = ("V-S05",)
+
 #: The eight hard check records S-13 applies (§3, Knowledge / config).
 REQUIRED_CHECKS: Final[tuple[str, ...]] = (
     "V-T01",
@@ -1102,16 +1327,17 @@ def text_check_records(knowledge: Any) -> Mapping[str, LoadedCheck]:
     eighth file was absent is the fail-open the register exists to prevent.
     """
 
+    applied = (*REQUIRED_CHECKS, *SOFT_CHECKS)
     loaded = {check.identity: check for check in knowledge.checks}
-    missing = sorted(set(REQUIRED_CHECKS) - set(loaded))
+    missing = sorted(set(applied) - set(loaded))
     if missing:
         raise TextCheckError(
             "the register holds no check record for "
             + ", ".join(missing)
-            + f"; {STAGE} applies V-T01…V-T08 and cannot accept a text against "
-            "fewer"
+            + f"; {STAGE} applies V-T01…V-T08 and {', '.join(SOFT_CHECKS)} and "
+            "cannot accept a text against fewer"
         )
-    return {check_id: loaded[check_id] for check_id in REQUIRED_CHECKS}
+    return {check_id: loaded[check_id] for check_id in applied}
 
 
 # ===========================================================================

@@ -29,8 +29,22 @@ with both its factual rechecks, package regeneration, both hashtag calls) is
 36. The default and hard maximum is 40:
 every legitimate shared-path run still fits, and a runaway loop stops within
 about twice a normal run's cost. Wednesday's restored July
-path is the single explicit exception: its historical per-candidate research
+path is the first explicit exception: its historical per-candidate research
 and five-surface composer require a finite role-scoped ceiling of 56 (#217).
+
+The canonical Golden Engine is the second, and 40 was never its number: Step 2
+§0.3 records the ``RunCallBudget`` row as "Sized for the six-destination
+canonical run from shadow measurements (§6). **AS-IS: the current engine's
+ceiling is 40**", and §6's own estimate for all six destinations is min 44,
+normal 61, worst 211 against "40 (current engine)". The deterministic #351
+execution measures 50 for a clean six-destination run — the §6 minimum of 44
+plus one S-09 ranking per destination, which the minimum assumes away. So the
+engine is given its own finite ceiling of 60 (owner decision, 2026-10-01): a
+runaway guard and not a target spend, high enough that the canonical
+architecture completes without a required editorial check being optimized away
+to fit 40, and low enough to stop a loop well inside §6's worst case. Which
+number it should finally be is SL-7's decision from measured data; this one
+exists so that the measurement can be taken at all.
 """
 
 from __future__ import annotations
@@ -50,6 +64,12 @@ R1_MAX_CEILING = 40
 #: Wednesday role, and every other role keeps ``R1_MAX_CEILING``.
 WEDNESDAY_MAX_CEILING = 56
 _WEDNESDAY_ROLE_ID = "never-blank-wednesday-golden"
+
+#: Finite hard ceiling for the canonical Golden Engine path (#351). Also not a
+#: new global maximum: it is reached only by ``run_golden_engine``, which names
+#: it explicitly, and the legacy default, ``R1_MAX_CEILING`` and Wednesday's 56
+#: are all unchanged. See the module docstring for where 60 comes from.
+GOLDEN_ENGINE_MAX_CEILING = 60
 
 #: Default when NB_RUN_TEXT_CALL_BUDGET is unset. See the module docstring
 #: for the derivation.
@@ -126,7 +146,11 @@ class RunCallBudget:
     def __init__(self, limit: int, *, hard_max: int = R1_MAX_CEILING) -> None:
         if not isinstance(limit, int) or isinstance(limit, bool):
             raise CallBudgetConfigurationError("call budget limit must be an integer")
-        if hard_max not in {R1_MAX_CEILING, WEDNESDAY_MAX_CEILING}:
+        if hard_max not in {
+            R1_MAX_CEILING,
+            WEDNESDAY_MAX_CEILING,
+            GOLDEN_ENGINE_MAX_CEILING,
+        }:
             raise CallBudgetConfigurationError(
                 f"unsupported call budget hard maximum: {hard_max!r}"
             )

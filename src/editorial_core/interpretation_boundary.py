@@ -104,8 +104,14 @@ from src.strategy.audience_profile import AudienceProfile
 #: The stage this module is, as the topology registry and §2.3 spell it.
 STAGE: Final[str] = "S-04"
 
-#: The counter a re-entry spends (§0.3): "L_boundary | unit | 1 | Re-entry
-#: into S-04 from S-13". The limit in force is the ledger's, not this module's.
+#: The counter the S-13 → S-04 edge consumes (§0.3): "L_boundary | unit | 1 |
+#: Re-entry into S-04 from S-13". **Spent by S-13, not here.** §0.3 gives one
+#: counter to one backward route, and §5.3 lists that route once, so the layer
+#: that decides the route is the layer that pays for it; this module is handed
+#: the record of that payment and verifies it. The same split already holds for
+#: `L_strategy`, where `propose_strategies` takes no ledger at all and checks
+#: the authorizing record through its own `_authorized` (owner decision,
+#: 2026-10-01). The limit in force is the ledger's, not this module's.
 BOUNDARY_COUNTER: Final[str] = "L_boundary"
 
 #: The route that brings a run back here, as the topology registry declares it.
@@ -934,8 +940,11 @@ class DetectedInterpretation:
     """
 
     statement: str
-    #: The destination whose text expressed it — the scope §0.3 skips when
-    #: ``L_boundary`` is exhausted.
+    #: The destination whose text expressed it, as its **scope key** — the
+    #: scope §0.3 skips, and the key the onward ``L_strategy`` route is counted
+    #: under. A bare destination name would key that counter under something no
+    #: other stage counts, so S-08 would refuse the route it was handed: see
+    #: ``destination_scope_key`` and ``candidate_strategies._authorized``.
     destination: str
     #: The text it was found in, when the caller has one.
     text_ref: Optional[str] = None
@@ -1098,6 +1107,50 @@ def decide_boundary(
     )
 
 
+def _authorized(route: OutcomeRecord, unit_id: str) -> None:
+    """Is this re-entry the one a declared route paid for (§0.3, §5.3)?
+
+    The same question ``candidate_strategies._authorized`` asks of a re-entry
+    into S-08, asked here of the one into S-04, and for the same reason: nothing
+    below this checks it. Four facts, each of which a wrong caller would get
+    wrong differently — the record is a ``REPLAN``, it targets this stage, it
+    spent this counter, and it spent it against this unit. Nothing here spends
+    anything; what it refuses is an unbounded loop dressed as a re-entry.
+
+    Raises rather than returning an outcome, as this module's other
+    preconditions do: §6.2 has no state for a caller that re-entered a stage
+    without the route that permits it, and recording one would put a run's own
+    accounting failure on the material.
+    """
+
+    if route.outcome is not ArpOutcome.REPLAN:
+        raise BoundaryError(
+            f"a re-entry into {STAGE} was authorized by a "
+            f"{route.outcome.value}; only a REPLAN routes anywhere (§0.3), and "
+            "a terminal outcome is where a destination ended rather than a way "
+            "back in"
+        )
+    if route.route_target != STAGE:
+        raise BoundaryError(
+            f"the route offered targets {route.route_target!r}, not {STAGE}; a "
+            "re-entry is taken by the stage the route names"
+        )
+    if route.counter != BOUNDARY_COUNTER:
+        raise BoundaryError(
+            f"the route offered spent {route.counter!r}; §5.3 counts the "
+            f"{REENTRY_SOURCE} → {STAGE} edge ({REENTRY_CAUSE}) against "
+            f"{BOUNDARY_COUNTER}, and a route that spent another counter did "
+            "not bound this one"
+        )
+    if route.scope_key != unit_id:
+        raise BoundaryError(
+            f"the route offered spent {BOUNDARY_COUNTER} against "
+            f"{route.scope_key!r} and is being taken for {unit_id!r}; the "
+            "counter is counted per unit, so another unit's attempt bounds "
+            "nothing here"
+        )
+
+
 def re_enter_boundary(
     *,
     boundary: InterpretationBoundary,
@@ -1108,48 +1161,38 @@ def re_enter_boundary(
     transport: BoundaryTransport,
     ladder: StrengthLadder,
     counters: AttemptCounterLedger,
+    authorizing: OutcomeRecord,
     anchor_interpretation_id: Optional[str] = None,
     budget: Optional[CallBudget] = None,
 ) -> Reentry:
     """Record what a text expressed, and route out of the new version.
 
+    ``authorizing`` is S-13's own ``REPLAN``: the record that already spent
+    ``L_boundary`` for this edge. It is **verified and never re-spent**. §0.3
+    gives one counter to one backward route and §5.3 lists ``S-13 → S-04`` once,
+    so charging it again here would make the declared allowance of 1 mean 0 —
+    the re-entry would be refused by the attempt its own route had just paid
+    for, and the F-4 sibling re-check downstream of a successful commit would be
+    unreachable. ``counters`` is still required, for the **onward** edge out of
+    the new version (``L_anchor`` or ``L_strategy``), which this stage does own.
+
     One call, and every refusal before it fails closed on the destination whose
-    text caused the re-entry: an exhausted ``L_boundary``, a refused budget and
-    a test call that did not answer all end in that destination's ``SKIP``,
-    because the alternative is releasing a text S-13 found to express a reading
-    the boundary does not admit (I-05).
+    text caused the re-entry: an unauthorized re-entry, a refused budget and a
+    test call that did not answer all end in that destination's ``SKIP`` or in a
+    contract error, because the alternative is releasing a text S-13 found to
+    express a reading the boundary does not admit (I-05).
     """
 
     if not unit_id.strip():
         raise BoundaryError(
-            "a re-entry spends L_boundary, which is counted per unit (§0.3); "
-            "an unnamed unit is a counter nobody can bound"
+            "a re-entry is bounded by L_boundary, which is counted per unit "
+            "(§0.3); an unnamed unit is a counter nobody can bound"
         )
-
-    route = counters.route(
-        source=REENTRY_SOURCE,
-        cause=REENTRY_CAUSE,
-        # §0.3 counts `L_boundary` per **unit**, so the unit is what the ledger
-        # keys on: two destinations of one unit share the attempt, which is
-        # what makes a single re-entry per unit mean what it says.
-        scope_key=unit_id,
-        state_code=StateCode.INVENTED_OR_INADMISSIBLE_INTERPRETATION,
-        reason=(
-            f"{detected.destination} expressed an interpretation the boundary "
-            f"does not admit: {detected.statement}"
-        ),
-    )
-    if route.outcome is not ArpOutcome.REPLAN:
-        # Exhaustion skips "the destination whose text caused it" (§0.3). The
-        # ledger takes one scope key and counted under the unit, so the record
-        # it produced is re-keyed to the scope it actually concerns.
-        return Reentry(outcomes=(route.model_copy(update={
-            "scope_key": detected.destination
-        }),))
+    _authorized(authorizing, unit_id)
 
     refusal = _spend(budget, detected.destination, scope=OutcomeScope.DESTINATION)
     if refusal is not None:
-        return Reentry(outcomes=(route, refusal))
+        return Reentry(outcomes=(refusal,))
 
     answer = _answer(
         transport,
@@ -1161,7 +1204,6 @@ def re_enter_boundary(
     if answer is None or (answer.matches is not None and matched is None):
         return Reentry(
             outcomes=(
-                route,
                 _skip(
                     detected.destination,
                     StateCode.INVENTED_OR_INADMISSIBLE_INTERPRETATION,
@@ -1183,7 +1225,6 @@ def re_enter_boundary(
     if recorded is None:
         return Reentry(
             outcomes=(
-                route,
                 _skip(
                     detected.destination,
                     StateCode.INVENTED_OR_INADMISSIBLE_INTERPRETATION,
@@ -1239,7 +1280,7 @@ def re_enter_boundary(
     )
     return Reentry(
         boundary=committed,
-        outcomes=(route, onward),
+        outcomes=(onward,),
         calls=1,
         anchor_invalidated=invalidated,
         detected_interpretation_id=recorded.interpretation_id,

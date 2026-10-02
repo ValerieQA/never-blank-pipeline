@@ -25,6 +25,18 @@ This module is that wrap and nothing more. It does not touch
 today, because the shadow canonical engine is the only caller here and
 production behaviour must not change under it.
 
+**Admission, not accounting.** §0.3 says what consumes the run counter: "Every
+model call". So the unit of consumption is the call, charged inside
+``src.utils.llm_client.chat`` before the transport is invoked, and
+:meth:`ArpCallBudget.spend` **asks** whether the next call can be paid for
+rather than paying for it. The distinction matters because a stage spends once
+per unit of work it is about to do while S-04, S-11 and S-13 each make more than
+one call inside one: a wrap that charged per unit of work would bound units of
+work, and a wrap that charged *as well* would charge every call twice. Asking is
+what makes §0.4.2 possible — "the unit of work that needed it ends in SKIP" —
+because the stage learns it cannot proceed before it starts, and the ceiling
+still measures what §0.3 says it measures (#351 review, 2026-10-01).
+
 **Destination order is an input, not a judgment.** §0.2 derives it from the
 Client Contract's ``publication_dependencies`` and its listed order, which live
 in the E-12 destination decisions S-07 produces — a later slice. The wrap
@@ -51,7 +63,7 @@ from src.editorial_core.arp import (
     OutcomeScope,
     StateCode,
 )
-from src.run.call_budget import RunCallBudget, RunCallBudgetExceededError
+from src.run.call_budget import RunCallBudget
 
 
 class ArpCallBudgetError(RuntimeError):
@@ -117,17 +129,21 @@ class ArpCallBudget:
         return self._budget.remaining <= 0
 
     def spend(self, *, scope: OutcomeScope, scope_key: str) -> Optional[OutcomeRecord]:
-        """Charge one model call, or refuse it and say what that costs.
+        """Admit one unit of work, or refuse it and say what that costs.
 
-        ``None`` means the call is paid for and may be made. An OutcomeRecord
-        means the call was **not** made and is the ``SKIP`` of the unit of work
-        that needed it: the caller records it and stops that work, rather than
-        catching an error and deciding for itself what to abandon.
+        ``None`` means the budget can still pay for a call and the work may
+        start. An OutcomeRecord means it cannot: that is the ``SKIP`` of the unit
+        of work that needed it, which the caller records before making any call,
+        rather than catching an error and deciding for itself what to abandon.
+
+        Nothing is charged here. §0.3 gives the run counter one consumer —
+        "Every model call" — and that charge is made inside
+        ``src.utils.llm_client.chat`` before the provider is reached. The method
+        keeps its name because that is what every stage calls it; what it asks is
+        whether the next call is affordable.
         """
 
-        try:
-            self._budget.spend()
-        except RunCallBudgetExceededError:
+        if self.exhausted:
             return self._skip(scope, scope_key)
         return None
 

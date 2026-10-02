@@ -73,6 +73,9 @@ from src.editorial_core.interpretation_boundary import (
     decide_boundary,
     interpretation_id,
     probe_families,
+    BOUNDARY_COUNTER,
+    REENTRY_CAUSE,
+    REENTRY_SOURCE,
     re_enter_boundary,
 )
 from src.editorial_core.material_features import (
@@ -113,7 +116,11 @@ from src.run.boundary_commit import (
     orphan_interpretation_versions,
     write_interpretation_version,
 )
-from src.run.call_budget import RunCallBudget
+from src.run.call_budget import (
+    RunCallBudget,
+    activate_call_budget,
+    charge_active_call_budget,
+)
 from src.run.call_budget_arp import ArpCallBudget
 from src.run.run_context import create_run_id
 from src.run.run_summary import ReasonCategory, reason_category
@@ -429,6 +436,10 @@ class _Replaying:
         self.requests: list[str] = []
 
     def complete(self, *, instructions: str, request: str) -> str:
+        # The accounting obligation of a production transport: one charge per
+        # call, before the answer. §0.3 gives the run counter one consumer —
+        # "Every model call" — and `llm_client.chat` makes that charge.
+        charge_active_call_budget()
         self.instructions.append(instructions)
         self.requests.append(request)
         if self.error is not None:
@@ -940,14 +951,20 @@ def test_a_generate_call_that_does_not_answer_skips_the_signal():
 
 
 def test_a_budget_that_runs_out_before_the_probe_leaves_no_boundary():
-    """The fail-closed edge: a generated, unprobed set is never recorded."""
+    """The fail-closed edge: a generated, unprobed set is never recorded.
+
+    One call left, and the stage makes two: the generate call spends it and the
+    probe is refused before it is attempted. The budget is activated because that
+    is where the charge happens — the wrap asks, the call pays (§0.3).
+    """
 
     budget = RunCallBudget(1)
     transport = _transport("ramp_stablecoin")
 
-    decision = _decide(
-        "ramp_stablecoin", transport=transport, budget=ArpCallBudget(budget)
-    )
+    with activate_call_budget(budget):
+        decision = _decide(
+            "ramp_stablecoin", transport=transport, budget=ArpCallBudget(budget)
+        )
 
     assert transport.instructions == [GENERATE_INSTRUCTIONS]
     assert decision.boundary is None
@@ -1138,6 +1155,26 @@ def _committed(tmp_path: Path, case: str = "ramp_stablecoin") -> tuple[
     return workspace, boundary
 
 
+def _spent(
+    counters: AttemptCounterLedger, unit_id: str = "unit-301"
+) -> Any:
+    """S-13's own ``L_boundary`` route, taken through the real ledger.
+
+    The authorization a re-entry is given. Built by spending the declared
+    ``S-13 → S-04`` edge rather than by hand, so a test cannot offer the stage a
+    record no route could have produced — and so the single attempt §0.3 allows
+    is really gone once this has been called.
+    """
+
+    return counters.route(
+        source=REENTRY_SOURCE,
+        cause=REENTRY_CAUSE,
+        scope_key=unit_id,
+        state_code=StateCode.INVENTED_OR_INADMISSIBLE_INTERPRETATION,
+        reason="a text expressed a reading the boundary does not admit",
+    )
+
+
 def _reentry(
     boundary: InterpretationBoundary,
     *,
@@ -1147,8 +1184,10 @@ def _reentry(
     destination: str = "unit-301/wix",
     unit_id: str = "unit-301",
     transport: Optional[_Replaying] = None,
+    authorizing: Any = None,
 ) -> Any:
     walkthrough = WALKTHROUGHS["ramp_stablecoin"]
+    counters = counters or AttemptCounterLedger()
     return re_enter_boundary(
         boundary=boundary,
         core=_core(walkthrough),
@@ -1161,7 +1200,12 @@ def _reentry(
         unit_id=unit_id,
         transport=transport or _Replaying(test=json.dumps(answer)),
         ladder=LADDER,
-        counters=counters or AttemptCounterLedger(),
+        counters=counters,
+        authorizing=(
+            _spent(counters, unit_id.strip() or "unit-301")
+            if authorizing is None
+            else authorizing
+        ),
         anchor_interpretation_id=anchor,
     )
 
@@ -1324,40 +1368,109 @@ def test_a_re_entry_that_leaves_the_anchor_standing_routes_to_s_08(tmp_path: Pat
     assert onward.scope is OutcomeScope.DESTINATION
 
 
-def test_an_exhausted_boundary_counter_skips_the_causing_destination(tmp_path: Path):
-    """§0.3: the destination whose text caused it, reason
-    `boundary_reentry_exhausted`."""
+def test_the_re_entry_verifies_its_authorization_and_never_spends_it_again(
+    tmp_path: Path,
+):
+    """§0.3, §5.3: one backward edge, one counter, spent once.
+
+    ``S-13 → S-04`` is one route and ``L_boundary`` is one unit-scoped attempt.
+    S-13 decides the route and pays for it; this stage is handed the record of
+    that payment. Charging it again here would make a declared allowance of 1
+    mean 0 — the re-entry would be refused by the attempt its own route had just
+    bought — which is the shape of the defect this ownership fixed. The same
+    split already holds for ``L_strategy``, where ``propose_strategies`` takes no
+    ledger at all (owner decision, 2026-10-01).
+    """
 
     workspace, boundary = _committed(tmp_path)
     counters = AttemptCounterLedger()
-    transport = _Replaying(test=json.dumps(NEW_READING))
+    authorizing = _spent(counters)
+    assert counters.used(BOUNDARY_COUNTER, "unit-301") == 1
 
-    first = _reentry(
-        boundary, answer=NEW_READING, counters=counters, transport=transport
-    )
-    assert first.boundary is not None
-
-    second = _reentry(
+    reentry = _reentry(
         boundary,
         answer=NEW_READING,
         counters=counters,
-        destination="unit-301/linkedin",
-        transport=transport,
+        authorizing=authorizing,
     )
 
-    assert second.boundary is None
-    assert second.calls == 0, "the refused call is never made"
-    refused = second.outcomes[0]
-    assert refused.outcome is ArpOutcome.SKIP
-    assert refused.state_code is StateCode.BOUNDARY_REENTRY_EXHAUSTED
-    assert refused.scope is OutcomeScope.DESTINATION
-    assert refused.scope_key == "unit-301/linkedin", (
-        "the counter is the unit's and the skip is the destination's (§0.3)"
+    assert reentry.boundary is not None, "the authorized re-entry went through"
+    assert counters.used(BOUNDARY_COUNTER, "unit-301") == 1, (
+        "the re-entry verified the attempt S-13 spent and spent nothing of its own"
     )
-    assert transport.instructions == [TEST_INSTRUCTIONS], (
-        "L_boundary is counted per unit, so the second destination of the same "
-        "unit shares the attempt the first one spent"
+    # What it did spend is the onward edge, which §5.3 gives it.
+    assert reentry.outcomes[-1].counter == "L_strategy"
+    assert len(reentry.outcomes) == 1, (
+        "the record S-13 wrote stays on S-13's own StageRecord; re-emitting it "
+        "here would put an S-13 → S-04 route on an S-04 record, which the route "
+        "table does not declare"
     )
+
+
+def test_a_second_boundary_failure_in_one_unit_is_refused_by_the_ledger(
+    tmp_path: Path,
+):
+    """§0.3 on exhaustion: the destination whose text caused it → `SKIP`.
+
+    The attempt is the unit's, so the second destination of the same unit finds
+    it spent. The refusal now happens where the spend does — at S-13, in the
+    ledger — and the terminal record it returns is not an authorization, so the
+    re-entry refuses it rather than running on a route nobody paid for.
+    """
+
+    workspace, boundary = _committed(tmp_path)
+    counters = AttemptCounterLedger()
+    _spent(counters)
+
+    exhausted = _spent(counters)
+
+    assert exhausted.outcome is ArpOutcome.SKIP
+    assert exhausted.state_code is StateCode.BOUNDARY_REENTRY_EXHAUSTED
+    assert exhausted.scope is OutcomeScope.DESTINATION
+    assert exhausted.attempt == exhausted.limit == 1
+    transport = _Replaying(test=json.dumps(NEW_READING))
+    with pytest.raises(BoundaryError, match="only a REPLAN routes anywhere"):
+        _reentry(
+            boundary,
+            answer=NEW_READING,
+            counters=counters,
+            destination="unit-301/linkedin",
+            transport=transport,
+            authorizing=exhausted,
+        )
+    assert transport.instructions == [], "the refused call is never made"
+
+
+@pytest.mark.parametrize(
+    "update, expected",
+    [
+        ({"route_target": "S-06"}, "targets 'S-06'"),
+        ({"counter": "L_anchor"}, "spent 'L_anchor'"),
+        ({"scope_key": "unit-302"}, "against 'unit-302'"),
+    ],
+)
+def test_a_re_entry_on_someone_elses_route_is_refused(
+    tmp_path: Path, update: dict, expected: str
+):
+    """Four facts, each of which a wrong caller would get wrong differently.
+
+    The same question ``candidate_strategies._authorized`` asks of a re-entry
+    into S-08: the record is a REPLAN, it targets this stage, it spent this
+    counter, and it spent it against this unit. Nothing below the stage boundary
+    checks any of them.
+    """
+
+    workspace, boundary = _committed(tmp_path)
+    counters = AttemptCounterLedger()
+    offered = _spent(counters).model_copy(update=update)
+
+    with pytest.raises(BoundaryError, match=expected):
+        _reentry(
+            boundary,
+            answer=NEW_READING,
+            counters=counters,
+            authorizing=offered,
+        )
 
 
 def test_a_test_call_that_does_not_answer_skips_the_destination(tmp_path: Path):

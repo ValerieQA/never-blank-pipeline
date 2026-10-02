@@ -112,7 +112,11 @@ from src.research.provider import (
     SourcePriority,
     SourceRetrievalOutcome,
 )
-from src.run.call_budget import RunCallBudget
+from src.run.call_budget import (
+    RunCallBudget,
+    activate_call_budget,
+    charge_active_call_budget,
+)
 from src.run.call_budget_arp import ArpCallBudget
 from src.run.run_summary import ReasonCategory, reason_category
 from src.strategy.business_config import load_business_strategy_configuration
@@ -206,6 +210,10 @@ class _Describing:
         self.requests: list[str] = []
 
     def complete(self, *, instructions: str, request: str) -> str:
+        # One charge per call, before the answer: the accounting obligation of a
+        # production transport, discharged by `llm_client.chat` before it reaches
+        # the provider (§0.3, "Every model call").
+        charge_active_call_budget()
         self.calls += 1
         self.requests.append(request)
         if self.error is not None:
@@ -260,6 +268,10 @@ class _Answering:
         self.calls = 0
 
     def complete(self, *, instructions: str, request: str) -> str:
+        # One charge per call, before the answer: the accounting obligation of a
+        # production transport, discharged by `llm_client.chat` before it reaches
+        # the provider (§0.3, "Every model call").
+        charge_active_call_budget()
         self.calls += 1
         payload = json.loads(request)
         verdicts = []
@@ -721,9 +733,10 @@ def test_the_stage_spends_one_call():
     budget = RunCallBudget(4)
     transport = _Describing()
 
-    described = describe_material(
-        core=_core(), transport=transport, budget=ArpCallBudget(budget)
-    )
+    with activate_call_budget(budget):
+        described = describe_material(
+            core=_core(), transport=transport, budget=ArpCallBudget(budget)
+        )
 
     assert described.calls == 1
     assert transport.calls == 1
@@ -1238,13 +1251,18 @@ def test_two_calls_are_recorded_for_one_round():
 
     budget = RunCallBudget(8)
 
-    enrichment = _enrich(
-        _core(), notes=(_blocking_note(),), budget=ArpCallBudget(budget)
-    )
+    with activate_call_budget(budget):
+        enrichment = _enrich(
+            _core(), notes=(_blocking_note(),), budget=ArpCallBudget(budget)
+        )
 
     assert enrichment.calls == 2
     assert enrichment.rounds[0].calls == 2
-    assert budget.used == 2
+    # Three charges, not two: the counter is charged per **call** (§0.3, "Every
+    # model call"), and `_enrich` makes one S-02 describe call of its own to build
+    # the features it hands the round. The round's own two are what the stage
+    # records above; the third is the helper's setup.
+    assert budget.used == 3
 
 
 @pytest.mark.parametrize("case", SAVED_CASES)
