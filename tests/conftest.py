@@ -142,6 +142,28 @@ def _publication_markers_stay_out_of_the_tracked_tree(tmp_path_factory, monkeypa
 
 
 @pytest.fixture(autouse=True)
+def _the_durable_ledger_stays_out_of_the_tracked_tree(tmp_path_factory, monkeypatch):
+    """No test writes a durable learning record into the tracked tree.
+
+    The ledger (NB-01d) is committed on purpose — the indicators a RunSummary
+    carries must outlive the 90-day run workspace — so ``data/editorial/runs/``
+    is deliberately un-ignored, and an unredirected test run leaves real
+    RunSummary records there. ``run_golden_engine`` redirects the workspace it
+    is handed a ``runs_root`` for, but the ledger has its own root and takes no
+    default from it: two records for a fixture signal reached PR #372 that way.
+    ``src/run/ledger.py`` names this variable for exactly this purpose.
+
+    A test that redirects the root itself is unaffected: its own patch runs
+    after this fixture and wins.
+    """
+
+    monkeypatch.setenv(
+        "NB_EDITORIAL_LEDGER_DIR", str(tmp_path_factory.mktemp("ledger"))
+    )
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _the_test_process_is_not_a_publishing_runner(monkeypatch):
     """No suite inherits cross-runner arbitration from the ambient environment.
 

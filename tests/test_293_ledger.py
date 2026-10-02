@@ -94,6 +94,21 @@ def test_the_ledger_root_is_the_committed_one_unless_redirected(monkeypatch):
     assert ledger_root() == Path("/tmp/elsewhere")
 
 
+def test_a_test_run_never_resolves_the_ledger_into_the_tracked_tree():
+    """The suite's own root is redirected, so no test can commit a record.
+
+    Read through `ledger_root` — the function every writer calls — rather than
+    through the variable, because what must hold is that a test resolving the
+    ledger the production way lands outside the repository. Two RunSummary
+    records for a #351 fixture signal reached PR #372 when nothing asserted
+    this; deleting the redirecting fixture fails here.
+    """
+
+    root = ledger_root().resolve()
+    assert root != DEFAULT_LEDGER_ROOT.resolve()
+    assert not root.is_relative_to(Path(__file__).parent.parent)
+
+
 def test_a_record_path_cannot_climb_out_of_the_ledger(tmp_path):
     for attempt in ("../secrets.json", "/etc/passwd", "runs/../../x.json", "  "):
         with pytest.raises((LedgerError, ValueError)):

@@ -211,6 +211,13 @@ staying off.
 
 ---
 
-*Read-only forensic record. No production code or configuration was modified,
-no test was added or changed, nothing was published, no provider call was made,
-and the product choice in #231 was left open.*
+*Forensic record. No production code or configuration was modified, nothing was
+published, no provider call was made, and the product choice in #231 was left
+open. One test-harness change travels with it, and it is not about Stage 11: the
+first push of this record carried two `data/editorial/runs/` RunSummary records
+for a #351 fixture signal, because the suite drives `run_golden_engine` with a
+temporary `runs_root` but no `ledger_dir`, and the ledger takes no default from
+the workspace. `tests/conftest.py` now redirects `NB_EDITORIAL_LEDGER_DIR` per
+test, as it already does for the package root and the marker store — the
+variable `src/run/ledger.py` defines for exactly that reason. Without it the
+artifacts return on the next run, under new run IDs.*
