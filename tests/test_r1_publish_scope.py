@@ -125,10 +125,28 @@ def test_the_authority_imports_no_publisher():
 # ===========================================================================
 
 
-def test_daily_research_can_only_publish_the_r1_channels():
-    from scripts.research.publish_packages import _ALL_PUBLISHERS, _PUBLISHERS
+def test_daily_research_can_publish_nothing_at_all():
+    """#231, option A: the stage is offered no publisher to drive.
 
-    assert [name for name, _ in _PUBLISHERS] == list(R1_PUBLISH_CHANNELS)
+    #227 narrowed this stage to Release 1's own two channels, which turned out
+    to be exactly the two it cannot drive — it has no canonical preflight, and
+    publication authorization is that preflight rather than the ability to reach
+    a publisher class. So the list it is given is empty, and the two Release 1
+    channels are named separately as the ones it may not publish to.
+
+    The inventory is untouched: the implementations stay complete and importable
+    for a manual or Release 2 caller.
+    """
+    from scripts.research.publish_packages import (
+        _ALL_PUBLISHERS,
+        _NO_PREFLIGHT_CHANNELS,
+        _PUBLISHERS,
+    )
+
+    assert list(_PUBLISHERS) == [], "this path drives no publisher (#231)"
+    # The two it may not publish to are Release 1's own, derived from the one
+    # shared definition rather than written out again.
+    assert list(_NO_PREFLIGHT_CHANNELS) == list(R1_PUBLISH_CHANNELS)
     # the implementations are still here, and still complete
     assert [name for name, _ in _ALL_PUBLISHERS] == [
         "wix", "linkedin", "facebook", "instagram", "threads", "telegram",
@@ -144,14 +162,34 @@ def test_daily_research_cannot_auto_publish_the_channels_it_published(channel):
     assert channel in _WITHHELD_CHANNELS
 
 
-def test_daily_research_records_the_withheld_channels_rather_than_omitting_them():
-    """A channel that silently disappears from the report is how this hid."""
-    from scripts.research.publish_packages import _WITHHELD_CHANNELS
+def test_daily_research_records_every_channel_rather_than_omitting_any():
+    """A channel that silently disappears from the report is how this hid.
+
+    All six are now recorded, in two classes that say two different true things:
+    the four are outside Release 1's scope, and the two are inside it but
+    unreachable from a path with no canonical preflight. Calling the second pair
+    out-of-scope would be false, and #227's reason is kept for the four it is
+    actually about.
+    """
+    from scripts.research.publish_packages import (
+        _NO_PREFLIGHT_CHANNELS,
+        _NO_PREFLIGHT_REASON,
+        _OUTSIDE_R1_REASON,
+        _WITHHELD_CHANNELS,
+    )
 
     assert set(_WITHHELD_CHANNELS) == set(NON_R1_PUBLISH_CHANNELS)
+    assert set(_NO_PREFLIGHT_CHANNELS) == set(R1_PUBLISH_CHANNELS)
+    assert set(_WITHHELD_CHANNELS) | set(_NO_PREFLIGHT_CHANNELS) == {
+        "wix", "linkedin", "facebook", "instagram", "threads", "telegram",
+    }
+    assert not set(_WITHHELD_CHANNELS) & set(_NO_PREFLIGHT_CHANNELS)
+    # Two reasons, and neither claims the other's fact.
+    assert "outside the Release 1 publishing scope" in _OUTSIDE_R1_REASON
+    assert "outside" not in _NO_PREFLIGHT_REASON
+    assert "canonical preflight" in _NO_PREFLIGHT_REASON
     source = Path("scripts/research/publish_packages.py").read_text()
     assert "PublishStatus.SKIPPED" in source
-    assert "outside the Release 1 publishing scope" in source
 
 
 def test_the_research_publisher_list_is_not_a_hand_maintained_literal():

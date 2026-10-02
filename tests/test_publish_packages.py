@@ -213,3 +213,89 @@ class TestPublishPackagesAllPlatformFailure:
             f"Every attempted publisher must be FAILED, got: {result_statuses}"
         )
         assert set(result_statuses) - set(attempted) <= set(NON_R1_PUBLISH_CHANNELS)
+
+
+class TestStage11PublishesNothing:
+    """#231, option A: Stage 11 generates and packages, and publishes nothing.
+
+    Behavioural, not textual. The status of every channel in the returned report
+    is what a restored publisher invocation would change, however it was
+    restored: deriving ``_PUBLISHERS`` from the inventory again, or adding a
+    direct call. A fake publisher that merely accepts the legacy draft cannot
+    satisfy these assertions either — a fake returning ``PUBLISHED`` flips the
+    status just as a real one would.
+    """
+
+    def _run(self, monkeypatch, tmp_path):
+        index_path = _setup_common(monkeypatch, tmp_path)
+        exploded: list[str] = []
+
+        class _Explodes:
+            """A publisher that must never be reached from this path."""
+
+            def __init__(self, name: str) -> None:
+                self.name = name
+
+            def publish(self, draft, mode, **kw):
+                exploded.append(self.name)
+                raise AssertionError(
+                    f"{self.name} was published to; Stage 11 holds no canonical "
+                    "preflight and must invoke no publisher (#231)"
+                )
+
+        # The inventory, exploding. A loop that iterates it at run time — rather
+        # than the empty list the stage is given — lands here.
+        monkeypatch.setattr(
+            pp,
+            "_ALL_PUBLISHERS",
+            [(name, _Explodes(name)) for name, _ in pp._ALL_PUBLISHERS],
+        )
+
+        signal = {**_SIGNAL, "ARTICLE_READY": "true",
+                  "SCORE_RECOMMENDED_FOR_ARTICLE": "false"}
+        reports = pp.publish_packages([signal], [_PACKAGE])
+        assert len(reports) == 1
+        return reports[0]["results"], exploded, index_path
+
+    def test_every_channel_is_recorded_and_none_is_published(
+        self, monkeypatch, tmp_path
+    ):
+        results, exploded, _ = self._run(monkeypatch, tmp_path)
+
+        assert exploded == [], "no publisher may be reached from this path"
+        assert set(results) == {
+            "wix", "linkedin", "facebook", "instagram", "threads", "telegram",
+        }, "a channel missing from the report is how #227 stayed hidden"
+        for name, result in results.items():
+            assert result["status"] == pp.PublishStatus.SKIPPED.value, (
+                f"{name} reports {result['status']}; a publisher was invoked"
+            )
+
+    def test_the_two_reasons_say_two_different_true_things(
+        self, monkeypatch, tmp_path
+    ):
+        results, _, _ = self._run(monkeypatch, tmp_path)
+
+        for name in ("wix", "linkedin"):
+            reason = results[name]["error_message"]
+            assert "canonical preflight" in reason, name
+            assert "outside" not in reason, (
+                f"{name} is inside Release 1 scope; saying otherwise is false"
+            )
+        for name in ("facebook", "instagram", "threads", "telegram"):
+            reason = results[name]["error_message"]
+            assert "outside the Release 1 publishing scope" in reason, name
+            assert "preflight" not in reason, name
+
+    def test_nothing_reaches_the_published_index(self, monkeypatch, tmp_path):
+        """The strongest behavioural signal: no entry was treated as published.
+
+        ``append_published_entry`` is reached only for a channel whose status is
+        among the publication-ok set, so an index that was never created is a run
+        in which nothing was published — and it is written to the redirected path,
+        so a regression here cannot touch the repository either.
+        """
+
+        _, _, index_path = self._run(monkeypatch, tmp_path)
+
+        assert not index_path.exists(), "a publication was recorded (#231)"
