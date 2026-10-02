@@ -6,7 +6,7 @@ with fake providers" (Step 6 §2). :func:`run_walking_skeleton` is that run, and
 it holds **no stage logic at all**.
 
 #351 added the other entry point. :func:`run_golden_engine` runs the **real**
-S-00…S-13 through :mod:`src.run.golden_engine`, over #361's production
+S-00…S-14 through :mod:`src.run.golden_engine`, over #361's production
 transport bindings, and it is the canonical shadow run: there is no
 pass-through in it, no fixture stands in for a stage, and
 ``PASS_THROUGH_MARKER`` never appears in its trace. The two share everything
@@ -63,9 +63,11 @@ Shadow only, and unable to be otherwise:
   cannot make a paid call, and ``NB_GOLDEN_ENGINE_MODEL`` stays a requirement of
   whoever builds real transports, with no default anywhere;
 - there is no external publish call and no publication marker. The canonical
-  run does not execute S-14 at all (#308 owns it), and S-14 in the pass-through
-  run writes the run's own publication record and fingerprint, consults no
-  idempotency authority, and publishes nothing;
+  run executes S-14 in **shadow mode** (#308): it fingerprints every accepted
+  text, constructs no publisher, consults no idempotency authority and writes
+  no marker — see :mod:`src.run.shadow_publication`. S-14 in the
+  pass-through run writes the run's own publication record and fingerprint and
+  publishes nothing, for the same reasons;
 - the ledger commit is off unless a caller turns it on, so running either on a
   developer's machine or in a test cannot touch the repository.
 
@@ -146,6 +148,7 @@ from src.run.run_workspace import (
     file_digest,
     verify_run_workspace,
 )
+from src.run.shadow_publication import write_fingerprint_record
 
 #: The six destinations, from the one list the repository keeps (#227: a
 #: duplicated list is a list that drifts). Wix and LinkedIn first, because that
@@ -890,7 +893,8 @@ def canonical_run_context(signal_id: str, started_at: datetime) -> RunContext:
     Built directly rather than through ``RunContext.from_assignment`` for the
     callers that have no ContentAssignment to hand — a diagnostic run over one
     intake record. The run is a dry run by construction: the canonical engine
-    does not publish until SL-11, and this harness does not execute S-14 at all.
+    does not publish until SL-11, and the S-14 this harness executes constructs
+    no publisher.
     """
 
     return RunContext(
@@ -929,7 +933,7 @@ def run_golden_engine(
     code_identity: Optional[CodeIdentity] = None,
     inputs: Optional[RunInputs] = None,
 ) -> GoldenEngineRun:
-    """Run the real S-00…S-13 over one intake record, seal it, and report.
+    """Run the real S-00…S-14 over one intake record, seal it, and report.
 
     ``seams`` and ``configuration`` are required and have no defaults. That is
     the production-safety property of this signature: this function constructs
@@ -1009,6 +1013,17 @@ def run_golden_engine(
     )
     verification = verify_run_workspace(workspace.run_dir.parent, context.run_id)
 
+    # §3.2's durable copy of S-14's output, written before the learning commit
+    # that carries it: the workspace holding the run copy is an Actions artifact
+    # that expires in 90 days, and Portfolio Memory is what a fingerprint is
+    # for. The ledger copy carries no text — see `as_ledger_record`.
+    fingerprint_paths = tuple(
+        write_fingerprint_record(
+            fingerprint, started_at=context.started_at, root=ledger_dir
+        )
+        for fingerprint in execution.fingerprints
+    )
+
     ledger = _write_ledger(
         context=context,
         manifest=manifest,
@@ -1019,14 +1034,20 @@ def run_golden_engine(
         unit_ids=execution.unit_ids,
         scopes=execution.scopes,
         run_dir=workspace.run_dir,
-        client=client or active_client(),
+        # The configuration's, not the deployment's: S-14 files a fingerprint
+        # under the client whose contract the run read, and a summary filed
+        # under a different one would partition the two halves of one run's
+        # evidence into two shelves. A caller may still name it, and nothing
+        # here falls back to the ambient client.
+        client=client or configuration.client,
         budget=budget,
         code_identity=identity,
         first_pass=execution.first_pass,
-        # None, and that is the honest value: E-16 is S-14's output and S-14 is
-        # not executed here. A fingerprint listed by a run that produced none
-        # would be a learning record nobody can open.
-        fingerprint_ids=(),
+        # S-14's output (#308). A run that produced none lists none, which is
+        # every run that reached no accepted text: a fingerprint listed by a run
+        # that produced none would be a learning record nobody can open.
+        fingerprint_ids=execution.fingerprint_ids,
+        learning_paths=fingerprint_paths,
         split_candidate=execution.split_candidate,
         ledger_dir=ledger_dir,
         commit=commit,
@@ -1129,6 +1150,7 @@ def _write_ledger(
     commit_attempts: int,
     commit_retry_seconds: float,
     split_candidate: bool = False,
+    learning_paths: Sequence[Path] = (),
 ) -> _LedgerStep:
     """Write the RunSummary to the ledger, and commit if asked (§3.1, §3.2).
 
@@ -1139,9 +1161,10 @@ def _write_ledger(
     caller rather than written into the file that failed to be committed.
 
     What §3.1 promises holds either way: the records are on disk, the run does
-    not wait, and nothing is undone. Neither run writes a learning record yet —
-    fingerprints arrive with S-14 in SL-7 and observations with S-15 in SL-12 —
-    so the first step normally has nothing to commit, and says so.
+    not wait, and nothing is undone. ``learning_paths`` are the records the run
+    wrote into tier 2 before this step — the canonical run's fingerprints
+    (#308); observations arrive with S-15 in SL-12 — and a run that wrote none
+    commits nothing and says so.
 
     The identities and the scopes are arguments rather than derived, because the
     two runs know them differently: the pass-through run derives them from its
@@ -1153,9 +1176,10 @@ def _write_ledger(
         commit,
         kind="learning",
         run_id=context.run_id,
-        # None yet: fingerprints arrive with S-14 in SL-7 and observations with
-        # S-15 in SL-12, and each will hand its files to this step.
-        paths=(),
+        # The fingerprints S-14 wrote (#308). Observations arrive with S-15 in
+        # SL-12 and will hand their files to this step the same way. A run that
+        # wrote none commits nothing and says so.
+        paths=learning_paths,
         repo_root=repo_root,
         attempts=commit_attempts,
         retry_seconds=commit_retry_seconds,

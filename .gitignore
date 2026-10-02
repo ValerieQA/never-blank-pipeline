@@ -33,6 +33,12 @@ data/editorial/*
 # per run, public-safe by construction (§3.3), committed because the
 # indicators it carries must outlive the 90-day run workspace.
 !data/editorial/runs/
+# Fingerprints are tier 2 (NB-07a, Step 3 §3.2): Portfolio Memory is what S-00,
+# S-07's cadence, S-08/S-09's pressure, V-T05 and V-S05 read across runs, so one
+# per accepted text outlives the 90-day workspace. The copy committed here
+# carries no text — §3.4 and §6 keep an unpublished body out of a public
+# repository, and `shadow_publication.write_fingerprint_record` refuses one.
+!data/editorial/fingerprints/
 # The keeper's offline queue is tier 2 as well (NB-02d, Step 3 §3.2): the
 # Knowledge Maintenance job writes one expiry_review item per record per
 # expiry, and a question nobody can see is a question nobody answers.

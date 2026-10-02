@@ -56,8 +56,9 @@ scenario they need that a clean canonical run does not produce: S-03's
 production entry decides nothing when nothing blocks a decision, so the stage
 is measured on a run whose material does.
 
-Nothing here reaches a network, a provider, a credential or a publication, and
-S-14 is not executed.
+Nothing here reaches a network, a provider, a credential or a publication.
+S-14 is executed, in the shadow mode #308 gave it: it fingerprints the accepted
+texts, constructs no publisher and writes no marker.
 """
 
 from __future__ import annotations
@@ -144,6 +145,7 @@ SEAMS: Final[Mapping[tuple[str, str], frozenset[str]]] = {
     ("S-12", "E-15"): frozenset({"S-12"}),
     ("S-13", "E-09"): frozenset({"S-04"}),
     ("S-13", "E-15"): frozenset({"S-12"}),
+    ("S-14", "E-15"): frozenset({"S-12"}),
 }
 
 #: The seams the consumer references by E-15's **content** digest rather than
@@ -153,7 +155,7 @@ SEAMS: Final[Mapping[tuple[str, str], frozenset[str]]] = {
 #: the comparison is made against the entity's own ``content_digest`` field
 #: (:func:`manifest_findings`) instead of being skipped.
 CONTENT_DIGEST_SEAMS: Final[frozenset[tuple[str, str]]] = frozenset(
-    {("S-12", "E-15"), ("S-13", "E-15")}
+    {("S-12", "E-15"), ("S-13", "E-15"), ("S-14", "E-15")}
 )
 
 #: The boundary the run reaches that §6 does not charge: "Model calls only.
@@ -188,12 +190,16 @@ CLEAN_RUN_CALLS: Final[Mapping[str, int]] = {
 #: "replace one real stage with a static artifact" means, and it is the stage's
 #: own production entry rather than a seam beside it.
 #:
-#: Every wired stage is here, S-03 included. Its entry is ``open_gaps``, and
-#: the static artifact a donor canonical run supplies for it is the empty gap
-#: set — which is why it is not measured on the canonical scenario, where the
-#: real entry returns the same empty set and the substitution would change
-#: nothing. :func:`enriching_run` is the scenario where it decides something,
-#: and that is where the substitution is made.
+#: Every wired stage is here, S-03 and S-14 included. S-03's entry is
+#: ``open_gaps``, and the static artifact a donor canonical run supplies for it
+#: is the empty gap set — which is why it is not measured on the canonical
+#: scenario, where the real entry returns the same empty set and the
+#: substitution would change nothing. :func:`enriching_run` is the scenario
+#: where it decides something, and that is where the substitution is made.
+#: S-14's entry is ``publish_in_shadow``, and a donor's publication records name
+#: the donor's unit and texts — which the engine refuses before it files one at
+#: this unit's path (``_about_this_unit``), so the substitution is detected as
+#: a refusal rather than as a finding.
 STAGE_PRODUCERS: Final[Mapping[str, str]] = {
     "S-00": "select_signal",
     "S-01": "retrieve_evidence_core",
@@ -209,6 +215,7 @@ STAGE_PRODUCERS: Final[Mapping[str, str]] = {
     "S-11": "check_plan",
     "S-12": "write_prose",
     "S-13": "check_text",
+    "S-14": "publish_in_shadow",
 }
 
 #: The one stage of :data:`STAGE_PRODUCERS` whose substitution is measured on
@@ -263,7 +270,7 @@ def stage_findings(
     if beyond:
         found.append(
             "the run recorded " + ", ".join(beyond) + ", which this slice "
-            "does not execute; S-14 is #308's and S-15 is SL-12's"
+            "does not execute; S-15 is SL-12's"
         )
     if execution.stopped_at is not None:
         found.append(
