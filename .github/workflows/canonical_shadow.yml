@@ -1,0 +1,155 @@
+# Canonical shadow run — the whole engine, S-00 → S-14, publishing nothing.
+#
+# SL-7 (issue #308). It exists to measure what the canonical chain actually
+# costs on real signals *before* anything is optimized, which is why its own
+# Scope says "Optimization of any kind" is out: a measurement taken after a
+# change is a measurement of the change.
+#
+# Shadow is structural here, not a flag inside a publisher. S-14 runs in the
+# half that has no external effect — it packages what can be packaged and
+# fingerprints every accepted text — and `src/editorial_core/publication.py`
+# names no publisher, no image pipeline and no marker store, so "no publish
+# call" is checkable rather than promised (tests/test_308_shadow_publication.py
+# asserts it against the module's own source).
+#
+# **It is off until somebody turns it on.** The run makes real model calls —
+# that is the measurement — so a schedule alone must not start spending. The
+# job is gated on the `CANONICAL_SHADOW_ENABLED` repository variable, and an
+# unset variable means "nobody has enabled this", which is a different
+# statement from "run it". The same posture `knowledge_maintenance.yml` takes
+# toward its warning window, and for the same reason.
+name: Canonical Shadow Run
+
+on:
+  schedule:
+    # 11:00 UTC = 07:00 ET. Well away from the 04:17 ET publishing window, so a
+    # shadow measurement never contends with a production run for a runner.
+    - cron: "0 11 * * *"
+  workflow_dispatch:
+    inputs:
+      signal_id:
+        description: "The intake record to run. Left empty, the production selector chooses one."
+        required: false
+        type: string
+      role:
+        description: "A role the business strategy configuration declares"
+        required: false
+        default: never-blank-monday-documented-case
+        type: string
+
+# The run writes its fingerprints and its summary into the durable ledger and
+# commits them. It publishes nothing, so it needs no publishing credential.
+permissions:
+  contents: write
+
+concurrency:
+  # One shadow run at a time: two would contend for the create-once ledger
+  # paths, and the second would be refused rather than measured.
+  group: canonical-shadow
+  cancel-in-progress: false
+
+jobs:
+  shadow:
+    name: S-00 to S-14, no publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Is the shadow run enabled?
+        id: gate
+        env:
+          ENABLED: ${{ vars.CANONICAL_SHADOW_ENABLED }}
+        run: |
+          # Unset is "not enabled", not "enabled with a default". The run costs
+          # money, so the only value that starts it is an explicit one.
+          if [ "${ENABLED}" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "CANONICAL_SHADOW_ENABLED is not 'true' — nothing was run."
+            echo "Set the repository variable to enable the measurement."
+          fi
+
+      - name: Set up Python
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        if: steps.gate.outputs.run == 'true'
+        run: pip install --quiet -r requirements.txt
+
+      # A dispatched run names its signal. A scheduled one has to choose, and
+      # it chooses with the production selector — the same
+      # `select_eligible_signal.py` the streams use, with its own exit codes:
+      # 0 selected, 3 every candidate was evaluated and none was eligible
+      # (a clean "nothing to measure today"), 4 a judgment failed.
+      - name: Select a signal
+        id: signal
+        if: steps.gate.outputs.run == 'true'
+        env:
+          PYTHONPATH: .
+          NB_GOLDEN_ENGINE_MODEL: ${{ secrets.NB_GOLDEN_ENGINE_MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DISPATCHED: ${{ inputs.signal_id }}
+          ROLE: ${{ inputs.role || 'never-blank-monday-documented-case' }}
+        run: |
+          if [ -n "${DISPATCHED}" ]; then
+            echo "signal_id=${DISPATCHED}" >> "$GITHUB_OUTPUT"
+            echo "dispatched: ${DISPATCHED}"
+            exit 0
+          fi
+          set +e
+          python3 scripts/streams/select_eligible_signal.py \
+            --editorial-role "${ROLE}" | tee selection.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "${status}" -eq 3 ]; then
+            echo "signal_id=" >> "$GITHUB_OUTPUT"
+            echo "every candidate was evaluated and none was eligible — "
+            echo "nothing to measure today, and that is a clean result."
+            exit 0
+          fi
+          if [ "${status}" -ne 0 ]; then
+            echo "the selector failed (exit ${status}); failing visibly."
+            exit "${status}"
+          fi
+          chosen=$(grep -oE '^selected=.*$' selection.log | tail -1 | cut -d= -f2)
+          echo "signal_id=${chosen}" >> "$GITHUB_OUTPUT"
+
+      - name: Run the canonical chain in shadow
+        if: steps.gate.outputs.run == 'true' && steps.signal.outputs.signal_id != ''
+        env:
+          PYTHONPATH: .
+          # The one variable that decides the model for all ten Golden Engine
+          # transports. It has no fallback: an unconfigured engine refuses to
+          # start rather than measuring whatever the legacy pipeline is set to.
+          NB_GOLDEN_ENGINE_MODEL: ${{ secrets.NB_GOLDEN_ENGINE_MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+        run: |
+          python3 scripts/run_canonical_shadow.py \
+            --signal-id "${{ steps.signal.outputs.signal_id }}" \
+            --role "${{ inputs.role || 'never-blank-monday-documented-case' }}"
+
+      - name: Commit the ledger
+        if: steps.gate.outputs.run == 'true' && steps.signal.outputs.signal_id != ''
+        run: |
+          # The summary and the fingerprints are Portfolio Memory, retained
+          # indefinitely (Step 3 §3.2) — which is why data/editorial/ is
+          # committed on purpose and deliberately un-ignored.
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/editorial
+          if git diff --cached --quiet; then
+            echo "no ledger records to commit"
+          else
+            git commit -m "Canonical shadow run: ledger records"
+            git push
+          fi

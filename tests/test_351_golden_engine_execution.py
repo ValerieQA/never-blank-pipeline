@@ -115,10 +115,14 @@ from tests.golden_engine_boundary import (
 #: set is the topology's own minus those two rather than a list written here: a
 #: stage added to the canonical topology below S-14 makes this fail, which is the
 #: point of deriving it.
+#: The stages this engine executes. S-15 is SL-12's, so the set is the
+#: topology's own minus that one rather than a list written here: a stage added
+#: to the canonical topology makes this fail, which is the point of deriving it.
+#: S-14 joined in #308, in shadow.
 _EXECUTED_STAGES = tuple(
     stage.stage_id
     for stage in CANONICAL_TOPOLOGY.stages
-    if stage.stage_id not in {"S-14", "S-15"}
+    if stage.stage_id != "S-15"
 )
 
 
@@ -141,12 +145,12 @@ def executed(tmp_path_factory):
 # ===========================================================================
 
 
-def test_the_run_executes_every_stage_from_s00_to_s13(executed):
+def test_the_run_executes_every_stage_from_s00_to_s14(executed):
     """Every executed stage of the topology appears in the trace.
 
-    Not "the trace is long" and not "it reached S-13": each stage the topology
-    declares below S-14 recorded at least one StageRecord, so a stage silently
-    skipped over is a failure here rather than a gap nobody notices.
+    Not "the trace is long" and not "it reached the end": each stage the
+    topology declares below S-15 recorded at least one StageRecord, so a stage
+    silently skipped over is a failure here rather than a gap nobody notices.
     """
 
     _, execution, _, _ = executed
