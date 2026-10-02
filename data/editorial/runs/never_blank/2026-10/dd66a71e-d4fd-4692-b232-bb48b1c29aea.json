@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "run_id": "f8f43867-7be8-4c46-a5c0-acf6812a9f7b",
+  "run_id": "dd66a71e-d4fd-4692-b232-bb48b1c29aea",
   "client": "never_blank",
   "started_at": "2026-10-01T09:00:00Z",
   "signal_ids": [
@@ -10,7 +10,7 @@
     "unit-core-sig-351-exec"
   ],
   "code_identity": {
-    "commit_sha": "8d4e76fb6794fbca07207c4c8e6ec8c73a40457c",
+    "commit_sha": "d87dcf509c2079120105eaf2833740a69f224d44",
     "tracked_worktree_clean": true,
     "clean_policy": "tracked-source-v1"
   },
@@ -226,10 +226,10 @@
   "split_candidate": false,
   "vt02_unmatched_findings": 0,
   "workspace": {
-    "artifact_name": "editorial-run-f8f43867-7be8-4c46-a5c0-acf6812a9f7b",
+    "artifact_name": "editorial-run-dd66a71e-d4fd-4692-b232-bb48b1c29aea",
     "retention_days": 90,
     "expires_on": "2026-12-30",
-    "manifest_digest": "sha256:1632f465545ac3f0a3c4fb2519a9a79d488530de27ab1e2c2599e4fd0367695f"
+    "manifest_digest": "sha256:b52ce19519aad9fb029c771f16cc644e89c5d30859589272bfc9e4485ab1ea2c"
   },
   "ledger_commit": "not_attempted",
   "publication_unconfirmed": []

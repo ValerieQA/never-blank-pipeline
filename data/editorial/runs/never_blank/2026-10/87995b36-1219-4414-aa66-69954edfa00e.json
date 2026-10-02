@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "run_id": "addf7d2b-9156-40bc-91a6-887f9da51b1f",
+  "run_id": "87995b36-1219-4414-aa66-69954edfa00e",
   "client": "never_blank",
   "started_at": "2026-10-01T09:00:00Z",
   "signal_ids": [
@@ -8,7 +8,7 @@
   ],
   "unit_ids": [],
   "code_identity": {
-    "commit_sha": "8d4e76fb6794fbca07207c4c8e6ec8c73a40457c",
+    "commit_sha": "d87dcf509c2079120105eaf2833740a69f224d44",
     "tracked_worktree_clean": true,
     "clean_policy": "tracked-source-v1"
   },
@@ -66,10 +66,10 @@
   "split_candidate": false,
   "vt02_unmatched_findings": 0,
   "workspace": {
-    "artifact_name": "editorial-run-addf7d2b-9156-40bc-91a6-887f9da51b1f",
+    "artifact_name": "editorial-run-87995b36-1219-4414-aa66-69954edfa00e",
     "retention_days": 90,
     "expires_on": "2026-12-30",
-    "manifest_digest": "sha256:b171b3d00922fe770e3acb2841ce1f44fc6f7512bc2574d11523a6f6f4594934"
+    "manifest_digest": "sha256:57cdf682ddce34d3416d70708213cd79b44d02e98f22cbd019d9a2131525bab7"
   },
   "ledger_commit": "not_attempted",
   "publication_unconfirmed": []
