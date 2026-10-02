@@ -74,9 +74,41 @@ _ALL_PUBLISHERS = [
 #: happened to reject these packages first; #222 removed that check, correctly,
 #: and the accident it had been covering became visible the next day. An
 #: incidental guard is not channel authorization, so this is the authorization.
-_PUBLISHERS = restrict_to_release_scope(_ALL_PUBLISHERS)
+#:
+#: **This stage drives none of them** (#231, owner decision 2026-10-02). It
+#: holds no canonical preflight — nothing in it constructs one — and publication
+#: authorization is that preflight, not the ability to reach a publisher class.
+#: #227 narrowed the stage to Release 1's own two channels, which are exactly
+#: the two it cannot drive: it hands the legacy mutable ``DraftPackage`` to
+#: publishers that have accepted only the frozen canonical package since
+#: #100/#101, and the adapter raised ``AttributeError`` before any provider
+#: call. The crash was substantively right and formally wrong — an incidental
+#: crash is not a decision — so the refusal is now stated instead of thrown, and
+#: Daily Signal Research generates and packages while publishing nothing.
+#:
+#: Empty rather than deleted: the loop below still handles the results of
+#: whatever it is given, which is what a manual or Release 2 caller would use,
+#: and a path that offers it nothing cannot publish by accident.
+_PUBLISHERS: list[tuple[str, object]] = []
+
+#: The two Release 1 channels this path may not publish to, and why they are a
+#: different case from the four below: they are **inside** Release 1 scope, so
+#: calling them out-of-scope would be false. What they lack is this stage's
+#: canonical preflight. Derived from the one shared definition, never written
+#: out here (#227 item 8).
+_NO_PREFLIGHT_CHANNELS = tuple(
+    name for name, _ in restrict_to_release_scope(_ALL_PUBLISHERS)
+)
 
 _WITHHELD_CHANNELS = out_of_release_scope([name for name, _ in _ALL_PUBLISHERS])
+
+#: The two stated non-results, one per reason. Every channel gets one: a channel
+#: that silently disappears from the report is how #227 stayed hidden for months.
+_OUTSIDE_R1_REASON = "outside the Release 1 publishing scope (#227)"
+_NO_PREFLIGHT_REASON = (
+    "inside the Release 1 publishing scope, but this path holds no canonical "
+    "preflight and may not publish without one (#231)"
+)
 
 
 def _slugify(text: str) -> str:
@@ -305,9 +337,13 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
             name: PublishResult(
                 platform=name,
                 status=PublishStatus.SKIPPED,
-                error_message="outside the Release 1 publishing scope (#227)",
+                error_message=reason,
             ).to_dict()
-            for name in _WITHHELD_CHANNELS
+            for names, reason in (
+                (_WITHHELD_CHANNELS, _OUTSIDE_R1_REASON),
+                (_NO_PREFLIGHT_CHANNELS, _NO_PREFLIGHT_REASON),
+            )
+            for name in names
         }
         wix_url = ""
         wix_post_id: Optional[str] = None

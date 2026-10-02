@@ -354,6 +354,11 @@ def test_the_canonical_entrypoint_activates_the_budget_it_built(tmp_path):
         signal=run.signal,
         binding=run.binding,
         runs_root=run.runs_root,
+        # Isolated, like `runs_root` beside it. Without it `write_run_summary`
+        # falls back to the repository's own `data/editorial/runs/` tree — which
+        # `.gitignore` deliberately re-includes — so the run summary lands in the
+        # working tree and the next commit picks it up. Two PRs did (#231, #370).
+        ledger_dir=run.runs_root.parent / "ledger",
         started_at=run.now,
         now=run.now,
     )
@@ -657,6 +662,11 @@ def test_a_complete_canonical_run_seals_inside_the_golden_engine_ceiling(tmp_pat
         signal=run.signal,
         binding=run.binding,
         runs_root=run.runs_root,
+        # Isolated, like `runs_root` beside it. Without it `write_run_summary`
+        # falls back to the repository's own `data/editorial/runs/` tree — which
+        # `.gitignore` deliberately re-includes — so the run summary lands in the
+        # working tree and the next commit picks it up. Two PRs did (#231, #370).
+        ledger_dir=run.runs_root.parent / "ledger",
         started_at=run.now,
         now=run.now,
     )
