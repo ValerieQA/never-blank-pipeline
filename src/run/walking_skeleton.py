@@ -1023,10 +1023,13 @@ def run_golden_engine(
         budget=budget,
         code_identity=identity,
         first_pass=execution.first_pass,
-        # None, and that is the honest value: E-16 is S-14's output and S-14 is
-        # not executed here. A fingerprint listed by a run that produced none
-        # would be a learning record nobody can open.
-        fingerprint_ids=(),
+        # S-14's output, since #308 wired it in shadow. Every ID here names a
+        # record the run really wrote, to the workspace and to the durable
+        # ledger — a fingerprint listed by a run that produced none would be a
+        # learning record nobody can open.
+        fingerprint_ids=tuple(
+            item.fingerprint_id for item in execution.fingerprints
+        ),
         split_candidate=execution.split_candidate,
         ledger_dir=ledger_dir,
         commit=commit,
