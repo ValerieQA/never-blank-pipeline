@@ -354,12 +354,14 @@ def shingles(text: str, *, width: int = 5) -> frozenset[str]:
     )
 
 
-#: How much of a text's n-gram profile has to be shared before V-S05 records the
-#: overlap as worth noticing. Deliberately far below
-#: :data:`NEAR_DUPLICATE_OVERLAP`: V-S05 reports resemblance and V-T05 refuses
-#: republication, so the soft check notices long before the hard one acts, and
-#: the gap between the two numbers is what keeps them different questions.
-PORTFOLIO_OVERLAP: Final[float] = 0.2
+# V-S05 has **no** similarity threshold, and this is where one would have gone.
+# Its own record states `threshold: none`, I-12 keeps a soft signal from becoming
+# one without an owner decision, and OPEN-25 leaves the portfolio soft-pressure
+# weights open as an implementation question nobody has answered. So any number
+# here — including a small one chosen to look harmless — would be this layer
+# deciding that some measured resemblance is too slight to tell anyone about.
+# V-S05 reports what it measured. :data:`NEAR_DUPLICATE_OVERLAP` stays what it
+# is: V-T05's hard threshold, which blocks, and which is a different question.
 
 
 def normalized_sentence(value: str) -> str:
@@ -426,6 +428,13 @@ def _v_s05(
     republication is not asked about here — that is V-T05, which is hard and does
     block.
 
+    **No threshold anywhere.** The record says ``threshold: none``, and the
+    n-gram dimension therefore reports whatever overlap it measured rather than
+    only the overlaps some number calls large enough. Deciding that a measured
+    resemblance is too small to record would be exactly the soft-signal-turned-
+    threshold I-12 forbids without an owner decision, and OPEN-25 leaves that
+    decision open.
+
     An empty portfolio is answered rather than skipped. The hint then says the
     comparison was made and found nothing, which is the difference between a
     check that ran against nothing and a check nobody ran — the distinction every
@@ -451,11 +460,20 @@ def _v_s05(
             entry.ending == ending
         ):
             hints.append(_resembles(entry, text, "the ending", entry.ending))
-        overlap = _overlap(profile, entry.shingles)
-        if overlap >= PORTFOLIO_OVERLAP:
+        shared = profile & entry.shingles
+        if shared:
+            # Any shared n-gram is an observation; how much sharing matters is
+            # not this layer's to say (`threshold: none`, I-12, OPEN-25). Zero
+            # shared n-grams is the same state as an opening that does not match:
+            # nothing found, so nothing to report about this dimension.
+            overlap = _overlap(profile, entry.shingles)
             hints.append(
                 _resembles(
-                    entry, text, "n-gram overlap", f"{overlap:.2f} of the profile"
+                    entry,
+                    text,
+                    "n-gram overlap",
+                    f"{len(shared)} shared of {len(profile)}, {overlap:.2f} of "
+                    "the smaller profile",
                 )
             )
     if not hints:

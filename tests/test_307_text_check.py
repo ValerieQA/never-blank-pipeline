@@ -39,7 +39,7 @@ from src.editorial_core.text_check import (
     EDIT_COUNTER,
     STRATEGY_COUNTER,
     CALLS_PER_TEXT_VERSION,
-    PORTFOLIO_OVERLAP,
+    NEAR_DUPLICATE_OVERLAP,
     SOFT_CHECKS,
     CheckMethod,
     CheckOutcome,
@@ -75,6 +75,7 @@ from tests.test_306_writer import (
 
 from pathlib import Path
 
+import src.editorial_core.text_check as text_check_module
 from src.knowledge.loader import load_register
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -1111,28 +1112,84 @@ def test_a_prior_on_another_destination_is_not_compared():
     assert "over 0 prior publication(s)" in hint.findings[0].detail
 
 
-def test_overlap_below_the_portfolio_threshold_is_not_reported():
-    """The soft check notices long before the hard one acts, and not sooner.
+def test_a_low_but_nonzero_overlap_is_still_reported():
+    """V-S05 has no similarity threshold, and this is what that means.
 
-    `PORTFOLIO_OVERLAP` sits far below `NEAR_DUPLICATE_OVERLAP` because V-S05
-    reports resemblance and V-T05 refuses republication. A profile with nothing
-    in common produces no n-gram finding at all.
+    Its record says ``threshold: none``, I-12 keeps a soft signal from becoming
+    one without an owner decision, and OPEN-25 leaves the portfolio weights open.
+    So a prior sharing a **single** n-gram out of a whole profile is reported with
+    the overlap it measured. Deciding that such a resemblance is too slight to
+    mention would be this layer choosing the threshold its own record refuses to
+    state.
+
+    The prior here shares exactly one shingle and holds many the text does not,
+    so the measured overlap is one divided by the text's profile size — far below
+    any number anybody would have picked.
     """
 
     _, _, _, text = _checked()
-    unrelated = _fingerprint(
+    profile = shingles(text.body)
+    one = sorted(profile)[0]
+    unrelated = frozenset(
+        f"nothing in common here number {index}" for index in range(len(profile) + 5)
+    )
+    barely = _fingerprint(
         text,
         reader_path=(),
         opening=None,
         ending=None,
-        shingles=shingles("nothing in this sentence resembles the text at all"),
+        shingles=frozenset({one}) | unrelated,
     )
-    decision, _, _, _ = _checked(portfolio=(unrelated,))
 
-    assert PORTFOLIO_OVERLAP < 0.8
+    decision, _, _, _ = _checked(portfolio=(barely,))
+
+    hint = _hint(decision)
+    assert len(hint.findings) == 1
+    detail = hint.findings[0].detail
+    assert "n-gram overlap" in detail
+    assert f"1 shared of {len(profile)}" in detail
+    # Measured and reported, not compared against anything.
+    assert f"{1 / len(profile):.2f} of the smaller profile" in detail
+    assert decision.verdict.result is TextResult.ACCEPTED
+
+
+def test_no_shared_n_gram_reports_nothing_for_that_dimension():
+    """Zero shared n-grams is "found nothing", not "too small to mention".
+
+    The same state as an opening that does not match: the other three dimensions
+    report nothing when they do not match, and this one is consistent with them.
+    What is refused is suppressing a resemblance that **was** measured — not
+    inventing one where the profiles share no n-gram at all.
+    """
+
+    _, _, _, text = _checked()
+    disjoint = _fingerprint(
+        text,
+        reader_path=(),
+        opening=None,
+        ending=None,
+        shingles=shingles("entirely unrelated wording with no shingle in common"),
+    )
+
+    decision, _, _, _ = _checked(portfolio=(disjoint,))
+
     hint = _hint(decision)
     assert len(hint.findings) == 1
     assert "found nothing" in hint.findings[0].detail
+
+
+def test_the_hard_near_duplicate_threshold_is_untouched():
+    """V-T05 keeps its own number; removing V-S05's did not touch it.
+
+    The two are different questions — V-S05 reports resemblance and never blocks,
+    V-T05 refuses republication and does — and only the hard one has a threshold
+    its record authorizes.
+    """
+
+    assert NEAR_DUPLICATE_OVERLAP == 0.8
+    assert not hasattr(text_check_module, "PORTFOLIO_OVERLAP"), (
+        "V-S05's similarity threshold is OPEN-25's to decide, not this layer's"
+    )
 
 
 def test_v_s05_is_recorded_even_on_a_text_v_t05_refuses():
