@@ -69,8 +69,19 @@ from src.editorial_core.arp import (
     StateCode,
 )
 from src.editorial_core.arp import OutcomeScope
+import re
+
 from src.editorial_core.destinations import Destination
-from src.editorial_core.text_check import PriorPublication
+from src.editorial_core.text_check import (
+    CheckClass,
+    CheckMethod,
+    CheckOutcome,
+    PriorPublication,
+    TextFingerprint,
+    TextResult,
+    normalized_sentence,
+    shingles,
+)
 from src.run.run_inputs import NO_REFERENCE_LIBRARY, InputKind, run_inputs
 from src.run.run_workspace import DeciderKind
 from src.editorial_core.text_check import (
@@ -837,6 +848,157 @@ def test_vt05_still_refuses_a_republication_when_a_prior_exists():
     assert refused[0].outcome is ArpOutcome.SKIP
     assert refused[0].scope is OutcomeScope.PUBLICATION
     assert refused[0].counter is None, "V-T05 is terminal and spends no counter"
+
+
+# ===========================================================================
+# V-S05 on the canonical path: the producer is wired, both ways
+# ===========================================================================
+
+
+def _v_s05(verdict):
+    """The one V-S05 hint on a verdict this run produced."""
+
+    hints = [item for item in verdict.hints if item.check_id == "V-S05"]
+    assert len(hints) == 1, [item.check_id for item in verdict.hints]
+    return hints[0]
+
+
+def _projected(entity: dict) -> TextFingerprint:
+    """A prior E-16 projected from a text a previous canonical run published.
+
+    Exactly what a harness would do with a real fingerprint, and done with the
+    production helpers so both sides of the comparison are built the same way.
+    The body and the part names come out of the run's own sealed E-15; nothing is
+    authored, and no production fingerprint source is introduced.
+    """
+
+    body = entity["body"]
+    sentences = [
+        part for part in re.split(r"(?<=[.!?])\s+", body.strip()) if part.strip()
+    ]
+    return TextFingerprint(
+        fingerprint_id="fp-351-portfolio",
+        destination=Destination(entity["destination"]),
+        reader_path=tuple(
+            normalized_sentence(item["name"]) for item in entity["segments"]
+        ),
+        opening=normalized_sentence(sentences[0]),
+        ending=normalized_sentence(sentences[-1]),
+        shingles=shingles(body),
+    )
+
+
+def test_v_s05_is_present_and_evaluated_on_every_canonical_verdict(executed):
+    """The producer is wired, and an empty portfolio is answered not skipped.
+
+    Before this, `check_text`'s `soft_hints` parameter had no caller anywhere in
+    ``src/`` and every canonical TextVerdict carried ``hints: []`` — the check was
+    in the register, named in S-13's contract, and never applied. Now every
+    accepted text carries it, recorded as the soft code check that it is, with the
+    one finding that says the comparison ran and found nothing.
+    """
+
+    _, execution, workspace, _ = executed
+
+    assert len(execution.verdicts) == 6
+    for verdict in execution.verdicts:
+        hint = _v_s05(verdict)
+        assert hint.check_class is CheckClass.SOFT
+        assert hint.method is CheckMethod.CODE
+        assert hint.result is CheckOutcome.PASS, "evaluated, not unanswered"
+        assert hint.route is None
+        assert len(hint.findings) == 1
+        assert "found nothing" in hint.findings[0].detail
+        assert "over 0 prior publication(s)" in hint.findings[0].detail
+        # I-12, enforced by TextVerdict itself: never among the deciding checks.
+        assert "V-S05" not in {item.check_id for item in verdict.checks}
+
+    assert len(set(execution.accepted)) == 6, "a soft check is not a gate"
+    # And it is on the sealed entity too, which records hints by check ID.
+    for path in sorted(workspace.run_dir.rglob("text_*.json")):
+        entity = json.loads(path.read_text(encoding="utf-8"))
+        assert entity["hints"] == ["V-S05"]
+
+
+def test_v_s05_reports_separate_hints_against_a_prior_canonical_publication():
+    """Two passes: the first publishes, the second finds itself in the portfolio.
+
+    The prior is projected from the first run's own sealed E-15 and supplied
+    through the canonical input seam, exactly as the V-T05 prior test supplies
+    `PriorPublication`. The dimensions stay separate — the record requires it —
+    and nothing about the verdict changes: V-S05 blocks nothing, routes nowhere,
+    spends no counter and costs no call.
+    """
+
+    first = canonical_run(_tmp())
+    first_execution, first_workspace, _ = execute(first)
+    published = {
+        json.loads(path.read_text(encoding="utf-8"))["destination"]: json.loads(
+            path.read_text(encoding="utf-8")
+        )
+        for path in sorted(first_workspace.run_dir.rglob("txt-*.json"))
+    }
+    assert "wix" in published, sorted(published)
+    prior = _projected(published["wix"])
+
+    second = canonical_run(_tmp())
+    execution, _, _ = execute(second, text_portfolio=(prior,))
+
+    wix = next(item for item in execution.verdicts if item.destination is Destination.WIX)
+    hint = _v_s05(wix)
+    details = [finding.detail for finding in hint.findings]
+    assert details, "a matching prior produces at least one similarity hint"
+    for dimension in ("the reader path", "the opening", "the ending", "n-gram overlap"):
+        assert sum(dimension in detail for detail in details) <= 1, dimension
+    assert sum(
+        any(dimension in detail for detail in details)
+        for dimension in ("the reader path", "the opening", "the ending", "n-gram overlap")
+    ) == len(details), "every finding names exactly one dimension"
+    assert all("fp-351-portfolio" in detail for detail in details)
+    assert all("never a reason to block, edit or replan" in detail for detail in details)
+
+    # Nothing about the decision moved.
+    assert wix.result is TextResult.ACCEPTED
+    assert wix.route is None and wix.counter is None and wix.outcome is None
+    assert Destination.WIX in execution.accepted
+    assert len(set(execution.accepted)) == 6
+    # The five destinations the prior is not about are unaffected.
+    for verdict in execution.verdicts:
+        if verdict.destination is Destination.WIX:
+            continue
+        assert "over 0 prior publication(s)" in _v_s05(verdict).findings[0].detail
+
+
+def test_v_s05_adds_no_model_call_to_the_canonical_run():
+    """`method: code`, proved over the whole run rather than over one verdict.
+
+    The same six-destination run with and without a portfolio records the same 50
+    calls and charges the same 50 units, so the soft check costs nothing against
+    the ceiling it now runs under.
+    """
+
+    without = canonical_run(_tmp())
+    empty_execution, _, empty_budget = execute(without)
+    recorded_empty = sum(record.calls["count"] for record in empty_execution.records)
+
+    first = canonical_run(_tmp())
+    _, first_workspace, _ = execute(first)
+    entity = json.loads(
+        sorted(first_workspace.run_dir.rglob("txt-*.json"))[0].read_text(
+            encoding="utf-8"
+        )
+    )
+
+    with_prior = canonical_run(_tmp())
+    loaded_execution, _, loaded_budget = execute(
+        with_prior, text_portfolio=(_projected(entity),)
+    )
+    recorded_loaded = sum(
+        record.calls["count"] for record in loaded_execution.records
+    )
+
+    assert recorded_empty == recorded_loaded == 50
+    assert empty_budget.used == loaded_budget.used == 50
 
 
 # ===========================================================================

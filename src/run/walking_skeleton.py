@@ -89,7 +89,7 @@ from typing import Any, NamedTuple, Optional
 
 from src.editorial_core.arp import AttemptCounterLedger, OutcomeScope
 from src.editorial_core.signal_selection import PortfolioFingerprint
-from src.editorial_core.text_check import PriorPublication
+from src.editorial_core.text_check import PriorPublication, TextFingerprint
 from src.editorial_core.topology import CANONICAL_TOPOLOGY
 from src.publishing.publication_markers import DESTINATIONS, active_client
 from src.run.boundary_commit import (
@@ -920,6 +920,7 @@ def run_golden_engine(
     now: Optional[datetime] = None,
     portfolio: Sequence[PortfolioFingerprint] = (),
     priors: Sequence[PriorPublication] = (),
+    text_portfolio: Sequence[TextFingerprint] = (),
     ledger_dir: Optional[Path] = None,
     commit: bool = False,
     repo_root: Optional[Path] = None,
@@ -993,6 +994,7 @@ def run_golden_engine(
             now=now,
             portfolio=portfolio,
             priors=priors,
+            text_portfolio=text_portfolio,
         )
     decided_every_destination(execution.records, names)
 

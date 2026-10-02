@@ -39,8 +39,13 @@ from src.editorial_core.text_check import (
     EDIT_COUNTER,
     STRATEGY_COUNTER,
     CALLS_PER_TEXT_VERSION,
+    PORTFOLIO_OVERLAP,
+    SOFT_CHECKS,
+    CheckMethod,
+    CheckOutcome,
     PriorPublication,
     TextCheckError,
+    TextFingerprint,
     TextResult,
     affected_siblings,
     check_text,
@@ -49,6 +54,9 @@ from src.editorial_core.text_check import (
     CALLS_PER_SIBLING_RECHECK,
     shingles,
     text_check_records,
+    text_ending,
+    text_opening,
+    text_reader_path,
 )
 from src.editorial_core.writer import Text, revise_prose
 from tests.test_306_writer import (
@@ -129,6 +137,7 @@ def _checked(
     execution: Optional[dict[str, Any]] = None,
     counters: Optional[AttemptCounterLedger] = None,
     priors: Sequence[PriorPublication] = (),
+    portfolio: Sequence[TextFingerprint] = (),
     transport: Optional[_Transport] = None,
     destination: Destination = Destination.LINKEDIN,
 ):
@@ -147,6 +156,7 @@ def _checked(
             counters=counters or _ledger(),
             transport=used,
             priors=priors,
+            portfolio=portfolio,
         ),
         used,
         plan,
@@ -915,3 +925,233 @@ def test_the_re_check_refuses_to_run_without_the_plan_the_text_executes():
             counters=_ledger(),
             transport=_Transport(),
         )
+
+
+# ===========================================================================
+# V-S05 · how close this text is to the portfolio (soft, code, hint-only)
+# ===========================================================================
+
+
+def _fingerprint(text: Text, **overrides: Any) -> TextFingerprint:
+    """A prior E-16 projected from a text this stage really produced.
+
+    Projected with the production helpers rather than written by hand, so the two
+    sides of every comparison are built the same way — which is the only reason a
+    match or a miss means anything.
+    """
+
+    fields: dict[str, Any] = {
+        "fingerprint_id": "fp-307-prior",
+        "destination": text.destination,
+        "reader_path": text_reader_path(text),
+        "opening": text_opening(text),
+        "ending": text_ending(text),
+        "shingles": shingles(text.body),
+    }
+    fields.update(overrides)
+    return TextFingerprint(**fields)
+
+
+def _hint(decision: Any) -> Any:
+    """The one V-S05 result on a verdict, or a failure saying there is none."""
+
+    hints = [item for item in decision.verdict.hints if item.check_id == "V-S05"]
+    assert len(hints) == 1, [item.check_id for item in decision.verdict.hints]
+    return hints[0]
+
+
+def test_the_stage_is_handed_its_own_soft_check_record():
+    """§3, Knowledge / config: S-13 applies V-S05, so it must be given it.
+
+    S-11 has loaded its soft V-P05 among its own five since #305; S-13 loaded
+    only the eight hard records, so a producer asking for `checks["V-S05"]` would
+    have raised. Loading it is the half of the repair that makes the other half
+    reachable.
+    """
+
+    assert SOFT_CHECKS == ("V-S05",)
+    assert set(CHECKS) == {
+        "V-T01", "V-T02", "V-T03", "V-T04",
+        "V-T05", "V-T06", "V-T07", "V-T08", "V-S05",
+    }
+    assert CHECKS["V-S05"].check.method == "code"
+    assert CHECKS["V-S05"].check.check_class == "S"
+
+
+def test_a_register_without_the_soft_record_is_refused_not_continued():
+    """Fail closed, exactly as a missing hard record is.
+
+    "Continuing with seven checks because the eighth file was absent is the
+    fail-open the register exists to prevent" — and a soft check nobody applied
+    is a hint nobody can tell from a comparison that found nothing.
+    """
+
+    class _Register:
+        checks = tuple(
+            item for item in load_register(_REPO_ROOT / "knowledge").checks
+            if item.identity != "V-S05"
+        )
+
+    with pytest.raises(TextCheckError, match="V-S05"):
+        text_check_records(_Register())
+
+
+def test_v_s05_is_recorded_as_a_hint_and_never_among_the_deciding_checks():
+    """I-12: V-S* never block, and the verdict's own shape enforces it."""
+
+    decision, _, _, _ = _checked()
+
+    hint = _hint(decision)
+    assert hint.check_class.value == "S"
+    assert hint.method is CheckMethod.CODE
+    assert hint.result is CheckOutcome.PASS
+    assert hint.route is None
+    assert "V-S05" not in {item.check_id for item in decision.verdict.checks}
+    assert decision.verdict.result is TextResult.ACCEPTED
+
+
+def test_v_s05_answers_an_empty_portfolio_rather_than_skipping_it():
+    """The distinction every soft input in this layer turns on.
+
+    A check that ran against nothing records that it ran. A check nobody ran
+    records nothing — and the two must not look the same, which is why the
+    comparison is evaluated unconditionally and says how many priors it saw.
+    """
+
+    decision, _, _, text = _checked()
+
+    hint = _hint(decision)
+    assert len(hint.findings) == 1
+    detail = hint.findings[0].detail
+    assert "the comparison was made over 0 prior publication(s)" in detail
+    assert "found nothing" in detail
+    assert hint.findings[0].refs == (text.text_id,)
+
+
+def test_v_s05_reports_each_dimension_separately():
+    """The record's own requirement, and the reason it is a requirement.
+
+    "Each reported separately so that a shared path and a shared phrasing are not
+    added together into one number nobody can act on." A prior that matches the
+    path, the opening, the ending and the n-grams produces four findings, each
+    naming its own dimension — not one finding with a score in it.
+    """
+
+    _, _, _, text = _checked()
+    decision, _, _, _ = _checked(portfolio=(_fingerprint(text),))
+
+    hint = _hint(decision)
+    details = [finding.detail for finding in hint.findings]
+    assert len(details) == 4
+    for dimension in ("the reader path", "the opening", "the ending", "n-gram overlap"):
+        assert sum(dimension in detail for detail in details) == 1, dimension
+    assert all("fp-307-prior" in detail for detail in details)
+    assert {finding.refs for finding in hint.findings} == {("fp-307-prior",)}
+
+
+@pytest.mark.parametrize(
+    "overrides, dimension",
+    [
+        ({"opening": None, "ending": None, "shingles": frozenset()}, "the reader path"),
+        ({"reader_path": (), "ending": None, "shingles": frozenset()}, "the opening"),
+        ({"reader_path": (), "opening": None, "shingles": frozenset()}, "the ending"),
+        ({"reader_path": (), "opening": None, "ending": None}, "n-gram overlap"),
+    ],
+)
+def test_each_dimension_is_compared_on_its_own_field(
+    overrides: dict[str, Any], dimension: str
+):
+    """One dimension at a time, so no finding can be produced by another's field.
+
+    A fingerprint that answers about one dimension and leaves the rest unstated
+    produces exactly that one hint — which is what makes the four findings above
+    four separate comparisons rather than one comparison reported four times.
+    """
+
+    _, _, _, text = _checked()
+    decision, _, _, _ = _checked(portfolio=(_fingerprint(text, **overrides),))
+
+    hint = _hint(decision)
+    assert len(hint.findings) == 1
+    assert dimension in hint.findings[0].detail
+
+
+def test_v_s05_cannot_block_however_much_it_finds():
+    """I-12, as behaviour: everything matched, and the text is still accepted."""
+
+    _, _, _, text = _checked()
+    decision, _, _, _ = _checked(portfolio=(_fingerprint(text),))
+
+    assert decision.verdict.result is TextResult.ACCEPTED
+    assert decision.verdict.route is None
+    assert decision.verdict.counter is None
+    assert decision.verdict.outcome is None
+    assert len(_hint(decision).findings) == 4
+
+
+def test_v_s05_costs_no_model_call():
+    """`method: code`. The run's call count is the same with and without it."""
+
+    without, _, _, text = _checked()
+    with_prior, _, _, _ = _checked(portfolio=(_fingerprint(text),))
+
+    assert without.verdict.calls == with_prior.verdict.calls == CALLS_PER_TEXT_VERSION
+
+
+def test_a_prior_on_another_destination_is_not_compared():
+    """Portfolio pressure is per surface, as every sibling projection is."""
+
+    _, _, _, text = _checked()
+    elsewhere = _fingerprint(text, destination=Destination.WIX)
+    decision, _, _, _ = _checked(portfolio=(elsewhere,))
+
+    hint = _hint(decision)
+    assert len(hint.findings) == 1
+    assert "found nothing" in hint.findings[0].detail
+    assert "over 0 prior publication(s)" in hint.findings[0].detail
+
+
+def test_overlap_below_the_portfolio_threshold_is_not_reported():
+    """The soft check notices long before the hard one acts, and not sooner.
+
+    `PORTFOLIO_OVERLAP` sits far below `NEAR_DUPLICATE_OVERLAP` because V-S05
+    reports resemblance and V-T05 refuses republication. A profile with nothing
+    in common produces no n-gram finding at all.
+    """
+
+    _, _, _, text = _checked()
+    unrelated = _fingerprint(
+        text,
+        reader_path=(),
+        opening=None,
+        ending=None,
+        shingles=shingles("nothing in this sentence resembles the text at all"),
+    )
+    decision, _, _, _ = _checked(portfolio=(unrelated,))
+
+    assert PORTFOLIO_OVERLAP < 0.8
+    hint = _hint(decision)
+    assert len(hint.findings) == 1
+    assert "found nothing" in hint.findings[0].detail
+
+
+def test_v_s05_is_recorded_even_on_a_text_v_t05_refuses():
+    """Evaluated unconditionally: the paths that stop early carry it too.
+
+    A near-exact republication returns before either model call is made. The
+    comparison is code and costs nothing, so a verdict that stops there still
+    says what the portfolio looked like — and a soft check present only on the
+    paths that reach the end would be a soft check whose absence means two things.
+    """
+
+    _, _, _, text = _checked()
+    prior = PriorPublication(
+        fingerprint_id="fp-307-republication",
+        destination=text.destination,
+        content_digest=text.content_digest,
+    )
+    decision, used, _, _ = _checked(priors=(prior,), portfolio=(_fingerprint(text),))
+
+    assert decision.verdict.result is TextResult.SKIP
+    assert used.calls == 0, "V-T05 is terminal before any model call"
+    assert len(_hint(decision).findings) == 4

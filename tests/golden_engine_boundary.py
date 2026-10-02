@@ -1212,6 +1212,7 @@ def execute(
     limit: int = GOLDEN_ENGINE_MAX_CEILING,
     counters: Optional[AttemptCounterLedger] = None,
     priors: Sequence[Any] = (),
+    text_portfolio: Sequence[Any] = (),
 ):
     """Execute the canonical topology over ``run``, and return its result.
 
@@ -1240,6 +1241,7 @@ def execute(
             budget=budget,
             counters=counters,
             priors=priors,
+            text_portfolio=text_portfolio,
             now=run.now,
         )
     return execution, workspace, budget

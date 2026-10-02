@@ -175,6 +175,7 @@ from src.editorial_core.strategy_selection import (
 from src.editorial_core.text_check import (
     BOUNDARY_COUNTER,
     PriorPublication,
+    TextFingerprint,
     TextResult,
     TextVerdict,
     affected_siblings,
@@ -686,6 +687,11 @@ class CanonicalExecution(NamedTuple):
     #: Where the run stopped, when it stopped before S-13. ``None`` for a run
     #: that reached the end of the wired topology.
     stopped_at: Optional[str] = None
+    #: The verdict behind each accepted text, in destination order. Carried
+    #: because the TextVerdict **entity** records its hints by check ID alone —
+    #: the free text stays in the workspace (§3.3) — so what a soft check like
+    #: V-S05 actually found is readable from the execution and from nowhere else.
+    verdicts: tuple[TextVerdict, ...] = ()
 
 
 # ===========================================================================
@@ -706,6 +712,7 @@ def execute_canonical_topology(
     now: Optional[datetime] = None,
     portfolio: Sequence[PortfolioFingerprint] = (),
     priors: Sequence[PriorPublication] = (),
+    text_portfolio: Sequence[TextFingerprint] = (),
 ) -> CanonicalExecution:
     """Execute the real S-00…S-13 over one intake record, and record every step.
 
@@ -734,6 +741,7 @@ def execute_canonical_topology(
         now=now or run_context.started_at,
         portfolio=tuple(portfolio),
         priors=tuple(priors),
+        text_portfolio=tuple(text_portfolio),
         workspace=workspace,
     ).execute()
 
@@ -942,6 +950,7 @@ class _Run:
         now: datetime,
         portfolio: Sequence[PortfolioFingerprint],
         priors: Sequence[PriorPublication],
+        text_portfolio: Sequence[TextFingerprint],
         workspace: RunWorkspace,
     ) -> None:
         self.trace = trace
@@ -955,6 +964,7 @@ class _Run:
         self.now = now
         self.portfolio = tuple(portfolio)
         self.priors = tuple(priors)
+        self.text_portfolio = tuple(text_portfolio)
         self.workspace = workspace
 
         self.signal_id: str = ""
@@ -1113,6 +1123,11 @@ class _Run:
                 if lane.accepted is not None
             ),
             stopped_at=stopped_at,
+            verdicts=tuple(
+                lane.accepted
+                for lane in self._ordered_lanes()
+                if lane.accepted is not None
+            ),
         )
 
     def _scopes(self) -> tuple[RunScope, ...]:
@@ -2197,6 +2212,7 @@ class _Run:
                 counters=self.counters,
                 transport=self.meters.text_check,
                 priors=self.priors,
+                portfolio=self.text_portfolio,
             )
             verdict = decided.verdict
             self.trace.record(
