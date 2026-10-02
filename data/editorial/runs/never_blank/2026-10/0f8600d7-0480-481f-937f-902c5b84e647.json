@@ -1,0 +1,236 @@
+{
+  "schema_version": "1.0",
+  "run_id": "0f8600d7-0480-481f-937f-902c5b84e647",
+  "client": "never_blank",
+  "started_at": "2026-10-01T09:00:00Z",
+  "signal_ids": [
+    "sig-351-exec"
+  ],
+  "unit_ids": [
+    "unit-core-sig-351-exec"
+  ],
+  "code_identity": {
+    "commit_sha": "8d4e76fb6794fbca07207c4c8e6ec8c73a40457c",
+    "tracked_worktree_clean": false,
+    "clean_policy": "tracked-source-v1"
+  },
+  "configuration_identity": null,
+  "topology_digest": "sha256:d01a7bc1f43e87c7fc08e4d1f122bbd0146b21a8fb385cd6bdd24d6c3b8dc00c",
+  "scope_outcomes": [
+    {
+      "scope": "signal",
+      "scope_key": "sig-351-exec",
+      "outcome": "DEGRADE",
+      "state_code": "only_low_strength_interpretation",
+      "category": "boundary"
+    },
+    {
+      "scope": "unit",
+      "scope_key": "unit-core-sig-351-exec",
+      "outcome": "RESOLVE",
+      "state_code": "no_asset_or_admissible_interpretation",
+      "category": "evidence"
+    },
+    {
+      "scope": "destination",
+      "scope_key": "unit-core-sig-351-exec/facebook",
+      "outcome": "RESOLVE",
+      "state_code": "several_equal_strategies",
+      "category": "strategy"
+    },
+    {
+      "scope": "destination",
+      "scope_key": "unit-core-sig-351-exec/instagram",
+      "outcome": "RESOLVE",
+      "state_code": "several_equal_strategies",
+      "category": "strategy"
+    },
+    {
+      "scope": "destination",
+      "scope_key": "unit-core-sig-351-exec/linkedin",
+      "outcome": "RESOLVE",
+      "state_code": "several_equal_strategies",
+      "category": "strategy"
+    },
+    {
+      "scope": "destination",
+      "scope_key": "unit-core-sig-351-exec/telegram",
+      "outcome": "RESOLVE",
+      "state_code": "several_equal_strategies",
+      "category": "strategy"
+    },
+    {
+      "scope": "destination",
+      "scope_key": "unit-core-sig-351-exec/threads",
+      "outcome": "RESOLVE",
+      "state_code": "several_equal_strategies",
+      "category": "strategy"
+    },
+    {
+      "scope": "destination",
+      "scope_key": "unit-core-sig-351-exec/wix",
+      "outcome": "RESOLVE",
+      "state_code": "several_equal_strategies",
+      "category": "strategy"
+    }
+  ],
+  "counters": [
+    {
+      "counter": "L_anchor",
+      "used": 0,
+      "limit": 1
+    },
+    {
+      "counter": "L_boundary",
+      "used": 0,
+      "limit": 1
+    },
+    {
+      "counter": "L_edit",
+      "used": 0,
+      "limit": 1
+    },
+    {
+      "counter": "L_enrich",
+      "used": 0,
+      "limit": 2
+    },
+    {
+      "counter": "L_strategy",
+      "used": 0,
+      "limit": 2
+    }
+  ],
+  "stage_calls": [
+    {
+      "stage": "S-00",
+      "calls": 1,
+      "tokens_in": 0,
+      "tokens_out": 0
+    },
+    {
+      "stage": "S-01",
+      "calls": 2,
+      "tokens_in": 0,
+      "tokens_out": 0
+    },
+    {
+      "stage": "S-02",
+      "calls": 1,
+      "tokens_in": 0,
+      "tokens_out": 0
+    },
+    {
+      "stage": "S-03",
+      "calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0
+    },
+    {
+      "stage": "S-04",
+      "calls": 2,
+      "tokens_in": 0,
+      "tokens_out": 0
+    },
+    {
+      "stage": "S-05",
+      "calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0
+    },
+    {
+      "stage": "S-06",
+      "calls": 1,
+      "tokens_in": 0,
+      "tokens_out": 0
+    },
+    {
+      "stage": "S-07",
+      "calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0
+    },
+    {
+      "stage": "S-08",
+      "calls": 6,
+      "tokens_in": 0,
+      "tokens_out": 0
+    },
+    {
+      "stage": "S-09",
+      "calls": 6,
+      "tokens_in": 0,
+      "tokens_out": 0
+    },
+    {
+      "stage": "S-10",
+      "calls": 6,
+      "tokens_in": 0,
+      "tokens_out": 0
+    },
+    {
+      "stage": "S-11",
+      "calls": 7,
+      "tokens_in": 0,
+      "tokens_out": 0
+    },
+    {
+      "stage": "S-12",
+      "calls": 6,
+      "tokens_in": 0,
+      "tokens_out": 0
+    },
+    {
+      "stage": "S-13",
+      "calls": 12,
+      "tokens_in": 0,
+      "tokens_out": 0
+    }
+  ],
+  "calls_total": 50,
+  "call_budget_limit": 60,
+  "first_pass": [
+    {
+      "destination": "facebook",
+      "plan_first_pass": true,
+      "text_first_pass": true
+    },
+    {
+      "destination": "instagram",
+      "plan_first_pass": true,
+      "text_first_pass": true
+    },
+    {
+      "destination": "linkedin",
+      "plan_first_pass": true,
+      "text_first_pass": true
+    },
+    {
+      "destination": "telegram",
+      "plan_first_pass": true,
+      "text_first_pass": true
+    },
+    {
+      "destination": "threads",
+      "plan_first_pass": true,
+      "text_first_pass": true
+    },
+    {
+      "destination": "wix",
+      "plan_first_pass": true,
+      "text_first_pass": true
+    }
+  ],
+  "fingerprint_ids": [],
+  "publications": [],
+  "split_candidate": false,
+  "vt02_unmatched_findings": 0,
+  "workspace": {
+    "artifact_name": "editorial-run-0f8600d7-0480-481f-937f-902c5b84e647",
+    "retention_days": 90,
+    "expires_on": "2026-12-30",
+    "manifest_digest": "sha256:a4101589667dbc3a7d728388b6215a15a405f26740ec22259d550485b299189c"
+  },
+  "ledger_commit": "not_attempted",
+  "publication_unconfirmed": []
+}

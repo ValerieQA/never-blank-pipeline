@@ -2357,6 +2357,12 @@ class _Run:
 
         boundary, core = self._material()
         unit = self._unit()
+        # The version this execution **reads**, captured before it commits the
+        # next one: `_commit` replaces `lineage[E-09]` with the version it
+        # writes, so a reference read afterwards would name this execution's own
+        # output as its input — a lineage reference that resolves to nothing
+        # upstream, which is the one thing a seam proof cannot resolve (#370).
+        read = self.lineage[_BOUNDARY_ENTITY_TYPE]
         text = lane.text
         if text is None:
             raise GoldenEngineError(
@@ -2422,7 +2428,7 @@ class _Run:
             stage="S-04",
             scope_key=self.signal_id,
             decider=_decider(reentry.calls),
-            inputs=(self.lineage[_BOUNDARY_ENTITY_TYPE],),
+            inputs=(read,),
             outputs=outputs,
             calls=reentry.calls,
             requests=self.meters.boundary.since(mark),
