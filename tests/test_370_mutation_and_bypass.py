@@ -5,17 +5,20 @@ A safety net nobody has torn is a net nobody has measured. Every proof in
 module breaks the path on purpose, one seam at a time, and requires the net to
 notice. Three families, and each answers one acceptance criterion:
 
-1. **a real stage replaced by a static artifact.** Thirteen cases, one per
-   stage whose canonical execution produces an artifact. The substitute is not
-   authored: it is the output a *donor* canonical run's production producer
-   really made, over a different signal — which is exactly what a "static
-   artifact" is, an artifact the consuming run did not produce. An authored one
-   would test the author's idea of the shape; this tests whether the net can
-   tell a foreign artifact from the run's own.
-2. **a required production producer removed.** The configuration is assembled
-   by the production ``golden_engine_configuration`` with one producer
-   answering ``None`` — "nobody produces this" — and the run must fail closed:
-   no accepted text, and no run that claims to have completed.
+1. **a real stage replaced by a static artifact.** One case per wired stage,
+   all fourteen. The substitute is not authored: it is the output a *donor*
+   canonical run's production producer really made, over a different signal —
+   which is exactly what a "static artifact" is, an artifact the consuming run
+   did not produce. An authored one would test the author's idea of the shape;
+   this tests whether the net can tell a foreign artifact from the run's own.
+   Thirteen are substituted into the canonical scenario and S-03 into the
+   enriching one, because a gap detector replaced by "nothing is missing" is
+   only a mutation on a run where something is.
+2. **a required production producer removed.** Each of the four the issue
+   names answers ``None`` in turn — "nobody produces this" — with the
+   configuration assembled by the production ``golden_engine_configuration``
+   and the run executed by the production engine, and the path must fail
+   closed: no accepted text, and no run that claims to have completed.
 3. **a stage-to-stage reference broken.** The net's own sensitivity, over the
    trace and the manifest of a clean run: a version nobody produced, a digest
    nobody wrote, a reference that resolves only to a later output, an
@@ -50,11 +53,15 @@ from src.run.signal_adapter import DOMAIN_FIELD, RISK_FIELD
 from src.run.walking_skeleton import CANONICAL_DESTINATIONS, run_golden_engine
 from tests.golden_engine_boundary import canonical_run, execute
 from tests.golden_engine_net import (
+    CLEAN_RUN_CALLS,
     DONOR_SIGNAL,
+    ENRICHING_STAGE,
     NET_SIGNAL,
     REQUIRED_PRODUCERS,
     STAGE_PRODUCERS,
+    boundary_calls,
     bypassed_run,
+    enriching_run,
     lineage_findings,
     manifest_findings,
     rebound,
@@ -71,12 +78,30 @@ FOREIGN_DIGEST = "sha256:" + "0" * 64
 def artifacts(tmp_path_factory):
     """One donor canonical run's stage outputs, captured once.
 
-    Module-scoped because capturing them is a whole canonical run: thirteen
-    substitutions over thirteen fresh host runs is the expensive half, and
-    re-donating per case would double it without proving anything more.
+    Module-scoped because capturing them is a whole canonical run: a
+    substitution per stage over a fresh host run each is the expensive half,
+    and re-donating per case would double it without proving anything more.
     """
 
     return static_artifacts(tmp_path_factory.mktemp("donor370"))
+
+
+@pytest.fixture(scope="module")
+def enriching(tmp_path_factory):
+    """One clean run of the enriching scenario, and what it asked each boundary.
+
+    The baseline the S-03 substitution is measured against, and it is measured
+    rather than declared: what that case proves is a difference between the
+    same scenario mutated and unmutated, and a number written here by hand
+    would be a third thing that could be wrong.
+
+    Module-scoped for the reason the donor is — it is a whole canonical run.
+    """
+
+    root = tmp_path_factory.mktemp("enriching370")
+    run = enriching_run(root, signal_id=NET_SIGNAL)
+    execution, _, _ = execute(run)
+    return run, execution
 
 
 @pytest.fixture(scope="module")
@@ -112,22 +137,27 @@ def test_the_donor_run_supplies_an_artifact_for_every_substitutable_stage(
 ):
     """The instrument works before it is used to measure anything.
 
-    Thirteen stages, thirteen captured outputs, each produced by the production
-    entry the engine calls — and the donor is a different signal, so an
-    artifact substituted into the host run carries identities the host never
-    produced. Without this, a case below could pass because the substitution
-    never happened.
+    One captured output per wired stage, each produced by the production entry
+    the engine calls — and the donor is a different signal, so an artifact
+    substituted into the host run carries identities the host never produced.
+    Without this, a case below could pass because the substitution never
+    happened.
+
+    S-03's is the empty gap set, which is what its entry answers on a run with
+    nothing to close. It is named here rather than left to be noticed, because
+    it is the one donation that carries no identity of the donor at all and so
+    the one that needs a host run whose own answer would differ.
     """
 
     assert sorted(artifacts) == sorted(STAGE_PRODUCERS)
     assert all(value is not None for value in artifacts.values())
     assert DONOR_SIGNAL != NET_SIGNAL
-    assert "S-03" not in STAGE_PRODUCERS
+    assert artifacts[ENRICHING_STAGE] == ()
 
 
 @pytest.mark.parametrize("stage", sorted(STAGE_PRODUCERS))
 def test_replacing_one_real_stage_with_a_static_artifact_is_caught(
-    tmp_path: Path, artifacts, stage: str
+    tmp_path: Path, artifacts, enriching, stage: str
 ):
     """Acceptance: replacing any one real stage makes the proof fail.
 
@@ -144,16 +174,49 @@ def test_replacing_one_real_stage_with_a_static_artifact_is_caught(
     nothing refuses, the net reports it: the substituted stage asked its model
     boundary nothing, or the artifact's identities are not this run's.
 
+    ``ENRICHING_STAGE`` is the one stage whose host run is not the canonical
+    scenario, and ``static_artifact_run`` picks it: its entry is the gap
+    detection, and on a run with nothing to close the substitute is the
+    stage's own answer handed back to it — a case that cannot fail and
+    therefore proves nothing. It is measured on the scenario whose material
+    blocks a decision, against that scenario's own measured arithmetic.
+
     What would **not** be a detection is a run that completed with the net
     finding nothing, which is what :attr:`MutationReport.detected` is false for.
     """
 
-    report = static_artifact_run(tmp_path, stage=stage, artifacts=artifacts)
+    clean, _ = enriching
+    report = static_artifact_run(
+        tmp_path,
+        stage=stage,
+        artifacts=artifacts,
+        enriching_calls=boundary_calls(clean.ledger),
+    )
 
     assert report.detected, (
         f"{stage} was replaced by an artifact of another run and the "
         "composition proof stayed green"
     )
+
+
+def test_the_enriching_scenario_spends_what_the_canonical_one_does_not(
+    enriching,
+):
+    """The S-03 case has a baseline, and the baseline is a round that ran.
+
+    Everything the substitution above claims rests on this: the unmutated
+    scenario reaches a boundary the canonical one does not, because S-03
+    opened a gap and searched for it. A scenario that quietly stopped
+    enriching would leave that case comparing a run with nothing in it against
+    a baseline with nothing in it, and passing for the wrong reason.
+    """
+
+    run, execution = enriching
+    calls = boundary_calls(run.ledger)
+
+    assert execution.stopped_at is None
+    assert len(set(execution.accepted)) == len(CANONICAL_DESTINATIONS)
+    assert calls["material"] > CLEAN_RUN_CALLS["material"], calls
 
 
 def test_the_substitution_is_undone_and_the_path_is_the_production_path(
@@ -187,12 +250,14 @@ def test_removing_a_required_production_producer_fails_closed(
 ):
     """Acceptance: bypassing a required producer makes the proof fail closed.
 
-    ``StrategyContract``, ``AdaptationContract`` and ``StrengthLadder`` are the
-    three the issue names that a run *loads*, each from its own producer in
-    ``golden_engine_configuration``. Each is removed in turn by rebinding that
-    producer to one that answers ``None``, and the configuration is then
-    assembled by the production loader — so the run is handed what it would be
-    handed if the producer were not there.
+    The four the issue names. ``StrategyContract``, ``AdaptationContract`` and
+    ``StrengthLadder`` are authorities a run *loads*, each from its own
+    producer in ``golden_engine_configuration``; ``UnitFacts`` is the lift S-07
+    makes out of the intake record while the run is under way. Each is removed
+    in turn by rebinding its producer to one that answers ``None``, across the
+    assembly and the run alike, and everything else is the production path —
+    so what the run is handed is what it would be handed if that producer were
+    not there.
 
     Nothing is substituted for the missing value. The claim is that the path
     cannot be walked without it, and "fails closed" is the conjunction of two
@@ -210,52 +275,72 @@ def test_removing_a_required_production_producer_fails_closed(
     assert report.fails_closed, report
 
 
-def test_the_unit_facts_s07_decides_on_are_lifted_from_the_intake_record(
+def test_the_unit_facts_s07_decides_on_move_with_the_record_they_are_lifted_from(
     tmp_path: Path,
 ):
-    """``UnitFacts`` is a lift, so bypassing it is proved by what S-07 was given.
+    """The lift is a lift, and not a producer answering the same thing twice.
 
-    The other three required inputs are loaded authorities and a run without
-    one cannot be assembled. This one is neither loaded nor classified: §1 says
-    the two values are "lifted out and handed over", and what they are lifted
-    from is the two fields #365 persists on the intake record before S-00 sees
-    it. So the bypass to rule out is the engine handing S-07 facts it did not
-    lift — a default, an inference, a classification of its own — and the
-    evidence is the argument the production stage was called with.
+    §1 says the two values are "lifted out and handed over", and what they are
+    lifted from is the two fields #365 persists on the intake record before
+    S-00 sees it. A spy over **one** run cannot tell that apart from a
+    producer that answers those two strings whatever record it is handed — the
+    fixture's classifications are constants, and a constant matches a
+    constant.
+
+    So the production path is walked twice, over two records stating two
+    editorial domains the client contract admits, and what S-07 was handed has
+    to move with the record it came from. A replacement that answered the
+    canonical record's domain both times fails the second case.
 
     The production ``decide_destinations`` still runs: the spy passes the call
-    through, so this is the canonical run, not a run with S-07 replaced.
+    through, so each of these is the canonical run and not a run with S-07
+    replaced.
     """
 
     seen: list[UnitFacts] = []
     original = golden_engine.decide_destinations
-    run = canonical_run(tmp_path, signal_id=NET_SIGNAL)
 
     def watching(*args: Any, **kwargs: Any) -> Any:
         seen.append(kwargs["facts"])
         return original(*args, **kwargs)
 
-    with rebound("decide_destinations", watching):
-        execution, _, _ = execute(run)
-
-    assert len(seen) == 1, "one unit, one destination decision set"
-    assert seen[0] == UnitFacts(
-        topic_key=run.signal[DOMAIN_FIELD],
-        risk_level=run.signal[RISK_FIELD],
+    first = canonical_run(tmp_path / "first", signal_id=NET_SIGNAL)
+    second = canonical_run(tmp_path / "second", signal_id=NET_SIGNAL)
+    # The contract's own admitted values, in its own spelling: a second domain
+    # chosen here would be a value the client never approved, and S-00 would
+    # refuse the record before S-07 could be asked anything.
+    admitted = first.configuration.fit_rules.rules[0].admits
+    assert len(admitted) >= 2, (
+        "the client contract admits one editorial domain, so no second record "
+        "can distinguish the lift from a constant; this case has to be "
+        "rewritten rather than left passing"
     )
-    assert len(set(execution.accepted)) == len(CANONICAL_DESTINATIONS)
+    assert first.signal[DOMAIN_FIELD] == admitted[0]
+    other = replace(
+        second, signal={**second.signal, DOMAIN_FIELD: admitted[-1]}
+    )
+
+    with rebound("decide_destinations", watching):
+        for run in (first, other):
+            execution, _, _ = execute(run)
+            assert execution.stopped_at is None
+
+    assert [facts.topic_key for facts in seen] == [admitted[0], admitted[-1]]
+    assert {facts.risk_level for facts in seen} == {first.signal[RISK_FIELD]}
 
 
 def test_a_record_that_states_neither_classification_never_reaches_s07(
     tmp_path: Path,
 ):
-    """And the lift cannot be the thing that rescues it.
+    """And the record that states nothing is refused before S-07, not at it.
 
     A record carrying neither field is refused by the fit rule that owns the
     refusal, at S-00, before anything is spent — so the run this net would
-    otherwise prove does not happen at all. That is the fail-closed direction:
-    the engine does not reach S-07 and decide six destinations on facts it
-    made up on the way.
+    otherwise prove does not happen at all. That is the fail-closed direction
+    on the *record*: the engine does not reach S-07 and decide six
+    destinations on facts it made up on the way. The fail-closed direction on
+    the *producer* is the bypass case above, where the record states both and
+    the lift is the thing that is gone.
     """
 
     run = canonical_run(tmp_path, signal_id=NET_SIGNAL)

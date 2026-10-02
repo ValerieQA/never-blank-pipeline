@@ -44,12 +44,14 @@ from tests.golden_engine_boundary import Ledger, TextCheck, canonical_run, execu
 from tests.golden_engine_net import (
     CLEAN_RUN_CALLS,
     NET_SIGNAL,
+    RESEARCH_BOUNDARY,
     SEAMS,
     SELECTION_ENTITY_TYPE,
     STAGE_PRODUCERS,
     STAGES,
     composition_findings,
     descent_findings,
+    enriching_run,
     fanout_findings,
     lineage_findings,
     manifest_findings,
@@ -306,10 +308,10 @@ def test_s03_runs_and_opens_no_enrichment_round(sealed):
 
     "No blocking gap → zero rounds" is the ordinary result and the common one,
     and the stage still records that it ran: a stage that left no entity is not
-    a stage that did not execute. It is also why S-03 is absent from
-    ``STAGE_PRODUCERS``: a stage that asks no boundary and opens no round has
-    no artifact a static one could be stood in for, so its seam is proved by
-    what it consumed rather than by a substitution that would change nothing.
+    a stage that did not execute. It is also why the substitution case for
+    S-03 is not measured here: on this scenario its production entry answers
+    the empty gap set, so a static empty result is the same answer, and the
+    mutation is made on the scenario below instead.
     """
 
     run, result = sealed
@@ -325,7 +327,80 @@ def test_s03_runs_and_opens_no_enrichment_round(sealed):
     # One material call in the whole run, and it is S-02's: an enrichment round
     # would be a second, so this is the evidence that none ran.
     assert run.ledger.count("material") == CLEAN_RUN_CALLS["material"] == 1
-    assert "S-03" not in STAGE_PRODUCERS
+    assert STAGE_PRODUCERS["S-03"] == "open_gaps"
+
+
+def test_material_that_blocks_a_decision_sends_s03_round_the_production_loop(
+    tmp_path,
+):
+    """The scenario where S-03 produces something, and the net over all of it.
+
+    One external boundary answers differently — S-02's description carries a
+    note naming the decision it blocks — and from there everything is the
+    production path: S-03 opens the E-07, searches through the run's own
+    research seam, re-assesses, recomputes the description and re-versions the
+    core and the features it enriched. Those re-versioned artifacts are what
+    ``SEAMS`` declares S-03 a producer of, and this is the scenario that
+    exercises the declaration rather than leaving it standing on trust.
+
+    It is also the host run of the S-03 substitution case in
+    ``tests/test_370_mutation_and_bypass.py``: a bypass is only a bypass of
+    something the path was doing, and this is the proof that it was doing it.
+
+    ``expected_calls`` is ``None`` because a round changes two of the fourteen
+    counts; what the loop costs is asserted here, against the clean canonical
+    arithmetic, rather than restated as a second table.
+    """
+
+    run = enriching_run(tmp_path, signal_id=NET_SIGNAL)
+    execution, workspace, _ = execute(run)
+
+    findings = composition_findings(
+        records=execution.records,
+        execution=execution,
+        ledger=run.ledger,
+        run_dir=workspace.run_dir,
+        expected_calls=None,
+    )
+    assert findings == (), "\n".join(findings)
+
+    records = [record for record in execution.records if record.stage == "S-03"]
+    assert len(records) == 1
+    (record,) = records
+    assert any(ref.entity_type == "E-07" for ref in record.outputs), (
+        "the material blocked a decision and S-03 opened no gap"
+    )
+    assert (record.calls or {}).get("count", 0) >= 1, (
+        "S-03 recorded no model call, so no round was run"
+    )
+    # The round is what re-versions the core and its description, and S-04
+    # reads what the round committed: the two seams S-03 produces at.
+    assert {ref.entity_type for ref in record.outputs} >= {"E-04", "E-05"}
+    # And the stage records what it *read*, which is S-02's description and not
+    # the one its own round went on to commit. The two are both E-05 and sit on
+    # opposite sides of this one record, so a stage that re-read its lineage
+    # entry after enriching would claim an input no earlier stage produced.
+    (consumed,) = record.inputs
+    (described,) = [
+        ref
+        for item in execution.records
+        if item.stage == "S-02"
+        for ref in item.outputs
+        if ref.entity_type == "E-05"
+    ]
+    assert consumed == described, (
+        "S-03 reported consuming an E-05 that S-02 did not write"
+    )
+    assert any(
+        ref.entity_type == "E-05" and ref.version > consumed.version
+        for ref in record.outputs
+    ), "the round committed no description later than the one S-03 read"
+    searched = run.ledger.count(RESEARCH_BOUNDARY)
+    assert run.ledger.count("material") > CLEAN_RUN_CALLS["material"]
+    assert searched > CLEAN_RUN_CALLS[RESEARCH_BOUNDARY], (
+        "the round reached no research provider, so it searched for nothing"
+    )
+    assert len(set(execution.accepted)) == len(CANONICAL_DESTINATIONS)
 
 
 # ===========================================================================

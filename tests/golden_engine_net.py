@@ -51,7 +51,10 @@ The seven checks, and the defect class each exists to catch
 :func:`composition_findings` is all seven, which is the integration proof this
 slice is judged on. :func:`static_artifact_run` and :func:`bypassed_run` are
 the two instruments that break the path on purpose, so that the net can be
-shown to catch what it claims to catch.
+shown to catch what it claims to catch, and :func:`enriching_run` is the one
+scenario they need that a clean canonical run does not produce: S-03's
+production entry decides nothing when nothing blocks a decision, so the stage
+is measured on a run whose material does.
 
 Nothing here reaches a network, a provider, a credential or a publication, and
 S-14 is not executed.
@@ -63,17 +66,26 @@ import json
 from collections import Counter
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Final, NamedTuple, Optional
 
 from src.editorial_core.editorial_units import unit_id
+from src.editorial_core.material_features import MATERIAL_INSTRUCTIONS
 from src.editorial_core.topology import CANONICAL_TOPOLOGY
 from src.run import golden_engine
 from src.run.golden_engine import UNWIRED_STAGES, CanonicalExecution
 from src.run.run_manifest import RunManifest
 from src.run.run_workspace import EntityRef, StageRecord, file_digest
 from src.run.walking_skeleton import CANONICAL_DESTINATIONS, PASS_THROUGH_MARKER
-from tests.golden_engine_boundary import Ledger, canonical_run, execute
+from tests.golden_engine_boundary import (
+    CanonicalRun,
+    EvidenceJudgment,
+    Ledger,
+    Material,
+    canonical_run,
+    execute,
+)
 
 #: The stages a canonical run executes, derived from the registry rather than
 #: listed: a stage added to the topology below S-14 makes the net demand it,
@@ -97,14 +109,22 @@ SELECTION_ENTITY_TYPE: Final[str] = "E-01.selection"
 #: type would accept S-13 reading a boundary version S-13 wrote itself.
 #:
 #: Read as ``(consumer stage, entity type) → the stages that may have produced
-#: it``. Two entries carry S-03 as a producer because the enrichment loop
-#: re-versions the core and the features when a gap is open; the canonical
-#: scenario opens none, so those producers are declared and unexercised rather
-#: than absent (see ``test_s03_runs_and_opens_no_enrichment_round``).
+#: it``. The core and features entries of the stages **after** S-03 carry it as
+#: a producer, because the enrichment loop re-versions both when a gap is open
+#: and a later consumer reads what the round committed. The canonical scenario
+#: opens none (``test_s03_runs_and_opens_no_enrichment_round``), so those
+#: producers are reached by :func:`enriching_run` instead — declared and
+#: exercised, rather than declared and taken on trust.
+#:
+#: S-02's and S-03's own entries do not carry it, and that is the same rule
+#: read the other way: the topology runs each of S-00…S-07 once and in order,
+#: so what S-02 and S-03 consume was produced upstream of the loop. A net that
+#: let S-03 answer for them would accept the trace saying S-03 consumed the
+#: E-05 it had just written.
 SEAMS: Final[Mapping[tuple[str, str], frozenset[str]]] = {
     ("S-01", SELECTION_ENTITY_TYPE): frozenset({"S-00"}),
-    ("S-02", "E-04"): frozenset({"S-01", "S-03"}),
-    ("S-03", "E-05"): frozenset({"S-02", "S-03"}),
+    ("S-02", "E-04"): frozenset({"S-01"}),
+    ("S-03", "E-05"): frozenset({"S-02"}),
     ("S-04", "E-04"): frozenset({"S-01", "S-03"}),
     ("S-04", "E-05"): frozenset({"S-02", "S-03"}),
     ("S-04", "E-09"): frozenset({"S-04"}),
@@ -168,15 +188,17 @@ CLEAN_RUN_CALLS: Final[Mapping[str, int]] = {
 #: "replace one real stage with a static artifact" means, and it is the stage's
 #: own production entry rather than a seam beside it.
 #:
-#: S-03 is absent, and that is a fact about the canonical path rather than an
-#: omission: the stage's entry is ``open_gaps``, which on this scenario opens
-#: no gap and runs no enrichment round, so it asks no boundary and there is no
-#: artifact a static one could stand in for. It is covered by its seam proof
-#: and by ``test_s03_runs_and_opens_no_enrichment_round`` instead.
+#: Every wired stage is here, S-03 included. Its entry is ``open_gaps``, and
+#: the static artifact a donor canonical run supplies for it is the empty gap
+#: set — which is why it is not measured on the canonical scenario, where the
+#: real entry returns the same empty set and the substitution would change
+#: nothing. :func:`enriching_run` is the scenario where it decides something,
+#: and that is where the substitution is made.
 STAGE_PRODUCERS: Final[Mapping[str, str]] = {
     "S-00": "select_signal",
     "S-01": "retrieve_evidence_core",
     "S-02": "describe_material",
+    "S-03": "open_gaps",
     "S-04": "decide_boundary",
     "S-05": "create_unit",
     "S-06": "choose_anchor",
@@ -189,15 +211,22 @@ STAGE_PRODUCERS: Final[Mapping[str, str]] = {
     "S-13": "check_text",
 }
 
+#: The one stage of :data:`STAGE_PRODUCERS` whose substitution is measured on
+#: :func:`enriching_run` instead of on the canonical scenario. Named here, by
+#: the module that knows why, so that the mutation suite picks the host run
+#: from the table rather than from a condition written beside the assertion.
+ENRICHING_STAGE: Final[str] = "S-03"
+
 #: The four producers the issue names, as the production function each run
-#: reads its value from. ``unit_facts`` is absent on purpose: it is a lift and
-#: not a loaded authority, so bypassing it is proved by what S-07 was handed
-#: rather than by a run that cannot be assembled (see
-#: ``tests/test_370_mutation_and_bypass.py``).
+#: reads its value from. Three are authorities the configuration loads and the
+#: fourth is a lift S-07 makes per run, and :func:`bypassed_run` removes each
+#: the same way — by answering ``None``, which is what "nobody produces this"
+#: looks like to the code that asked.
 REQUIRED_PRODUCERS: Final[Mapping[str, str]] = {
     "StrategyContract": "strategy_contract",
     "AdaptationContract": "adaptation_contract",
     "StrengthLadder": "universal_strength_ladder",
+    "UnitFacts": "unit_facts",
 }
 
 #: The signal the donor run of :func:`static_artifacts` is about. Different
@@ -454,7 +483,7 @@ def call_findings(
     """
 
     found: list[str] = []
-    counted = dict(Counter(ledger.names))
+    counted = boundary_calls(ledger)
     if counted != dict(expected):
         found.append(
             f"the run asked the boundaries {counted}, and the topology's own "
@@ -472,6 +501,17 @@ def call_findings(
             "the two are the same number"
         )
     return tuple(found)
+
+
+def boundary_calls(ledger: Ledger) -> dict[str, int]:
+    """What one run asked of each boundary, in :func:`call_findings`' shape.
+
+    Public because a scenario whose arithmetic is not the canonical run's has
+    to state what its own is, and the honest way to state it is to measure the
+    same scenario unmutated rather than to declare a number nobody derived.
+    """
+
+    return dict(Counter(ledger.names))
 
 
 # ===========================================================================
@@ -642,6 +682,80 @@ def composition_findings(
 
 
 # ===========================================================================
+# The scenario where S-03 decides something
+# ===========================================================================
+
+#: The one note that makes the canonical material block a decision. A note
+#: becomes an E-07 only when it names the stage and the decision it stops
+#: (F-3: S-03 is the sole producer of a gap), so this is the whole difference
+#: between a run that enriches and one that does not — and it is a *model*
+#: answer about the material, not an artifact authored into the path.
+BLOCKING_NOTE: Final[Mapping[str, Any]] = {
+    "kind": "evidence",
+    "description": (
+        "The material states what the carrier committed to and not what the "
+        "commitment does to what a later buyer pays."
+    ),
+    "refs": [],
+    "blocks_stage": "S-04",
+    "blocks": "whether this material carries a reading the audience can act on",
+}
+
+
+class EnrichingMaterial(Material):
+    """S-02's boundary in a scenario whose material blocks a decision.
+
+    Two answers rather than one, and both are the answers an external boundary
+    gives:
+
+    * the description carries :data:`BLOCKING_NOTE`, which is what opens the
+      gap S-03 then has to search for;
+    * the extended assessment of the round is answered with the response this
+      repository recorded for this case, because
+      ``ExtendedEvidenceAssessor`` reaches **this** transport inside the loop
+      rather than S-01's judgment seam — the same two-call boundary, routed by
+      instructions exactly as the production stages route theirs.
+
+    Nothing internal is replaced. What the engine does with the note — opening
+    the E-07, building the search, re-assessing, recomputing the description
+    and re-versioning the core — is S-03's own production path, and the point
+    of the scenario is that the path is there to be bypassed.
+    """
+
+    def __init__(self, ledger: Ledger) -> None:
+        super().__init__(ledger)
+        self._judgment = EvidenceJudgment(ledger)
+
+    def answer(self, *, instructions: str, request: str) -> str:
+        if instructions != MATERIAL_INSTRUCTIONS:
+            return self._judgment.answer(
+                instructions=instructions, request=request
+            )
+        described = json.loads(
+            super().answer(instructions=instructions, request=request)
+        )
+        return json.dumps({**described, "notes": [dict(BLOCKING_NOTE)]})
+
+
+def enriching_run(root: Path, *, signal_id: str = NET_SIGNAL) -> CanonicalRun:
+    """One canonical run whose material opens a gap the loop must work on.
+
+    The production path, unchanged: #351's configuration, producers,
+    orchestration, ledger and budget, with one of the five handed-in seams
+    answering differently. That is the line this slice draws — a deterministic
+    substitute belongs at an external boundary and nowhere else — and it is
+    what makes this a second *scenario* of the canonical path rather than a
+    second path.
+    """
+
+    run = canonical_run(root, signal_id=signal_id)
+    transports = replace(
+        run.seams.transports, material=EnrichingMaterial(run.ledger)
+    )
+    return replace(run, seams=replace(run.seams, transports=transports))
+
+
+# ===========================================================================
 # The two instruments that break the path on purpose
 # ===========================================================================
 
@@ -677,6 +791,12 @@ def static_artifacts(root: Path) -> dict[str, Any]:
 
     Authoring them instead would make the mutation prove the author's idea of
     the shape rather than the net's ability to notice a foreign artifact.
+
+    S-03's donated value is the empty gap set, because that is what the entry
+    answers on a run with nothing to close. It is the weakest of the donations
+    and the one worth having: a gap detector replaced by "nothing is missing"
+    is the substitution a scenario with nothing missing cannot tell apart,
+    which is why its host run is :func:`enriching_run`.
     """
 
     run = canonical_run(root, signal_id=DONOR_SIGNAL)
@@ -703,7 +823,11 @@ def static_artifacts(root: Path) -> dict[str, Any]:
 
 
 def static_artifact_run(
-    root: Path, *, stage: str, artifacts: Mapping[str, Any]
+    root: Path,
+    *,
+    stage: str,
+    artifacts: Mapping[str, Any],
+    enriching_calls: Optional[Mapping[str, int]] = None,
 ) -> MutationReport:
     """Replace one stage's production entry with a static artifact, and run.
 
@@ -712,9 +836,29 @@ def static_artifact_run(
     rebound, and it is the stage's own entry function. That is the narrowest
     form of "this stage no longer produces what it produces" that the
     composition can be given.
+
+    The host run is the canonical scenario for every stage but
+    :data:`ENRICHING_STAGE`, which is substituted into :func:`enriching_run`
+    because on the canonical one its entry answers what the substitute
+    answers. ``enriching_calls`` is that scenario's own arithmetic, measured
+    by :func:`boundary_calls` off an unmutated run of it, and it is required
+    rather than defaulted: measuring the enriching scenario against the
+    canonical counts would report a mutation nobody made, and this case would
+    then pass whatever the engine did.
     """
 
-    run = canonical_run(root, signal_id=NET_SIGNAL)
+    if stage == ENRICHING_STAGE:
+        if enriching_calls is None:
+            raise AssertionError(
+                f"{stage} is substituted into the enriching scenario, and the "
+                "counts it is measured against are that scenario's own; "
+                "without them the case proves nothing it claims to"
+            )
+        run = enriching_run(root, signal_id=NET_SIGNAL)
+        expected: Mapping[str, int] = enriching_calls
+    else:
+        run = canonical_run(root, signal_id=NET_SIGNAL)
+        expected = CLEAN_RUN_CALLS
     static = artifacts[stage]
     with rebound(STAGE_PRODUCERS[stage], lambda *_args, **_kwargs: static):
         try:
@@ -728,6 +872,7 @@ def static_artifact_run(
             execution=execution,
             ledger=run.ledger,
             run_dir=workspace.run_dir,
+            expected_calls=expected,
         ),
         None,
     )
@@ -759,6 +904,11 @@ def bypassed_run(root: Path, *, producer: str) -> BypassReport:
     run is handed is what a run would be handed if that producer did not
     exist. Nothing is substituted for it: the point is that the path cannot be
     walked without it, not that it can be walked with a stand-in.
+
+    The rebinding spans the assembly **and** the run, because the four
+    producers are not all read at the same moment: three are authorities the
+    configuration loads before S-00, and ``unit_facts`` is the lift S-07 makes
+    out of the intake record while the run is under way.
     """
 
     name = REQUIRED_PRODUCERS[producer]

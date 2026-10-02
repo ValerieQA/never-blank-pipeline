@@ -25,7 +25,11 @@ nothing here invents a configuration value, a default or a fallback:
 - ``UnitFacts`` is **lifted**, never classified (:func:`unit_facts`): the two
   values are #365's, persisted on the intake record before S-00 saw it, and a
   record that states neither produces ``UnitFacts()`` with both ``None``, which
-  S-07's rules read as "the unit states nothing" and fail closed on.
+  S-07's rules read as "the unit states nothing" and fail closed on. A record
+  that states nothing and a lift that produced nothing are **not** the same
+  state, and S-07 keeps them apart: the first is facts whose values are
+  ``None``, and the second is no facts at all, which the stage refuses rather
+  than decides on.
 
 It also does not **run** the seams it wires. Every verification of this slice
 uses deterministic typed test doubles satisfying the core's own Protocols
@@ -1382,6 +1386,13 @@ class _Run:
 
         assert self.core is not None and self.features is not None
         core, features = self.core, self.features
+        # The description this stage enriches, read before a round can re-point
+        # the lineage at the one a round commits. A stage records what it
+        # consumed, and what S-03 consumed is S-02's vector: re-reading the
+        # entry at the end of an enriching round would make the trace say that
+        # S-03's input was the E-05 S-03 itself had just written, which is a
+        # reference no earlier stage of the run produced.
+        description = self.lineage[_FEATURES_ENTITY_TYPE]
         requested = (
             () if self.assessment is None else self.assessment.requested_gaps
         )
@@ -1396,7 +1407,7 @@ class _Run:
                 stage="S-03",
                 scope_key=self.signal_id,
                 decider=DeciderKind.CODE,
-                inputs=(self.lineage[_FEATURES_ENTITY_TYPE],),
+                inputs=(description,),
                 outputs=self._gap_refs(gaps),
             )
             return True
@@ -1467,7 +1478,7 @@ class _Run:
             stage="S-03",
             scope_key=self.signal_id,
             decider=_decider(enriched.calls),
-            inputs=(self.lineage[_FEATURES_ENTITY_TYPE],),
+            inputs=(description,),
             outputs=tuple(outputs),
             calls=enriched.calls,
             requests=self.meters.material.since(mark),
@@ -1653,11 +1664,27 @@ class _Run:
         """
 
         assert self.unit is not None and self.anchor is not None
+        # What the lift answered, before the stage has established that it is
+        # the input §1 requires. The engine calls `unit_facts` as a module
+        # global, so "nothing produced the facts" is a state this stage can be
+        # handed — and it is the one state it must not decide in: every rule
+        # that refuses a destination for this unit's topic or risk reads them,
+        # so a fan-out decided without them is decided as though the contract
+        # refused nothing (#370).
+        lifted: object = unit_facts(self.signal)
+        if not isinstance(lifted, UnitFacts):
+            raise GoldenEngineError(
+                f"{self.unit.unit_id} reached S-07 and nothing lifted its unit "
+                "facts; §1 makes `facts: UnitFacts` a required input, and the "
+                "destinations this stage would decide without the topic and "
+                "risk the intake record states are destinations no contract "
+                "rule was given anything to refuse"
+            )
         decided = decide_destinations(
             unit=self.unit,
             anchor=self.anchor,
             contract=self.cfg.destinations,
-            facts=unit_facts(self.signal),
+            facts=lifted,
         )
         written = write_destination_decisions(self.workspace, decided)
         self.trace.record(
