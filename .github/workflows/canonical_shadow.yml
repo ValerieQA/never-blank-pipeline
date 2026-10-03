@@ -123,6 +123,14 @@ jobs:
           chosen=$(grep -oE '^selected=.*$' selection.log | tail -1 | cut -d= -f2)
           echo "signal_id=${chosen}" >> "$GITHUB_OUTPUT"
 
+      # Before the run, not after it: the run commits its own records through
+      # the canonical §3.1 mechanism, so the identity has to exist by then.
+      - name: Configure the committer
+        if: steps.gate.outputs.run == 'true' && steps.signal.outputs.signal_id != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Run the canonical chain in shadow
         if: steps.gate.outputs.run == 'true' && steps.signal.outputs.signal_id != ''
         env:
@@ -134,22 +142,15 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         run: |
+          # --commit: the run itself commits the durable E-16 records S-14
+          # wrote and then its summary, each over its own exact paths, and the
+          # summary states the status of the first (Step 3 §3.1, §3.3). There
+          # is deliberately no `git add data/editorial` step after this one:
+          # staging the ledger directory would commit whatever else happened to
+          # be untracked there — another run's records, or a publication marker
+          # its own step withheld — and would report a status about them under
+          # this run's name.
           python3 scripts/run_canonical_shadow.py \
             --signal-id "${{ steps.signal.outputs.signal_id }}" \
-            --role "${{ inputs.role || 'never-blank-monday-documented-case' }}"
-
-      - name: Commit the ledger
-        if: steps.gate.outputs.run == 'true' && steps.signal.outputs.signal_id != ''
-        run: |
-          # The summary and the fingerprints are Portfolio Memory, retained
-          # indefinitely (Step 3 §3.2) — which is why data/editorial/ is
-          # committed on purpose and deliberately un-ignored.
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/editorial
-          if git diff --cached --quiet; then
-            echo "no ledger records to commit"
-          else
-            git commit -m "Canonical shadow run: ledger records"
-            git push
-          fi
+            --role "${{ inputs.role || 'never-blank-monday-documented-case' }}" \
+            --commit

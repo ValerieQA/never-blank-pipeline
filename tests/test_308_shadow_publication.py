@@ -16,9 +16,12 @@ a real failure, and the tests below plant each kind.
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
+from typing import Optional
 
 import pytest
+import yaml
 
 from src.editorial_core.destinations import Destination, DestinationMode
 from src.editorial_core.publication import (
@@ -39,6 +42,13 @@ from src.publishing.package import (
     PublicationPackageError,
     WixPublicationTarget,
 )
+from src.editorial_core.publication import FINGERPRINTS_DIRECTORY
+from src.run.ledger import (
+    LedgerCommitFailure,
+    LedgerCommitReport,
+    LedgerCommitStatus,
+)
+from src.run.walking_skeleton import run_golden_engine, run_walking_skeleton
 from src.visual.contract import build_visual_assets_record
 from tests.golden_engine_boundary import canonical_run, execute
 from tests.test_visual_contract import DESIGN, _pimgs
@@ -340,3 +350,254 @@ def test_only_a_provenance_refusal_without_a_passport_is_absorbed(category):
     assert _absorbed(provenance, visual_record=object()) is None, (
         "a passport was supplied, so this is somebody else's provenance failure"
     )
+
+
+# ===========================================================================
+# The durable records are committed by the canonical mechanism, by path
+# ===========================================================================
+#
+# What these six tests are about: S-14 writes six durable E-16 records, and the
+# RunSummary *states* the status of the commit that holds them (Step 3 §3.3).
+# For that statement to mean anything, the learning commit has to be over those
+# exact files. It used to be over `paths=()` while a workflow step staged the
+# whole `data/editorial` directory — so the summary reported the status of an
+# empty commit, and the files reached the repository by a mechanism the summary
+# knew nothing about and could not report on.
+
+
+def _spy(monkeypatch, report: LedgerCommitReport):
+    """Record every ledger commit the run asks for, and answer with `report`.
+
+    A spy rather than a real repository: these tests are about *which paths are
+    handed to the commit step*, which is the fact the summary's status is a
+    statement about. `test_the_learning_commit_stages_only_the_records_this_run_wrote`
+    below does the same thing against a real git repository, so the pathspec is
+    proven twice — once as an argument and once as a tree.
+    """
+
+    calls: list[tuple[str, tuple[Path, ...]]] = []
+
+    def record(*, paths, message, repo_root, attempts, retry_seconds):
+        calls.append((message, tuple(paths)))
+        return report
+
+    monkeypatch.setattr("src.run.walking_skeleton.commit_ledger", record)
+    return calls
+
+
+def _sealed(
+    tmp_path,
+    *,
+    commit: bool,
+    ledger_dir: Optional[Path] = None,
+    repo_root: Optional[Path] = None,
+):
+    """One complete six-destination canonical run, sealed through `_write_ledger`."""
+
+    run = canonical_run(tmp_path)
+    return run_golden_engine(
+        seams=run.seams,
+        configuration=run.configuration,
+        signal=run.signal,
+        binding=run.binding,
+        runs_root=run.runs_root,
+        ledger_dir=ledger_dir if ledger_dir is not None else run.runs_root.parent / "ledger",
+        started_at=run.now,
+        now=run.now,
+        commit=commit,
+        repo_root=repo_root if repo_root is not None else tmp_path,
+    )
+
+
+def test_the_learning_commit_is_handed_the_six_durable_fingerprint_paths(
+    tmp_path, monkeypatch
+):
+    """Six accepted destinations, six E-16 records, six paths — and no glob.
+
+    The run's own report of what it wrote (`fingerprint_ids`) and the paths it
+    hands to the commit step are the same six records seen two ways, so a
+    summary that names six fingerprints cannot be sitting on a commit of none.
+    """
+
+    calls = _spy(monkeypatch, LedgerCommitReport(status=LedgerCommitStatus.COMMITTED))
+    ledger = tmp_path / "named-ledger"
+    sealed = _sealed(tmp_path, commit=True, ledger_dir=ledger)
+
+    assert len(set(sealed.execution.accepted)) == 6
+    assert len(calls) == 2, "one learning commit, then one for the summary"
+
+    learning_message, learning_paths = calls[0]
+    assert len(learning_paths) == 6
+    assert learning_paths == sealed.execution.fingerprint_paths
+    assert "6 learning record(s)" in learning_message
+    # Every path is a durable E-16 record that is really there, and the set of
+    # them is exactly the set of fingerprints the summary names.
+    assert all(path.exists() for path in learning_paths)
+    assert {path.stem for path in learning_paths} == set(sealed.summary.fingerprint_ids)
+    assert {path.parent.parent.parent.name for path in learning_paths} == {
+        FINGERPRINTS_DIRECTORY
+    }
+    # Under the ledger the caller named, like the summary beside them. S-14 used
+    # to write to this process's default root while the summary went to the
+    # named one, which put one run's records in two places and left the commit
+    # able to reach only one of them.
+    for path in (*learning_paths, sealed.summary_path):
+        assert ledger in path.parents
+
+    # The summary's own commit is the second step and is over the summary alone:
+    # it states the first step's status, so it cannot be in the same commit.
+    _, summary_paths = calls[1]
+    assert summary_paths == (sealed.summary_path,)
+
+
+def test_a_committed_learning_record_set_is_reported_as_committed(
+    tmp_path, monkeypatch
+):
+    """The status of *those* records reaches `RunSummary.ledger_commit`."""
+
+    _spy(monkeypatch, LedgerCommitReport(status=LedgerCommitStatus.COMMITTED, attempts=1))
+    sealed = _sealed(tmp_path, commit=True)
+
+    assert sealed.summary.ledger_commit is LedgerCommitStatus.COMMITTED
+    assert sealed.records_commit.status is LedgerCommitStatus.COMMITTED
+    assert len(sealed.summary.fingerprint_ids) == 6
+
+
+def test_a_failed_learning_commit_is_reported_and_the_records_stay_on_disk(
+    tmp_path, monkeypatch
+):
+    """§3.1: a lost learning record is a recorded fact, not a run failure.
+
+    The run does not raise, the summary says `failed`, and the six records are
+    still where S-14 put them — which is the whole reason the status is worth
+    recording. A `committed` here would be the dangerous value: nobody would go
+    looking for files the ledger says it already has.
+    """
+
+    _spy(
+        monkeypatch,
+        LedgerCommitReport(
+            status=LedgerCommitStatus.FAILED,
+            attempts=3,
+            failure=LedgerCommitFailure.PUSH_FAILED,
+        ),
+    )
+    sealed = _sealed(tmp_path, commit=True)
+
+    assert sealed.summary.ledger_commit is LedgerCommitStatus.FAILED
+    assert sealed.records_commit.failure is LedgerCommitFailure.PUSH_FAILED
+    assert len(sealed.execution.fingerprint_paths) == 6
+    for path in sealed.execution.fingerprint_paths:
+        assert path.exists(), "a failed commit does not undo the record"
+        stored = json.loads(path.read_text(encoding="utf-8"))
+        assert stored["fingerprint_id"] == path.stem
+        assert stored["content_digest"]
+
+
+def test_the_learning_commit_stages_only_the_records_this_run_wrote(tmp_path):
+    """Against a real repository: six files in the tree, and the stranger left alone.
+
+    Two files are planted in the same ledger the run writes to — another run's
+    fingerprint and a publication marker, which §3.6 commits by its own step —
+    and the learning commit must take neither. `commit_ledger` passes a pathspec
+    to every git command for exactly this reason; the test is here because the
+    *caller* is what used to defeat it.
+
+    The push fails (there is no remote), so the status is `failed` while the
+    commit exists locally — the honest pair §3.1 asks for.
+    """
+
+    repo = tmp_path / "repo"
+    ledger = repo / "data" / "editorial"
+    ledger.mkdir(parents=True)
+    for argv in (
+        ("init", "-q", "-b", "main"),
+        ("config", "user.email", "ledger@example.test"),
+        ("config", "user.name", "Ledger Test"),
+        ("commit", "-q", "--allow-empty", "-m", "root"),
+    ):
+        subprocess.run(["git", "-C", str(repo), *argv], check=True)
+
+    stranger = ledger / "fingerprints" / "other" / "2026-10" / "fp-other-run-wix.json"
+    stranger.parent.mkdir(parents=True)
+    stranger.write_text("{}", encoding="utf-8")
+    marker = ledger / "markers" / "withheld.json"
+    marker.parent.mkdir(parents=True)
+    marker.write_text("{}", encoding="utf-8")
+
+    sealed = _sealed(tmp_path, commit=True, ledger_dir=ledger, repo_root=repo)
+    assert sealed.summary.ledger_commit is LedgerCommitStatus.FAILED
+    assert sealed.records_commit.failure is LedgerCommitFailure.PUSH_FAILED
+
+    # The learning commit is the first of the two, so it is HEAD~1 once the
+    # summary's commit lands on top of it.
+    committed = subprocess.run(
+        ["git", "-C", str(repo), "show", "--name-only", "--format=", "HEAD~1"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.split()
+    assert len(committed) == 6
+    assert {Path(name).stem for name in committed} == set(
+        sealed.summary.fingerprint_ids
+    )
+
+    untracked = subprocess.run(
+        ["git", "-C", str(repo), "ls-files", "--others", "--exclude-standard"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.split()
+    assert str(stranger.relative_to(repo)) in untracked
+    assert str(marker.relative_to(repo)) in untracked
+
+
+def test_a_run_that_writes_no_learning_record_says_so(tmp_path, monkeypatch):
+    """The pass-through run hands no paths, and `commit_ledger` is not lied to.
+
+    `nothing_to_commit` is the honest answer for it: #293's run names a
+    fingerprint ID per destination without writing a durable record, so there is
+    no file for a learning commit to hold. Empty is the value, not a gap — and
+    it must not become six paths borrowed from somewhere.
+    """
+
+    calls = _spy(
+        monkeypatch, LedgerCommitReport(status=LedgerCommitStatus.NOTHING_TO_COMMIT)
+    )
+    run_walking_skeleton(
+        runs_root=tmp_path / "runs",
+        ledger_dir=tmp_path / "ledger",
+        commit=True,
+        repo_root=tmp_path,
+    )
+
+    assert [paths for _, paths in calls][0] == ()
+    assert "0 learning record(s)" in calls[0][0]
+
+
+def test_the_shadow_workflow_has_no_second_generic_ledger_commit():
+    """One mechanism, and it is the run's own.
+
+    The workflow used to run `git add data/editorial` after the run. That staged
+    whatever was untracked under the ledger — another run's records, a marker
+    §3.6 withheld — and it committed the summary's own file in the same breath
+    as the records the summary reports on. It is gone: the run commits, by path,
+    and the workflow only gives it an identity to commit as.
+    """
+
+    parsed = yaml.safe_load(
+        Path(".github/workflows/canonical_shadow.yml").read_text(encoding="utf-8")
+    )
+    steps = parsed["jobs"]["shadow"]["steps"]
+    assert [step["name"] for step in steps][-1] == "Run the canonical chain in shadow"
+
+    # What the job *runs*, with the comments stripped: a line that explains why
+    # there is no `git add` here is not a `git add`.
+    for step in steps:
+        for line in step.get("run", "").splitlines():
+            code = line.split("#", 1)[0]
+            for forbidden in ("git add", "git commit", "git push"):
+                assert forbidden not in code, f"{step['name']}: {line.strip()}"
+
+    asked = steps[-1]["run"]
+    assert "--commit" in asked, "the run's own mechanism has to be asked for"

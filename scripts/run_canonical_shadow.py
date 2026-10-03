@@ -92,6 +92,17 @@ def main(argv: list[str] | None = None) -> int:
             "the measurement, and the canonical path's hard maximum is its own"
         ),
     )
+    parser.add_argument(
+        "--commit",
+        action="store_true",
+        help=(
+            "commit and push the durable learning records this run writes "
+            "(§3.1). Off by default, like run_golden_engine's own posture: a "
+            "local measurement run should not write to the repository. The "
+            "workflow passes it, because a record only the expired runner "
+            "holds is not Portfolio Memory"
+        ),
+    )
     args = parser.parse_args(argv)
 
     now = datetime.now(tz=timezone.utc)
@@ -152,6 +163,12 @@ def main(argv: list[str] | None = None) -> int:
         run_context=run_context,
         call_budget_limit=args.call_budget,
         now=now,
+        # The canonical mechanism commits the exact E-16 records S-14 wrote,
+        # by path, and the summary states that commit's status. There is no
+        # second, broader commit step: one that staged the ledger directory
+        # would report success over files this run never produced.
+        commit=args.commit,
+        repo_root=Path.cwd() if args.commit else None,
     )
     summary = run.summary
     print(f"  run_id            {summary.run_id}")
@@ -162,6 +179,7 @@ def main(argv: list[str] | None = None) -> int:
     for record in run.execution.packages:
         print(f"  package {record.destination.value:10} {record.state.value}")
     print(f"  summary           {run.summary_path}")
+    print(f"  ledger commit     {summary.ledger_commit.value}")
     return 0
 
 

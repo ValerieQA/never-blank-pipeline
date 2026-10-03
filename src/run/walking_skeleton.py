@@ -792,6 +792,9 @@ def run_walking_skeleton(
             for name in names
         ),
         fingerprint_ids=tuple(signal.fingerprint_id(name) for name in names),
+        # A pass-through run writes no durable learning record: the IDs above
+        # name the destinations it passed through, not files on the ledger.
+        record_paths=(),
         ledger_dir=ledger_dir,
         commit=commit,
         repo_root=repo_root,
@@ -995,6 +998,11 @@ def run_golden_engine(
             portfolio=portfolio,
             priors=priors,
             text_portfolio=text_portfolio,
+            # The same ledger the summary is written to, and not this process's
+            # default: S-14's durable E-16 records and the summary that reports
+            # their commit are one run's records, so two roots would put them in
+            # two places and leave the commit able to reach only one.
+            ledger_dir=ledger_dir,
         )
     decided_every_destination(execution.records, names)
 
@@ -1030,6 +1038,10 @@ def run_golden_engine(
         fingerprint_ids=tuple(
             item.fingerprint_id for item in execution.fingerprints
         ),
+        # The same records, by the exact path each one went to, so the learning
+        # commit commits what this run wrote and the summary's ledger_commit
+        # is a statement about those files.
+        record_paths=execution.fingerprint_paths,
         split_candidate=execution.split_candidate,
         ledger_dir=ledger_dir,
         commit=commit,
@@ -1126,6 +1138,7 @@ def _write_ledger(
     code_identity: Optional[CodeIdentity],
     first_pass: Sequence[DestinationFirstPass],
     fingerprint_ids: Sequence[str],
+    record_paths: Sequence[Path],
     ledger_dir: Optional[Path],
     commit: bool,
     repo_root: Optional[Path],
@@ -1142,9 +1155,17 @@ def _write_ledger(
     caller rather than written into the file that failed to be committed.
 
     What §3.1 promises holds either way: the records are on disk, the run does
-    not wait, and nothing is undone. Neither run writes a learning record yet —
-    fingerprints arrive with S-14 in SL-7 and observations with S-15 in SL-12 —
-    so the first step normally has nothing to commit, and says so.
+    not wait, and nothing is undone. A failed learning commit is reported as
+    such by the summary while the records it names stay where S-14 wrote them.
+
+    ``record_paths`` are the durable learning records **this run** wrote, named
+    one by one by the stage that wrote them. They are named and not globbed
+    because the summary states this commit's status (§3.3): a status collected
+    over whatever happened to be untracked under the ledger would be a claim
+    about other runs' files as much as this one's. The canonical run hands over
+    S-14's E-16 records; the pass-through run writes none, and its empty
+    sequence is the honest value, not a gap. Observations arrive with S-15 in
+    SL-12 and will hand their files to this same step.
 
     The identities and the scopes are arguments rather than derived, because the
     two runs know them differently: the pass-through run derives them from its
@@ -1156,9 +1177,7 @@ def _write_ledger(
         commit,
         kind="learning",
         run_id=context.run_id,
-        # None yet: fingerprints arrive with S-14 in SL-7 and observations with
-        # S-15 in SL-12, and each will hand its files to this step.
-        paths=(),
+        paths=tuple(record_paths),
         repo_root=repo_root,
         attempts=commit_attempts,
         retry_seconds=commit_retry_seconds,
