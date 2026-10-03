@@ -214,6 +214,7 @@ from src.run.expected_destinations import (
 )
 from src.run.run_context import RunContext
 from src.run.run_summary import DestinationFirstPass, RunScope
+from src.run import stage_routing
 from src.run.run_workspace import (
     DeciderKind,
     EntityIndexEntry,
@@ -733,6 +734,47 @@ def execute_canonical_topology(
     """
 
     check_every_stage_is_wired()
+    # The canonical path enters `stage_routing` here (NB-07a1). It never did:
+    # the engine did not import the module, so `_STAGE` was empty for every
+    # canonical call and both hooks inside the shared model client were silent
+    # no-ops — #279's request evidence was absent for canonical runs, not merely
+    # unused. One block covers the whole run, so a stage cannot be observed
+    # outside it, and the routing object is per run because the usage entries
+    # drained into each record belong to this run alone.
+    with stage_routing.recording(stage_routing.StageRouting(run_id=run_context.run_id)):
+        return _execute_canonical_topology(
+            workspace=workspace,
+            run_context=run_context,
+            seams=seams,
+            configuration=configuration,
+            signal=signal,
+            binding=binding,
+            budget=budget,
+            counters=counters,
+            now=now,
+            portfolio=portfolio,
+            priors=priors,
+            text_portfolio=text_portfolio,
+        )
+
+
+def _execute_canonical_topology(
+    *,
+    workspace: RunWorkspace,
+    run_context: RunContext,
+    seams: GoldenEngineSeams,
+    configuration: GoldenEngineConfiguration,
+    signal: Mapping[str, Any],
+    binding: ResearchBinding,
+    budget: ArpCallBudget,
+    counters: Optional[AttemptCounterLedger],
+    now: Optional[datetime],
+    portfolio: Sequence[PortfolioFingerprint],
+    priors: Sequence[PriorPublication],
+    text_portfolio: Sequence[TextFingerprint],
+) -> CanonicalExecution:
+    """The run itself, inside the routing block its caller opened."""
+
     return _Run(
         trace=_Trace(workspace, run_context),
         meters=_meters(seams.transports),
@@ -806,6 +848,19 @@ class _Trace:
         started = self._context.started_at + timedelta(
             seconds=seq * _STAGE_SECONDS
         )
+        # The two observations this execution produced, taken before the record
+        # is built so that nothing it spent can be attributed to the next one.
+        # Outside a recording run both are empty, and the usage then states that
+        # no response reported anything rather than claiming zero tokens.
+        active = stage_routing.current()
+        observed = active.take_usage(stage) if active is not None else ()
+        requested = active.take_requests(stage) if active is not None else ()
+        usage = stage_routing.UsageTotals.of(observed, calls=calls)
+        routing_evidence = (
+            {"requests": [item.as_evidence() for item in requested]}
+            if requested
+            else None
+        )
         record = StageRecord(
             run_id=self._context.run_id,
             seq=seq,
@@ -824,7 +879,12 @@ class _Trace:
             ),
             inputs=tuple(inputs),
             outputs=tuple(outputs),
-            calls={"count": calls, "tokens_in": 0, "tokens_out": 0},
+            # What this execution's calls actually cost, from the provider's own
+            # usage (NB-07a1). Drained per stage, so a second execution of the
+            # same stage carries only its own; measured or stated absent, never
+            # a zero standing in for a number nobody read.
+            calls=usage.as_calls(calls),
+            routing=routing_evidence,
             outcomes=tuple(outcomes),
             status=StageStatus.COMPLETED,
         )
@@ -996,6 +1056,20 @@ class _Run:
     # The whole run
     # ------------------------------------------------------------------
 
+    def _at(self, stage: str) -> None:
+        """Advance the stage cursor, and name the stage for the observers.
+
+        One mechanism for two readers. §0.4's exhaustion handler needs to know
+        which stage asked for the refused call, and ``stage_routing``'s hooks
+        need the same name to attribute a request (#279) and a provider usage
+        (NB-07a1) to the execution that made it. Keeping them one assignment is
+        what stops them from disagreeing: a stage that advanced the cursor and
+        not the name would have its tokens recorded against its predecessor.
+        """
+
+        self.executing = stage
+        stage_routing.set_stage(stage)
+
     def execute(self) -> CanonicalExecution:
         try:
             return self._execute()
@@ -1018,7 +1092,7 @@ class _Run:
             ("S-06", self._s06),
             ("S-07", self._s07),
         ):
-            self.executing = stage
+            self._at(stage)
             if not step():
                 return self._finished(stopped_at=stage)
         for destination in self._order():
@@ -1733,7 +1807,7 @@ class _Run:
             self._s11(lane, chosen[0], plan)
 
     def _s08(self, lane: _Lane) -> Optional[CandidateSet]:
-        self.executing = "S-08"
+        self._at("S-08")
         assert self.unit is not None and self.anchor is not None
         assert self.boundary is not None and self.core is not None
         assert self.features is not None
@@ -1778,6 +1852,7 @@ class _Run:
     ) -> Optional[tuple[EditorialStrategy, StrategySelection]]:
         assert self.boundary is not None and self.core is not None
         assert self.features is not None
+        self._at("S-09")
         mark = self.meters.ranking.mark()
         decided = select_strategy(
             candidate_set=candidates,
@@ -1827,6 +1902,7 @@ class _Run:
         selection: StrategySelection,
     ) -> Optional[ExecutablePlan]:
         assert self.boundary is not None and self.core is not None
+        self._at("S-10")
         mark = self.meters.segmentation.mark()
         drafted = adapt_strategy(
             strategy=strategy,
@@ -1865,6 +1941,7 @@ class _Run:
         plan: ExecutablePlan,
     ) -> None:
         assert self.boundary is not None and self.core is not None
+        self._at("S-11")
         mark = self.meters.plan_check.mark()
         checked = check_plan(
             plan=plan,
@@ -2003,7 +2080,7 @@ class _Run:
         and a round the barrier sends back is re-planned and declared again —
         shorter — which is §0.2's "B1 re-evaluates without it".
         """
-        self.executing = "S-11"
+        self._at("S-11")
 
         unit = self._unit()
         decisions = self.decisions
@@ -2166,7 +2243,7 @@ class _Run:
                 return
 
     def _text(self, lane: _Lane) -> None:
-        self.executing = "S-12"
+        self._at("S-12")
         boundary, core = self._material()
         barrier = self._passed_barrier()
         _, verdict, _ = self._approved_plan(lane)
@@ -2221,7 +2298,7 @@ class _Run:
         its own count would mint a fresh allowance with every text version,
         which is exactly the defect ``edit_scope_key`` exists to prevent.
         """
-        self.executing = "S-13"
+        self._at("S-13")
 
         boundary, core = self._material()
         while True:
@@ -2283,7 +2360,7 @@ class _Run:
         at S-13 — so charging it again here would turn one permitted edit into
         none.
         """
-        self.executing = "S-12"
+        self._at("S-12")
 
         boundary, core = self._material()
         barrier = self._passed_barrier()
@@ -2380,7 +2457,7 @@ class _Run:
         already-accepted sibling verdict of this unit is re-checked against it —
         one truth call each, V-T02 only — **before** anything may reach S-14.
         """
-        self.executing = "S-04"
+        self._at("S-04")
 
         boundary, core = self._material()
         unit = self._unit()
@@ -2495,7 +2572,7 @@ class _Run:
         records is the StageRecord, which carries the result and its outcome,
         rather than a file overwriting the verdict it supersedes.
         """
-        self.executing = "S-13"
+        self._at("S-13")
 
         boundary, core = self._material()
         accepted: list[tuple[Text, TextVerdict]] = []
@@ -2555,7 +2632,7 @@ class _Run:
         new version and :func:`approval_holds` starts answering ``True`` for it;
         one that does not routes back to S-08 like any other failed hard check.
         """
-        self.executing = "S-11"
+        self._at("S-11")
 
         boundary, core = self._material()
         plan, approved, strategy = self._approved_plan(lane)
