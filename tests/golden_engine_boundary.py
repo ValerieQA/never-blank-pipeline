@@ -78,6 +78,7 @@ from src.research.provider import (
     SourceRetrievalOutcome,
 )
 
+from src.run.stage_routing import observe_request, observe_usage
 from src.run.call_budget import (
     GOLDEN_ENGINE_MAX_CEILING,
     RunCallBudget,
@@ -174,6 +175,14 @@ class Ledger:
         return len(self.requests(name))
 
 
+@dataclass(frozen=True, slots=True)
+class _Usage:
+    """The two attributes ``ProviderUsage.of`` reads off a provider response."""
+
+    prompt_tokens: int
+    completion_tokens: int
+
+
 class _Boundary:
     """A recorded boundary. Subclasses answer; this one accounts and remembers.
 
@@ -193,13 +202,30 @@ class _Boundary:
     def __init__(self, ledger: Ledger) -> None:
         self.ledger = ledger
 
+    #: What this double's provider "reported" it cost, per call (NB-07a1). A
+    #: production transport does not choose these — the provider does — so the
+    #: numbers are deliberately uninteresting and only their arithmetic matters.
+    #: ``None`` makes the response one that carried no usage at all, which is
+    #: the case a run must record as unavailable rather than as zero.
+    usage: Optional[tuple[int, int]] = (10, 4)
+
     def complete(self, *, instructions: str, request: str) -> str:
         # Charged first, and the answer is produced only afterwards: a refused
         # call must leave no trace of work, exactly as a refused `chat` leaves no
         # provider request.
         charge_active_call_budget()
+        # Then the request is measured, before the provider is reached — the
+        # order `chat` keeps, so a call the budget refused is never written down
+        # as one that went out (#279).
+        observe_request(instructions, request)
         self.ledger.record(self.name, request)
-        return self.answer(instructions=instructions, request=request)
+        answer = self.answer(instructions=instructions, request=request)
+        # And observed last, because `chat` reads `response.usage` only after
+        # the provider has replied. A double that charges but reports no usage
+        # would make every token assertion meaningless in the same way one that
+        # does not charge makes a budget assertion meaningless.
+        observe_usage(_Usage(*self.usage) if self.usage is not None else None)
+        return answer
 
     def answer(self, *, instructions: str, request: str) -> str:
         raise NotImplementedError

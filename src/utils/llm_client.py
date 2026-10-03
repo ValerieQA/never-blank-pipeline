@@ -4,7 +4,7 @@ from typing import Any, TypeVar
 from pydantic import BaseModel as PydanticBaseModel
 from openai import OpenAI, BadRequestError
 from src.run.call_budget import charge_active_call_budget
-from src.run.stage_routing import observe_request
+from src.run.stage_routing import observe_request, observe_usage
 from src.utils.logger import get_logger
 
 _T = TypeVar("_T", bound=PydanticBaseModel)
@@ -151,6 +151,10 @@ def chat(system: str, user: str, json_mode: bool = False, model: str | None = No
             response = client.chat.completions.create(**kwargs)
         else:
             raise
+    # NB-07a1: what the response said it cost, read after the provider replied
+    # because usage exists only per response and cannot be reconstructed later.
+    # After the call, so it can neither cause, prevent nor re-price one.
+    observe_usage(getattr(response, "usage", None))
     content = response.choices[0].message.content or ""
 
     if json_mode:
@@ -201,6 +205,10 @@ def chat_qc(system: str, user: str, json_mode: bool = False, model: str | None =
             response = client.chat.completions.create(**kwargs)
         else:
             raise
+    # NB-07a1: what the response said it cost, read after the provider replied
+    # because usage exists only per response and cannot be reconstructed later.
+    # After the call, so it can neither cause, prevent nor re-price one.
+    observe_usage(getattr(response, "usage", None))
     content = response.choices[0].message.content or ""
 
     if json_mode:
