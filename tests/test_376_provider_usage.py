@@ -290,12 +290,18 @@ def test_every_stage_reports_usage_for_every_call_it_was_charged_for(measured):
 
 
 def test_a_stage_that_made_no_call_records_a_measured_zero(measured):
-    """Knowable, not unmeasured: nothing was sent, so nothing was spent."""
+    """Knowable, not unmeasured: nothing was sent, so nothing was spent.
+
+    S-14 is in this set, and that is the point of including it: #308's
+    "S-14 makes no model call" is now readable from the usage instrument rather
+    than only from the stage's own call count. A slice that quietly gave S-14 a
+    model call would change this set.
+    """
 
     execution, _ = measured
     silent = [row for row in stage_call_totals(execution.records) if not row.calls]
 
-    assert {row.stage for row in silent} == {"S-03", "S-05", "S-07"}
+    assert {row.stage for row in silent} == {"S-03", "S-05", "S-07", "S-14"}
     for row in silent:
         assert (row.tokens_in, row.tokens_out) == (0, 0)
         assert row.tokens_absent is None

@@ -96,7 +96,7 @@ jobs:
         env:
           PYTHONPATH: .
           NB_GOLDEN_ENGINE_MODEL: ${{ secrets.NB_GOLDEN_ENGINE_MODEL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
           DISPATCHED: ${{ inputs.signal_id }}
           ROLE: ${{ inputs.role || 'never-blank-monday-documented-case' }}
         run: |
@@ -139,8 +139,8 @@ jobs:
           # transports. It has no fallback: an unconfigured engine refuses to
           # start rather than measuring whatever the legacy pipeline is set to.
           NB_GOLDEN_ENGINE_MODEL: ${{ secrets.NB_GOLDEN_ENGINE_MODEL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+          NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
+          NB_EXA_API_KEY: ${{ secrets.NB_EXA_API_KEY }}
         run: |
           # --commit: the run itself commits the durable E-16 records S-14
           # wrote and then its summary, each over its own exact paths, and the

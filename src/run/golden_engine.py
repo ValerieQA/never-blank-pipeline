@@ -783,6 +783,7 @@ def execute_canonical_topology(
             portfolio=portfolio,
             priors=priors,
             text_portfolio=text_portfolio,
+            ledger_dir=ledger_dir,
         )
 
 
@@ -800,6 +801,7 @@ def _execute_canonical_topology(
     portfolio: Sequence[PortfolioFingerprint],
     priors: Sequence[PriorPublication],
     text_portfolio: Sequence[TextFingerprint],
+    ledger_dir: Optional[Path],
 ) -> CanonicalExecution:
     """The run itself, inside the routing block its caller opened."""
 
