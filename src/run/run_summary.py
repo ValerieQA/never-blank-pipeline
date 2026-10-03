@@ -67,6 +67,7 @@ from src.editorial_core.arp import (
 from src.editorial_core.topology import CANONICAL_TOPOLOGY
 from src.run.code_identity import CodeIdentity
 from src.run.ledger import LedgerCommitStatus, write_record
+from src.run.stage_routing import UsageAbsence
 from src.run.run_context import RunContext
 from src.run.run_manifest import RunManifest
 from src.run.run_workspace import StageRecord
@@ -86,6 +87,12 @@ RUNS_DIRECTORY = "runs"
 CALL_COUNT_KEY = "count"
 TOKENS_IN_KEY = "tokens_in"
 TOKENS_OUT_KEY = "tokens_out"
+#: The closed category saying why one execution's tokens are not a number.
+TOKENS_ABSENT_KEY = "tokens_absent"
+#: How many of that execution's provider responses carried usable usage, and
+#: how many came back without it. Counts, never sentences (§3.3).
+USAGE_REPORTS_KEY = "usage_reports"
+SILENT_REPORTS_KEY = "silent_reports"
 
 _DIGEST_PATTERN = r"^sha256:[0-9a-f]{64}$"
 _STAGE_ID_PATTERN = r"^S-(?:0\d|1[0-5])$"
@@ -543,12 +550,49 @@ class CounterUsage(_Record):
 
 
 class StageCalls(_Record):
-    """Model calls and tokens for one stage, across its executions (§3.3)."""
+    """Model calls and tokens for one stage, across its executions (§3.3).
+
+    ``calls`` is the logical call count §0.3's budget bounds, and it is always a
+    number: the engine knows what it asked for. Tokens are the **provider's**
+    number, so they are measured or stated absent — the convention #308's
+    PO-DECISION-V1 settled for E-16, for the same reason. ``usage_reports``
+    counts the responses that carried usage, and it legitimately differs from
+    ``calls``: the temperature fallback charges two logical calls (#171) while
+    the request the provider rejected carries no usage at all. The divergence is
+    recorded rather than reconciled, because it is the measurement.
+    """
 
     stage: str = Field(pattern=_STAGE_ID_PATTERN)
     calls: int = Field(ge=0)
-    tokens_in: int = Field(ge=0)
-    tokens_out: int = Field(ge=0)
+    #: Absent exactly when ``tokens_absent`` is present.
+    tokens_in: Optional[int] = Field(default=None, ge=0)
+    tokens_out: Optional[int] = Field(default=None, ge=0)
+    #: Why this stage's tokens are not a number. A closed category, never "0"
+    #: and never a sentence: §3.3 keeps the words in the workspace trace.
+    tokens_absent: Optional[UsageAbsence] = None
+    usage_reports: int = Field(default=0, ge=0)
+    silent_reports: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def _measured_or_stated_absent(self) -> "StageCalls":
+        if (self.tokens_in is None) != (self.tokens_out is None):
+            raise ValueError(
+                f"{self.stage} measured one token direction and not the other; "
+                "a half measurement is recorded as absent, not as a total"
+            )
+        measured = self.tokens_in is not None and self.tokens_out is not None
+        if measured and self.tokens_absent is not None:
+            raise ValueError(
+                f"{self.stage} states both a token measurement and a reason it "
+                "has none; one of them is not true"
+            )
+        if not measured and self.tokens_absent is None:
+            raise ValueError(
+                f"{self.stage} carries no token measurement and no reason — a "
+                "reader would have to decide whether that means zero, and "
+                "deciding it for them is what §3.3 forbids"
+            )
+        return self
 
 
 class DestinationFirstPass(_Record):
@@ -909,22 +953,97 @@ def stage_call_totals(records: Sequence[StageRecord]) -> tuple[StageCalls, ...]:
     """Model calls and tokens per stage, across every execution of it (§3.3).
 
     A stage that recorded no ``calls`` block made none: the block is where a
-    stage states what it spent, and its absence is zero rather than unknown. A
-    value that is not a whole count is refused — the totals reach a public
+    stage states what it spent, and its absence is zero **calls** rather than
+    unknown. Tokens are not the same kind of fact — they are the provider's
+    number — so an execution that could not measure them makes the stage's
+    total absent, with the reasons it gave. Summing a measured stage with an
+    unmeasured one would publish a total that is quietly short, which is the
+    one outcome a budget baseline cannot survive.
+
+    A value that is not a whole count is refused — the totals reach a public
     ledger, and a fractional one is how an amount would get there.
+
+    **Per destination is not aggregated here** (owner decision, 2026-10-03).
+    ``StageRecord`` is the canonical trace authority, every record already names
+    its ``scope_key``, and #309 derives destination usage from the records. A
+    second aggregate in the durable summary would be a second source of truth.
     """
 
-    totals: dict[str, list[int]] = {}
+    calls_by_stage: dict[str, int] = {}
+    reports: dict[str, int] = {}
+    silent: dict[str, int] = {}
+    measured: dict[str, list[int]] = {}
+    absent: dict[str, list[UsageAbsence]] = {}
     for record in records:
         calls = record.calls or {}
-        row = totals.setdefault(record.stage, [0, 0, 0])
-        row[0] += _count(calls, CALL_COUNT_KEY, record.stage)
-        row[1] += _count(calls, TOKENS_IN_KEY, record.stage)
-        row[2] += _count(calls, TOKENS_OUT_KEY, record.stage)
-    return tuple(
-        StageCalls(stage=stage, calls=row[0], tokens_in=row[1], tokens_out=row[2])
-        for stage, row in sorted(totals.items())
-    )
+        stage = record.stage
+        made = _count(calls, CALL_COUNT_KEY, stage)
+        calls_by_stage[stage] = calls_by_stage.get(stage, 0) + made
+        reports[stage] = reports.get(stage, 0) + _count(calls, USAGE_REPORTS_KEY, stage)
+        silent[stage] = silent.get(stage, 0) + _count(
+            calls, SILENT_REPORTS_KEY, stage
+        )
+        stated = calls.get(TOKENS_ABSENT_KEY)
+        if stated is not None:
+            try:
+                absent.setdefault(stage, []).append(UsageAbsence(stated))
+            except ValueError as exc:
+                raise RunSummaryError(
+                    f"{stage} states {stated!r} for absent tokens; the ledger "
+                    "carries a closed category and no other kind of reason "
+                    "(§3.3)"
+                ) from exc
+            continue
+        if TOKENS_IN_KEY not in calls and TOKENS_OUT_KEY not in calls:
+            if made == 0:
+                # An execution that made no call sent no tokens, and that is
+                # knowable rather than unmeasured — the same rule the engine's
+                # recorder applies, and what lets a pass-through run (#293,
+                # which records no calls block at all) report honest zeros.
+                measured.setdefault(stage, [0, 0])
+                continue
+            # It made calls and stated neither a measurement nor a reason.
+            # Said so, rather than read as zero.
+            absent.setdefault(stage, []).append(UsageAbsence.NOT_RECORDED)
+            continue
+        row = measured.setdefault(stage, [0, 0])
+        row[0] += _count(calls, TOKENS_IN_KEY, stage)
+        row[1] += _count(calls, TOKENS_OUT_KEY, stage)
+
+    totals: list[StageCalls] = []
+    for stage in sorted(calls_by_stage):
+        stated = absent.get(stage, ())
+        if stated:
+            # One category when every absent execution gave the same one, and
+            # MIXED when they did not. The quantity is `silent_reports`, which
+            # is a count: a sentence would be the free text §3.3 refuses.
+            categories = set(stated)
+            totals.append(
+                StageCalls(
+                    stage=stage,
+                    calls=calls_by_stage[stage],
+                    tokens_absent=(
+                        next(iter(categories))
+                        if len(categories) == 1
+                        else UsageAbsence.MIXED
+                    ),
+                    usage_reports=reports.get(stage, 0),
+                    silent_reports=silent.get(stage, 0),
+                )
+            )
+            continue
+        row = measured.get(stage, [0, 0])
+        totals.append(
+            StageCalls(
+                stage=stage,
+                calls=calls_by_stage[stage],
+                tokens_in=row[0],
+                tokens_out=row[1],
+                usage_reports=reports.get(stage, 0),
+                silent_reports=silent.get(stage, 0),
+            )
+        )
+    return tuple(totals)
 
 
 def _count(calls: Mapping[str, Any], key: str, stage: str) -> int:
