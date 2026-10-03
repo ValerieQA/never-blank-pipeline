@@ -149,6 +149,15 @@ from src.editorial_core.material_features import (
     MaterialNote,
     describe_material,
 )
+from src.publishing.publication_markers import active_client
+from src.editorial_core.publication import (
+    FINGERPRINTS_DIRECTORY,
+    AcceptedText,
+    Fingerprint,
+    PackageRecord,
+    publish_in_shadow,
+    write_fingerprint_to_ledger,
+)
 from src.editorial_core.plan_check import (
     BarrierRound,
     PlanVerdict,
@@ -299,13 +308,19 @@ WIRED_STAGES: Final[tuple[str, ...]] = (
     "S-11",
     "S-12",
     "S-13",
+    "S-14",
 )
 
-#: The two stages of the topology this slice does not execute. S-14 is #308's
-#: and S-15 is SL-12's, and neither has an implementation to call — so the run
-#: ends at S-13 and says so, rather than standing a pass-through in for them,
-#: which is exactly what this slice exists to remove.
-UNWIRED_STAGES: Final[tuple[str, ...]] = ("S-14", "S-15")
+#: The one stage of the topology this engine does not execute. S-15 is SL-12's
+#: and has no implementation to call — so the run ends after S-14 and says so,
+#: rather than standing a pass-through in for it, which is exactly what #351
+#: exists to remove. S-14 joined the wired stages in #308, in **shadow**: it
+#: packages what can be packaged and fingerprints every accepted text, and
+#: reaches no provider, no image pipeline and no marker store.
+UNWIRED_STAGES: Final[tuple[str, ...]] = ("S-15",)
+
+#: ``E-16`` as the run workspace and the trace name it.
+_FINGERPRINT_ENTITY_TYPE: Final[str] = "E-16"
 
 
 class GoldenEngineError(RuntimeError):
@@ -691,6 +706,18 @@ class CanonicalExecution(NamedTuple):
     #: Where the run stopped, when it stopped before S-13. ``None`` for a run
     #: that reached the end of the wired topology.
     stopped_at: Optional[str] = None
+    #: Every E-16 S-14 wrote, in destination order. Empty for a run that
+    #: reached no accepted text — not for one that published nothing, because a
+    #: shadow run still fingerprints what it accepted.
+    fingerprints: tuple[Fingerprint, ...] = ()
+    #: One package record per accepted text: built, required input unavailable,
+    #: or no package type yet (#308).
+    packages: tuple[PackageRecord, ...] = ()
+    #: The durable E-16 records this run wrote, by the exact path each went to.
+    #: Carried so the learning-record commit commits **these files** and not a
+    #: glob of the ledger: the summary states that commit's status (§3.3), and
+    #: a status over files nobody named would be a status about nothing.
+    fingerprint_paths: tuple[Path, ...] = ()
     #: The verdict behind each accepted text, in destination order. Carried
     #: because the TextVerdict **entity** records its hints by check ID alone —
     #: the free text stays in the workspace (§3.3) — so what a soft check like
@@ -717,6 +744,7 @@ def execute_canonical_topology(
     portfolio: Sequence[PortfolioFingerprint] = (),
     priors: Sequence[PriorPublication] = (),
     text_portfolio: Sequence[TextFingerprint] = (),
+    ledger_dir: Optional[Path] = None,
 ) -> CanonicalExecution:
     """Execute the real S-00…S-13 over one intake record, and record every step.
 
@@ -746,6 +774,8 @@ def execute_canonical_topology(
         portfolio=tuple(portfolio),
         priors=tuple(priors),
         text_portfolio=tuple(text_portfolio),
+        run_context=run_context,
+        ledger_dir=ledger_dir,
         workspace=workspace,
     ).execute()
 
@@ -917,6 +947,9 @@ class _Lane:
     strategy: Optional[EditorialStrategy] = None
     plan: Optional[ExecutablePlan] = None
     verdict: Optional[PlanVerdict] = None
+    #: S-09's selection, kept because E-16 records the tie-breaker that decided
+    #: this destination's strategy and no other artifact carries it.
+    selection: Optional[StrategySelection] = None
     text: Optional[Text] = None
     accepted: Optional[TextVerdict] = None
     skipped: bool = False
@@ -955,6 +988,8 @@ class _Run:
         portfolio: Sequence[PortfolioFingerprint],
         priors: Sequence[PriorPublication],
         text_portfolio: Sequence[TextFingerprint],
+        run_context: RunContext,
+        ledger_dir: Optional[Path],
         workspace: RunWorkspace,
     ) -> None:
         self.trace = trace
@@ -970,6 +1005,8 @@ class _Run:
         self.priors = tuple(priors)
         self.text_portfolio = tuple(text_portfolio)
         self.workspace = workspace
+        self.run_context = run_context
+        self.ledger_dir = ledger_dir
 
         self.signal_id: str = ""
         #: The stage currently executing. Only §0.4's exhaustion handler reads
@@ -991,6 +1028,9 @@ class _Run:
         self.barrier_round = 0
         self.split_candidate = False
         self.lineage: dict[str, EntityRef] = {}
+        self.fingerprints: tuple[Fingerprint, ...] = ()
+        self.packages: tuple[PackageRecord, ...] = ()
+        self.fingerprint_paths: tuple[Path, ...] = ()
 
     # ------------------------------------------------------------------
     # The whole run
@@ -1026,7 +1066,108 @@ class _Run:
         if not self._barrier():
             return self._finished(stopped_at="S-11")
         self._produce_texts()
+        self._s14()
         return self._finished()
+
+    # ------------------------------------------------------------------
+    # S-14 · publication and fingerprint, in shadow (#308)
+    # ------------------------------------------------------------------
+
+    def _s14(self) -> None:
+        """Fingerprint every accepted text, and package what can be packaged.
+
+        The shadow half of S-14, and the whole of what SL-7 asks for: the run
+        measures what the canonical chain costs, and a measurement must not
+        publish. Nothing here reaches a provider, an image pipeline or a marker
+        store — not behind a flag, but because no such call exists on this path.
+
+        ``calls=0``, because §1's Calls column is 0 and the stage takes no
+        transport. A run that accepted nothing records no S-14 at all: there is
+        no publication scope to record, and an empty record would make the
+        indicators count a scope nobody reached.
+        """
+
+        self.executing = "S-14"
+        accepted = [
+            lane for lane in self._ordered_lanes() if lane.accepted is not None
+        ]
+        if not accepted:
+            return
+        unit = self._unit()
+        texts: list[AcceptedText] = []
+        for lane in accepted:
+            if lane.text is None or lane.plan is None or lane.strategy is None:
+                raise GoldenEngineError(
+                    f"{lane.destination.value} holds an accepted verdict and "
+                    "not the text, plan and strategy E-16 snapshots; a "
+                    "fingerprint records what was accepted, and one assembled "
+                    "from part of it would remember a text that never existed"
+                )
+            assert self.features is not None
+            texts.append(
+                AcceptedText(
+                    text=lane.text,
+                    decision=lane.decision,
+                    plan=lane.plan,
+                    strategy=lane.strategy,
+                    features=self.features,
+                    deciding_tiebreaker=(
+                        None
+                        if lane.selection is None
+                        or lane.selection.deciding_tiebreaker is None
+                        else lane.selection.deciding_tiebreaker.value
+                    ),
+                )
+            )
+        # No PackageInputs: a canonical run holds none of what the existing Wix
+        # and LinkedIn builders require — it produces E-15 rather than a legacy
+        # generated artifact, it calls no image pipeline, and it reads no
+        # publication target. Each absence is recorded by name rather than
+        # fabricated (owner decision, 2026-10-02).
+        round_result = publish_in_shadow(
+            accepted=tuple(texts),
+            unit_id=unit.unit_id,
+            run_id=self.run_context.run_id,
+            client=active_client(),
+        )
+        outputs: list[EntityRef] = []
+        durable: list[Path] = []
+        for fingerprint in round_result.fingerprints:
+            written = self.workspace.write_entity(
+                stage="S-14",
+                relative_path=(
+                    f"{FINGERPRINTS_DIRECTORY}/{fingerprint.fingerprint_id}.json"
+                ),
+                entity_type=_FINGERPRINT_ENTITY_TYPE,
+                entity_id=fingerprint.fingerprint_id,
+                payload=fingerprint.as_entity(),
+            )
+            outputs.append(_ref(written))
+            # And the durable copy: §3.2 retains E-16 indefinitely, because the
+            # 90-day run workspace outlives nothing Portfolio Memory reads. The
+            # path is kept, because the learning-record commit commits these
+            # files by name.
+            durable.append(
+                write_fingerprint_to_ledger(
+                    fingerprint,
+                    month=f"{self.run_context.started_at.year:04d}-"
+                    f"{self.run_context.started_at.month:02d}",
+                    root=self.ledger_dir,
+                )
+            )
+        self.fingerprints = round_result.fingerprints
+        self.packages = round_result.packages
+        self.fingerprint_paths = tuple(durable)
+        self.trace.record(
+            stage="S-14",
+            scope_key=unit.unit_id,
+            decider=DeciderKind.CODE,
+            inputs=tuple(
+                _text_ref(item.text) for item in texts
+            ),
+            outputs=tuple(outputs),
+            calls=round_result.calls,
+        )
 
     # ------------------------------------------------------------------
     # Budget exhaustion the wrap could not refuse in advance (§0.4)
@@ -1132,6 +1273,9 @@ class _Run:
                 for lane in self._ordered_lanes()
                 if lane.accepted is not None
             ),
+            fingerprints=self.fingerprints,
+            packages=self.packages,
+            fingerprint_paths=self.fingerprint_paths,
         )
 
     def _scopes(self) -> tuple[RunScope, ...]:
@@ -1727,6 +1871,7 @@ class _Run:
             chosen = self._s09(lane, candidates)
             if chosen is None:
                 continue
+            lane.selection = chosen[1]
             plan = self._s10(lane, chosen[0], chosen[1])
             if plan is None:
                 continue

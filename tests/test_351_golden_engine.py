@@ -101,11 +101,16 @@ _ENGINE_SOURCE = (_REPO_ROOT / "src" / "run" / "golden_engine.py").read_text(
 # ===========================================================================
 
 
-def test_the_wired_stages_are_the_editorial_core_of_the_registry():
-    """S-00…S-13, derived from the registry rather than listed a second time."""
+def test_the_wired_stages_are_the_editorial_core_and_s14():
+    """S-00…S-13 from the registry, and S-14 since #308 wired it in shadow.
 
-    assert WIRED_STAGES == CANONICAL_TOPOLOGY.editorial_core_stage_ids
-    assert UNWIRED_STAGES == ("S-14", "S-15")
+    The editorial core is still derived rather than listed a second time; S-14
+    is named beside it because it is not part of that core — it makes no
+    editorial decision — and it is wired all the same.
+    """
+
+    assert WIRED_STAGES == (*CANONICAL_TOPOLOGY.editorial_core_stage_ids, "S-14")
+    assert UNWIRED_STAGES == ("S-15",)
     assert not set(WIRED_STAGES) & set(UNWIRED_STAGES)
     assert set(WIRED_STAGES) | set(UNWIRED_STAGES) == set(
         CANONICAL_TOPOLOGY.stage_ids
@@ -126,7 +131,7 @@ def test_a_stage_the_harness_does_not_wire_stops_the_run(monkeypatch):
 
     monkeypatch.setattr(golden_engine, "WIRED_STAGES", WIRED_STAGES[:-1])
 
-    with pytest.raises(StageNotWiredError, match="S-13"):
+    with pytest.raises(StageNotWiredError, match="S-14"):
         check_every_stage_is_wired()
 
 
@@ -172,6 +177,7 @@ STAGE_ENTRIES: dict[str, tuple[str, str]] = {
     "S-05": ("src.editorial_core.editorial_units", "create_unit"),
     "S-06": ("src.editorial_core.anchor", "choose_anchor"),
     "S-07": ("src.editorial_core.destinations", "decide_destinations"),
+    "S-14": ("src.editorial_core.publication", "publish_in_shadow"),
     "S-08": (
         "src.editorial_core.candidate_strategies",
         "propose_strategies",
@@ -672,17 +678,19 @@ def test_the_execution_reports_where_it_stopped_rather_than_how_far_it_got():
     assert golden_engine.CanonicalExecution._field_defaults["stopped_at"] is None
 
 
-def test_the_execution_reports_what_was_accepted_and_claims_no_publication():
-    """E-16 and a publication are S-14's, and S-14 is not executed here.
+def test_the_execution_reports_fingerprints_and_still_claims_no_publication():
+    """E-16 is S-14's and #308 executes S-14 — in shadow, publishing nothing.
 
     ``accepted`` is a list of destinations holding an accepted text, which is
-    not the same claim: a text S-13 accepted may be published and has not been.
-    A field named for publication would let a reader of the ledger count a run
-    that published nothing as one that did.
+    not the same claim as published: a text S-13 accepted may be published and
+    has not been. So the execution now carries the fingerprints S-14 wrote, and
+    still carries no field named for a publication — a shadow run that reported
+    one would let a reader of the ledger count it as a run that published.
     """
 
     fields = golden_engine.CanonicalExecution._fields
 
     assert "accepted" in fields
+    assert "fingerprints" in fields, "#308 wired S-14, which produces E-16"
+    assert "packages" in fields
     assert not [name for name in fields if "publication" in name]
-    assert not [name for name in fields if "fingerprint" in name]
