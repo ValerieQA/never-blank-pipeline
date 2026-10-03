@@ -713,6 +713,11 @@ class CanonicalExecution(NamedTuple):
     #: One package record per accepted text: built, required input unavailable,
     #: or no package type yet (#308).
     packages: tuple[PackageRecord, ...] = ()
+    #: The durable E-16 records this run wrote, by the exact path each went to.
+    #: Carried so the learning-record commit commits **these files** and not a
+    #: glob of the ledger: the summary states that commit's status (§3.3), and
+    #: a status over files nobody named would be a status about nothing.
+    fingerprint_paths: tuple[Path, ...] = ()
     #: The verdict behind each accepted text, in destination order. Carried
     #: because the TextVerdict **entity** records its hints by check ID alone —
     #: the free text stays in the workspace (§3.3) — so what a soft check like
@@ -1025,6 +1030,7 @@ class _Run:
         self.lineage: dict[str, EntityRef] = {}
         self.fingerprints: tuple[Fingerprint, ...] = ()
         self.packages: tuple[PackageRecord, ...] = ()
+        self.fingerprint_paths: tuple[Path, ...] = ()
 
     # ------------------------------------------------------------------
     # The whole run
@@ -1125,6 +1131,7 @@ class _Run:
             client=active_client(),
         )
         outputs: list[EntityRef] = []
+        durable: list[Path] = []
         for fingerprint in round_result.fingerprints:
             written = self.workspace.write_entity(
                 stage="S-14",
@@ -1137,15 +1144,20 @@ class _Run:
             )
             outputs.append(_ref(written))
             # And the durable copy: §3.2 retains E-16 indefinitely, because the
-            # 90-day run workspace outlives nothing Portfolio Memory reads.
-            write_fingerprint_to_ledger(
-                fingerprint,
-                month=f"{self.run_context.started_at.year:04d}-"
-                f"{self.run_context.started_at.month:02d}",
-                root=self.ledger_dir,
+            # 90-day run workspace outlives nothing Portfolio Memory reads. The
+            # path is kept, because the learning-record commit commits these
+            # files by name.
+            durable.append(
+                write_fingerprint_to_ledger(
+                    fingerprint,
+                    month=f"{self.run_context.started_at.year:04d}-"
+                    f"{self.run_context.started_at.month:02d}",
+                    root=self.ledger_dir,
+                )
             )
         self.fingerprints = round_result.fingerprints
         self.packages = round_result.packages
+        self.fingerprint_paths = tuple(durable)
         self.trace.record(
             stage="S-14",
             scope_key=unit.unit_id,
@@ -1263,6 +1275,7 @@ class _Run:
             ),
             fingerprints=self.fingerprints,
             packages=self.packages,
+            fingerprint_paths=self.fingerprint_paths,
         )
 
     def _scopes(self) -> tuple[RunScope, ...]:
