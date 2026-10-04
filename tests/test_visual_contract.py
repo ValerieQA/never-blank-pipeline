@@ -388,19 +388,31 @@ def _record_dict(tmp_path) -> dict:
          "dimensions"),
         (lambda d: d["derivatives"][0].update(format="bmp"),
          "unsupported"),
-        (lambda d: d["derivatives"].pop(0),
-         "required Wix derivative"),
+        # NB-02h: a rendition that is a different asset from the canonical
+        # master and declares no technical transformation. This replaced the
+        # old "the required Wix derivative is missing" rule — the master is no
+        # longer owned by Wix, so what must be refused is an undeclared
+        # substitution rather than Wix's absence.
+        (lambda d: d["derivatives"][1].update(transforms=[]),
+         "declares no technical transformation"),
         (lambda d: d["derivatives"].append(dict(d["derivatives"][0])),
          "unique"),
-        (lambda d: d["derivatives"][1].update(channel="instagram"),
-         "non-Release-1"),
+        # Still refused, but for the vocabulary rather than for "Release 1":
+        # `instagram` is now a declared rendition channel (NB-02h), so this
+        # case uses a channel that genuinely has no declared rendition.
+        (lambda d: d["derivatives"][1].update(channel="mastodon"),
+         "no declared rendition"),
+        # The master may now be its own asset — but then every rendition that
+        # differs from it must say what it did. Pointing the master elsewhere
+        # while leaving the Wix rendition's transforms empty is exactly the
+        # silent substitution the new rule catches.
         (lambda d: d.update(master_asset_url="https://res.cloudinary.com/other.png"),
-         "master asset URL"),
+         "declares no technical transformation"),
         (lambda d: d.update(linkedin_visual="not_requested"),
          "not_requested but a LinkedIn derivative exists"),
     ],
-    ids=["wix-1x1", "wix-bmp", "no-wix", "duplicate-channel",
-         "foreign-channel", "master-mismatch", "linkedin-state-lie"],
+    ids=["wix-1x1", "wix-bmp", "rendition-without-transform", "duplicate-channel",
+         "undeclared-channel", "master-substituted", "linkedin-state-lie"],
 )
 def test_schema_valid_but_semantically_invalid_passports_are_rejected(
     tmp_path, tamper, expect
@@ -422,9 +434,13 @@ def test_linkedin_state_cannot_claim_absent_derivative(tmp_path):
     "tamper",
     [
         lambda d: d["derivatives"][0].update(width=1, height=1, format="bmp"),
-        lambda d: d["derivatives"].pop(0),
+        # NB-02h replaced "missing Wix derivative" here too: a Wix-less
+        # passport is now a legitimate record of a visual that exists without
+        # Wix. What still fails closed on reuse is a rendition that differs
+        # from the master and declares nothing.
+        lambda d: d["derivatives"][1].update(transforms=[]),
     ],
-    ids=["tampered-wix-dims-format", "missing-wix-derivative"],
+    ids=["tampered-wix-dims-format", "rendition-without-transform"],
 )
 def test_from_package_rejects_semantically_invalid_source_passport(
     tmp_path, tamper
