@@ -110,6 +110,18 @@ def run() -> dict:
         "_classification": "discovery-preparation-only",
     }
 
+    #: Research-only: discovery, scoring, the Stage 4 classification and the
+    #: Stage 6 save, and nothing after them. Set by a manual dispatch of
+    #: `daily_signal_research.yml`, which defaults to it — see that workflow's
+    #: `full_production` input. **Absence means the full path**, so a scheduled
+    #: run and every other caller behave exactly as before: the fail-safe
+    #: default belongs to the dispatch input, where a person chooses it, and not
+    #: here, where it would silently change what production does.
+    research_only = os.environ.get("NB_RESEARCH_ONLY", "").strip().lower() == "true"
+    if research_only:
+        log.info("=== research-only mode: no packages, no images, no publishing ===")
+        summary["_classification"] = "research-only"
+
     cfg = _load_weights()
     thresholds = cfg.get("thresholds", {})
     select_min = thresholds.get("select_minimum", 7)
@@ -187,7 +199,23 @@ def run() -> dict:
 
     log.info("=== Stage 10: Content Package Preparation ===")
     content_packages = []
-    if selected:
+    if research_only:
+        # Research-only: the run stops contributing after Stage 6. Content
+        # packages are where the paid package model and the billed base image
+        # are spent, and the image is uploaded to a media host — so a run that
+        # exists to produce classified signals must not reach them. Skipped
+        # before `prepare_content_packages` is called at all, not inside it:
+        # a flag the function honoured would still be a call into the image
+        # path, and what this mode promises is that the path is not entered.
+        log.info(
+            "research-only: Stage 10 skipped — no content package, no image "
+            "generation, no media upload (%d signal(s) were selected)",
+            len(selected),
+        )
+        summary["content_packages"] = 0
+        summary["images_new"] = 0
+        summary["images_reused"] = 0
+    elif selected:
         content_packages = prepare_content_packages(selected)
         if not content_packages:
             raise RuntimeError("Selected signals produced no content packages; publishing aborted")
@@ -195,7 +223,14 @@ def run() -> dict:
         summary["images_new"] = sum(p["images"].get("new_images", 0) for p in content_packages)
         summary["images_reused"] = sum(p["images"].get("reused_images", 0) for p in content_packages)
 
-    publish_enabled = os.environ.get("NB_RESEARCH_PUBLISH_ENABLED", "false").lower() == "true"
+    # Two independent reasons publishing cannot happen in research-only mode,
+    # and that is on purpose: this conjunction, and the empty `content_packages`
+    # the skipped stage leaves behind, which the condition below also requires.
+    # Neither is load-bearing alone.
+    publish_enabled = (
+        not research_only
+        and os.environ.get("NB_RESEARCH_PUBLISH_ENABLED", "false").lower() == "true"
+    )
     log.info("=== Stage 11: Live Publishing (enabled=%s) ===", publish_enabled)
     publish_reports = []
     if selected and content_packages and publish_enabled:
