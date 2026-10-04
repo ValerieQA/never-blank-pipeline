@@ -546,7 +546,7 @@ def test_wednesday_workflow_uses_canonical_visual_and_r1_publish_surfaces():
 
 def test_exactly_one_authoritative_scheduled_wednesday_publisher():
     owners = []
-    for name in ("wednesday_golden.yml", "scheduled_publish.yml", "research_generate_and_publish.yml"):
+    for name in ("wednesday_golden.yml", "research_generate_and_publish.yml"):
         if any(_fires_on(cron, "3") for cron in _schedule(_workflow(name))):
             owners.append(name)
     assert owners == ["wednesday_golden.yml"]
@@ -559,11 +559,11 @@ def test_exactly_one_authoritative_scheduled_wednesday_publisher():
 
 
 def test_legacy_owners_remove_only_wednesday_and_preserve_other_days():
-    # #224 moved Friday's minute off :00 and #232 its hour to 04 ET; the
-    # day-of-week is what this pins.
-    assert [
-        cron.split()[1:] for cron in _schedule(_workflow("scheduled_publish.yml"))
-    ] == [["8", "*", "*", "5"], ["9", "*", "*", "5"]]
+    # Friday's own workflow is gone (owner decision, #326): `scheduled_publish.yml`
+    # was the legacy ungated six-channel publisher. What this test still pins is
+    # that removing Wednesday's legacy owner left the other days alone — the
+    # Friday/Sunday pair below, and the Friday configuration the surviving
+    # `scripts/scheduled_publish.py` reads.
     assert _schedule(_workflow("research_generate_and_publish.yml")) == [
         "0 7 * * 5,0"
     ]
