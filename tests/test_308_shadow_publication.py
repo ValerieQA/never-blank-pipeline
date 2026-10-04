@@ -601,3 +601,122 @@ def test_the_shadow_workflow_has_no_second_generic_ledger_commit():
 
     asked = steps[-1]["run"]
     assert "--commit" in asked, "the run's own mechanism has to be asked for"
+
+
+# ===========================================================================
+# The composition root reads the intake record, not a prepared package
+# ===========================================================================
+#
+# Acceptance run 1 (37166701563) failed two seconds in, before any model call,
+# with `ResearchGateError: research requires at least one required, preferred,
+# or discovery source`. The cause was not the gate: `_signal` was reading
+# `reports/content_packages/<id>.json`, which is the legacy pipeline's prepared
+# *output* — five keys, no `SOURCE_URL` — instead of the intake record the
+# research pipeline writes. Three modules name the right file, and the run had
+# been pointed at the wrong one.
+
+
+def test_the_shadow_run_reads_the_intake_record_from_the_research_queue():
+    """The queue, by SIGNAL_ID — the same file the production selector reads.
+
+    `select_eligible_signal.py --active-path` defaults to it,
+    `src/strategy/contract_fit.py` calls it "the real intake record", and
+    `src/run/signal_adapter.py` says S-00 reads the record "spelled as intake
+    spells it". A prepared package is spelled nothing like it.
+    """
+
+    from scripts.run_canonical_shadow import ACTIVE_SIGNALS, PACKAGES_DIR, _signal
+
+    assert ACTIVE_SIGNALS == Path("data/research/signals_active.jsonl")
+    # PACKAGES_DIR stays, for the legacy research run_dir S-01's lineage wraps.
+    assert PACKAGES_DIR == Path("reports/content_packages")
+
+    queued = [
+        json.loads(line)
+        for line in ACTIVE_SIGNALS.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    first = next(r for r in queued if r.get("SIGNAL_ID"))
+    record = _signal(first["SIGNAL_ID"])
+
+    assert record["SIGNAL_ID"] == first["SIGNAL_ID"]
+    # The fields the research gate and S-00 actually need, which the prepared
+    # package does not carry.
+    assert record.get("SOURCE_URL"), "a prepared package has no source URL"
+    assert record.get("CORE_FACT") and record.get("SIGNAL_TYPE")
+    assert len(record) > 5, "five keys is the shape of the wrong file"
+
+
+def test_the_research_gate_passes_on_a_real_queued_record():
+    """What run 1 crashed on, asserted directly.
+
+    `build_source_directives` needs one required, preferred or discovery
+    source. The queue's `SOURCE_URL` is the required one; the prepared package
+    had none, so the gate refused before the engine was ever constructed.
+    """
+
+    from src.research.lifecycle import build_source_directives
+    from scripts.run_canonical_shadow import ACTIVE_SIGNALS, _signal
+
+    queued = [
+        json.loads(line)
+        for line in ACTIVE_SIGNALS.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    record = _signal(next(r for r in queued if r.get("SIGNAL_ID"))["SIGNAL_ID"])
+
+    directives = build_source_directives(record)
+    assert directives, "the gate the run died on"
+    assert any(item.directive_id == "required-source-1" for item in directives)
+
+
+def test_the_composition_root_does_not_pre_screen_the_contract_fields():
+    """A record S-00 will refuse is read, passed on, and refused in the trace.
+
+    `src/run/signal_adapter.py` is explicit that a pre-screen would be wrong:
+    it "would take the refusal away from the rule that owns it and leave the
+    trace unable to say which rule decided". So `_signal` must hand over a
+    record with no `EDITORIAL_DOMAIN` / `EDITORIAL_RISK` rather than raise —
+    the measurement needs the refusal recorded, not hidden.
+    """
+
+    import inspect
+
+    from scripts.run_canonical_shadow import ACTIVE_SIGNALS, _signal
+    from src.run.signal_adapter import DOMAIN_FIELD, golden_engine_fit_rules
+    from src.run.signal_adapter import selection_candidate
+
+    source = inspect.getsource(_signal)
+    assert DOMAIN_FIELD not in source, "the fit rule owns this refusal"
+    assert "EDITORIAL_RISK" not in source
+
+    queued = [
+        json.loads(line)
+        for line in ACTIVE_SIGNALS.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    unclassified = next(
+        (r for r in queued if r.get("SIGNAL_ID") and not r.get(DOMAIN_FIELD)), None
+    )
+    if unclassified is None:  # pragma: no cover - the queue is classified
+        pytest.skip("every queued record carries the classification")
+
+    record = _signal(unclassified["SIGNAL_ID"])
+    assert DOMAIN_FIELD not in record or not record[DOMAIN_FIELD]
+
+    # And the refusal lands on the rule, naming the field, as the trace needs.
+    verdicts = golden_engine_fit_rules(
+        directory=Path("clients/never_blank")
+    ).evaluate(selection_candidate(record).signal)
+    refused = {v.rule_id: v for v in verdicts if not v.passed}
+    assert "FIT-NB-TOPIC-01" in refused
+    assert refused["FIT-NB-TOPIC-01"].field == DOMAIN_FIELD
+
+
+def test_a_signal_absent_from_the_queue_is_refused_by_name():
+    """Not a traceback, and not a silent empty record."""
+
+    from scripts.run_canonical_shadow import _signal
+
+    with pytest.raises(SystemExit, match="is not in data/research"):
+        _signal("0000000000000000")

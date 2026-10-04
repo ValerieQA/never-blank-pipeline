@@ -60,19 +60,48 @@ REGISTER_DIR = Path("knowledge")
 CLIENT_DIR = Path("clients/never_blank")
 
 #: Where the legacy content packages live, for the research lineage S-01 wraps.
+#: **Not** the intake source — see :data:`ACTIVE_SIGNALS`. A prepared package
+#: holds five keys (``HEADLINE``, ``SIGNAL_ID``, ``content``, ``images``,
+#: ``prepared_at``) and is an output of the legacy pipeline, not an input to
+#: this one.
 PACKAGES_DIR = Path("reports/content_packages")
+
+#: The intake record S-00 reads, "spelled as intake spells it"
+#: (``src/run/signal_adapter.py``). The same file the production selector reads
+#: (``select_eligible_signal.py --active-path``) and the one
+#: ``src/strategy/contract_fit.py`` calls "the real intake record".
+ACTIVE_SIGNALS = Path("data/research/signals_active.jsonl")
 
 
 def _signal(signal_id: str) -> dict:
-    """The intake record, read from the research queue as intake wrote it."""
+    """The intake record, read from the research queue as intake wrote it.
 
-    path = PACKAGES_DIR / f"{signal_id}.json"
-    if not path.exists():
+    By ``SIGNAL_ID`` out of the queue, and handed on **unchanged**. Nothing here
+    screens the record for the fields the contract's fit rules require: those
+    rules own that refusal, and ``signal_adapter`` states why taking it away
+    would be wrong — a pre-screen "would take the refusal away from the rule
+    that owns it and leave the trace unable to say which rule decided". A
+    record S-00 will refuse is therefore read, passed on, and refused in the
+    trace, which is the outcome a measurement run needs to record.
+    """
+
+    if not ACTIVE_SIGNALS.exists():
         raise SystemExit(
-            f"no intake record at {path}; a shadow run is over a real signal, "
-            "and inventing one would measure a run nobody will ever make"
+            f"no research queue at {ACTIVE_SIGNALS}; a shadow run is over a "
+            "real signal, and inventing one would measure a run nobody will "
+            "ever make"
         )
-    return json.loads(path.read_text(encoding="utf-8"))
+    for line in ACTIVE_SIGNALS.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        record = json.loads(line)
+        if str(record.get("SIGNAL_ID", "")).strip() == signal_id:
+            return record
+    raise SystemExit(
+        f"{signal_id} is not in {ACTIVE_SIGNALS}; a shadow run is over a signal "
+        "intake really wrote, and the queue is where intake writes them"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
