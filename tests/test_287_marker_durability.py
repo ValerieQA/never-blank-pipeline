@@ -40,7 +40,6 @@ PUBLISHING_WORKFLOWS = {
     "research_generate_and_publish.yml": True,
     "visibility_publish.yml": True,
     "daily_signal_research.yml": False,
-    "scheduled_publish.yml": False,
 }
 
 

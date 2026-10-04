@@ -242,7 +242,6 @@ def test_the_friday_stream_uses_the_same_seam():
 # by test_the_paused_monday_schedule_documents_its_exact_restoration below.
 @pytest.mark.parametrize("name, pair", [
     ("wednesday_golden.yml", (WEDNESDAY_EDT, WEDNESDAY_EST)),
-    ("scheduled_publish.yml", (FRIDAY_EDT, FRIDAY_EST)),
 ])
 def test_every_canonical_stream_fires_at_04_17_off_the_top_of_the_hour(name, pair):
     """#232: all three canonical streams on one paired UTC schedule. GitHub
@@ -411,16 +410,12 @@ def test_a_forced_manual_publish_remains_forced():
     assert plain_manual.decision == FORCED and plain_manual.publishes
 
 
-def test_the_friday_workflow_check_branch_carries_no_force():
-    """The workflow seam itself: the check_only branch must invoke --check-only
-    with the real event name and never --force, so the fix above is actually
-    reachable from the button that exposed the bug."""
-    steps = _workflow("scheduled_publish.yml")["jobs"].popitem()[1]["steps"]
-    run = next(s for s in steps if s["name"] == "Run scheduled publisher")["run"]
-    check_branch = run.split("inputs.check_only")[1].split("else")[0]
-    assert "--check-only" in check_branch
-    assert "--event" in check_branch
-    assert "--force" not in check_branch
+# `test_the_friday_workflow_check_branch_carries_no_force` stood here. Its
+# subject was `scheduled_publish.yml`'s own check_only branch, and the workflow
+# is deleted (owner decision, #326). The script-level half of that fix is still
+# pinned by `test_the_window_is_the_scheduling_seams_and_not_the_scripts_own`
+# above, which reads `scripts/scheduled_publish.py` — the script is shared code
+# and stays.
 
 
 # ===========================================================================
@@ -496,7 +491,6 @@ def test_the_record_survives_a_missing_directory(tmp_path):
 @pytest.mark.parametrize("name, artifact", [
     ("monday_publish.yml", "monday-scheduling-decision"),
     ("wednesday_golden.yml", "wednesday-scheduling-decision"),
-    ("scheduled_publish.yml", "friday-scheduling-decision"),
 ])
 def test_the_decision_artifact_is_uploaded_regardless_of_the_outcome(name, artifact):
     """The defect that hid this: every upload step was gated on `due`, so the
@@ -510,7 +504,7 @@ def test_the_decision_artifact_is_uploaded_regardless_of_the_outcome(name, artif
 
 
 @pytest.mark.parametrize("name", [
-    "monday_publish.yml", "wednesday_golden.yml", "scheduled_publish.yml",
+    "monday_publish.yml", "wednesday_golden.yml",
 ])
 def test_every_stream_passes_the_firing_identity_to_the_seam(name):
     text = (WORKFLOWS / name).read_text()

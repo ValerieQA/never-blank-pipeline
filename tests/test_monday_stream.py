@@ -434,16 +434,16 @@ def test_no_workflow_publishes_on_monday_while_the_schedule_is_paused():
 
 
 def test_the_legacy_scheduler_kept_friday_after_independent_streams_split_out():
-    crons = _schedule(_workflow("scheduled_publish.yml"))
+    """The workflow is deleted; the configuration it read is not.
 
-    # #224 moved the minute off the top of the hour and #232 the hour itself;
-    # the day is the contract.
-    assert [cron.split()[1:] for cron in crons] == [
-        ["8", "*", "*", "5"], ["9", "*", "*", "5"],
-    ]
-    assert not any(_fires_on(cron, "1") for cron in crons)
-    assert not any(_fires_on(cron, "3") for cron in crons)
-    # and the configuration its script actually reads agrees
+    `scheduled_publish.yml` was removed by owner decision (#326) as an obsolete
+    ungated publisher. `scripts/scheduled_publish.py` is shared code and stays,
+    so the Friday configuration it reads still has a contract worth pinning —
+    and a stream that is not Monday's and not Wednesday's still must not claim
+    their days.
+    """
+
+    # the configuration the surviving script actually reads
     schedule = yaml.safe_load(Path("config/schedule.yaml").read_text())["schedule"]
     assert schedule["days"] == ["friday"]
     # #224 moved the minute off the top of the hour, where GitHub delays
