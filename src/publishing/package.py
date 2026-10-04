@@ -594,3 +594,79 @@ def build_linkedin_publication_package(
         raise PublicationPackageError(
             f"LinkedIn publication package is invalid: {exc}"
         ) from exc
+
+
+# ===========================================================================
+# The destination → builder seam (NB-08s)
+# ===========================================================================
+#
+# Why a table. Today a canonical package exists for two destinations, and the
+# one place that chose between them did it with `if channel_name == "wix": …
+# else: …` (`idempotency.py`). That is fine for two and wrong for six: the
+# fourth destination would be the fourth conditional, in whichever file needed
+# it next, and `AS_IS_CAPABILITY`'s `package` column would have no single thing
+# to be true about.
+#
+# So a destination becomes packageable by **registering a builder**, and the
+# two existing builders are registered as they are — their signatures,
+# behaviour and digests are untouched, because nothing about Wix or LinkedIn
+# needed to change for a seam to exist beside them.
+#
+# What this is NOT: capability. A destination absent from this table has no
+# package, which is exactly what `AS_IS_CAPABILITY` already records for four of
+# them, and registering one here is the whole of what "it has a package" means.
+# Authorization to publish is a third question, and `release_scope` owns it.
+
+
+class UnsupportedDestinationError(PublicationPackageError):
+    """No canonical package builder is registered for this destination.
+
+    A subclass of :class:`PublicationPackageError` so that a caller which
+    already fails closed on an unbuildable package keeps failing closed on an
+    unbuildable *destination*, without learning a second exception.
+    """
+
+
+#: Destination name → the builder that constructs its canonical package.
+#:
+#: The builders deliberately do not share a signature. Wix needs a visual
+#: record, LinkedIn needs the accepted composition as well, and a future
+#: destination will need whatever its own package is made of. Flattening them
+#: into one uniform call would either invent arguments nobody has or hide the
+#: differences behind a dict — so the table maps to the real callables and a
+#: caller passes what that destination's package is built from.
+PACKAGE_BUILDERS: Mapping[str, object] = {
+    "wix": build_wix_publication_package,
+    "linkedin": build_linkedin_publication_package,
+}
+
+
+def packageable_destinations() -> tuple[str, ...]:
+    """The destinations a canonical package can be built for, sorted.
+
+    Read rather than asserted, so a reader and a test can ask the registry
+    instead of trusting a comment. `AS_IS_CAPABILITY` stays a hand-written
+    table on purpose (AD-02 §3: the editorial core must not read the
+    publishers to learn what it may decide), and this function is how the two
+    are checked against each other rather than how either is derived.
+    """
+
+    return tuple(sorted(PACKAGE_BUILDERS))
+
+
+def package_builder(destination: str) -> object:
+    """The registered builder for ``destination``, or fail closed.
+
+    Raising rather than returning ``None``: a caller that got ``None`` would
+    have to decide what an unpackageable destination means, and the one safe
+    answer — do not build, do not publish — is what an exception already
+    enforces at every call site that exists.
+    """
+
+    try:
+        return PACKAGE_BUILDERS[destination]
+    except KeyError:
+        raise UnsupportedDestinationError(
+            f"no canonical package builder is registered for {destination!r}; "
+            f"registered: {', '.join(packageable_destinations())}"
+        ) from None

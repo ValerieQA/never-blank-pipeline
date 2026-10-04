@@ -59,9 +59,27 @@ PREFLIGHT_SCHEMA_VERSION = "1.0"
 #: Environment variable carrying each channel's credential secret. Only the
 #: PRESENCE of a value is ever read here; the value itself is read solely by
 #: the adapter when it executes an already-ALLOWed call.
+#:
+#: One entry per **capable-or-capability-bound** destination, which is what
+#: makes this map the channel vocabulary rather than a Release 1 roster
+#: (NB-08s). A destination appearing here can be *represented* in a verdict; it
+#: says nothing about whether that destination has a package, a collector, or a
+#: place in the rollout scope. ``AS_IS_CAPABILITY`` answers the first two and
+#: ``release_scope.R1_PUBLISH_CHANNELS`` the third, and neither is widened by
+#: this map.
+#:
+#: Each value is the destination's **authenticating** secret and not every
+#: variable its adapter reads: ``wix`` names its API key and not
+#: ``NB_WIX_SITE_BASE_URL``, so by the same rule Facebook names its page token
+#: and not ``NB_META_FB_PAGE_ID``. Instagram shares Facebook's page token —
+#: surprising, and what ``src/publishing/instagram.py`` actually reads.
 CHANNEL_CREDENTIAL_ENV = {
     "wix": "NB_WIX_API_KEY",
     "linkedin": "NB_ZERNIO_API_KEY",
+    "facebook": "NB_META_FB_PAGE_TOKEN",
+    "instagram": "NB_META_FB_PAGE_TOKEN",
+    "threads": "NB_THREADS_ACCESS_TOKEN",
+    "telegram": "NB_TELEGRAM_BOT_TOKEN",
 }
 
 
@@ -232,9 +250,9 @@ class ChannelPreflightVerdict(_PreflightModel):
 
     @field_validator("channel")
     @classmethod
-    def _release1_channel(cls, value: str) -> str:
+    def _known_channel(cls, value: str) -> str:
         if value not in CHANNEL_CREDENTIAL_ENV:
-            raise ValueError(f"unsupported Release 1 publication channel: {value!r}")
+            raise ValueError(f"unsupported publication channel: {value!r}")
         return value
 
     @model_validator(mode="after")
@@ -277,7 +295,13 @@ class PreflightResult(_PreflightModel):
     configuration_consistent: bool
     run_disposition: PreflightDisposition
     run_blocking_reasons: tuple[BlockingReason, ...] = Field(default=(), max_length=10)
-    channels: tuple[ChannelPreflightVerdict, ...] = Field(min_length=1, max_length=2)
+    #: Bounded by the declared channel vocabulary rather than by the literal
+    #: two Release 1 happened to have (NB-08s). A hard ``2`` meant a third
+    #: channel could not be *represented*, which is a different thing from not
+    #: being authorized — authorization is the rollout scope's answer.
+    channels: tuple[ChannelPreflightVerdict, ...] = Field(
+        min_length=1, max_length=len(CHANNEL_CREDENTIAL_ENV)
+    )
 
     @field_validator("schema_version")
     @classmethod

@@ -30,8 +30,7 @@ from pathlib import Path
 # Make repo root importable when run directly
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.analytics.blog import BlogCollector
-from src.analytics.linkedin import LinkedInCollector
+from src.analytics.registry import registered_collectors
 from src.analytics.orchestrator import run_analytics_pipeline
 from src.utils.logger import get_logger
 
@@ -52,10 +51,13 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    collectors = [
-        BlogCollector(),
-        LinkedInCollector(),
-    ]
+    # From the registry rather than a literal list (NB-08s). Today this builds
+    # exactly `[BlogCollector(), LinkedInCollector()]` — a test pins that — and
+    # a destination that registers a collector later is picked up without
+    # editing this script. The seam gets a real consumer here on purpose: a
+    # registry nothing reads is how the last one ended up being an argument
+    # list in a script.
+    collectors = registered_collectors()
 
     log.info(
         "run_analytics: starting — collectors=%s strategy_id=%s dry_run=%s",
