@@ -10,6 +10,16 @@ on:
         required: false
         type: boolean
         default: false
+      # A manual run is research-only unless somebody explicitly asks for more.
+      # The default is the safe value rather than the configured one: a hand
+      # dispatch must not reach the package, image or publishing stages because
+      # a secret happens to be set, and "what is that secret set to right now"
+      # is not a question the person dispatching can answer.
+      full_production:
+        description: "Manual run performs the FULL production path, including content packages, images and (if configured) publishing. Default: research only."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -76,6 +86,20 @@ jobs:
           NB_TELEGRAM_CHANNEL_ID:            ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
         id: research
         run: |
+          # A manual dispatch is research-only by default: discovery, scoring,
+          # the Stage 4 classification and the Stage 6 save, and nothing after
+          # them. Two variables are exported rather than one, deliberately —
+          # each disables the publishing path on its own, so neither is the
+          # single point this guarantee rests on.
+          #
+          # The scheduled path never enters this branch, so the repository's
+          # configured behaviour is unchanged on a schedule.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] \
+             && [ "${{ inputs.full_production }}" != "true" ]; then
+            echo "manual dispatch: research-only (no packages, no images, no publishing)"
+            export NB_RESEARCH_ONLY=true
+            export NB_RESEARCH_PUBLISH_ENABLED=false
+          fi
           # Daily discovery remains active, but its optional legacy Stage 11
           # is not a second Wednesday publisher. Other days preserve the
           # repository's configured behavior unchanged.
