@@ -144,6 +144,10 @@ SEAMS: Final[Mapping[tuple[str, str], frozenset[str]]] = {
     ("S-12", "E-15"): frozenset({"S-12"}),
     ("S-13", "E-09"): frozenset({"S-04"}),
     ("S-13", "E-15"): frozenset({"S-12"}),
+    # S-14 (#308) fingerprints the accepted text, so it consumes the same E-15
+    # S-12 produced — and by the content digest, like S-13, because that is the
+    # reference `_text_ref` builds and the digest E-16 remembers the text by.
+    ("S-14", "E-15"): frozenset({"S-12"}),
 }
 
 #: The seams the consumer references by E-15's **content** digest rather than
@@ -153,7 +157,7 @@ SEAMS: Final[Mapping[tuple[str, str], frozenset[str]]] = {
 #: the comparison is made against the entity's own ``content_digest`` field
 #: (:func:`manifest_findings`) instead of being skipped.
 CONTENT_DIGEST_SEAMS: Final[frozenset[tuple[str, str]]] = frozenset(
-    {("S-12", "E-15"), ("S-13", "E-15")}
+    {("S-12", "E-15"), ("S-13", "E-15"), ("S-14", "E-15")}
 )
 
 #: The boundary the run reaches that §6 does not charge: "Model calls only.
