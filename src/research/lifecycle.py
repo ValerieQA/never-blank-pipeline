@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Sequence
 
 from src.artifacts import load_research_json, write_research_json
 from src.intake import ContentAssignment
@@ -109,6 +109,83 @@ def build_source_directives(signal: dict) -> tuple[SourceDirective, ...]:
     order = {SourcePriority.REQUIRED: 0, SourcePriority.PREFERRED: 1,
              SourcePriority.DISCOVERY: 2, SourcePriority.EXCLUDED: 3}
     return tuple(sorted(directives, key=lambda item: order[item.priority]))
+
+
+def case_source_directives(signal: dict) -> tuple[SourceDirective, ...]:
+    """The case's own source, offered to the **evidence** path.
+
+    `SOURCE_FOR_CASE` is a source associated with the case and therefore a
+    possible evidence input — nothing more. Being non-empty proves nothing, and
+    for a signal discovered secondhand it is often the discovery URL repeated,
+    which is why a duplicate produces no directive. Whether it turns out to be
+    the responsible authority is settled by an authority lookup and by
+    ``resolve_claim_authority``, never by this translation.
+
+    Deliberately **not** folded into :func:`build_source_directives`. That
+    builder serves every existing caller, and a PREFERRED source a provider
+    cannot retrieve degrades the whole result to ``PARTIAL`` — so adding one
+    there would have changed the outcome classification of every legacy run
+    whose case source differs from its discovery URL. A caller that wants the
+    case source asks for it.
+    """
+
+    source_url = str(signal.get("SOURCE_URL") or "").strip()
+    value = str(signal.get("SOURCE_FOR_CASE") or "").strip()
+    if not value or value == source_url:
+        return ()
+    return (
+        SourceDirective(
+            directive_id="case-source-1",
+            priority=SourcePriority.PREFERRED,
+            kind=(
+                SourceDirectiveKind.URL
+                if "://" in value
+                else SourceDirectiveKind.DOMAIN
+            ),
+            value=value,
+            material=False,
+        ),
+    )
+
+
+def authority_directives(
+    responsible: Sequence[str],
+) -> tuple[SourceDirective, ...]:
+    """Bounded lookups aimed at named responsible authorities.
+
+    ``DOMAIN``-scoped and ``PREFERRED``: "this organisation's own site", which
+    is a narrow lookup rather than open discovery — `ALLOW_OPEN_DISCOVERY` is
+    untouched and stays off. Each directive id carries
+    ``AUTHORITY_DIRECTIVE_PREFIX``, which is how a source that comes back is
+    later recognised as having established an authority: because a lookup aimed
+    at one returned it, never because its URL reads as official.
+
+    **The Engine does not decide who is responsible.** It is given the names —
+    identified on the assessment call that already runs — and builds the
+    lookup. A name it was not given produces no directive and no guess.
+    """
+
+    from src.editorial_core.evidence_core import AUTHORITY_DIRECTIVE_PREFIX
+
+    seen: list[str] = []
+    for name in responsible:
+        value = str(name or "").strip()
+        if value and value not in seen:
+            seen.append(value)
+    return tuple(
+        SourceDirective(
+            directive_id=f"{AUTHORITY_DIRECTIVE_PREFIX}{index}",
+            priority=SourcePriority.PREFERRED,
+            kind=(
+                SourceDirectiveKind.URL
+                if "://" in value
+                else SourceDirectiveKind.DOMAIN
+            ),
+            value=value,
+            material=False,
+        )
+        for index, value in enumerate(seen, 1)
+    )
 
 
 def build_research_request(

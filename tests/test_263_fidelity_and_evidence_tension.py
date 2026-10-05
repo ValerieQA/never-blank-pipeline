@@ -544,10 +544,19 @@ def test_the_evidence_tension_lens_is_a_conditional_never_blank_client_lens():
         assert rule in lens.text, rule
 
 
-def test_the_existing_evidence_policy_is_untouched():
+def test_the_existing_evidence_policy_is_untouched_as_client_policy():
+    """Still a standing client lens; it left `selection` by owner decision.
+
+    2026-10-05 (#286, from the #308 source-authority audit): primary-source
+    authority is an evidence/retrieval responsibility, and `selection` chooses
+    a candidate before any research is done. The policy text is unchanged and
+    still the client's — only the stage that enforces it moved.
+    """
+
     evidence = load_lens(DEFAULT_CLIENT_DIR / "lenses" / "evidence.md")
     assert evidence.is_standing
-    assert set(evidence.stages) == {"selection", "writing"}
+    assert set(evidence.stages) == {"writing"}
+    assert "responsible primary authority" in evidence.text
 
 
 def test_no_engine_code_carries_the_never_blank_lens_policy():
