@@ -97,7 +97,15 @@ from src.research.evidence import (
     NormalizedSource,
     UncertaintyAssessment,
 )
-from src.research.lifecycle import ResearchGateError, execute_and_persist_research
+from src.research.lifecycle import (
+    ResearchGateError,
+    # Aliased: ``build_evidence_core`` below takes a keyword of the same name,
+    # and a module where one spelling means both the lookup and its result is a
+    # module where the next edit silently calls the wrong one.
+    authoritative_source_ids as retrieved_authority_sources,
+    execute_and_persist_research,
+    load_research_envelope,
+)
 from src.research.provider import ResearchProvider, ResearchProviderRequest
 from src.strategy.execution_context import ConfigurationIdentity
 
@@ -238,6 +246,21 @@ class ClaimAuthority:
             AuthorityState.NOT_REQUIRED,
             AuthorityState.REQUIRED_ESTABLISHED,
         )
+
+    def as_entity(self) -> dict[str, Any]:
+        """The authority as the E-04 entity carries it.
+
+        Persisted, because every stage after S-04 reads the written core rather
+        than this object: a state that lived only in memory would be a state the
+        decision never sees, and the three fields are exactly what a reader
+        cannot reconstruct from the claim's own refs.
+        """
+
+        return {
+            "state": self.state.value,
+            "responsible": self.responsible,
+            "authoritative_source_ref": self.authoritative_source_ref,
+        }
 
     def as_entity(self) -> dict:
         return {
@@ -588,6 +611,7 @@ class EvidenceClaim:
             "scope": self.scope,
             "strength": self.strength.as_entity(),
             "ceiling": self.ceiling.as_entity(),
+            "authority": self.authority.as_entity(),
             "usable": self.usable,
         }
 
@@ -990,12 +1014,19 @@ For each claim, return:
         support actually reaches, judged by that level's own wording. Never the
         level the claim would need: a claim that would need level 3 and whose
         support reaches level 1 is level 1.
+  responsible_authority: who could authoritatively confirm this claim's core
+        fact — the organisation, body or issuer whose own record would settle
+        it, as its name or the domain it publishes on. Report who *could*
+        confirm, not whether anything here does. Use null when nobody
+        identifiable could, and null rather than a guess when the claim does
+        not make it clear who that would be; an unnamed authority is a recorded
+        state and a wrong one is a fabricated source.
 
 Return ONLY one valid JSON object, no text outside it, with exactly these three
 keys:
 
 {"verdicts": [{"evidence_id": "...", "disposition": "accepted | qualified | rejected", "rationale": "one bounded sentence, checkable against the excerpt"}],
- "claims": [{"evidence_claim_id": "...", "scope": "...", "strength_level": 1}],
+ "claims": [{"evidence_claim_id": "...", "scope": "...", "strength_level": 1, "responsible_authority": "example.gov or null"}],
  "observations": [{"observation_id": "...", "kind": "quote", "is_third_party_assertion": false, "figure": null}]}
 """
 
@@ -1452,6 +1483,11 @@ def retrieve_evidence_core(
     ladder: StrengthLadder,
     core_id: str,
     client_ceiling: Optional[Strength] = None,
+    #: The **client's** evidence policy, as one question: must a claim whose
+    #: responsible authority this run can name have that authority established
+    #: before it may read as verified? Supplied by the caller from the Client
+    #: Contract; ``False`` means no client asked.
+    authority_required: bool = False,
     budget: Optional[CallBudget] = None,
 ) -> CoreBuild:
     """Retrieve, assess and build the core — or record why there is none.
@@ -1522,6 +1558,10 @@ def retrieve_evidence_core(
         core_id=core_id,
         ladder=ladder,
         client_ceiling=client_ceiling,
+        authority_required=authority_required,
+        authoritative_source_ids=_authoritative_sources(
+            run_dir, request, required=authority_required
+        ),
     )
     if not core.usable_claims:
         return CoreBuild(
@@ -1552,6 +1592,32 @@ def _usable_claims_without_assessment(
         if item.disposition in USABLE_DISPOSITIONS
         and (assessment is None or assessment.claim(item.evidence_id) is None)
     )
+
+
+def _authoritative_sources(
+    run_dir: Path, request: ResearchProviderRequest, *, required: bool
+) -> tuple[str, ...]:
+    """Which retrieved sources an authority lookup returned, from the record.
+
+    Read from the persisted envelope rather than from the provider's in-memory
+    result: ``research.json`` is the create-once record this core references by
+    digest, so what established an authority is recoverable later from the same
+    artifact an auditor reads.
+
+    Returns empty when the client requires no authority — there is then nothing
+    for the state to be established against and no reason to read the file —
+    and empty when the record cannot be read as an envelope. The second is not
+    silent: an unreadable envelope has already failed
+    :func:`validate_research_envelope` upstream, which is why reaching here
+    with one is impossible rather than tolerated.
+    """
+
+    if not required:
+        return ()
+    envelope = load_research_envelope(
+        run_dir.parent.parent.parent, request.signal_id, request.run_id
+    )
+    return retrieved_authority_sources(envelope.result.source_outcomes)
 
 
 def _skipped(signal_id: str, state_code: StateCode, reason: str) -> CoreBuild:

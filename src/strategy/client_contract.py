@@ -56,6 +56,7 @@ which does not exist yet (#307). Nothing here pretends otherwise.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Final, Optional
 
@@ -78,6 +79,7 @@ from src.strategy.client_contracts import (
     SharedList,
     client_dir,
     load_shared_list,
+    strip_comments,
 )
 
 #: The contract, relative to the client directory.
@@ -88,6 +90,11 @@ LISTS_DIRECTORY: Final[str] = "lists"
 
 #: The section the enabled destinations are listed in.
 DESTINATIONS_SECTION: Final[str] = "Enabled destinations"
+
+#: The section the client declares its evidence policy in. Optional: a contract
+#: without it declares no evidence requirement, which is a choice and not an
+#: omission — the same posture as a stream that declares no client ladder.
+EVIDENCE_POLICY_SECTION: Final[str] = "Evidence policy"
 
 #: Front matter, all required and nothing else accepted.
 _FIELDS: Final[tuple[str, ...]] = (
@@ -102,6 +109,33 @@ _FIELDS: Final[tuple[str, ...]] = (
 #: ``HARD_PLATFORM_POLICY``, which is why the legacy engine list (every entry
 #: ``tier: directional``) is not a source here.
 CONTRACT_TIER: Final[KnowledgeTier] = KnowledgeTier.APPROVED_CLIENT_RULE
+
+
+class EvidenceRequirement(str, Enum):
+    """Evidence requirements the Engine can execute, by their contract wording.
+
+    The canonical map gives the Client Contract an "evidence policy" beside its
+    ceiling, and this is the Engine half of it: a closed vocabulary a client
+    declares from, matched literally exactly as ``Enabled destinations`` matches
+    :class:`~src.editorial_core.destinations.Destination`. The Engine matches;
+    it never interprets, and a wording it does not carry is refused rather than
+    passed over.
+
+    What a member means is a **mechanism**, never a taxonomy of claims:
+
+    ``PRIMARY_AUTHORITY_WHEN_IDENTIFIABLE``
+        A claim whose responsible primary authority the run can name may not
+        read as verified until a lookup aimed at that authority has returned a
+        source for it. *Which* claims owe one is not enumerated here, and
+        deliberately: S-01's assessment reports who could confirm a claim, and
+        a claim nobody identifiable could confirm owes nothing. The editorial
+        doctrine — a vendor for its product, a regulator for its rule — stays
+        prose in the client's own lens, where people can read and revise it.
+
+    Adding a member is an Engine capability decision, like adding a lens stage.
+    """
+
+    PRIMARY_AUTHORITY_WHEN_IDENTIFIABLE = "primary authority when identifiable"
 
 
 class ClientConfigurationError(ValueError):
@@ -126,6 +160,10 @@ class ClientContract:
     voice_ref: str
     path: str
     digest: str
+    #: What the client declared under ``## Evidence policy``, in document order.
+    #: Empty is a contract that requires nothing of its evidence beyond what the
+    #: Engine requires of everyone's.
+    evidence: tuple[EvidenceRequirement, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.contract_id.strip() or not self.version.strip():
@@ -154,6 +192,20 @@ class ClientContract:
         """Did the client switch this destination on?"""
 
         return destination in self.enabled
+
+    @property
+    def requires_primary_authority(self) -> bool:
+        """Does this client require a named authority before a claim reads verified?
+
+        The one question S-01 asks of the evidence policy. ``False`` when the
+        client declared nothing, which is why the Engine caps no claim for a
+        client that never asked it to: a requirement nobody stated is not a
+        requirement the Engine may supply on the client's behalf.
+        """
+
+        return (
+            EvidenceRequirement.PRIMARY_AUTHORITY_WHEN_IDENTIFIABLE in self.evidence
+        )
 
     def phrases(self) -> tuple[ForbiddenItem, ...]:
         """The forbidden entries code may match (V-T06's code half)."""
@@ -230,7 +282,57 @@ def parse_client_contract(
         voice_ref=document.field("voice_ref") or "",
         path=path,
         digest=document.digest,
+        evidence=_evidence_policy(document, path=path),
     )
+
+
+def _evidence_policy(
+    document: Document, *, path: str
+) -> tuple[EvidenceRequirement, ...]:
+    """What the client declared under ``## Evidence policy``, matched literally.
+
+    Absent section → nothing declared, which the ``requires_primary_authority``
+    property reads as "this client asks for no authority" rather than as a
+    default the Engine chose. A wording the Engine does not carry is refused
+    with the vocabulary named, because a requirement that was written down and
+    silently dropped is the one failure mode a client cannot see.
+    """
+
+    body = document.section(EVIDENCE_POLICY_SECTION)
+    if body is None:
+        return ()
+    try:
+        body = strip_comments(body, Path(path))
+    except ClientContractError as exc:
+        raise ClientConfigurationError(str(exc)) from exc
+    declared: list[EvidenceRequirement] = []
+    for line in body.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if not stripped.startswith("- "):
+            raise ClientConfigurationError(
+                f"{path}: every evidence requirement is a bullet (`- `); got "
+                f"{stripped[:60]!r}"
+            )
+        wording = stripped[2:].strip().lower()
+        try:
+            requirement = EvidenceRequirement(wording)
+        except ValueError:
+            raise ClientConfigurationError(
+                f"{path}: declares the evidence requirement {wording!r}, which "
+                "is not one this engine can execute; it carries "
+                + ", ".join(repr(item.value) for item in EvidenceRequirement)
+                + ". The policy a client wants a person to read belongs in a "
+                "lens; this section is the part code acts on"
+            ) from None
+        if requirement in declared:
+            raise ClientConfigurationError(
+                f"{path}: declares {wording!r} twice; saying a requirement "
+                "twice says nothing more than saying it once"
+            )
+        declared.append(requirement)
+    return tuple(declared)
 
 
 def forbidden_from(shared: SharedList) -> tuple[ForbiddenItem, ...]:

@@ -1446,6 +1446,11 @@ class _Run:
             transport=self.seams.evidence_judgment,
             ladder=self.cfg.ladder,
             core_id=f"core-{self.signal_id}",
+            # The client's evidence policy, from the contract that declared it
+            # (§1, S-01 Inputs: "Client Contract evidence policy and strength
+            # ladder"). Both halves now arrive from the same authority, and
+            # neither is decided here.
+            authority_required=self.cfg.contract.requires_primary_authority,
             budget=self.budget,
         )
         outputs: list[EntityRef] = []
@@ -1647,6 +1652,9 @@ class _Run:
             now=self.now,
             approved_positions=self.cfg.approved_positions,
             budget=self.budget,
+            # The same client policy S-01 built the core under. A round that
+            # rebuilt a claim without it would return it uncapped.
+            authority_required=self.cfg.contract.requires_primary_authority,
         )
         outputs = list(self._gap_refs(enriched.gaps))
         version = enriched.core.version

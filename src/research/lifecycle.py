@@ -30,6 +30,8 @@ from src.research.provider import (
     ProviderFailure,
     ProviderFailureCode,
     ProviderInvocation,
+    RetrievalStatus,
+    SourceRetrievalOutcome,
     execute_research,
 )
 from src.run import RunContext
@@ -188,11 +190,61 @@ def authority_directives(
     )
 
 
+def authoritative_source_ids(
+    outcomes: Sequence[SourceRetrievalOutcome],
+) -> tuple[str, ...]:
+    """The sources an authority-aimed lookup actually returned.
+
+    Read from the retrieval outcomes, which are the only record of *why* a
+    source is in an artifact: ``SourceRetrievalOutcome`` names the directive
+    that asked for it. A source is authoritative here on one ground and no
+    other — a directive carrying
+    :data:`~src.editorial_core.evidence_core.AUTHORITY_DIRECTIVE_PREFIX` asked
+    for it and the provider returned it. Not that its URL reads official, not
+    that the client named it, not that it is the only source on the claim.
+
+    Empty is the ordinary case: no authority lookup ran, or it ran and came
+    back with nothing. Both are facts about this run, and
+    ``resolve_claim_authority`` distinguishes them from the claim's own side.
+
+    Takes the outcomes rather than a result or an envelope because both callers
+    hold a different container of the same record — S-01 reads the persisted
+    envelope it references by digest, S-03's round holds the provider result in
+    hand — and the rule for reading them is one rule.
+    """
+
+    from src.editorial_core.evidence_core import AUTHORITY_DIRECTIVE_PREFIX
+
+    found: list[str] = []
+    for outcome in outcomes:
+        if (
+            outcome.status is RetrievalStatus.RETRIEVED
+            and outcome.source_id
+            and (outcome.directive_id or "").startswith(AUTHORITY_DIRECTIVE_PREFIX)
+            and outcome.source_id not in found
+        ):
+            found.append(outcome.source_id)
+    return tuple(found)
+
+
 def build_research_request(
     run: RunContext, assignment: ContentAssignment, signal: dict,
     strategy: ResearchStrategyView, *, now: datetime,
+    extra_directives: Sequence[SourceDirective] = (),
 ) -> ResearchProviderRequest:
-    directives = build_source_directives(signal)
+    """The run's research request.
+
+    ``extra_directives`` are directives a caller supplies beside the ones the
+    signal's own fields translate into — today the canonical path's case source
+    (:func:`case_source_directives`). Default empty, so every existing caller
+    builds byte-identically the request it built before: a PREFERRED source a
+    provider cannot retrieve degrades the whole result to ``PARTIAL``, and the
+    canonical path can carry that (Step 2 §1 gives readiness to the ARP, and
+    ``retrieve_evidence_core`` passes ``require_ready=False``) where the legacy
+    gate cannot.
+    """
+
+    directives = build_source_directives(signal) + tuple(extra_directives)
     return ResearchProviderRequest(
         run_id=run.run_id, assignment_id=assignment.assignment_id,
         signal_id=assignment.assignment_id, strategy=strategy,

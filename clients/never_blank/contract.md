@@ -50,6 +50,23 @@ Loaders: src/strategy/strategy_contract.py and src/strategy/adaptation_contract.
 - threads
 - telegram
 
+## Evidence policy
+
+<!--
+Never Blank's evidence requirement, as the part of its policy that code acts on
+(owner decision 2026-10-05, #286 PRIMARY-AUTHORITY-DESIGN-V1). The requirement
+itself is written for people in `lenses/evidence.md`: where a claim's core fact
+has a responsible primary authority, that authority is the factual anchor, and
+secondary reporting may serve discovery and context but does not replace it.
+
+This section declares that Never Blank wants the engine to enforce it. The
+engine matches these lines against the requirements it can execute and never
+interprets them; which claims owe an authority is decided per claim from who
+could confirm it, not from a list of topics kept here.
+-->
+
+- primary authority when identifiable
+
 ## Editorial domain
 
 <!--

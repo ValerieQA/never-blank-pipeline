@@ -349,6 +349,46 @@ def test_the_engine_holds_the_concept_and_not_the_editorial_doctrine():
         assert doctrine not in code, doctrine
 
 
+def test_no_engine_module_in_the_authority_path_names_a_client_rule():
+    """The same check over every Engine module this repair touched.
+
+    One module staying clean is not the boundary; the path is. The client's
+    requirement reaches the Engine as a **closed vocabulary of mechanisms** and
+    a boolean, so none of these modules has any reason to name a kind of claim,
+    an industry or a client — and the test says so for all of them rather than
+    for the one that happened to be reviewed.
+    """
+
+    import inspect
+
+    from src.editorial_core import enrichment, evidence_core
+    from src.research import lifecycle
+    from src.run import golden_engine
+    from src.strategy import client_contract
+
+    for module in (
+        evidence_core,
+        enrichment,
+        lifecycle,
+        golden_engine,
+        client_contract,
+    ):
+        tree = ast.parse(inspect.getsource(module))
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef)):
+                body = node.body
+                if (
+                    body
+                    and isinstance(body[0], ast.Expr)
+                    and isinstance(body[0].value, ast.Constant)
+                    and isinstance(body[0].value.value, str)
+                ):
+                    body.pop(0)
+        code = ast.unparse(tree).lower()
+        for doctrine in ("product release", "regulator", "vendor", "shopify"):
+            assert doctrine not in code, f"{module.__name__}: {doctrine}"
+
+
 def test_the_client_lens_still_owns_when_an_authority_is_required():
     """And the doctrine is where it belongs, unchanged."""
 
