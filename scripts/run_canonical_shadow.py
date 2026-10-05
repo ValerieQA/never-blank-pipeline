@@ -50,7 +50,10 @@ from src.run.golden_engine import (
     ResearchBinding,
     golden_engine_configuration,
 )
-from src.run.transports import golden_engine_transports
+from src.run.transports import (
+    configured_golden_engine_model,
+    golden_engine_transports,
+)
 from src.run.walking_skeleton import canonical_run_context, run_golden_engine
 from src.strategy.business_config import load_business_strategy_configuration
 from src.strategy.execution_context import StrategyExecutionContext
@@ -173,15 +176,30 @@ def main(argv: list[str] | None = None) -> int:
         # without credentials records a research failure rather than inventing
         # evidence.
         research = MissingCredentialResearchProvider()
+    # One authoritative model identity for the whole canonical run.
+    #
+    # `golden_engine_transports()` already reads `NB_GOLDEN_ENGINE_MODEL` for
+    # the ten stage transports — and ten was exactly the hole. The three seams
+    # at the front of the chain are not Golden Engine transports and resolved
+    # their own model through `model_enrich()`, so #308's first attempted
+    # acceptance run spent its only call on `gpt-4o` while
+    # `NB_GOLDEN_ENGINE_MODEL` named another model, and the judgement that
+    # ended the run was made by a model nobody authorized for it.
+    #
+    # Injected here rather than changed in those classes: their default is
+    # untouched, so Monday, Wednesday and every legacy caller keep the model
+    # routing they have. What changes is only what *this* composition root
+    # asks for.
+    model = configured_golden_engine_model()
     seams = GoldenEngineSeams(
         transports=golden_engine_transports(),
         research=research,
-        eligibility=LlmChatSourceEligibilityTransport(),
-        evidence_judgment=LlmChatEvidenceJudgmentTransport(),
+        eligibility=LlmChatSourceEligibilityTransport(model),
+        evidence_judgment=LlmChatEvidenceJudgmentTransport(model),
         # The maintained Release 1 evaluator, built by its own factory rather
-        # than assembled here: the instructions it reads and the transport it
-        # speaks through are that module's to choose.
-        relevance=production_evaluator(),
+        # than assembled here: the instructions it reads are that module's to
+        # choose. The model is not — this run names it.
+        relevance=production_evaluator(model=model),
     )
 
     run = run_golden_engine(
@@ -198,6 +216,10 @@ def main(argv: list[str] | None = None) -> int:
         # would report success over files this run never produced.
         commit=args.commit,
         repo_root=Path.cwd() if args.commit else None,
+        # The identity this root chose, handed over rather than re-read: an
+        # early-stop record that consulted the environment again could name a
+        # model the run did not actually use.
+        model=model,
     )
     summary = run.summary
     print(f"  run_id            {summary.run_id}")
@@ -209,6 +231,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  package {record.destination.value:10} {record.state.value}")
     print(f"  summary           {run.summary_path}")
     print(f"  ledger commit     {summary.ledger_commit.value}")
+    print(f"  model             {model}")
+    print(f"  workspace         {run.run_dir}")
+    if run.early_stop_path is not None:
+        print(f"  early stop        {run.early_stop_path}")
     return 0
 
 

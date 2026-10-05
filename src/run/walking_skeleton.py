@@ -114,6 +114,10 @@ from src.run.golden_engine import (
     ResearchBinding,
     execute_canonical_topology,
 )
+from src.run.early_stop import (
+    early_stop_from_outcome,
+    write_early_stop_to_ledger,
+)
 from src.run.ledger import (
     DEFAULT_PUSH_ATTEMPTS,
     DEFAULT_RETRY_SECONDS,
@@ -875,6 +879,9 @@ class GoldenEngineRun(NamedTuple):
     execution: CanonicalExecution
     records_commit: LedgerCommitReport
     summary_commit: LedgerCommitReport
+    #: Where the early-stop record went, when the run stopped before S-14.
+    #: ``None`` for a run that reached it — there is nothing to explain.
+    early_stop_path: Optional[Path] = None
 
     @property
     def destination_dirs(self) -> tuple[Path, ...]:
@@ -931,6 +938,11 @@ def run_golden_engine(
     commit_retry_seconds: float = DEFAULT_RETRY_SECONDS,
     code_identity: Optional[CodeIdentity] = None,
     inputs: Optional[RunInputs] = None,
+    #: The model identity every model-backed seam of this run was given. Taken
+    #: rather than read from the environment: the composition root is what
+    #: chose it, and an early-stop record that re-read the variable could
+    #: report a model the run did not actually use (#308).
+    model: Optional[str] = None,
 ) -> GoldenEngineRun:
     """Run the real S-00…S-13 over one intake record, seal it, and report.
 
@@ -1049,6 +1061,18 @@ def run_golden_engine(
         commit_attempts=commit_attempts,
         commit_retry_seconds=commit_retry_seconds,
     )
+    # An early stop leaves a reviewable record (#308). The state code reaches
+    # the summary; the seam's own reasoning cannot — §3.3 keeps prose out of
+    # the public ledger's summary — so it goes to a durable record of its own,
+    # in the same ledger and the same shape as the E-16 fingerprints.
+    early_stop_path = _write_early_stop(
+        execution=execution,
+        context=context,
+        client=client or active_client(),
+        model=model,
+        ledger_dir=ledger_dir,
+    )
+
     return GoldenEngineRun(
         run_context=context,
         run_dir=workspace.run_dir,
@@ -1060,6 +1084,49 @@ def run_golden_engine(
         execution=execution,
         records_commit=ledger.records_commit,
         summary_commit=ledger.summary_commit,
+        early_stop_path=early_stop_path,
+    )
+
+
+def _write_early_stop(
+    *,
+    execution: CanonicalExecution,
+    context: RunContext,
+    client: str,
+    model: Optional[str],
+    ledger_dir: Optional[Path],
+) -> Optional[Path]:
+    """Persist why this run stopped before S-14, or nothing if it did not.
+
+    The outcome is read off the trace rather than re-derived: the stage that
+    stopped recorded why, and forming a second opinion here would be a way for
+    the record and the trace to disagree. A run that reached S-14 has no stop
+    to explain and writes nothing.
+    """
+
+    if execution.stopped_at is None:
+        return None
+
+    stopping = [
+        record for record in execution.records
+        if record.stage == execution.stopped_at and record.outcomes
+    ]
+    if not stopping:
+        return None
+    outcome = stopping[-1].outcomes[-1].model_dump(mode="json")
+
+    stop = early_stop_from_outcome(
+        run_id=context.run_id,
+        signal_id=(execution.signal_ids or (context.assignment_id,))[0],
+        stage=execution.stopped_at,
+        outcome=outcome,
+        model=model,
+    )
+    return write_early_stop_to_ledger(
+        stop,
+        client=client,
+        month=f"{context.started_at.year:04d}-{context.started_at.month:02d}",
+        root=ledger_dir,
     )
 
 

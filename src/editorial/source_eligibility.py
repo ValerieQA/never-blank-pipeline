@@ -22,6 +22,8 @@ case, and uncertainty is ineligibility.
 
 from __future__ import annotations
 
+from typing import Optional
+
 import json
 from dataclasses import dataclass
 from typing import Protocol
@@ -270,13 +272,35 @@ class SourceEligibilityVerdict(BaseModel):
 
 
 class LlmChatSourceEligibilityTransport:
-    """Production transport backed by the repository LLM client."""
+    """Production transport backed by the repository LLM client.
+
+    ``model`` is the model this transport speaks to. ``None`` keeps the legacy
+    resolution — ``model_enrich()``, i.e. ``NB_ENRICH_MODEL`` falling back to
+    ``NB_OPENAI_CHAT_MODEL`` — so every existing caller behaves exactly as
+    before. The canonical shadow path injects
+    ``configured_golden_engine_model()`` instead, because a run that measures
+    one model must not make part of its chain on another: #308's first
+    attempted acceptance run spent its only call on ``gpt-4o`` while
+    ``NB_GOLDEN_ENGINE_MODEL`` named something else, and a mixed-model
+    measurement cannot satisfy #308 or #309.
+
+    This module names no stream and no weekday, deliberately: a generic engine
+    seam that names one is how day-specific routing starts, and an engine-module
+    invariant test holds that line strictly enough to have caught two earlier
+    drafts of this very docstring.
+    """
+
+    def __init__(self, model: Optional[str] = None) -> None:
+        self._model = model
 
     def complete(self, *, instructions: str, request: str) -> str:
         from src.utils.llm_client import chat, model_enrich
 
         return chat(
-            system=instructions, user=request, json_mode=True, model=model_enrich()
+            system=instructions,
+            user=request,
+            json_mode=True,
+            model=self._model or model_enrich(),
         )
 
 
