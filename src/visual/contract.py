@@ -351,11 +351,23 @@ def _renditions_of(
     if item.format != master.format:
         transforms.append(RenditionTransform.ENCODE)
     if not transforms:
-        # A different asset with the same dimensions and format: something was
-        # done to it that these properties do not show. Rather than invent a
-        # category, the record says the platform required a fit — the weakest
-        # true statement available, and the one the gate below demands.
-        transforms.append(RenditionTransform.FIT)
+        # A different asset whose recorded dimensions and format are identical
+        # to the master's. Something produced it that these properties do not
+        # show — and there is no truthful name for it here.
+        #
+        # The earlier version of this function put `FIT` in, which was the
+        # defect: it invented a measurement in the one branch that exists
+        # because nothing was measured, three lines under a comment saying the
+        # crop-versus-fit distinction must not be guessed. So this fails
+        # closed instead. A caller that genuinely knows which transformation
+        # it performed may still declare it — the model accepts a declared
+        # truth; what it will not accept is this function fabricating one.
+        raise VisualGateError(
+            f"{item.channel} visual is a different asset from the canonical "
+            "master, and its recorded dimensions and format are identical to "
+            "the master's, so no technical derivation can be established from "
+            "the evidence; a rendition's lineage is recorded, never inferred"
+        )
     return tuple(transforms)
 
 

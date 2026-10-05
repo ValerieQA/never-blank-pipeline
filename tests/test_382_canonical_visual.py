@@ -257,6 +257,88 @@ def test_a_rendition_that_differs_from_the_master_must_say_what_it_did():
         )
 
 
+def test_the_factory_refuses_a_derivation_it_cannot_establish():
+    """The repair of GPT's blocker on `d963fe6`.
+
+    The first version of `_renditions_of` put `FIT` in when the rendition's
+    asset differed from the master but its recorded dimensions and format did
+    not — inventing a measurement in the one branch that exists *because*
+    nothing was measured, three lines under a comment saying the
+    crop-versus-fit distinction must not be guessed.
+
+    It now fails closed. The branch is unreachable on the Release 1 path (a
+    LinkedIn rendition always differs in size from the blog master), so this
+    costs nothing today and removes the one place the contract could fabricate
+    lineage.
+    """
+
+    from src.visual.contract import _renditions_of
+
+    master = _derivative("wix", url="https://res.cloudinary.com/nb/wix.png")
+    # Same recorded dimensions and format as the master, different asset: the
+    # one input for which neither a resize nor an encode is observable.
+    same_shape = master.model_copy(
+        update={"channel": "wix", "url": "https://res.cloudinary.com/nb/other.png"}
+    )
+
+    with pytest.raises(VisualGateError, match="no technical derivation"):
+        _renditions_of(master, same_shape)
+
+    # Tested at the function rather than through `build_visual_assets_record`
+    # because the factory cannot reach this branch: `_validate_channel` pins
+    # every channel to its own declared size first, and no declared size
+    # equals the blog master's 1920x1080 — so any other channel's rendition
+    # necessarily differs in dimensions and yields a resize. The guard is
+    # defensive, and that is the honest description of it.
+    assert PLATFORM_SIZES["blog"] == (1920, 1080)
+    assert all(
+        PLATFORM_SIZES[key] != PLATFORM_SIZES["blog"]
+        for destination, key in RENDITION_PLATFORM.items()
+        if destination != "wix"
+    )
+
+
+def test_a_caller_that_knows_its_transformation_may_still_declare_it():
+    """Failing closed in the factory is not forbidding the truth in the model.
+
+    `FIT` and `CROP` remain declarable — what was removed is this contract
+    *inferring* them. A producer that genuinely performed a fit records it.
+    """
+
+    record = _record(
+        _derivative(
+            "instagram",
+            url="https://res.cloudinary.com/nb/ig.png",
+            transforms=(RenditionTransform.FIT,),
+        ),
+    )
+    assert record.derivatives[0].transforms == (RenditionTransform.FIT,)
+
+
+def test_the_contract_never_infers_a_transformation_it_did_not_measure():
+    """No branch assigns a transform without a property difference behind it.
+
+    Asserted on the parsed source: every `RenditionTransform` member named in
+    `_renditions_of` must be `RESIZE` or `ENCODE`, the only two the recorded
+    dimensions and format can establish.
+    """
+
+    import ast
+    import inspect
+
+    from src.visual import contract
+
+    tree = ast.parse(inspect.getsource(contract._renditions_of))
+    named = {
+        node.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "RenditionTransform"
+    }
+    assert named == {"RESIZE", "ENCODE"}, named
+
+
 def test_nothing_in_the_contract_compares_images_or_scores_resemblance():
     """No invented threshold, and the absence is asserted rather than trusted.
 
