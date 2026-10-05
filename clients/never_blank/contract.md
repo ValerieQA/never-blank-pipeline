@@ -54,18 +54,36 @@ Loaders: src/strategy/strategy_contract.py and src/strategy/adaptation_contract.
 
 <!--
 Never Blank's evidence requirement, as the part of its policy that code acts on
-(owner decision 2026-10-05, #286 PRIMARY-AUTHORITY-DESIGN-V1). The requirement
-itself is written for people in `lenses/evidence.md`: where a claim's core fact
-has a responsible primary authority, that authority is the factual anchor, and
-secondary reporting may serve discovery and context but does not replace it.
+(owner decisions 2026-10-05, #286). The requirement is written for people in
+`lenses/evidence.md`; the indented bullets below are the same policy in the
+form the run applies per claim.
 
-This section declares that Never Blank wants the engine to enforce it. The
-engine matches these lines against the requirements it can execute and never
-interprets them; which claims owe an authority is decided per claim from who
-could confirm it, not from a list of topics kept here.
+The engine matches the top-level line against the requirements it can execute
+and never interprets it. The indented conditions are Never Blank's own and are
+carried verbatim to the stage that judges each claim against them — the engine
+holds no list of claim kinds, here or in its code.
+
+Why the conditions matter: "somebody could confirm this" is not the same as
+"this claim depends on a primary authority". Most factual claims have an
+identifiable organisation somewhere behind them without that organisation's own
+record being mandatory. These bullets say when it is.
 -->
 
-- primary authority when identifiable
+- primary authority where the claim depends on one
+  - The claim states what a company or product did, launched, changed, priced,
+    acquired, discontinued or announced about itself. The company's own
+    announcement or documentation is the authority.
+  - The claim states what a law, rule, regulation, standard or government
+    decision requires, permits or changes. The issuing body's own published
+    text is the authority.
+  - The claim states a figure, date or term that an organisation publishes
+    about itself — results, headcount, funding, pricing, availability. The
+    organisation's own disclosure is the authority.
+  - The claim does **not** depend on a primary authority when it reports a
+    market condition, a trend, an observed pattern, somebody's analysis,
+    opinion or advice, a reader-facing interpretation, or an event no single
+    organisation is the record of. Those rest on their cited support, and a
+    responsible party being nameable does not make one mandatory.
 
 ## Editorial domain
 

@@ -29,7 +29,7 @@ from __future__ import annotations
 import json
 from datetime import timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import pytest
 
@@ -224,21 +224,44 @@ class _Judgment:
 
     name = "evidence_judgment"
 
-    def __init__(self, ledger: Ledger, *, authority: str | None = AUTHORITY) -> None:
+    def __init__(
+        self,
+        ledger: Ledger,
+        *,
+        authority: str | None = AUTHORITY,
+        depends: bool | Mapping[str, bool] = True,
+    ) -> None:
         self.ledger = ledger
         self.authority = authority
+        #: The client's predicate, as the model answers it: one value for every
+        #: claim, or per claim id. Authored, because in production the model
+        #: answers it against the client conditions this request carries — the
+        #: double stands in for that judgment, not for the policy.
+        self.depends = depends
         self.instructions: list[str] = []
+        self.requests: list[str] = []
 
     def complete(self, *, instructions: str, request: str) -> str:
         self.ledger.record(self.name, request)
         self.instructions.append(instructions)
+        self.requests.append(request)
         payload = json.loads(
             (FIXTURES / "ups_cold_chain_investment.response.json").read_text(
                 encoding="utf-8"
             )
         )
+        # The instruction this double is given says: answer false when the
+        # request carries no client conditions. A faithful double obeys it,
+        # because a double that answered a question nobody grounded would hide
+        # exactly the behaviour under test.
+        grounded = bool(json.loads(request).get("client_evidence_policy"))
         for claim in payload["claims"]:
             claim["responsible_authority"] = self.authority
+            claim["authority_required"] = grounded and (
+                self.depends
+                if isinstance(self.depends, bool)
+                else self.depends[claim["evidence_claim_id"]]
+            )
         return json.dumps(payload, ensure_ascii=False)
 
 
@@ -332,8 +355,15 @@ def test_the_client_contract_is_where_the_requirement_is_declared() -> None:
 
     contract = client_contract(directory=CLIENT_DIR)
     assert contract.requires_primary_authority is True
-    assert (
-        EvidenceRequirement.PRIMARY_AUTHORITY_WHEN_IDENTIFIABLE in contract.evidence
+    assert [item.requirement for item in contract.evidence] == [
+        EvidenceRequirement.PRIMARY_AUTHORITY_WHERE_DEPENDENT
+    ]
+    # And the client wrote the predicate, which is the half the Engine must not
+    # supply: a declaration with no conditions would leave the per-claim
+    # question groundless, and the Engine would still not invent one.
+    assert contract.authority_conditions, (
+        "the client declared the requirement and stated no conditions for when "
+        "a claim depends on an authority"
     )
 
 
@@ -376,7 +406,7 @@ def test_an_unexecutable_requirement_is_refused_rather_than_ignored(
 
     with pytest.raises(ClientConfigurationError) as raised:
         client_contract(directory=directory)
-    assert "primary authority when identifiable" in str(raised.value)
+    assert "primary authority where the claim depends on one" in str(raised.value)
 
 
 # ===========================================================================
@@ -706,3 +736,150 @@ def test_the_persisted_schema_carries_no_client_doctrine(tmp_path: Path) -> None
             "entity records what the run found, and the policy stays in the "
             "client's own contract and lens"
         )
+
+
+# ===========================================================================
+# Per-claim applicability (owner's second review, 2026-10-05)
+# ===========================================================================
+
+
+def test_two_claims_one_run_only_the_dependent_one_owes_an_authority(
+    tmp_path: Path,
+) -> None:
+    """The differential the second review asked for, in a single run.
+
+    Both claims name the **same** responsible party, so being nameable is held
+    constant and cannot explain the difference. What differs is the client's
+    predicate: one claim depends on a primary authority, the other does not.
+
+    The second claim must persist as ``NOT_REQUIRED`` — and it keeps the
+    responsible party, because "a responsible party being nameable does not
+    make one mandatory" is a statement about obligation, not about the fact.
+    """
+
+    dependent, independent = SCENARIO.evidence_ids
+    run, _, workspace = _run(
+        tmp_path, depends={dependent: True, independent: False}
+    )
+    claims = {claim["evidence_claim_id"]: claim for claim in _claims(workspace)}
+    assert set(claims) == {dependent, independent}
+
+    owes = claims[dependent]["authority"]
+    assert owes["state"] == AuthorityState.REQUIRED_UNAVAILABLE.value
+    assert owes["responsible"] == AUTHORITY
+
+    free = claims[independent]["authority"]
+    assert free["state"] == AuthorityState.NOT_REQUIRED.value
+    assert free["responsible"] == AUTHORITY, (
+        "the party is a fact about the material and survives a claim owing "
+        "nothing; dropping it would conflate the two questions again"
+    )
+    assert free["authoritative_source_ref"] is None
+
+
+def test_the_claim_that_owes_nothing_is_not_capped_and_opens_no_lookup(
+    tmp_path: Path,
+) -> None:
+    """And the consequences are per claim too, not per run.
+
+    One run, two claims, one ceiling held down and one left alone; one gap
+    opened and one not. A run-wide boolean could not produce this, which is
+    what makes it the regression for the defect.
+    """
+
+    dependent, independent = SCENARIO.evidence_ids
+    run, _, workspace = _run(
+        tmp_path, depends={dependent: True, independent: False}
+    )
+    bottom = run.configuration.ladder.bottom
+    claims = {claim["evidence_claim_id"]: claim for claim in _claims(workspace)}
+
+    # The dependent claim is held at the bottom; the other keeps the ceiling
+    # its own evidence earned.
+    assert claims[dependent]["ceiling"]["level"] == bottom.level
+    assert claims[dependent]["strength"]["level"] > bottom.level, (
+        "the dependent claim must be the one whose support reached above the "
+        "bottom, or the cap would be invisible"
+    )
+    assert (
+        claims[independent]["ceiling"]["level"]
+        == claims[independent]["strength"]["level"]
+    )
+
+    # One gap, for the one claim that owes an authority.
+    gaps = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted((Path(workspace.run_dir) / "signal" / "gaps").glob("*.json"))
+    ]
+    authority_gaps = [
+        gap
+        for gap in gaps
+        if any(
+            directive["directive_id"].startswith(AUTHORITY_DIRECTIVE_PREFIX)
+            for directive in gap["search_directives"]
+        )
+    ]
+    assert len(authority_gaps) == 1
+    assert dependent in authority_gaps[0]["description"]
+    assert independent not in authority_gaps[0]["description"]
+
+
+def test_the_clients_own_conditions_are_what_the_claim_is_judged_against(
+    tmp_path: Path,
+) -> None:
+    """The predicate travels from the contract to the judgment, verbatim.
+
+    The request the assessment was given carries the client's conditions under
+    the key the Engine's instructions name. That is the mechanism by which the
+    predicate stays the client's: the Engine asks, the client's words answer,
+    and no claim class is enumerated in ``src/``.
+    """
+
+    run, _, _ = _run(tmp_path)
+    judgment = run.seams.evidence_judgment
+    assert judgment.requests, "the assessment was never asked anything"
+    conditions = client_contract(directory=CLIENT_DIR).authority_conditions
+    for request in judgment.requests:
+        carried = json.loads(request)["client_evidence_policy"]
+        assert carried == list(conditions)
+    # And the instructions that read that key are the Engine's own: generic,
+    # naming no client and no kind of claim.
+    text = "\n".join(judgment.instructions).lower()
+    assert "client_evidence_policy" in text
+    for doctrine in ("never blank", "product release", "vendor", "regulator"):
+        assert doctrine not in text
+
+
+def test_a_client_that_states_no_conditions_has_nothing_asked_of_its_claims(
+    tmp_path: Path,
+) -> None:
+    """A declaration with no predicate asks the model nothing.
+
+    The fail-loud alternative would be refusing the contract, and that is the
+    owner's call rather than mine — so this records the behaviour instead: the
+    request carries no policy key, the instructions already say to answer
+    ``false`` without one, and nothing is capped on a predicate nobody wrote.
+    """
+
+    directory = _client_without_the_policy(tmp_path / "bare")
+    contract = directory / "contract.md"
+    contract.write_text(
+        contract.read_text(encoding="utf-8").replace(
+            "## Editorial domain",
+            "## Evidence policy\n\n- primary authority where the claim "
+            "depends on one\n\n## Editorial domain",
+            1,
+        ),
+        encoding="utf-8",
+    )
+    loaded = client_contract(directory=directory)
+    assert loaded.requires_primary_authority is True
+    assert loaded.authority_conditions == ()
+
+    run, _, workspace = _run(tmp_path / "run", client_dir=directory)
+    for request in run.seams.evidence_judgment.requests:
+        assert "client_evidence_policy" not in json.loads(request)
+    bottom = run.configuration.ladder.bottom
+    assert any(
+        claim["ceiling"]["level"] > bottom.level for claim in _claims(workspace)
+    ), "a predicate nobody wrote capped a claim"

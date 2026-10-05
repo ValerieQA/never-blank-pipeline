@@ -122,6 +122,7 @@ from src.editorial_core.editorial_units import (
 )
 from src.editorial_core.enrichment import Gap, GapStatus, enrich, open_gaps
 from src.editorial_core.evidence_core import (
+    AuthorityPolicy,
     EvidenceCore,
     StrengthLadder,
     retrieve_evidence_core,
@@ -1432,6 +1433,21 @@ class _Run:
         return selection.selected
 
     # ------------------------------------------------------------------
+    @property
+    def _authority_policy(self) -> AuthorityPolicy:
+        """The client's evidence policy, assembled once from the contract.
+
+        Read here rather than inside the editorial core because the contract is
+        the harness's input to hand over, not something a stage goes and reads
+        (CE-1 placement). S-01 and S-03 take the same value, so a round cannot
+        rebuild a claim under a policy the core was not built under.
+        """
+
+        return AuthorityPolicy(
+            declared=self.cfg.contract.requires_primary_authority,
+            conditions=self.cfg.contract.authority_conditions,
+        )
+
     # S-01 · the Evidence Core and the relevance screen
     # ------------------------------------------------------------------
 
@@ -1449,8 +1465,9 @@ class _Run:
             # The client's evidence policy, from the contract that declared it
             # (§1, S-01 Inputs: "Client Contract evidence policy and strength
             # ladder"). Both halves now arrive from the same authority, and
-            # neither is decided here.
-            authority_required=self.cfg.contract.requires_primary_authority,
+            # neither is decided here — including *which* claims owe an
+            # authority, which the client's own conditions settle per claim.
+            policy=self._authority_policy,
             budget=self.budget,
         )
         outputs: list[EntityRef] = []
@@ -1654,7 +1671,7 @@ class _Run:
             budget=self.budget,
             # The same client policy S-01 built the core under. A round that
             # rebuilt a claim without it would return it uncapped.
-            authority_required=self.cfg.contract.requires_primary_authority,
+            policy=self._authority_policy,
         )
         outputs = list(self._gap_refs(enriched.gaps))
         version = enriched.core.version

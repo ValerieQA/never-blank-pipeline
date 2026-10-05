@@ -123,19 +123,45 @@ class EvidenceRequirement(str, Enum):
 
     What a member means is a **mechanism**, never a taxonomy of claims:
 
-    ``PRIMARY_AUTHORITY_WHEN_IDENTIFIABLE``
-        A claim whose responsible primary authority the run can name may not
-        read as verified until a lookup aimed at that authority has returned a
-        source for it. *Which* claims owe one is not enumerated here, and
-        deliberately: S-01's assessment reports who could confirm a claim, and
-        a claim nobody identifiable could confirm owes nothing. The editorial
-        doctrine — a vendor for its product, a regulator for its rule — stays
-        prose in the client's own lens, where people can read and revise it.
+    ``PRIMARY_AUTHORITY_WHERE_DEPENDENT``
+        For each claim, ask whether it *depends* on a responsible primary
+        authority under the conditions this client wrote beneath the
+        declaration — and where it does and none was established, the claim may
+        not read as verified.
+
+        The predicate is the client's, and that is the whole point of the
+        second review (2026-10-05): "model can name somebody who could confirm
+        this" is **not** "this is one of the claim classes for which policy
+        requires a primary source". So the Engine asks the client's question
+        per claim and carries the client's own words to where it is answered.
+        It does not enumerate claim classes, here or anywhere in ``src/``.
 
     Adding a member is an Engine capability decision, like adding a lens stage.
     """
 
-    PRIMARY_AUTHORITY_WHEN_IDENTIFIABLE = "primary authority when identifiable"
+    PRIMARY_AUTHORITY_WHERE_DEPENDENT = (
+        "primary authority where the claim depends on one"
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class DeclaredRequirement:
+    """One declared requirement and the client's conditions for it.
+
+    ``conditions`` are the indented bullets written beneath the declaration:
+    client prose, kept verbatim and **never parsed**. They travel to the stage
+    that answers the requirement's question, exactly as a lens body travels to
+    the stages its front matter names. The Engine carries them; what they mean
+    is the client's.
+
+    Empty conditions are a declaration with no stated predicate. That is not a
+    default the Engine fills in — it is a client asking for a judgment it gave
+    no grounds for, and :meth:`ClientContract.authority_conditions` is what the
+    caller reads to see it.
+    """
+
+    requirement: EvidenceRequirement
+    conditions: tuple[str, ...] = ()
 
 
 class ClientConfigurationError(ValueError):
@@ -160,10 +186,11 @@ class ClientContract:
     voice_ref: str
     path: str
     digest: str
-    #: What the client declared under ``## Evidence policy``, in document order.
-    #: Empty is a contract that requires nothing of its evidence beyond what the
-    #: Engine requires of everyone's.
-    evidence: tuple[EvidenceRequirement, ...] = ()
+    #: What the client declared under ``## Evidence policy``, in document order,
+    #: each with the client's own conditions beneath it. Empty is a contract
+    #: that requires nothing of its evidence beyond what the Engine requires of
+    #: everyone's.
+    evidence: tuple[DeclaredRequirement, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.contract_id.strip() or not self.version.strip():
@@ -195,17 +222,41 @@ class ClientContract:
 
     @property
     def requires_primary_authority(self) -> bool:
-        """Does this client require a named authority before a claim reads verified?
+        """Did this client declare the primary-authority requirement at all?
 
-        The one question S-01 asks of the evidence policy. ``False`` when the
-        client declared nothing, which is why the Engine caps no claim for a
-        client that never asked it to: a requirement nobody stated is not a
-        requirement the Engine may supply on the client's behalf.
+        A switch on the *mechanism*, never a verdict about a claim. ``False``
+        when the client declared nothing, which is why the Engine caps no claim
+        for a client that never asked it to: a requirement nobody stated is not
+        a requirement the Engine may supply on the client's behalf.
+
+        Whether any particular claim owes an authority is a separate question,
+        answered per claim against :meth:`authority_conditions`. Conflating the
+        two is the defect the second review of #387 named: a run-wide boolean
+        made every claim with an identifiable party owe one.
         """
 
-        return (
-            EvidenceRequirement.PRIMARY_AUTHORITY_WHEN_IDENTIFIABLE in self.evidence
+        return any(
+            item.requirement is EvidenceRequirement.PRIMARY_AUTHORITY_WHERE_DEPENDENT
+            for item in self.evidence
         )
+
+    @property
+    def authority_conditions(self) -> tuple[str, ...]:
+        """The client's own conditions for when a claim depends on an authority.
+
+        Verbatim client prose, carried to the stage that applies it and never
+        interpreted here. Empty when the client declared the requirement and
+        wrote no conditions, or declared nothing at all — and the Engine does
+        not invent a predicate for either case.
+        """
+
+        for item in self.evidence:
+            if (
+                item.requirement
+                is EvidenceRequirement.PRIMARY_AUTHORITY_WHERE_DEPENDENT
+            ):
+                return item.conditions
+        return ()
 
     def phrases(self) -> tuple[ForbiddenItem, ...]:
         """The forbidden entries code may match (V-T06's code half)."""
@@ -286,16 +337,57 @@ def parse_client_contract(
     )
 
 
+def _policy_bullets(body: str, *, path: str) -> tuple[tuple[bool, str], ...]:
+    """The section's bullets, each as ``(indented, text)``, wrapped lines joined.
+
+    A condition is a sentence or two of client prose and prose wraps, so a line
+    that is not itself a bullet continues the bullet above it — the one
+    markdown convention this has to honour, because the alternative is a client
+    reformatting its own policy and changing what the run applies.
+
+    A line before any bullet is refused rather than attached to nothing.
+    """
+
+    bullets: list[tuple[bool, list[str]]] = []
+    for line in body.splitlines():
+        if not line.strip():
+            continue
+        stripped = line.strip()
+        if stripped.startswith("- "):
+            indented = line[: len(line) - len(line.lstrip())] != ""
+            bullets.append((indented, [stripped[2:].strip()]))
+            continue
+        if not bullets:
+            raise ClientConfigurationError(
+                f"{path}: the evidence policy opens with {stripped[:60]!r}, "
+                "which is not a bullet (`- `); every requirement and every "
+                "condition is one"
+            )
+        bullets[-1][1].append(stripped)
+    return tuple(
+        (indented, " ".join(parts)) for indented, parts in bullets
+    )
+
+
 def _evidence_policy(
     document: Document, *, path: str
-) -> tuple[EvidenceRequirement, ...]:
+) -> tuple[DeclaredRequirement, ...]:
     """What the client declared under ``## Evidence policy``, matched literally.
 
-    Absent section → nothing declared, which the ``requires_primary_authority``
-    property reads as "this client asks for no authority" rather than as a
-    default the Engine chose. A wording the Engine does not carry is refused
-    with the vocabulary named, because a requirement that was written down and
-    silently dropped is the one failure mode a client cannot see.
+    Two levels, and the split is the boundary:
+
+    * a **top-level** bullet names one requirement the Engine can execute, and
+      is matched against :class:`EvidenceRequirement` — a wording the Engine
+      does not carry is refused with the vocabulary named, because a
+      requirement written down and silently dropped is the one failure mode a
+      client cannot see;
+    * an **indented** bullet beneath it is that requirement's condition, in the
+      client's own words. Never matched, never parsed, never normalised: it is
+      carried to the stage that applies it, as a lens body is.
+
+    Absent section → nothing declared, which ``requires_primary_authority``
+    reads as "this client asks for no authority" rather than as a default the
+    Engine chose.
     """
 
     body = document.section(EVIDENCE_POLICY_SECTION)
@@ -305,17 +397,22 @@ def _evidence_policy(
         body = strip_comments(body, Path(path))
     except ClientContractError as exc:
         raise ClientConfigurationError(str(exc)) from exc
+
+    bullets = _policy_bullets(body, path=path)
     declared: list[EvidenceRequirement] = []
-    for line in body.splitlines():
-        stripped = line.strip()
-        if not stripped:
+    conditions: dict[EvidenceRequirement, list[str]] = {}
+    for indented, text in bullets:
+        if indented:
+            if not declared:
+                raise ClientConfigurationError(
+                    f"{path}: the evidence policy opens with the indented "
+                    f"condition {text[:60]!r}; a condition states when a "
+                    "requirement applies, so it follows the requirement it is "
+                    "about"
+                )
+            conditions[declared[-1]].append(text)
             continue
-        if not stripped.startswith("- "):
-            raise ClientConfigurationError(
-                f"{path}: every evidence requirement is a bullet (`- `); got "
-                f"{stripped[:60]!r}"
-            )
-        wording = stripped[2:].strip().lower()
+        wording = text.lower()
         try:
             requirement = EvidenceRequirement(wording)
         except ValueError:
@@ -323,8 +420,8 @@ def _evidence_policy(
                 f"{path}: declares the evidence requirement {wording!r}, which "
                 "is not one this engine can execute; it carries "
                 + ", ".join(repr(item.value) for item in EvidenceRequirement)
-                + ". The policy a client wants a person to read belongs in a "
-                "lens; this section is the part code acts on"
+                + ". A condition for when a requirement applies is an indented "
+                "bullet beneath it, not a requirement of its own"
             ) from None
         if requirement in declared:
             raise ClientConfigurationError(
@@ -332,7 +429,13 @@ def _evidence_policy(
                 "twice says nothing more than saying it once"
             )
         declared.append(requirement)
-    return tuple(declared)
+        conditions[requirement] = []
+    return tuple(
+        DeclaredRequirement(
+            requirement=requirement, conditions=tuple(conditions[requirement])
+        )
+        for requirement in declared
+    )
 
 
 def forbidden_from(shared: SharedList) -> tuple[ForbiddenItem, ...]:

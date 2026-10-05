@@ -74,6 +74,7 @@ from src.editorial_core.arp import (
 )
 from src.editorial_core.evidence_core import (
     AUTHORITY_DIRECTIVE_PREFIX,
+    AuthorityPolicy,
     AuthorityState,
     EvidenceClaim,
     EvidenceCore,
@@ -555,8 +556,9 @@ def enrich(
     approved_positions: Sequence[str] = (),
     budget: Optional[CallBudget] = None,
     #: The client's evidence policy, as S-01 received it. Carried so that a
-    #: round rebuilding a claim rebuilds it under the same requirement.
-    authority_required: bool = False,
+    #: round rebuilding a claim rebuilds it under the same requirement — and
+    #: judges any new claim against the same client conditions.
+    policy: Optional[AuthorityPolicy] = None,
 ) -> Enrichment:
     """Close what blocks a decision, and stop with a recorded reason.
 
@@ -609,7 +611,7 @@ def enrich(
             client_ceiling=client_ceiling,
             approved_positions=approved_positions,
             budget=budget,
-            authority_required=authority_required,
+            policy=policy,
         )
         rounds.append(outcome.record)
         outcomes.extend(outcome.outcomes)
@@ -731,7 +733,7 @@ def _round(
     client_ceiling: Optional[Strength],
     approved_positions: Sequence[str],
     budget: Optional[CallBudget],
-    authority_required: bool = False,
+    policy: Optional[AuthorityPolicy] = None,
 ) -> _RoundOutcome:
     """Search, re-assess, recompute — and commit all three or none of them."""
 
@@ -789,7 +791,7 @@ def _round(
                 stop=StopReason.BUDGET_EXHAUSTED,
             )
 
-    assessor = ExtendedEvidenceAssessor(transport, ladder=ladder)
+    assessor = ExtendedEvidenceAssessor(transport, ladder=ladder, policy=policy)
     try:
         assessed = assess_artifact(artifact, transport=assessor)
     except EvidenceAssessmentError as exc:
@@ -808,7 +810,7 @@ def _round(
             assessor,
             ladder,
             client_ceiling,
-            authority_required=authority_required,
+            policy=policy,
             # The round's own retrieval record: a source this search returned
             # from an authority lookup is what can close the gap that opened it.
             authoritative=authoritative_source_ids(
@@ -1077,7 +1079,7 @@ def _merged(
     ladder: StrengthLadder,
     client_ceiling: Optional[Strength],
     *,
-    authority_required: bool = False,
+    policy: Optional[AuthorityPolicy] = None,
     authoritative: Sequence[str] = (),
 ) -> tuple[EvidenceCore, _Added]:
     """The next core version: everything the core held, plus what is new.
@@ -1105,7 +1107,7 @@ def _merged(
         core_id=core.core_id,
         ladder=ladder,
         client_ceiling=client_ceiling,
-        authority_required=authority_required,
+        policy=policy or AuthorityPolicy(),
         authoritative_source_ids=authoritative,
         version=core.version + 1,
     )

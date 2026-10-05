@@ -25,6 +25,7 @@ import pytest
 
 from src.editorial_core.evidence_core import (
     AUTHORITY_DIRECTIVE_PREFIX,
+    AuthorityPolicy,
     AuthorityState,
     ClaimAssessment,
     ClaimAuthority,
@@ -50,9 +51,30 @@ def _signal(signal_id: str) -> dict:
     raise AssertionError(f"{signal_id} is not in the queue")
 
 
-def _assessment(**kwargs) -> ClaimAssessment:
+#: A client that declared the mechanism and wrote one condition. Authored here
+#: because it is the *client's* value: these unit tests exercise the Engine's
+#: transition, and the predicate they stand in for is NB's own in its contract.
+POLICY = AuthorityPolicy(
+    declared=True,
+    conditions=("The claim states what a company announced about itself.",),
+)
+
+
+def _assessment(*, depends: bool = True, **kwargs) -> ClaimAssessment:
+    """One claim's assessment. ``depends`` is the client's predicate, applied.
+
+    Defaulted to ``True`` so that each test below reads as being about the
+    transition it names. The case where a party is nameable and the claim does
+    **not** depend on one has its own test, because that distinction is the
+    whole of #387's second review.
+    """
+
     return ClaimAssessment(
-        evidence_claim_id="c1", scope="small business", strength_level=3, **kwargs
+        evidence_claim_id="c1",
+        scope="small business",
+        strength_level=3,
+        authority_required=depends,
+        **kwargs,
     )
 
 
@@ -120,7 +142,7 @@ def test_the_responsible_authority_is_identified_without_fabricating_a_url():
 
     state = resolve_claim_authority(
         _assessment(), source_refs=("s-sej",), authoritative_source_ids=(),
-        authority_required=True,
+        policy=POLICY,
     )
     assert state.state is AuthorityState.UNDETERMINED
     assert state.responsible is None
@@ -134,7 +156,7 @@ def test_an_established_authority_is_linked_separately_from_discovery():
         _assessment(responsible_authority="shopify.com"),
         source_refs=("s-sej", "s-shopify"),
         authoritative_source_ids={"s-shopify"},
-        authority_required=True,
+        policy=POLICY,
     )
 
     assert authority.state is AuthorityState.REQUIRED_ESTABLISHED
@@ -229,7 +251,7 @@ def test_the_case_source_reaches_the_evidence_path_without_being_authoritative()
         _assessment(responsible_authority="zingermans.com"),
         source_refs=("s-entrepreneur", "s-zingtrain"),
         authoritative_source_ids=(),
-        authority_required=True,
+        policy=POLICY,
     ).state is AuthorityState.REQUIRED_UNAVAILABLE
 
 
@@ -283,7 +305,9 @@ def test_third_party_assertion_stays_distinct_from_authority_status():
 def test_no_additional_model_or_provider_call_is_introduced():
     """Regression 8: the two authority facts ride the call that already runs."""
 
-    assert "authority_required" not in ClaimAssessment.model_fields
+    # Both authority fields are on the claim assessment, which means they ride
+    # the one extended call S-01 already makes rather than a call of their own.
+    assert "authority_required" in ClaimAssessment.model_fields
     assert "responsible_authority" in ClaimAssessment.model_fields
 
     from src.editorial_core.evidence_core import extended_instructions
@@ -311,8 +335,9 @@ def test_the_engine_holds_the_concept_and_not_the_editorial_doctrine():
     The Engine may know that an authority can be required, established or not.
     It must not know *which kinds of claim* require one — that enumeration is
     editorial policy and belongs in a client contract. So the Engine takes
-    `authority_required` as an input it is given, and the only mention of the
-    doctrine in the module is the sentence forbidding it.
+    the policy as an input it is given — including, after #387's second review,
+    the per-claim predicate — and the only mention of the doctrine in the
+    module is the sentence forbidding it.
     """
 
     import inspect
@@ -321,15 +346,17 @@ def test_the_engine_holds_the_concept_and_not_the_editorial_doctrine():
 
     # The policy is an argument, never a decision taken here.
     assert (
-        "authority_required"
+        "policy"
         in inspect.signature(evidence_core.resolve_claim_authority).parameters
     )
     assert (
         inspect.signature(evidence_core.build_evidence_core)
-        .parameters["authority_required"]
+        .parameters["policy"]
         .default
-        is False
+        == evidence_core.AuthorityPolicy()
     ), "no client asked by default, so nothing is owed and nothing is capped"
+    assert evidence_core.AuthorityPolicy().declared is False
+    assert evidence_core.AuthorityPolicy().conditions == ()
 
     # Executable code carries no client doctrine: comments and docstrings are
     # stripped, so the sentence that *forbids* the doctrine is not read as it.
