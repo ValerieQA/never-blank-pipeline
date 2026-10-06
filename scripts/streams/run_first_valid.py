@@ -80,16 +80,32 @@ def _emit_output(name: str, value: str) -> None:
 #: A signal id, as every dispatch guard in `.github/workflows/` already states
 #: it: `case "$X" in (*[!A-Za-z0-9_-]*) ... exit 1`. One path segment, and the
 #: class is the repository's existing convention rather than a new one — all
-#: 145 ids in `data/research/` satisfy it. Anchored and `+`, so an empty id, a
-#: separator, traversal, whitespace, a newline or a shell metacharacter is not
-#: a signal id here.
-_SIGNAL_ID = re.compile(r"^[A-Za-z0-9_-]+$")
+#: 145 ids in `data/research/` satisfy it.
+#:
+#: **Deliberately unanchored, and matched with** :meth:`re.Pattern.fullmatch`.
+#: The first version of this guard was `^[A-Za-z0-9_-]+$` with `.match()`, which
+#: has a hole Python documents: `$` matches at the end of the string *or just
+#: before a trailing newline*. So `"sig\n"` passed it — and that is the worst
+#: possible id to let through, because these lines become an `upload-artifact`
+#: path list, where a newline is an entry separator:
+#:
+#:     reports/content_packages/sig
+#:     /runs/
+#:
+#: one truncated path and one absolute path outside the repository. `fullmatch`
+#: has no such exemption, and leaving the anchors out means nothing can reopen
+#: it by changing them.
+_SIGNAL_ID = re.compile(r"[A-Za-z0-9_-]+")
 
 
 def _unsafe_signal_ids(signal_ids: list[str]) -> list[str]:
-    """Which of these are not exactly one safe path segment."""
+    """Which of these are not exactly one safe path segment.
 
-    return [item for item in signal_ids if not _SIGNAL_ID.match(item)]
+    ``fullmatch``, never ``match``: the whole string must be the id, with no
+    trailing anything. See :data:`_SIGNAL_ID` for what that cost before.
+    """
+
+    return [item for item in signal_ids if not _SIGNAL_ID.fullmatch(item)]
 
 
 def _emit_evidence_paths(signal_ids: list[str]) -> None:
