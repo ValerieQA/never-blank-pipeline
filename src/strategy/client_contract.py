@@ -154,10 +154,11 @@ class DeclaredRequirement:
     the stages its front matter names. The Engine carries them; what they mean
     is the client's.
 
-    Empty conditions are a declaration with no stated predicate. That is not a
-    default the Engine fills in — it is a client asking for a judgment it gave
-    no grounds for, and :meth:`ClientContract.authority_conditions` is what the
-    caller reads to see it.
+    A declaration with no conditions is **refused at load** (owner decision
+    2026-10-05): its predicate would be empty, every claim would be answered
+    "no", and the contract would read as stating a policy while doing nothing.
+    That is a configuration error, not a policy — so this type never holds one,
+    and the inert-rule state has no way into a run.
     """
 
     requirement: EvidenceRequirement
@@ -430,6 +431,17 @@ def _evidence_policy(
             )
         declared.append(requirement)
         conditions[requirement] = []
+    for requirement in declared:
+        if not conditions[requirement]:
+            raise ClientConfigurationError(
+                f"{path}: declares {requirement.value!r} and states no "
+                "condition for when it applies. A requirement whose predicate "
+                "is empty is answered 'no' for every claim, so it would read "
+                "as declared policy and do nothing — a configuration error, "
+                "not a policy (owner decision 2026-10-05). State the "
+                "conditions as indented bullets beneath it, or remove the "
+                f"`## {EVIDENCE_POLICY_SECTION}` section to require nothing"
+            )
     return tuple(
         DeclaredRequirement(
             requirement=requirement, conditions=tuple(conditions[requirement])

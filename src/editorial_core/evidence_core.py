@@ -216,6 +216,18 @@ class AuthorityPolicy:
                 "say when a requirement applies, and a requirement nobody "
                 "declared never applies"
             )
+        if self.declared and not self.conditions:
+            # The contract loader refuses this too, which is where a person
+            # sees it. Refused here as well so the state is unrepresentable
+            # rather than merely unproduced: a declared requirement with no
+            # predicate is answered "no" for every claim, which is a rule that
+            # reads as policy and does nothing.
+            raise EvidenceCoreError(
+                "a declared evidence policy states no condition for when it "
+                "applies; a predicate nobody wrote cannot be applied to a "
+                "claim, and answering 'no' for every claim would make a "
+                "declared requirement inert"
+            )
 
 
 @dataclass(frozen=True, slots=True)

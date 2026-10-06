@@ -850,18 +850,40 @@ def test_the_clients_own_conditions_are_what_the_claim_is_judged_against(
         assert doctrine not in text
 
 
-def test_a_client_that_states_no_conditions_has_nothing_asked_of_its_claims(
+def test_a_declaration_without_conditions_fails_at_configuration_load(
     tmp_path: Path,
 ) -> None:
-    """A declaration with no predicate asks the model nothing.
+    """A declared requirement with no predicate is a configuration error.
 
-    The fail-loud alternative would be refusing the contract, and that is the
-    owner's call rather than mine — so this records the behaviour instead: the
-    request carries no policy key, the instructions already say to answer
-    ``false`` without one, and nothing is capped on a predicate nobody wrote.
+    Owner decision, 2026-10-05: the state
+
+        requirement declared → conditions empty → every claim answered "no"
+
+    must not exist. It would read as a client stating a policy while the policy
+    did nothing, which is the worst of the three outcomes — worse than
+    requiring nothing, because nobody looking at the contract could tell.
+
+    The three states, enforced here as one table:
+
+    * no ``Evidence policy`` section → valid, the mechanism is not declared;
+    * declared with one or more conditions → valid;
+    * declared with none → ``ClientConfigurationError`` at load.
     """
 
-    directory = _client_without_the_policy(tmp_path / "bare")
+    from src.strategy.client_contract import ClientConfigurationError
+
+    # 1 · no section at all: valid, and requires nothing.
+    bare = client_contract(directory=_client_without_the_policy(tmp_path / "none"))
+    assert bare.requires_primary_authority is False
+    assert bare.authority_conditions == ()
+
+    # 2 · declared with conditions: valid. The real client is this case.
+    declared = client_contract(directory=CLIENT_DIR)
+    assert declared.requires_primary_authority is True
+    assert declared.authority_conditions
+
+    # 3 · declared with none: refused, and the message says how to fix it.
+    directory = _client_without_the_policy(tmp_path / "empty")
     contract = directory / "contract.md"
     contract.write_text(
         contract.read_text(encoding="utf-8").replace(
@@ -872,14 +894,29 @@ def test_a_client_that_states_no_conditions_has_nothing_asked_of_its_claims(
         ),
         encoding="utf-8",
     )
-    loaded = client_contract(directory=directory)
-    assert loaded.requires_primary_authority is True
-    assert loaded.authority_conditions == ()
+    with pytest.raises(ClientConfigurationError) as raised:
+        client_contract(directory=directory)
+    message = str(raised.value)
+    assert "primary authority where the claim depends on one" in message
+    assert "Evidence policy" in message
 
-    run, _, workspace = _run(tmp_path / "run", client_dir=directory)
-    for request in run.seams.evidence_judgment.requests:
-        assert "client_evidence_policy" not in json.loads(request)
-    bottom = run.configuration.ladder.bottom
-    assert any(
-        claim["ceiling"]["level"] > bottom.level for claim in _claims(workspace)
-    ), "a predicate nobody wrote capped a claim"
+
+def test_the_engine_cannot_hold_a_declared_policy_without_a_predicate() -> None:
+    """And the typed value refuses it too, so the state is unrepresentable.
+
+    The loader is where a person sees the error. This is the second lock: a
+    caller assembling the policy by hand cannot produce an inert requirement
+    either, so no path reaches a run with one.
+    """
+
+    from src.editorial_core.evidence_core import AuthorityPolicy, EvidenceCoreError
+
+    assert AuthorityPolicy().declared is False
+    assert AuthorityPolicy(declared=True, conditions=("when it does",)).conditions
+
+    with pytest.raises(EvidenceCoreError):
+        AuthorityPolicy(declared=True)
+    # And the mirror case, which was already refused: conditions for a
+    # requirement nobody declared.
+    with pytest.raises(EvidenceCoreError):
+        AuthorityPolicy(declared=False, conditions=("when it does",))
