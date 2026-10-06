@@ -40,6 +40,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.evidence_path_contract import PathContractError, assert_contained
 from tests.publishing_workflows import (
     ENTRYPOINT,
     entrypoint_step,
@@ -180,17 +181,115 @@ def test_preservation_tolerates_a_run_that_produced_nothing(workflow):
 
 
 @pytest.mark.parametrize("workflow", WORKFLOWS)
-@pytest.mark.parametrize("forbidden", [".env", "..", "~", "*"])
-def test_the_upload_path_cannot_reach_outside_the_run_namespace(workflow, forbidden):
-    assert forbidden not in _path(workflow)
+def test_every_path_the_upload_can_yield_is_inside_the_run_namespace(workflow):
+    """Parsed, not matched — the second review of PR #388.
+
+    ``upload-artifact`` takes a newline-separated **list** of paths, so a value
+    can contain ``reports/content_packages/`` and ``/runs/``, contain no
+    traversal token, and still upload a second tree on a second line. Substring
+    containment is not namespace containment.
+
+    :func:`tests.evidence_path_contract.assert_contained` parses every entry and
+    every ``||`` alternative and fails closed on any shape it cannot account
+    for. Accepting nothing would also be a failure, so the result is checked to
+    be non-empty: a contract that proved an empty path would prove nothing.
+    """
+
+    accepted = assert_contained(_path(workflow), where=f"{workflow} evidence path")
+
+    assert accepted.total >= 1
 
 
-@pytest.mark.parametrize("workflow", WORKFLOWS)
-def test_the_upload_path_is_not_the_whole_reports_tree(workflow):
-    path = _path(workflow).strip()
+@pytest.mark.parametrize(
+    "widening",
+    [
+        pytest.param(
+            "reports/content_packages/${{ steps.publish.outputs.signal_id }}/runs/\nreports/",
+            id="a-second-tree-on-a-second-line",
+        ),
+        pytest.param(
+            "reports/content_packages/${{ steps.a.outputs.s }}/runs/\n"
+            "reports/content_packages/other/runs/",
+            id="a-sibling-signals-namespace",
+        ),
+        pytest.param("reports/content_packages/other/runs/", id="a-hardcoded-signal-id"),
+        pytest.param("reports/content_packages/", id="the-whole-packages-root"),
+        pytest.param("reports/content_packages/*/runs/", id="a-glob-over-every-signal"),
+        pytest.param("reports/content_packages/../../etc/runs/", id="traversal"),
+        pytest.param("reports/content_packages/$(whoami)/runs/", id="command-substitution"),
+        pytest.param(
+            "reports/content_packages/${{ steps.a.outputs.s }}/runs/\n.env",
+            id="a-dotfile-beside-it",
+        ),
+        pytest.param("${{ steps.publish.outputs.whatever }}", id="an-unproven-step-output"),
+        pytest.param(
+            "${{ steps.publish.outputs.whatever || "
+            "format('reports/content_packages/{0}/runs/', steps.r.outputs.s) }}",
+            id="an-unproven-output-behind-a-good-fallback",
+        ),
+        pytest.param(
+            "${{ format('reports/{0}/runs/', steps.r.outputs.s) }}",
+            id="a-format-template-outside-the-namespace",
+        ),
+        pytest.param("${{ github.workspace }}", id="an-unrecognised-expression"),
+        pytest.param(
+            "${{ format('reports/content_packages/{0}/runs/', steps.r.outputs.s) }}/../..",
+            id="an-expression-with-a-trailing-literal",
+        ),
+        pytest.param("\n  \n", id="nothing-at-all"),
+    ],
+)
+def test_the_contract_rejects_a_widened_upload_path(widening):
+    """Testing the test: a contract nobody tried to break proves nothing.
 
-    assert path not in ("reports/", "reports", ".", "./")
-    assert "reports/content_packages/" in path
+    Each case here would have passed the lexical check this replaced. The
+    sibling-namespace one is why a literal signal id is refused outright: it is
+    canonical in shape while naming a signal the run never attempted, so the
+    segment has to be derived from the run.
+    """
+
+    with pytest.raises(PathContractError):
+        assert_contained(widening, where="widening probe")
+
+
+def test_the_evidence_emitter_builds_only_canonical_entries(tmp_path, monkeypatch):
+    """The one alternative a workflow cannot state is proved beside its emitter.
+
+    Monday's path falls back to ``steps.publish.outputs.evidence_paths``, whose
+    value no workflow states — so the contract accepts that alternative only
+    because of this test. ``run_first_valid`` emits, per attempted candidate,
+    its run namespace and its generated package: both under
+    ``reports/content_packages/``, both keyed by the signal id.
+
+    **The limit, stated rather than implied:** the emitter interpolates the
+    signal id without a charset guard, so an id containing ``..`` would escape.
+    Guarding it is a change to production code, which this slice may not make;
+    the finding is reported on #326. What is proved here is the shape for a
+    well-formed id, which is the guarantee that exists today.
+    """
+
+    from scripts.streams import run_first_valid
+
+    output = tmp_path / "github_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setenv("NB_PACKAGES_DIR", "reports/content_packages")
+
+    run_first_valid._emit_evidence_paths(["sig-a", "sig-b"])
+
+    body = output.read_text().split("evidence_paths<<__NB_EVIDENCE__\n", 1)[1]
+    lines = body.split("\n__NB_EVIDENCE__\n", 1)[0].splitlines()
+
+    assert lines == [
+        "reports/content_packages/sig-a/runs/",
+        "reports/content_packages/sig-a_generated.json",
+        "reports/content_packages/sig-b/runs/",
+        "reports/content_packages/sig-b_generated.json",
+    ]
+    # Every line the emitter produced is an entry the contract accepts, with the
+    # id standing where the workflow's expression would put it.
+    for line in lines:
+        rebuilt = line.replace("sig-a", "${{ s }}").replace("sig-b", "${{ s }}")
+        assert assert_contained(rebuilt, where=f"emitted {line}").total == 1
 
 
 # ── 4. secrets stay in the execution step ────────────────────────────────────
