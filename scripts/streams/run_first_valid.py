@@ -35,6 +35,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from collections.abc import Callable
@@ -76,15 +77,61 @@ def _emit_output(name: str, value: str) -> None:
             handle.write(f"{name}={value}\n")
 
 
+#: A signal id, as every dispatch guard in `.github/workflows/` already states
+#: it: `case "$X" in (*[!A-Za-z0-9_-]*) ... exit 1`. One path segment, and the
+#: class is the repository's existing convention rather than a new one — all
+#: 145 ids in `data/research/` satisfy it. Anchored and `+`, so an empty id, a
+#: separator, traversal, whitespace, a newline or a shell metacharacter is not
+#: a signal id here.
+_SIGNAL_ID = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _unsafe_signal_ids(signal_ids: list[str]) -> list[str]:
+    """Which of these are not exactly one safe path segment."""
+
+    return [item for item in signal_ids if not _SIGNAL_ID.match(item)]
+
+
 def _emit_evidence_paths(signal_ids: list[str]) -> None:
     """Every attempted candidate's canonical evidence, one path per line.
 
     Independent of ``signal_id``, which names only the candidate that
     completed: a candidate that was passed over, or that failed after an
     earlier one was passed over, is evidence too.
+
+    **Every id is validated as one safe path segment before any path is
+    built** (#326, #388 review). These lines become an ``upload-artifact``
+    path list, so an id carrying ``..`` or a separator would upload from
+    outside the signal's own namespace — the escape the Story #21 contract
+    exists to prevent. The check is the repository's existing dispatch-guard
+    class, so nothing new is invented about what a signal id may be.
+
+    An invalid id emits **nothing at all**, not a filtered subset: if an id is
+    malformed, what this run is about is no longer something this function can
+    state, and a partial list would look like a complete one.
+
+    It refuses rather than raising, deliberately. This runs inside ``record``,
+    which writes the attempts audit, and the whole driver's exit code decides
+    whether the workflow's ``Mark signal as published`` step — guarded by
+    ``success()`` — records a publication that already happened. Raising here
+    would let an evidence concern suppress publication bookkeeping and destroy
+    the attempts record with it, which is exactly what Story #21 forbids
+    (``test_evidence_preservation_cannot_suppress_publication_bookkeeping``).
+    So the dangerous outcome is closed — no path escapes — while the ones that
+    must not be lost are kept, and the refusal is reported on stderr.
     """
     target = os.environ.get("GITHUB_OUTPUT")
     if not target or not signal_ids:
+        return
+    unsafe = _unsafe_signal_ids(signal_ids)
+    if unsafe:
+        print(
+            "refusing to emit evidence paths: "
+            + ", ".join(repr(item) for item in unsafe)
+            + " is not one safe path segment ([A-Za-z0-9_-]+), so a path built "
+            "from it could leave the signal's own namespace",
+            file=sys.stderr,
+        )
         return
     root = _packages_root()
     lines = []

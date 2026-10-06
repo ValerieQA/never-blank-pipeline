@@ -7,8 +7,10 @@ leaves behind — the generated package, the run namespace, the selection audit
 — is what a later investigation has to read. So every upload states its own
 retention rather than inheriting one.
 
-These are the two that did not (#289 audit): the ``generated-*`` package in
-``monday_publish.yml`` and in ``research_generate_and_publish.yml``.
+These are the ones that did not (#289 audit): the ``generated-*`` package in
+``monday_publish.yml``. The audit named a second workflow,
+``research_generate_and_publish.yml``, which #326 deleted — the rule below is
+about the uploads that exist, so it now checks the one that does.
 """
 
 from __future__ import annotations
@@ -78,7 +80,7 @@ def test_every_generated_package_upload_states_its_retention(workflow):
 def test_the_two_workflows_the_audit_named_upload_a_generated_package():
     """The test above passes vacuously if the steps are ever renamed away."""
 
-    for workflow in ("monday_publish.yml", "research_generate_and_publish.yml"):
+    for workflow in ("monday_publish.yml",):
         steps = _upload_steps(_WORKFLOWS / workflow)
         assert any(_is_generated_package(step) for step in steps), (
             f"{workflow} no longer uploads a generated package: the retention "

@@ -25,7 +25,21 @@ from scripts.streams.resolve_research_signal import (
 )
 from src.publishing.publication_markers import MarkerStore, PublicationIdentity
 
-_WORKFLOW = Path(".github/workflows/research_generate_and_publish.yml")
+#: The surviving owner of marker-aware **selection** (#326).
+#:
+#: These workflow assertions were written against
+#: `research_generate_and_publish.yml`, which is deleted. Their subject is not
+#: "a workflow that publishes" — it is "a workflow that chooses which signal to
+#: publish, and must ask the marker authority first". Of the two surviving
+#: canonical publishers only Monday does that: it runs
+#: `scripts/streams/select_eligible_signal.py`, which consults `MarkerStore`.
+#:
+#: Wednesday is deliberately **not** a subject here. Since #211 its `resolve`
+#: step is a from-package retry short-circuit, and its normal runs discover
+#: their signal inside the entrypoint through the restored July research path.
+#: Pointing these tests at it because it also publishes would assert a
+#: responsibility it does not hold.
+_WORKFLOW = Path(".github/workflows/monday_publish.yml")
 
 
 def _store(tmp_path: Path) -> MarkerStore:
@@ -176,19 +190,50 @@ def _steps() -> list[dict]:
 def test_the_workflow_resolves_through_the_marker_aware_resolver():
     resolve = next(step for step in _steps() if step.get("id") == "resolve")
 
-    assert "resolve_research_signal.py" in str(resolve.get("run", "")), (
-        "the research workflow must consult the marker authority, not the "
+    assert "select_eligible_signal.py" in str(resolve.get("run", "")), (
+        "the selecting workflow must consult the marker authority, not the "
         "published-signals file alone"
     )
 
 
-def test_the_workflow_no_longer_selects_on_the_published_file_alone():
+def test_the_resolver_the_workflow_calls_is_the_one_that_asks_the_authority():
+    """And the selector it calls really does ask, rather than being named well.
+
+    The assertion above is about wiring; this is about the thing wired. Without
+    it the pair could pass on a selector that read the published file and
+    nothing else.
+    """
+
+    selector = Path("scripts/streams/select_eligible_signal.py").read_text()
+
+    assert "MarkerStore" in selector
+    assert "AUTHORITY_UNAVAILABLE" in selector
+
+
+def test_the_workflow_does_not_select_on_the_published_file_alone():
+    """The invariant, not the legacy implementation of it.
+
+    The deleted workflow asserted that `published_signal_ids.txt` appeared
+    nowhere in its resolve step — true of that file, and **false** of Monday's,
+    which names the file in its from-package retry guard (a published signal may
+    not be retried). Copying the literal would have failed, and weakening it to
+    make it pass would have asserted nothing.
+
+    What NB-00b actually forbids is deciding eligibility by file membership
+    alone. So: the step may read the file, and it must also run the selector
+    that asks the authority.
+    """
+
     resolve = next(step for step in _steps() if step.get("id") == "resolve")
     run = str(resolve.get("run", ""))
 
-    assert "published_signal_ids.txt" not in run, (
-        "the inline membership check is what NB-00b replaces"
-    )
+    assert "select_eligible_signal.py" in run
+    if "published_signal_ids.txt" in run:
+        # Named only where a retry is refused, never as the selection itself.
+        assert "retry" in run.lower() or "already published" in run.lower(), (
+            "the published-signals file is read somewhere other than a retry "
+            "guard; inline membership is what NB-00b replaces"
+        )
 
 
 def test_only_a_completed_search_keeps_the_run_green():

@@ -101,6 +101,40 @@ def _schedule(workflow: dict) -> list[str]:
     return [item["cron"] for item in (triggers.get("schedule") or [])]
 
 
+#: The discovery workflow fires daily, so it matches every weekday — but it is
+#: not a weekday *owner*: its optional non-canonical publication is disabled
+#: deterministically. The exclusion below is allowed only while that remains
+#: true, and :func:`_publishing_workflow_names` checks it rather than assuming.
+_NON_PUBLISHING_DAILY = "daily_signal_research.yml"
+
+
+def _publishing_workflow_names() -> tuple[str, ...]:
+    """Every workflow that can take a publishing weekday.
+
+    The marker-store set from #287, which is wider than "runs the canonical
+    entrypoint" — a legacy publisher that never touches the entrypoint can
+    still take a weekday — minus the daily discovery workflow, whose
+    publication is switched off.
+
+    That exclusion is **earned, not assumed**: the guard that disables daily
+    publication is asserted here, so removing the guard puts the workflow back
+    into every weekday-ownership test in this module instead of quietly
+    exempting it.
+    """
+
+    from tests.test_287_marker_durability import PUBLISHING_WORKFLOWS
+
+    daily = Path(".github/workflows", _NON_PUBLISHING_DAILY).read_text()
+    assert "export NB_RESEARCH_PUBLISH_ENABLED=false" in daily, (
+        f"{_NON_PUBLISHING_DAILY} no longer disables its own publication, so it "
+        "is a scheduled publisher on every day of the week and cannot be "
+        "excluded from weekday ownership"
+    )
+    return tuple(
+        sorted(name for name in PUBLISHING_WORKFLOWS if name != _NON_PUBLISHING_DAILY)
+    )
+
+
 def _fires_on(cron: str, weekday: str) -> bool:
     field = cron.split()[4]
     return field == "*" or weekday in {item.strip() for item in field.split(",")}
@@ -545,10 +579,16 @@ def test_wednesday_workflow_uses_canonical_visual_and_r1_publish_surfaces():
 
 
 def test_exactly_one_authoritative_scheduled_wednesday_publisher():
-    owners = []
-    for name in ("wednesday_golden.yml", "research_generate_and_publish.yml"):
-        if any(_fires_on(cron, "3") for cron in _schedule(_workflow(name))):
-            owners.append(name)
+    # Over every workflow that can publish, not a named pair (#326). The pair
+    # was written when the legacy multiday publisher was the only other
+    # candidate; it is deleted now, and a list of two names could not have
+    # noticed a third workflow picking the day up. The question is the same
+    # one — who fires on Wednesday — asked of everything that could.
+    owners = sorted(
+        name
+        for name in _publishing_workflow_names()
+        if any(_fires_on(cron, "3") for cron in _schedule(_workflow(name)))
+    )
     assert owners == ["wednesday_golden.yml"]
 
     # Daily discovery still fires, but its optional non-canonical publication
@@ -558,15 +598,19 @@ def test_exactly_one_authoritative_scheduled_wednesday_publisher():
     assert "export NB_RESEARCH_PUBLISH_ENABLED=false" in daily
 
 
-def test_legacy_owners_remove_only_wednesday_and_preserve_other_days():
-    # Friday's own workflow is gone (owner decision, #326): `scheduled_publish.yml`
-    # was the legacy ungated six-channel publisher. What this test still pins is
-    # that removing Wednesday's legacy owner left the other days alone — the
-    # Friday/Sunday pair below, and the Friday configuration the surviving
-    # `scripts/scheduled_publish.py` reads.
-    assert _schedule(_workflow("research_generate_and_publish.yml")) == [
-        "0 7 * * 5,0"
-    ]
+def test_removing_the_legacy_owners_left_the_other_days_alone():
+    # Both legacy publishers are gone now (owner decisions, #326):
+    # `scheduled_publish.yml` in PR #380, and `research_generate_and_publish.yml`
+    # — the Friday/Sunday multiday publisher — with this change. What this test
+    # pins is that their removal did not disturb the other days: the Friday
+    # configuration the surviving `scripts/scheduled_publish.py` reads, and the
+    # Tuesday/Thursday stream.
+    #
+    # The deleted workflow's own `0 7 * * 5,0` schedule is no longer asserted
+    # here; there is no file to assert it of. That Friday and Sunday now have
+    # no scheduled publisher is the intended consequence of the deletion, and
+    # `test_no_workflow_quietly_inherited_friday_or_sunday` below is what keeps
+    # it from being inherited by accident.
     schedule = yaml.safe_load(Path("config/schedule.yaml").read_text())["schedule"]
     assert schedule["days"] == ["friday"]
     # #224 moved the minute off the top of the hour, where GitHub delays
@@ -580,6 +624,25 @@ def test_legacy_owners_remove_only_wednesday_and_preserve_other_days():
     assert "wednesday" not in Path(
         ".github/workflows/visibility_publish.yml"
     ).read_text().lower()
+
+
+def test_no_workflow_quietly_inherited_friday_or_sunday():
+    """The deletion removed Friday/Sunday publishing; nothing may pick it up.
+
+    #326, owner decision: `research_generate_and_publish.yml` remained only
+    because deleting it stranded safety assertions, "not because the legacy
+    Friday/Sunday publishing path is still desired". So the days are meant to
+    be unowned — and an unowned day is only a decision for as long as nobody
+    silently takes it. This is the test that would catch that.
+    """
+
+    for day, label in (("5", "Friday"), ("0", "Sunday"), ("7", "Sunday")):
+        owners = sorted(
+            name
+            for name in _publishing_workflow_names()
+            if any(_fires_on(cron, day) for cron in _schedule(_workflow(name)))
+        )
+        assert owners == [], f"{label} is scheduled again, by {owners}"
 
 
 # #224: identified by the cron that fired, then allowed to run late for as
@@ -685,11 +748,11 @@ def test_wednesday_consumption_is_visible_to_other_canonical_selectors(tmp_path)
     published.write_text("wednesday-case\n")
 
     assert select_eligible_signal._load_candidates(active, published) == []
-    for workflow_name in (
-        "monday_publish.yml",
-        "research_generate_and_publish.yml",
-        "wednesday_golden.yml",
-    ):
+    # Every surviving canonical publisher, derived (#326): the deleted
+    # `research_generate_and_publish.yml` was the third name here.
+    from tests.publishing_workflows import publishing_workflows
+
+    for workflow_name in publishing_workflows():
         assert "data/research/published_signal_ids.txt" in Path(
             ".github/workflows", workflow_name
         ).read_text()

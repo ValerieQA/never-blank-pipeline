@@ -174,8 +174,11 @@ but it would not catch the partial-failure republication it was built for.
 
 `scripts/ci/persist_publication_markers.sh` is the whole seam, wired into every
 workflow that can publish: `monday_publish.yml`, `wednesday_golden.yml`,
-`research_generate_and_publish.yml`, `visibility_publish.yml`,
-`scheduled_publish.yml` and `daily_signal_research.yml`.
+`visibility_publish.yml` and `daily_signal_research.yml`. Two of the original
+six are gone — `scheduled_publish.yml` (#326, PR #380) and
+`research_generate_and_publish.yml` (#326) — and the list is kept current by
+`PUBLISHING_WORKFLOWS` in `tests/test_287_marker_durability.py`, which fails if
+a workflow that can publish does not persist the markers.
 
 It is its own step, under `always()`, and that is the point. The existing
 "mark signal as published" commits are guarded by `success()`, so a run whose
