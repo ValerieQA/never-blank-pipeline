@@ -23,14 +23,16 @@ the surviving publishing workflows actually use, and nothing more:
   nobody proved is a rejection — the alternative's value is not knowable from
   the workflow, so the proof has to live beside its emitter.
 
-What containment means here, exactly, and its one limit: every entry resolves
-under ``reports/content_packages/`` and names a single signal's run namespace or
-its generated package. It does **not** prove that a *signal id* is itself free of
-traversal — ``scripts/streams/run_first_valid.py`` interpolates ids without a
-charset guard, which is production code this slice may not change.
-:func:`tests.test_story21_hosted_evidence.test_the_evidence_emitter_builds_only_canonical_entries`
-pins the guarantee that does hold, and the gap is reported on #326 rather than
-hidden behind a test that would read as proving more than it does.
+What containment means here, exactly: every entry resolves under
+``reports/content_packages/`` and names a single signal's run namespace or its
+generated package — and the signal that names it is one the run attempted, so an
+id fixed when the workflow was written is refused along with a traversing one.
+
+The second half of that is the producer's, because a step output's value is not
+in the workflow: ``_emit_evidence_paths`` validates every id as one safe path
+segment before building a path, which is what makes
+:data:`PROVEN_OUTPUTS` an entry rather than an assumption. Both halves are
+tested in :mod:`tests.test_story21_hosted_evidence`.
 """
 
 from __future__ import annotations
@@ -72,6 +74,12 @@ _STEP_OUTPUT = re.compile(r"^steps\.(?P<step>[A-Za-z0-9_-]+)\.outputs\.(?P<name>
 #: Step outputs whose emitter this repository proves canonical, and where the
 #: proof is. An output absent from here is rejected: a value the workflow cannot
 #: state must be proved where it is produced, or it is not proved at all.
+#:
+#: The proof for ``evidence_paths`` is two things in its emitter: every line is
+#: built from the packages root and one signal id, and every id is validated as
+#: one safe path segment first — so a traversing or glob-shaped id emits nothing
+#: rather than a path outside the namespace. Adding an entry here means doing
+#: that work beside the new emitter, not widening this dict.
 PROVEN_OUTPUTS = {
     "evidence_paths": "scripts/streams/run_first_valid.py::_emit_evidence_paths",
 }

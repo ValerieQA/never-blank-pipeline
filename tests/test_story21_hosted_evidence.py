@@ -261,11 +261,10 @@ def test_the_evidence_emitter_builds_only_canonical_entries(tmp_path, monkeypatc
     its run namespace and its generated package: both under
     ``reports/content_packages/``, both keyed by the signal id.
 
-    **The limit, stated rather than implied:** the emitter interpolates the
-    signal id without a charset guard, so an id containing ``..`` would escape.
-    Guarding it is a change to production code, which this slice may not make;
-    the finding is reported on #326. What is proved here is the shape for a
-    well-formed id, which is the guarantee that exists today.
+    The ids are validated as one safe path segment first, so the shapes below
+    are the only ones it can produce — see
+    :func:`test_the_emitter_refuses_an_id_that_is_not_one_safe_path_segment`,
+    which is the half that makes ``PROVEN_OUTPUTS`` honest.
     """
 
     from scripts.streams import run_first_valid
@@ -353,3 +352,109 @@ def test_the_evidence_contract_needs_no_production_code(workflow):
     step = _evidence(workflow)
     assert "run" not in step  # no script of its own
     assert step["uses"].startswith("actions/upload-artifact@")
+
+
+@pytest.mark.parametrize(
+    "signal_id",
+    [
+        pytest.param("..", id="traversal"),
+        pytest.param("../../etc", id="traversal-with-separators"),
+        pytest.param("a/b", id="forward-slash"),
+        pytest.param("a\\b", id="backslash"),
+        pytest.param("has space", id="whitespace"),
+        pytest.param("two\nlines", id="newline-a-second-path-entry"),
+        pytest.param("tab\tsep", id="tab"),
+        pytest.param("$(whoami)", id="command-substitution"),
+        pytest.param("glob*", id="glob"),
+        pytest.param("q?", id="single-char-glob"),
+        pytest.param("~root", id="home-expansion"),
+        pytest.param("/absolute", id="absolute-path"),
+        pytest.param(".env", id="dotfile"),
+        pytest.param("", id="empty"),
+        pytest.param("  ", id="only-whitespace"),
+        pytest.param("sig;rm -rf /", id="shell-separator"),
+        pytest.param("sig\x00null", id="nul-byte"),
+    ],
+)
+def test_the_emitter_refuses_an_id_that_is_not_one_safe_path_segment(
+    signal_id, tmp_path, monkeypatch
+):
+    """The producer half of the contract (#326, #388 review).
+
+    ``PROVEN_OUTPUTS`` trusts ``evidence_paths`` because *this* is true: an id
+    that is not one safe path segment produces no path at all. Without it the
+    helper would be trusting an output that could carry
+    ``reports/content_packages/../../etc/runs/``.
+
+    Refusal is **total** — not a filtered subset. A partial list would look
+    like a complete one, and the run's own account of what it attempted would
+    be silently wrong.
+    """
+
+    from scripts.streams import run_first_valid
+
+    output = tmp_path / "github_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setenv("NB_PACKAGES_DIR", "reports/content_packages")
+
+    # Beside a perfectly good id, so this proves refusal and not merely that a
+    # malformed id yields nothing of its own.
+    run_first_valid._emit_evidence_paths(["sig-ok", signal_id])
+
+    emitted = output.read_text() if output.is_file() else ""
+    assert "evidence_paths" not in emitted
+    assert "sig-ok" not in emitted
+
+
+def test_the_emitter_refuses_rather_than_raising(tmp_path, monkeypatch):
+    """And the refusal may not become a failed run.
+
+    This runs inside ``record``, which writes the attempts audit, and the
+    driver's exit code decides whether the workflow's ``success()``-guarded
+    ``Mark signal as published`` step records a publication that already
+    happened. An exception here would let an evidence concern suppress
+    publication bookkeeping — the one thing
+    ``test_evidence_preservation_cannot_suppress_publication_bookkeeping``
+    forbids — so the dangerous outcome is closed while the irreversible one is
+    kept.
+    """
+
+    from scripts.streams import run_first_valid
+
+    output = tmp_path / "github_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setenv("NB_PACKAGES_DIR", "reports/content_packages")
+
+    # Returns normally. Any exception fails this test by propagating.
+    assert run_first_valid._emit_evidence_paths(["../../etc"]) is None
+
+
+def test_the_ids_this_repository_actually_carries_are_all_accepted():
+    """And the guard is the existing convention, not a new restriction.
+
+    Every signal id in `data/research/` must pass, or this hardening would be
+    refusing ids production already uses. 145 of them at the time of writing,
+    all `[A-Za-z0-9_-]+` — which is the class the workflows' own dispatch
+    guards have always stated.
+    """
+
+    import json
+
+    from scripts.streams.run_first_valid import _unsafe_signal_ids
+
+    ids: list[str] = []
+    active = ROOT / "data" / "research" / "signals_active.jsonl"
+    if active.is_file():
+        for line in active.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                ids.append(str(json.loads(line).get("SIGNAL_ID", "")))
+    published = ROOT / "data" / "research" / "published_signal_ids.txt"
+    if published.is_file():
+        ids += [
+            item.strip()
+            for item in published.read_text(encoding="utf-8").splitlines()
+            if item.strip()
+        ]
+
+    assert ids, "no signal ids to check; this test would pass vacuously"
+    assert _unsafe_signal_ids(ids) == []
