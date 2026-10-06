@@ -453,10 +453,12 @@ def test_the_legacy_scheduler_kept_friday_after_independent_streams_split_out():
     assert schedule["timezone"] == "America/New_York"
 
 
-def test_the_canonical_multiday_workflow_kept_friday_and_sunday():
-    crons = _schedule(_workflow("research_generate_and_publish.yml"))
-
-    assert crons == ["0 7 * * 5,0"]
+# #326: `test_the_canonical_multiday_workflow_kept_friday_and_sunday` stood
+# here. Its whole subject was the deleted `research_generate_and_publish.yml`
+# and the Friday/Sunday schedule it carried, so there is nothing left for it to
+# assert. That those days are now unowned — and must stay unowned until an
+# owner decision says otherwise — is held by
+# `tests/test_wednesday_golden.py::test_no_workflow_quietly_inherited_friday_or_sunday`.
 
 
 def test_the_tuesday_thursday_stream_is_untouched():

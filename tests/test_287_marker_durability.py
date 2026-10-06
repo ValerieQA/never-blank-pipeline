@@ -34,10 +34,19 @@ SCRIPT = Path("scripts/ci/persist_publication_markers.sh").resolve()
 STORE_PATH = "data/editorial/publication_markers"
 
 #: Every workflow that can publish, and whether it takes a dry-run input.
+#:
+#: Deliberately **not** derived from "runs the canonical entrypoint" (#326):
+#: this set is wider, because the marker store is written by legacy publishers
+#: too — `visibility_publish.yml` and `daily_signal_research.yml` never touch
+#: the canonical entrypoint and can still publish. Narrowing it to the canonical
+#: set would quietly stop checking them.
+#:
+#: `research_generate_and_publish.yml` was removed from this list when the
+#: workflow itself was deleted (#326). Its share of the invariant did not move
+#: anywhere: the rule is "every workflow that can publish", and it no longer can.
 PUBLISHING_WORKFLOWS = {
     "monday_publish.yml": True,
     "wednesday_golden.yml": True,
-    "research_generate_and_publish.yml": True,
     "visibility_publish.yml": True,
     "daily_signal_research.yml": False,
 }

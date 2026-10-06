@@ -187,6 +187,20 @@ def test_discovery_never_marks_a_signal_published(source: str):
 
 
 def test_the_canonical_publish_path_is_untouched():
-    canonical = (ROOT / ".github" / "workflows" / "research_generate_and_publish.yml").read_text()
-    assert "scripts/generate_and_publish.py --signal-id" in canonical
-    assert "data/research/published_signal_ids.txt" in canonical
+    """Consumption stays with the canonical publishers, whichever they are.
+
+    #326: this used to read the deleted `research_generate_and_publish.yml`.
+    The property is not about that file — it is that discovery does not consume
+    a signal *and* that the canonical path still does. So it is asked of every
+    workflow that runs the canonical entrypoint.
+    """
+
+    from tests.publishing_workflows import ENTRYPOINT, publishing_workflows
+
+    for workflow in publishing_workflows():
+        canonical = (ROOT / ".github" / "workflows" / workflow).read_text()
+        assert ENTRYPOINT in canonical
+        assert "data/research/published_signal_ids.txt" in canonical, (
+            f"{workflow} runs the canonical entrypoint and consumes nothing; "
+            "a published signal would stay eligible for the next run"
+        )

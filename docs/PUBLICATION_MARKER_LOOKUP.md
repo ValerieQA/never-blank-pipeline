@@ -21,7 +21,7 @@ checks that decide *before* them answered from somewhere else:
 |---|---|---|
 | `find_prior_wix_publication` / `find_prior_linkedin_publication` | `packages_dir/<signal_id>/runs/*/publication_results.json` only — nothing in a fresh CI checkout (§1.1) | the marker store first; this checkout's run directories only when the authority has proven nothing was published |
 | `select_eligible_signal.py`, including an explicitly dispatched `--signal-id` | `data/research/published_signal_ids.txt` only — written only when a whole job succeeded | the same list **and** the marker store |
-| the research workflow's signal selection, including an explicitly dispatched `signal_id` | an inline heredoc over `data/research/published_signal_ids.txt` only | `scripts/streams/resolve_research_signal.py` — the same list **and** the marker store |
+| the research workflow's signal selection, including an explicitly dispatched `signal_id` | an inline heredoc over `data/research/published_signal_ids.txt` only | `scripts/streams/resolve_research_signal.py` — the same list **and** the marker store (the workflow this row describes was deleted in #326; see below) |
 
 `src/publishing/idempotency.py` is now "has this publication already
 happened?", with the authority in front of the evidence reader it used to be:
@@ -125,6 +125,13 @@ done here.
 ## The research workflow's selector
 
 `SATISFIED`.
+
+> **#326.** The workflow this section is about,
+> `.github/workflows/research_generate_and_publish.yml`, has been deleted. The
+> section is kept as the record of why the authority-aware selector exists; the
+> surviving selecting path is Monday's `scripts/streams/select_eligible_signal.py`,
+> which asks the same authority. `scripts/streams/resolve_research_signal.py`
+> remains in the repository with its unit tests and now has no workflow caller.
 
 `.github/workflows/research_generate_and_publish.yml` used to auto-select a
 signal in an inline Python heredoc that read `published_signal_ids.txt` and
