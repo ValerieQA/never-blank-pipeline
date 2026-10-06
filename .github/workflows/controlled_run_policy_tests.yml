@@ -1,0 +1,33 @@
+name: Controlled Run — Policy Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/controlled_run/**"
+      - "tests/test_controlled_run_policy.py"
+      - ".github/workflows/controlled_run_policy_tests.yml"
+  pull_request:
+    paths:
+      - "src/controlled_run/**"
+      - "tests/test_controlled_run_policy.py"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --quiet pytest
+
+      - name: Run Story 1 policy tests
+        run: pytest tests/test_controlled_run_policy.py -v --tb=short
