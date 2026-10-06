@@ -65,7 +65,10 @@ from src.editorial_core.text_check import (
 )
 from src.artifacts import resolve_run_dir
 from src.intake.content_assignment import from_jsonl_signal
-from src.research.lifecycle import build_research_request
+from src.research.lifecycle import (
+    build_research_request,
+    case_source_directives,
+)
 from src.research.provider import (
     CompleteResearchResult,
     NormalizedResearchArtifact,
@@ -1121,6 +1124,11 @@ def canonical_run(
     barrier: Optional[Barrier] = None,
     signal_id: str = "sig-351-exec",
     library: Any = _KEEP,
+    signal_extra: Optional[Mapping[str, Any]] = None,
+    research: Any = None,
+    evidence_judgment: Any = None,
+    boundary: Optional[Boundary] = None,
+    client_dir: Path = CLIENT_DIR,
 ) -> CanonicalRun:
     """Assemble one canonical run: production configuration, authored answers.
 
@@ -1144,7 +1152,7 @@ def canonical_run(
     configuration = load_business_strategy_configuration()
     _, role = resolve_editorial_role(configuration, ROLE_ID)
     golden = golden_engine_configuration(
-        register_dir=REGISTER_DIR, client_dir=CLIENT_DIR, role=role
+        register_dir=REGISTER_DIR, client_dir=client_dir, role=role
     )
     if library is not _KEEP:
         # The one soft input §3 lets degrade. Overridable here so a run with no
@@ -1164,6 +1172,7 @@ def canonical_run(
         "EDITORIAL_DOMAIN_OUTCOME": "admitted",
         "EDITORIAL_RISK": golden.fit_rules.rules[1].admits[0],
         "EDITORIAL_RISK_OUTCOME": "admitted",
+        **dict(signal_extra or {}),
     }
     run_context = canonical_run_context(signal_id, NOW)
     assignment = from_jsonl_signal(
@@ -1172,7 +1181,15 @@ def canonical_run(
         strategy_version=run_context.strategy_version,
     )
     request = build_research_request(
-        run_context, assignment, signal, context.research, now=NOW
+        run_context,
+        assignment,
+        signal,
+        context.research,
+        now=NOW,
+        # As the canonical entrypoint builds it: the case's own source reaches
+        # the evidence path, and a signal that states none adds no directive, so
+        # every scenario that does not state one builds the request it did before.
+        extra_directives=case_source_directives(signal),
     )
     packages_dir = tmp_path / "content_packages"
     legacy_run_dir = resolve_run_dir(packages_dir, signal_id, run_context.run_id)
@@ -1190,7 +1207,7 @@ def canonical_run(
     ledger = Ledger()
     bound = {
         "material": Material(ledger),
-        "boundary": Boundary(ledger),
+        "boundary": boundary or Boundary(ledger),
         "anchor": Anchor(ledger),
         "strategy": Strategy(ledger),
         "ranking": Ranking(ledger),
@@ -1211,9 +1228,9 @@ def canonical_run(
         )
     seams = GoldenEngineSeams(
         transports=GoldenEngineTransports(**bound),
-        research=Research(ledger, identity=strategy_view.identity),
+        research=research or Research(ledger, identity=strategy_view.identity),
         eligibility=Eligibility(ledger),
-        evidence_judgment=EvidenceJudgment(ledger),
+        evidence_judgment=evidence_judgment or EvidenceJudgment(ledger),
         relevance=DecisionLensEvaluator(
             Lens(ledger),
             DecisionLensInstructions.load(DEFAULT_INSTRUCTIONS_PATH),

@@ -73,6 +73,9 @@ from src.editorial_core.arp import (
     StateCode,
 )
 from src.editorial_core.evidence_core import (
+    AUTHORITY_DIRECTIVE_PREFIX,
+    AuthorityPolicy,
+    AuthorityState,
     EvidenceClaim,
     EvidenceCore,
     EvidenceCoreError,
@@ -94,6 +97,7 @@ from src.editorial_core.material_features import (
 from src.editorial_core.relevance_screen import RequestedGapKind
 from src.editorial_core.signal_selection import CallBudget
 from src.research.assessment import EvidenceAssessmentError, assess_artifact
+from src.research.lifecycle import authority_directives, authoritative_source_ids
 from src.research.evidence import (
     Contradiction,
     EvidenceDisposition,
@@ -369,6 +373,39 @@ def gap_id(core_id: str, index: int) -> str:
     return f"gap-{core_id}-{index}"
 
 
+#: What an unestablished primary authority blocks. S-04's, because that is the
+#: stage that decides what the run may say: a claim held at the ladder's bottom
+#: is a claim S-04 degrades or skips around, and a gap that blocked nothing
+#: would not be opened at all (§1: "only gaps that block a decision").
+_AUTHORITY_BLOCKS: Final[str] = (
+    "the claim cannot read as verified until its responsible authority is "
+    "established"
+)
+
+
+def _claims_owing_an_authority(
+    core: EvidenceCore,
+) -> tuple[EvidenceClaim, ...]:
+    """The claims whose required authority this core has not established.
+
+    Only ``REQUIRED_UNAVAILABLE``: the party is named, so there is something to
+    look up. ``UNDETERMINED`` names nobody — a gap would carry no query and the
+    round would search for a blank — and ``NOT_REQUIRED`` owes nothing. Both of
+    those stay capped by :func:`_claim_ceiling` without a round being spent on
+    a search that could not be aimed.
+
+    Code's, and from the core alone: the claim already carries the state S-01
+    resolved, so nothing is re-judged and no model is asked again.
+    """
+
+    return tuple(
+        claim
+        for claim in core.evidence_claims
+        if claim.authority.state is AuthorityState.REQUIRED_UNAVAILABLE
+        and (claim.authority.responsible or "").strip()
+    )
+
+
 def open_gaps(
     *,
     core: EvidenceCore,
@@ -417,6 +454,25 @@ def open_gaps(
                     blocks=GapBlocks(note.blocks.stage, note.blocks.decision),
                 ),
                 note.refs,
+            )
+        )
+    for claim in _claims_owing_an_authority(core):
+        index += 1
+        responsible = claim.authority.responsible or ""
+        opened.append(
+            (
+                Gap(
+                    gap_id=gap_id(core.core_id, index),
+                    kind=GapKind.EVIDENCE,
+                    description=(
+                        f"{responsible} is the responsible primary authority "
+                        f"for {claim.evidence_claim_id} and no source retrieved "
+                        "from a lookup aimed at it is in the core"
+                    ),
+                    blocks=GapBlocks("S-04", _AUTHORITY_BLOCKS),
+                    search_directives=authority_directives((responsible,)),
+                ),
+                (claim.evidence_claim_id,),
             )
         )
     return tuple(
@@ -499,6 +555,10 @@ def enrich(
     client_ceiling: Optional[Strength] = None,
     approved_positions: Sequence[str] = (),
     budget: Optional[CallBudget] = None,
+    #: The client's evidence policy, as S-01 received it. Carried so that a
+    #: round rebuilding a claim rebuilds it under the same requirement — and
+    #: judges any new claim against the same client conditions.
+    policy: Optional[AuthorityPolicy] = None,
 ) -> Enrichment:
     """Close what blocks a decision, and stop with a recorded reason.
 
@@ -551,6 +611,7 @@ def enrich(
             client_ceiling=client_ceiling,
             approved_positions=approved_positions,
             budget=budget,
+            policy=policy,
         )
         rounds.append(outcome.record)
         outcomes.extend(outcome.outcomes)
@@ -672,6 +733,7 @@ def _round(
     client_ceiling: Optional[Strength],
     approved_positions: Sequence[str],
     budget: Optional[CallBudget],
+    policy: Optional[AuthorityPolicy] = None,
 ) -> _RoundOutcome:
     """Search, re-assess, recompute — and commit all three or none of them."""
 
@@ -679,7 +741,9 @@ def _round(
     signal_id = state.core.signal_ids[0]
     try:
         directives = _directives(searched)
-        search = _search_request(request, directives, now)
+        search = _search_request(
+            request, directives, now, authority=_authority_lookups(searched)
+        )
     except EnrichmentError as exc:
         # This module's own refusal, so it is this module's own words.
         return _failed_round(number, gap_ids, f"no search could be built: {exc}")
@@ -727,7 +791,7 @@ def _round(
                 stop=StopReason.BUDGET_EXHAUSTED,
             )
 
-    assessor = ExtendedEvidenceAssessor(transport, ladder=ladder)
+    assessor = ExtendedEvidenceAssessor(transport, ladder=ladder, policy=policy)
     try:
         assessed = assess_artifact(artifact, transport=assessor)
     except EvidenceAssessmentError as exc:
@@ -741,7 +805,17 @@ def _round(
 
     try:
         candidate, added = _merged(
-            state.core, assessed, assessor, ladder, client_ceiling
+            state.core,
+            assessed,
+            assessor,
+            ladder,
+            client_ceiling,
+            policy=policy,
+            # The round's own retrieval record: a source this search returned
+            # from an authority lookup is what can close the gap that opened it.
+            authoritative=authoritative_source_ids(
+                getattr(result, "source_outcomes", ()) or ()
+            ),
         )
     except EvidenceCoreError as exc:
         return _failed_round(
@@ -910,10 +984,31 @@ def _directives(searched: Sequence[Gap]) -> tuple[SourceDirective, ...]:
     )
 
 
+def _authority_lookups(searched: Sequence[Gap]) -> tuple[SourceDirective, ...]:
+    """The authority lookups the open gaps carry, each once.
+
+    Only the directives built by :func:`authority_directives` — a gap's
+    ``search_directives`` also accumulates the queries earlier rounds sent it,
+    and re-sending those would spend the request's bound on material this round
+    already has. Kept out of :func:`_directives` because that one is 1:1 with
+    the gaps it was given and the round reads the pairing to decide which gap
+    was actually asked about.
+    """
+
+    seen: dict[str, SourceDirective] = {}
+    for gap in searched:
+        for directive in gap.search_directives:
+            if directive.directive_id.startswith(AUTHORITY_DIRECTIVE_PREFIX):
+                seen.setdefault(directive.directive_id, directive)
+    return tuple(seen.values())
+
+
 def _search_request(
     request: ResearchProviderRequest,
     directives: Sequence[SourceDirective],
     now: datetime,
+    *,
+    authority: Sequence[SourceDirective] = (),
 ) -> ResearchProviderRequest:
     """The run's own research request, re-aimed at the open gaps.
 
@@ -931,6 +1026,12 @@ def _search_request(
     is a source the client prohibited and the round would research anyway. A
     client whose exclusions leave room for no gap query at all has asked for a
     round that cannot be searched, and that is refused rather than sent.
+
+    ``authority`` are the bounded primary-authority lookups the open gaps
+    carry. They sit between the gap queries and the client's preferred sources:
+    ahead of ``preferred`` because a gap that was opened *because* an authority
+    is missing is what this round is for, and behind the queries because the
+    bound must never cut the gap's own search.
     """
 
     excluded = tuple(
@@ -958,7 +1059,10 @@ def _search_request(
             retrieved_not_before=request.freshness.retrieved_not_before,
             allow_open_discovery=True,
         ),
-        source_directives=excluded + (tuple(directives) + preferred)[:room],
+        source_directives=(
+            excluded
+            + (tuple(directives) + tuple(authority) + preferred)[:room]
+        ),
         requested_at=now,
     )
 
@@ -974,8 +1078,19 @@ def _merged(
     assessor: ExtendedEvidenceAssessor,
     ladder: StrengthLadder,
     client_ceiling: Optional[Strength],
+    *,
+    policy: Optional[AuthorityPolicy] = None,
+    authoritative: Sequence[str] = (),
 ) -> tuple[EvidenceCore, _Added]:
     """The next core version: everything the core held, plus what is new.
+
+    The client's authority policy is carried into the rebuild rather than left
+    at its default, and that is not a detail: the round's claims are rebuilt by
+    the S-01 builder, so a merge that did not pass the policy on would hand
+    every enriched claim back as ``NOT_REQUIRED`` and uncapped — enrichment
+    would launder away the very ceiling the missing authority imposed. What a
+    round *can* change is the other half: a lookup that returned the authority
+    makes the claim ``REQUIRED_ESTABLISHED`` on its own evidence.
 
     The round's material is turned into core entities by the S-01 builder, so
     observations are built from support references and attributed by code there
@@ -992,6 +1107,8 @@ def _merged(
         core_id=core.core_id,
         ladder=ladder,
         client_ceiling=client_ceiling,
+        policy=policy or AuthorityPolicy(),
+        authoritative_source_ids=authoritative,
         version=core.version + 1,
     )
     known_claims = {item.evidence_claim_id for item in core.evidence_claims}

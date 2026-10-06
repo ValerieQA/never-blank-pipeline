@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Sequence
 
 from src.artifacts import load_research_json, write_research_json
 from src.intake import ContentAssignment
@@ -30,6 +30,8 @@ from src.research.provider import (
     ProviderFailure,
     ProviderFailureCode,
     ProviderInvocation,
+    RetrievalStatus,
+    SourceRetrievalOutcome,
     execute_research,
 )
 from src.run import RunContext
@@ -111,11 +113,138 @@ def build_source_directives(signal: dict) -> tuple[SourceDirective, ...]:
     return tuple(sorted(directives, key=lambda item: order[item.priority]))
 
 
+def case_source_directives(signal: dict) -> tuple[SourceDirective, ...]:
+    """The case's own source, offered to the **evidence** path.
+
+    `SOURCE_FOR_CASE` is a source associated with the case and therefore a
+    possible evidence input — nothing more. Being non-empty proves nothing, and
+    for a signal discovered secondhand it is often the discovery URL repeated,
+    which is why a duplicate produces no directive. Whether it turns out to be
+    the responsible authority is settled by an authority lookup and by
+    ``resolve_claim_authority``, never by this translation.
+
+    Deliberately **not** folded into :func:`build_source_directives`. That
+    builder serves every existing caller, and a PREFERRED source a provider
+    cannot retrieve degrades the whole result to ``PARTIAL`` — so adding one
+    there would have changed the outcome classification of every legacy run
+    whose case source differs from its discovery URL. A caller that wants the
+    case source asks for it.
+    """
+
+    source_url = str(signal.get("SOURCE_URL") or "").strip()
+    value = str(signal.get("SOURCE_FOR_CASE") or "").strip()
+    if not value or value == source_url:
+        return ()
+    return (
+        SourceDirective(
+            directive_id="case-source-1",
+            priority=SourcePriority.PREFERRED,
+            kind=(
+                SourceDirectiveKind.URL
+                if "://" in value
+                else SourceDirectiveKind.DOMAIN
+            ),
+            value=value,
+            material=False,
+        ),
+    )
+
+
+def authority_directives(
+    responsible: Sequence[str],
+) -> tuple[SourceDirective, ...]:
+    """Bounded lookups aimed at named responsible authorities.
+
+    ``DOMAIN``-scoped and ``PREFERRED``: "this organisation's own site", which
+    is a narrow lookup rather than open discovery — `ALLOW_OPEN_DISCOVERY` is
+    untouched and stays off. Each directive id carries
+    ``AUTHORITY_DIRECTIVE_PREFIX``, which is how a source that comes back is
+    later recognised as having established an authority: because a lookup aimed
+    at one returned it, never because its URL reads as official.
+
+    **The Engine does not decide who is responsible.** It is given the names —
+    identified on the assessment call that already runs — and builds the
+    lookup. A name it was not given produces no directive and no guess.
+    """
+
+    from src.editorial_core.evidence_core import AUTHORITY_DIRECTIVE_PREFIX
+
+    seen: list[str] = []
+    for name in responsible:
+        value = str(name or "").strip()
+        if value and value not in seen:
+            seen.append(value)
+    return tuple(
+        SourceDirective(
+            directive_id=f"{AUTHORITY_DIRECTIVE_PREFIX}{index}",
+            priority=SourcePriority.PREFERRED,
+            kind=(
+                SourceDirectiveKind.URL
+                if "://" in value
+                else SourceDirectiveKind.DOMAIN
+            ),
+            value=value,
+            material=False,
+        )
+        for index, value in enumerate(seen, 1)
+    )
+
+
+def authoritative_source_ids(
+    outcomes: Sequence[SourceRetrievalOutcome],
+) -> tuple[str, ...]:
+    """The sources an authority-aimed lookup actually returned.
+
+    Read from the retrieval outcomes, which are the only record of *why* a
+    source is in an artifact: ``SourceRetrievalOutcome`` names the directive
+    that asked for it. A source is authoritative here on one ground and no
+    other — a directive carrying
+    :data:`~src.editorial_core.evidence_core.AUTHORITY_DIRECTIVE_PREFIX` asked
+    for it and the provider returned it. Not that its URL reads official, not
+    that the client named it, not that it is the only source on the claim.
+
+    Empty is the ordinary case: no authority lookup ran, or it ran and came
+    back with nothing. Both are facts about this run, and
+    ``resolve_claim_authority`` distinguishes them from the claim's own side.
+
+    Takes the outcomes rather than a result or an envelope because both callers
+    hold a different container of the same record — S-01 reads the persisted
+    envelope it references by digest, S-03's round holds the provider result in
+    hand — and the rule for reading them is one rule.
+    """
+
+    from src.editorial_core.evidence_core import AUTHORITY_DIRECTIVE_PREFIX
+
+    found: list[str] = []
+    for outcome in outcomes:
+        if (
+            outcome.status is RetrievalStatus.RETRIEVED
+            and outcome.source_id
+            and (outcome.directive_id or "").startswith(AUTHORITY_DIRECTIVE_PREFIX)
+            and outcome.source_id not in found
+        ):
+            found.append(outcome.source_id)
+    return tuple(found)
+
+
 def build_research_request(
     run: RunContext, assignment: ContentAssignment, signal: dict,
     strategy: ResearchStrategyView, *, now: datetime,
+    extra_directives: Sequence[SourceDirective] = (),
 ) -> ResearchProviderRequest:
-    directives = build_source_directives(signal)
+    """The run's research request.
+
+    ``extra_directives`` are directives a caller supplies beside the ones the
+    signal's own fields translate into — today the canonical path's case source
+    (:func:`case_source_directives`). Default empty, so every existing caller
+    builds byte-identically the request it built before: a PREFERRED source a
+    provider cannot retrieve degrades the whole result to ``PARTIAL``, and the
+    canonical path can carry that (Step 2 §1 gives readiness to the ARP, and
+    ``retrieve_evidence_core`` passes ``require_ready=False``) where the legacy
+    gate cannot.
+    """
+
+    directives = build_source_directives(signal) + tuple(extra_directives)
     return ResearchProviderRequest(
         run_id=run.run_id, assignment_id=assignment.assignment_id,
         signal_id=assignment.assignment_id, strategy=strategy,

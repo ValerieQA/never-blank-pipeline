@@ -352,8 +352,14 @@ def _text_list(data: dict, key: str, path: Path) -> tuple[str, ...]:
     return tuple(v.strip() for v in value)
 
 
-def _strip_comments(body: str, path: Path) -> str:
-    """Remove people-only notes; a malformed one must not reach a model."""
+def strip_comments(body: str, path: Path) -> str:
+    """Remove people-only notes; a malformed one must not reach a model.
+
+    Public because the rule belongs to this module — an HTML comment is a note
+    for people in *every* client document — and the Client Contract's own
+    sections are read elsewhere. One implementation, so a comment convention
+    cannot drift between two readers of the same client directory.
+    """
     stripped = _COMMENT.sub("", body)
     if "<!--" in stripped or "-->" in stripped:
         raise ClientContractError(f"{path}: an HTML comment is not closed (`<!--` … `-->`)")
@@ -447,7 +453,7 @@ def _plan(lines: list[str], path: Path) -> tuple[tuple[str, tuple[str, ...]], ..
 def load_stream_contract(path: Path) -> StreamContract:
     raw, text = _read(path)
     data, body = _front_matter(text, path)
-    body = _strip_comments(body, path)
+    body = strip_comments(body, path)
     _require_keys(data, _STREAM_KEYS, path)
     selection = _text(data, "selection", path)
     if selection not in SELECTION_MODES:
@@ -510,7 +516,7 @@ def load_stream_contract(path: Path) -> StreamContract:
 def load_lens(path: Path) -> Lens:
     raw, text = _read(path)
     data, body = _front_matter(text, path)
-    body = _strip_comments(body, path)
+    body = strip_comments(body, path)
     _require_keys(data, _LENS_KEYS, path, optional=_LENS_OPTIONAL_KEYS)
     stages = _text_list(data, "stages", path)
     unknown = sorted(set(stages) - STAGES)
@@ -549,7 +555,7 @@ def load_lens(path: Path) -> Lens:
 def load_shared_list(path: Path) -> SharedList:
     raw, text = _read(path)
     data, body = _front_matter(text, path)
-    body = _strip_comments(body, path)
+    body = strip_comments(body, path)
     _require_keys(data, _LIST_KEYS, path)
     entries: list[str] = []
     for line in body.splitlines():

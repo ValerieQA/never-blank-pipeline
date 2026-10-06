@@ -2,7 +2,7 @@
 lens_id: never-blank-evidence
 version: "1"
 applies_to: [never-blank-monday]
-stages: [selection, writing]
+stages: [writing]
 ---
 
 <!--
@@ -13,6 +13,16 @@ Format: docs/engine/CLIENT_CONTRACTS.md.
 -->
 
 Evidence and source integrity:
+
+<!--
+Owner decision 2026-10-05 (#286 PRIMARY-AUTHORITY-DESIGN-V1): this lens left
+`selection`. Primary-source authority is an evidence/retrieval responsibility,
+and S-00 chooses a candidate before any research is done — so requiring it
+there made the Engine reject admissible signals for work the pipeline had not
+yet had a chance to perform. S-01 and S-03 own retrieval and gap closure, and
+the claim-strength ceiling is where an unestablished authority fails closed.
+The requirement itself is unchanged.
+-->
 
 - Broad topic eligibility does not mean loose factual sourcing: the signal and
   the article must rest on a factual claim, not on rumor.

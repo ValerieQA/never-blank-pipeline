@@ -306,14 +306,26 @@ def test_never_blank_monday_is_governed_by_its_contract_and_six_lenses():
     assert conditional[0].stages == ("writing", "revision")
 
 
-def test_never_blank_evidence_policy_is_a_client_lens_for_selection_and_writing():
+def test_never_blank_evidence_policy_is_a_client_lens_for_writing():
+    """It left `selection` by owner decision, 2026-10-05 (#286, from #308).
+
+    Primary-source authority is an evidence/retrieval responsibility, and
+    `selection` chooses a candidate before any research is done — so requiring
+    it there refused admissible signals for work the pipeline had not yet had a
+    chance to do. The policy itself is unchanged and still a client lens; what
+    moved is the stage that enforces it.
+    """
+
     contracts = contracts_for_role(MONDAY_ROLE, NEVER_BLANK)
     evidence = next(l for l in contracts.lenses if l.lens_id == "never-blank-evidence")
 
-    assert set(evidence.stages) == {"selection", "writing"}
-    assert evidence.text in contracts.selection_requirements
+    assert set(evidence.stages) == {"writing"}
+    assert evidence.text not in contracts.selection_requirements
     assert evidence.text in contracts.for_stage("writing")
+    # The requirement is moved, not weakened: it is still the client's, and it
+    # still says what it said.
     assert "primary authority" in evidence.text
+    assert "does not replace the authoritative source" in evidence.text
 
 
 def test_the_monday_role_takes_purpose_and_selection_from_the_client():

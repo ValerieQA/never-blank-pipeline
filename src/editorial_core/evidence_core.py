@@ -62,8 +62,8 @@ AD-05 and AD-10; ``docs/editorial/architecture/04_STEP3_STORAGE_AND_RUN_TRACE.md
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Collection, Mapping, Sequence
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
@@ -97,7 +97,15 @@ from src.research.evidence import (
     NormalizedSource,
     UncertaintyAssessment,
 )
-from src.research.lifecycle import ResearchGateError, execute_and_persist_research
+from src.research.lifecycle import (
+    ResearchGateError,
+    # Aliased: ``build_evidence_core`` below takes a keyword of the same name,
+    # and a module where one spelling means both the lookup and its result is a
+    # module where the next edit silently calls the wrong one.
+    authoritative_source_ids as retrieved_authority_sources,
+    execute_and_persist_research,
+    load_research_envelope,
+)
 from src.research.provider import ResearchProvider, ResearchProviderRequest
 from src.strategy.execution_context import ConfigurationIdentity
 
@@ -117,6 +125,11 @@ UNASSESSED_SCOPE: Final[str] = (
     "not established: this claim was never assessed against its own support"
 )
 UNASSESSED_RATIONALE: Final[str] = "not assessed: no verdict was recorded"
+
+#: The ``directive_id`` prefix a bounded primary-authority lookup carries.
+#: Code builds these, so a source counts as authoritative because it came back
+#: from a lookup aimed at the authority — never because its URL looks official.
+AUTHORITY_DIRECTIVE_PREFIX: Final[str] = "authority-source-"
 
 
 class EvidenceCoreError(RuntimeError):
@@ -142,6 +155,159 @@ class ObservationKind(str, Enum):
     STATED_POSITION = "stated_position"
     DOCUMENT_FACT = "document_fact"
     OTHER = "other"
+
+
+class AuthorityState(str, Enum):
+    """Whether a responsible primary authority stands behind one claim.
+
+    Owner decision, 2026-10-05 (#286 ``PRIMARY-AUTHORITY-DESIGN-V1``, from the
+    #308 audit). Never an S-00 admission gate: a signal may be *discovered*
+    through secondary reporting, and the authority is established — or not — by
+    the evidence path that can actually go and look.
+
+    Deliberately **not** ``is_third_party_assertion``, which is a property of
+    one observation ("this source is relaying somebody else's claim"). These
+    four are a property of the **claim**: whether an authority is owed, and
+    whether one was established. A source relaying an organisation's own
+    statement and that organisation's own statement can both be third-party
+    assertions about some further thing; only one of them is that
+    organisation's authority.
+    """
+
+    #: The claim has no responsible primary authority — an opinion, a practice,
+    #: an aggregate. No penalty follows.
+    NOT_REQUIRED = "not_required"
+    #: Owed, and a source retrieved from an authority lookup supports it.
+    REQUIRED_ESTABLISHED = "required_established"
+    #: Owed, the responsible party is known, and no authoritative source was
+    #: established. Fails closed: secondary reporting stays context and
+    #: evidence, and cannot make the claim read as verified.
+    REQUIRED_UNAVAILABLE = "required_unavailable"
+    #: Owed, and the responsible party could not be identified with
+    #: confidence — or retrieval itself could not answer. Also fails closed:
+    #: uncertainty is never converted into a factual conclusion.
+    UNDETERMINED = "undetermined"
+
+
+@dataclass(frozen=True, slots=True)
+class AuthorityPolicy:
+    """The client's evidence policy, as the Engine carries it. Two parts.
+
+    ``declared`` is the switch: did this client ask for the primary-authority
+    mechanism at all. ``conditions`` are the client's own words for *when* a
+    claim depends on an authority — carried to the stage that applies them per
+    claim, and never parsed, matched or interpreted here.
+
+    The split exists because the second review of #387 found them conflated: a
+    single run-wide "required" made every claim with a nameable party owe an
+    authority, which is a far broader rule than any client wrote. The Engine
+    now asks the client's question of each claim instead of answering it.
+
+    The default is a client that declared nothing, which owes nothing.
+    """
+
+    declared: bool = False
+    conditions: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.conditions and not self.declared:
+            raise EvidenceCoreError(
+                "an undeclared evidence policy carries conditions; conditions "
+                "say when a requirement applies, and a requirement nobody "
+                "declared never applies"
+            )
+        if self.declared and not self.conditions:
+            # The contract loader refuses this too, which is where a person
+            # sees it. Refused here as well so the state is unrepresentable
+            # rather than merely unproduced: a declared requirement with no
+            # predicate is answered "no" for every claim, which is a rule that
+            # reads as policy and does nothing.
+            raise EvidenceCoreError(
+                "a declared evidence policy states no condition for when it "
+                "applies; a predicate nobody wrote cannot be applied to a "
+                "claim, and answering 'no' for every claim would make a "
+                "declared requirement inert"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class ClaimAuthority:
+    """``E-03``'s authority record: who owes it, and whether it was established.
+
+    It holds the two facts a reader cannot reconstruct and must not guess —
+    the **responsible party**, named by the assessment when the client policy
+    requires one, and the **authoritative source ref**, present only when
+    retrieval actually established it. Discovery provenance is not here: it
+    stays where it already lives, on the research artifact and the claim's own
+    ``source_refs``, so the two can never be conflated by reading one field.
+
+    Authority is never inferred from a URL. A ref appears here only because a
+    source retrieved from an authority lookup carried it.
+    """
+
+    state: AuthorityState
+    #: The entity or category the assessment named as responsible — a **fact
+    #: about the material**, independent of whether policy requires it. It is
+    #: present on ``NOT_REQUIRED`` whenever somebody could be named: "a
+    #: responsible party being nameable does not make one mandatory" (#387,
+    #: second review), and recording the party while recording that nothing is
+    #: owed is what keeps those two readable apart. ``None`` when nobody
+    #: identifiable could confirm the claim, or the assessment did not say.
+    responsible: Optional[str] = None
+    #: The source that established the authority. Present **only** for
+    #: ``REQUIRED_ESTABLISHED``.
+    authoritative_source_ref: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if self.state is AuthorityState.REQUIRED_ESTABLISHED:
+            if not self.responsible or not self.authoritative_source_ref:
+                raise EvidenceCoreError(
+                    "an established authority names both the responsible party "
+                    "and the source that established it"
+                )
+        elif self.authoritative_source_ref:
+            raise EvidenceCoreError(
+                f"state {self.state.value!r} carries an authoritative source "
+                "ref; only an established authority has one, and a ref on an "
+                "unestablished claim is the fabrication this record prevents"
+            )
+        if self.state is AuthorityState.REQUIRED_UNAVAILABLE and not self.responsible:
+            raise EvidenceCoreError(
+                "'required but unavailable' means the responsible party is "
+                "known and the source is not; a claim that cannot name the "
+                "party is UNDETERMINED"
+            )
+
+    @property
+    def verified(self) -> bool:
+        """May this claim read as factually authorized at full strength?"""
+
+        return self.state in (
+            AuthorityState.NOT_REQUIRED,
+            AuthorityState.REQUIRED_ESTABLISHED,
+        )
+
+    def as_entity(self) -> dict[str, Any]:
+        """The authority as the E-04 entity carries it.
+
+        Persisted, because every stage after S-04 reads the written core rather
+        than this object: a state that lived only in memory would be a state the
+        decision never sees, and the three fields are exactly what a reader
+        cannot reconstruct from the claim's own refs.
+        """
+
+        return {
+            "state": self.state.value,
+            "responsible": self.responsible,
+            "authoritative_source_ref": self.authoritative_source_ref,
+        }
+
+    def as_entity(self) -> dict:
+        return {
+            "state": self.state.value,
+            "responsible": self.responsible,
+            "authoritative_source_ref": self.authoritative_source_ref,
+        }
 
 
 class FigureProvenance(str, Enum):
@@ -406,6 +572,13 @@ class EvidenceClaim:
     strength: Strength
     ceiling: Strength
     caveats: tuple[str, ...] = ()
+    #: Whether a responsible primary authority is owed, and whether one was
+    #: established (NB: owner decision 2026-10-05). Defaults to "not owed" so
+    #: that a core built before this record existed stays valid and reads as
+    #: making no authority claim — the honest reading, since nothing asked.
+    authority: ClaimAuthority = field(
+        default_factory=lambda: ClaimAuthority(AuthorityState.NOT_REQUIRED)
+    )
 
     def __post_init__(self) -> None:
         if not self.observation_refs:
@@ -478,6 +651,7 @@ class EvidenceClaim:
             "scope": self.scope,
             "strength": self.strength.as_entity(),
             "ceiling": self.ceiling.as_entity(),
+            "authority": self.authority.as_entity(),
             "usable": self.usable,
         }
 
@@ -712,11 +886,130 @@ class ObservationAssessment(_AssessmentModel):
 
 
 class ClaimAssessment(_AssessmentModel):
-    """One claim's scope and the ladder level its own support reaches."""
+    """One claim's scope, the ladder level its support reaches, and who owes it.
+
+    The two authority fields ride **this** call — the extended assessment S-01
+    already makes — so identifying a responsible authority costs no additional
+    model call. What the model may do is *identify*: whether the claim's core
+    fact has a responsible primary authority, and which entity or domain that
+    is. Everything downstream of that is code's: the state transition, the
+    directive, the evidence linkage and the fail-closed cap.
+    """
 
     evidence_claim_id: str = Field(min_length=1)
     scope: str = Field(min_length=1, max_length=600)
     strength_level: int = Field(ge=1)
+    #: Who could authoritatively confirm this claim's core fact — the entity,
+    #: or the domain it publishes on — when anyone could. ``None`` when nobody
+    #: identifiable could, or when the assessment cannot name them.
+    #:
+    #: A **fact about the claim**, and only that. Being nameable decides
+    #: nothing about whether the claim owes a primary source.
+    responsible_authority: Optional[str] = Field(default=None, max_length=200)
+    #: Does this claim **depend** on a primary authority under the client's own
+    #: conditions, which the request carries verbatim?
+    #:
+    #: Separate from the field above on purpose, and the separation is the
+    #: whole of #387's second review: the two predicates are not equivalent, so
+    #: a claim may name a responsible party and still owe nothing. ``False`` is
+    #: the default and the answer whenever the request carries no client
+    #: conditions — a judgment nobody gave grounds for is not made here.
+    #:
+    #: The **client** owns the predicate and wrote it; the model applies the
+    #: client's words to one claim, as it applies a lens; **code** owns the
+    #: transition, the directive, the linkage and the cap. Nothing in this
+    #: module enumerates a kind of claim.
+    authority_required: bool = False
+
+
+def _claim_ceiling(
+    strength: "Strength",
+    *,
+    client_ceiling: Optional["Strength"],
+    ladder: "StrengthLadder",
+    authority: "ClaimAuthority",
+) -> "Strength":
+    """The lower of the client ceiling, the evidence, and the authority.
+
+    The first two are E-03's existing arithmetic. The third is the fail-closed
+    half of the owner's 2026-10-05 decision: a claim that owes a responsible
+    primary authority and has none established may not read as verified, so it
+    is held at the ladder's bottom — *"what a claim its own evidence does not
+    support reaches, and the floor code applies rather than the model"*.
+
+    Reusing the ladder rather than adding a parallel terminal state is the
+    point. Secondary reporting stays an observation, a context and an
+    attribution; what it cannot do is lift the claim.
+    """
+
+    ceiling = (
+        strength if client_ceiling is None else ladder.lower_of(strength, client_ceiling)
+    )
+    if authority.verified:
+        return ceiling
+    return ladder.lower_of(ceiling, ladder.bottom)
+
+
+def resolve_claim_authority(
+    assessment: Optional["ClaimAssessment"],
+    *,
+    source_refs: Sequence[str],
+    authoritative_source_ids: Collection[str],
+    policy: "AuthorityPolicy" = None,  # type: ignore[assignment]
+) -> "ClaimAuthority":
+    """Decide one claim's authority state. **Code decides; nobody else does.**
+
+    Four inputs, four owners, and keeping them apart is the point:
+
+    * the **client** declares the mechanism and writes the conditions — the
+      ``policy``, which says whether the question is asked at all;
+    * the **assessment** answers two separate things about this claim: who
+      could confirm it (a fact), and whether it depends on an authority under
+      the client's stated conditions (the client's predicate, applied to one
+      claim). A claim may answer the first and not the second;
+    * **retrieval** decides whether an authority was established, by what a
+      lookup aimed at one returned;
+    * **code** — here — owns the transition, the linkage and the result.
+
+    Deliberately dull: no heuristics, no URL inspection, no string similarity,
+    and no inference from one answer to the other. Being nameable is not owing
+    one, which is the defect this signature now makes unrepresentable.
+
+    * the client declared nothing → ``NOT_REQUIRED``;
+    * declared, and this claim does not depend on an authority →
+      ``NOT_REQUIRED``, **carrying the responsible party anyway** because that
+      stays a fact about the material;
+    * depends on one and nobody can be named → ``UNDETERMINED``;
+    * depends on one, named, and one of the claim's own sources came back from
+      an authority lookup → ``REQUIRED_ESTABLISHED``, linked to that source;
+    * depends on one, named, no such source → ``REQUIRED_UNAVAILABLE``.
+
+    ``authoritative_source_ids`` is the set of sources retrieved through a
+    directive whose id carries :data:`AUTHORITY_DIRECTIVE_PREFIX`. That is the
+    whole of "established": a retrieval aimed at the authority returned this
+    source. A URL that merely looks official never qualifies, and neither does
+    ``SOURCE_FOR_CASE`` being non-empty.
+    """
+
+    if policy is None:
+        policy = AuthorityPolicy()
+    if assessment is None:
+        return ClaimAuthority(AuthorityState.NOT_REQUIRED)
+    responsible = (assessment.responsible_authority or "").strip() or None
+    if not policy.declared or not assessment.authority_required:
+        return ClaimAuthority(AuthorityState.NOT_REQUIRED, responsible=responsible)
+    if not responsible:
+        return ClaimAuthority(AuthorityState.UNDETERMINED)
+    established = [ref for ref in source_refs if ref in authoritative_source_ids]
+    if established:
+        return ClaimAuthority(
+            AuthorityState.REQUIRED_ESTABLISHED,
+            responsible=responsible,
+            authoritative_source_ref=established[0],
+        )
+    return ClaimAuthority(
+        AuthorityState.REQUIRED_UNAVAILABLE, responsible=responsible
+    )
 
 
 class ExtendedAssessment(_AssessmentModel):
@@ -780,12 +1073,27 @@ For each claim, return:
         support actually reaches, judged by that level's own wording. Never the
         level the claim would need: a claim that would need level 3 and whose
         support reaches level 1 is level 1.
+  responsible_authority: who could authoritatively confirm this claim's core
+        fact — the organisation, body or issuer whose own record would settle
+        it, as its name or the domain it publishes on. Report who *could*
+        confirm, not whether anything here does. Use null when nobody
+        identifiable could, and null rather than a guess when the claim does
+        not make it clear who that would be; an unnamed authority is a recorded
+        state and a wrong one is a fabricated source.
+  authority_required: does this claim *depend* on a primary authority under
+        `client_evidence_policy` in this request? Judge the claim against those
+        conditions and nothing else. This is a separate question from the one
+        above: a claim can have a nameable responsible party and still not
+        depend on that party's own record. Return false when
+        `client_evidence_policy` is absent or empty — a requirement nobody
+        stated is not one to apply — and false when the conditions do not cover
+        this claim.
 
 Return ONLY one valid JSON object, no text outside it, with exactly these three
 keys:
 
 {"verdicts": [{"evidence_id": "...", "disposition": "accepted | qualified | rejected", "rationale": "one bounded sentence, checkable against the excerpt"}],
- "claims": [{"evidence_claim_id": "...", "scope": "...", "strength_level": 1}],
+ "claims": [{"evidence_claim_id": "...", "scope": "...", "strength_level": 1, "responsible_authority": "example.gov or null", "authority_required": false}],
  "observations": [{"observation_id": "...", "kind": "quote", "is_third_party_assertion": false, "figure": null}]}
 """
 
@@ -820,10 +1128,18 @@ class ExtendedEvidenceAssessor:
     """
 
     def __init__(
-        self, transport: EvidenceJudgmentTransport, *, ladder: StrengthLadder
+        self,
+        transport: EvidenceJudgmentTransport,
+        *,
+        ladder: StrengthLadder,
+        policy: Optional["AuthorityPolicy"] = None,
     ) -> None:
         self._transport = transport
         self._ladder = ladder
+        #: The client's evidence policy. Its conditions ride the request, so
+        #: the instructions stay the Engine's and client text is never
+        #: compiled into them — the same separation a lens has.
+        self._policy = policy or AuthorityPolicy()
         self._assessment: Optional[ExtendedAssessment] = None
         self._failure: Optional[str] = None
         self._calls = 0
@@ -907,6 +1223,15 @@ class ExtendedEvidenceAssessor:
                         for index, wording in enumerate(self._ladder.levels, 1)
                     ],
                 },
+                # Verbatim client prose, under a key the instructions name.
+                # Absent when the client declared no conditions, which the
+                # instructions answer with `authority_required: false` rather
+                # than with a predicate of the Engine's own.
+                **(
+                    {"client_evidence_policy": list(self._policy.conditions)}
+                    if self._policy.conditions
+                    else {}
+                ),
                 "claims": [
                     {
                         "evidence_claim_id": item["evidence_id"],
@@ -1001,6 +1326,18 @@ def build_evidence_core(
     core_id: str,
     ladder: StrengthLadder,
     client_ceiling: Optional[Strength] = None,
+    #: Sources this run retrieved through a bounded primary-authority lookup —
+    #: the ids a directive carrying :data:`AUTHORITY_DIRECTIVE_PREFIX` returned.
+    #: Empty is the ordinary case and means no authority was established, which
+    #: is a fact and not a failure.
+    authoritative_source_ids: Collection[str] = (),
+    #: The **client's** evidence policy: whether it declared the
+    #: primary-authority mechanism, and the conditions it wrote for when a
+    #: claim depends on one. Built outside the Engine and passed in. The
+    #: default is a client that declared nothing, so nothing is owed and
+    #: nothing is capped — the Engine never decides this for a client, and
+    #: never decides per claim either: that answer arrives on the assessment.
+    policy: AuthorityPolicy = AuthorityPolicy(),
     version: int = CORE_VERSION,
 ) -> EvidenceCore:
     """Wrap one assessed research artifact as ``E-04`` v1.
@@ -1102,6 +1439,12 @@ def build_evidence_core(
             # the verdict rather than being a second judgment.
             else ladder.bottom
         )
+        authority = resolve_claim_authority(
+            classified,
+            source_refs=tuple(dict.fromkeys(observed_sources)),
+            authoritative_source_ids=authoritative_source_ids,
+            policy=policy,
+        )
         claims.append(
             EvidenceClaim(
                 evidence_claim_id=item.evidence_id,
@@ -1129,11 +1472,13 @@ def build_evidence_core(
                     classified.scope if classified is not None else UNASSESSED_SCOPE
                 ),
                 strength=strength,
-                ceiling=(
-                    strength
-                    if client_ceiling is None
-                    else ladder.lower_of(strength, client_ceiling)
+                ceiling=_claim_ceiling(
+                    strength,
+                    client_ceiling=client_ceiling,
+                    ladder=ladder,
+                    authority=authority,
                 ),
+                authority=authority,
             )
         )
 
@@ -1223,6 +1568,11 @@ def retrieve_evidence_core(
     ladder: StrengthLadder,
     core_id: str,
     client_ceiling: Optional[Strength] = None,
+    #: The **client's** evidence policy, from the Client Contract that declared
+    #: it. Reaches two places from here: the assessment request, which carries
+    #: the client's conditions so each claim is judged against them, and the
+    #: builder, which resolves the state. Default: no client asked.
+    policy: AuthorityPolicy = AuthorityPolicy(),
     budget: Optional[CallBudget] = None,
 ) -> CoreBuild:
     """Retrieve, assess and build the core — or record why there is none.
@@ -1246,7 +1596,7 @@ def retrieve_evidence_core(
         if refusal is not None:
             return CoreBuild(signal_id=signal_id, outcome=refusal)
 
-    assessor = ExtendedEvidenceAssessor(transport, ladder=ladder)
+    assessor = ExtendedEvidenceAssessor(transport, ladder=ladder, policy=policy)
     try:
         artifact = execute_and_persist_research(
             provider,
@@ -1293,6 +1643,10 @@ def retrieve_evidence_core(
         core_id=core_id,
         ladder=ladder,
         client_ceiling=client_ceiling,
+        policy=policy,
+        authoritative_source_ids=_authoritative_sources(
+            run_dir, request, required=policy.declared
+        ),
     )
     if not core.usable_claims:
         return CoreBuild(
@@ -1323,6 +1677,32 @@ def _usable_claims_without_assessment(
         if item.disposition in USABLE_DISPOSITIONS
         and (assessment is None or assessment.claim(item.evidence_id) is None)
     )
+
+
+def _authoritative_sources(
+    run_dir: Path, request: ResearchProviderRequest, *, required: bool
+) -> tuple[str, ...]:
+    """Which retrieved sources an authority lookup returned, from the record.
+
+    Read from the persisted envelope rather than from the provider's in-memory
+    result: ``research.json`` is the create-once record this core references by
+    digest, so what established an authority is recoverable later from the same
+    artifact an auditor reads.
+
+    Returns empty when the client requires no authority — there is then nothing
+    for the state to be established against and no reason to read the file —
+    and empty when the record cannot be read as an envelope. The second is not
+    silent: an unreadable envelope has already failed
+    :func:`validate_research_envelope` upstream, which is why reaching here
+    with one is impossible rather than tolerated.
+    """
+
+    if not required:
+        return ()
+    envelope = load_research_envelope(
+        run_dir.parent.parent.parent, request.signal_id, request.run_id
+    )
+    return retrieved_authority_sources(envelope.result.source_outcomes)
 
 
 def _skipped(signal_id: str, state_code: StateCode, reason: str) -> CoreBuild:

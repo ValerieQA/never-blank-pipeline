@@ -43,6 +43,7 @@ from src.research.assessment import LlmChatEvidenceJudgmentTransport
 from src.research.lifecycle import (
     MissingCredentialResearchProvider,
     build_research_request,
+    case_source_directives,
 )
 from src.run.call_budget import GOLDEN_ENGINE_MAX_CEILING
 from src.run.golden_engine import (
@@ -159,7 +160,16 @@ def main(argv: list[str] | None = None) -> int:
     legacy_run_dir.mkdir(parents=True, exist_ok=True)
     binding = ResearchBinding(
         request=build_research_request(
-            run_context, assignment, signal, context.research, now=now
+            run_context,
+            assignment,
+            signal,
+            context.research,
+            now=now,
+            # The case's own source, offered to the evidence path. It is a
+            # possible evidence input and nothing more: whether it turns out to
+            # be the responsible authority is settled by an authority lookup,
+            # never by the field being filled in.
+            extra_directives=case_source_directives(signal),
         ),
         identity=view.identity,
         strategy_view=view,
