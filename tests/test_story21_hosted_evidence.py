@@ -363,6 +363,18 @@ def test_the_evidence_contract_needs_no_production_code(workflow):
         pytest.param("a\\b", id="backslash"),
         pytest.param("has space", id="whitespace"),
         pytest.param("two\nlines", id="newline-a-second-path-entry"),
+        # The one the first guard let through. `^…$` with `.match()` accepts a
+        # *trailing* newline — Python's `$` matches just before one — and a
+        # trailing newline is the worst case here, because `upload-artifact`
+        # separates path entries by newline: `…/sig` and `/runs/`, the second
+        # an absolute path outside the repository. `fullmatch` has no such
+        # exemption.
+        pytest.param("sig\n", id="trailing-newline"),
+        pytest.param("sig\r", id="trailing-cr"),
+        pytest.param("sig\r\n", id="trailing-crlf"),
+        pytest.param("\nsig", id="leading-newline"),
+        pytest.param("sig\n\n", id="two-trailing-newlines"),
+        pytest.param("sig\r\nsig2", id="crlf-separated-second-entry"),
         pytest.param("tab\tsep", id="tab"),
         pytest.param("$(whoami)", id="command-substitution"),
         pytest.param("glob*", id="glob"),
@@ -458,3 +470,33 @@ def test_the_ids_this_repository_actually_carries_are_all_accepted():
 
     assert ids, "no signal ids to check; this test would pass vacuously"
     assert _unsafe_signal_ids(ids) == []
+
+
+def test_the_guard_matches_the_whole_id_and_not_a_prefix_of_it():
+    """``fullmatch``, and a class that does not depend on ``^…$`` to mean it.
+
+    This is the regression for the guard's own first version. ``$`` in Python
+    matches at the end of the string *or just before a trailing newline*, so
+    ``^[A-Za-z0-9_-]+$`` with ``.match()`` accepted ``"sig\n"`` — the one
+    malformed id that turns one uploaded path into two, because
+    ``upload-artifact`` separates entries by newline.
+
+    Asserted on the module's own pattern rather than only through behaviour: if
+    somebody restores the anchors and switches back to ``match``, the cases
+    above would still pass for every id except the trailing-newline ones, and
+    this states the mechanism that keeps those failing.
+    """
+
+    from scripts.streams.run_first_valid import _SIGNAL_ID, _unsafe_signal_ids
+
+    assert _SIGNAL_ID.pattern == "[A-Za-z0-9_-]+", (
+        "the class must carry no anchors: fullmatch is what makes it whole-string, "
+        "and anchors would invite `.match()` back"
+    )
+    # The documented hole, stated as the difference it makes.
+    assert _SIGNAL_ID.match("sig\n") is not None      # a prefix match succeeds
+    assert _SIGNAL_ID.fullmatch("sig\n") is None       # the whole string does not
+    assert _unsafe_signal_ids(["sig\n"]) == ["sig\n"]
+
+    # And a plain id is still a plain id.
+    assert _unsafe_signal_ids(["215284813eae82ce", "sig-ok", "A_1-b"]) == []
