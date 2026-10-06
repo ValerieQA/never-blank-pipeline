@@ -470,18 +470,54 @@ def test_publication_image_and_s15_remain_unreachable_from_canonical_shadow():
         assert forbidden not in code, forbidden
 
 
-def test_the_shadow_workflow_does_not_upload_the_whole_workspace():
-    """The instruction preferred structured evidence over a blanket upload.
+def test_the_early_stop_record_is_what_makes_a_stop_reviewable():
+    """The claim this file made, kept — and the claim it did not make, named.
 
-    An earlier draft of this repair uploaded `reports/editorial_runs/` as an
-    artifact. It is removed: the rationale now reaches the durable ledger as a
-    record, so preserving the whole runner workspace is no longer what makes an
-    early stop reviewable.
+    This test used to assert the shadow workflow uploads **nothing**
+    (`uploads == []`), on the reasoning that *"the rationale now reaches the
+    durable ledger as a record, so preserving the whole runner workspace is no
+    longer what makes an early stop reviewable."*
+
+    That reasoning still holds and is still asserted below: the early-stop
+    record carries the stage, the outcome, the state code, the category and the
+    model's own words, and it survives the runner because the ledger is
+    committed. An early stop is reviewable without an artifact.
+
+    What it was never about is the other half. #308's acceptance asks for the
+    `PASS_THROUGH_MARKER` count, ID+version lineage through the manifest, and
+    `request_digest` coverage on every model-deciding StageRecord. Those are
+    statements about the **trace and the manifest**, which the early-stop record
+    does not contain and was not meant to. Acceptance run 1 (37460768845)
+    proved the gap at cost: it stopped at S-04, the stop itself was explained
+    by its record, and the four trace-level items were unverifiable because the
+    run namespace died with the runner.
+
+    So the upload added in that repair does not reverse this decision — it
+    covers a different question. The assertion is re-aimed at what this file
+    actually established, and
+    :mod:`tests.test_308_shadow_evidence` owns the upload contract.
     """
 
-    workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
-    uploads = [
-        step for step in workflow["jobs"]["shadow"]["steps"]
-        if str(step.get("uses", "")).startswith("actions/upload-artifact")
-    ]
-    assert uploads == []
+    from src.run.early_stop import early_stop_from_outcome
+
+    stop = early_stop_from_outcome(
+        run_id="r1", signal_id="sig", stage="S-04",
+        outcome={
+            "outcome": "SKIP",
+            "state_code": "no_asset_or_admissible_interpretation",
+            "category": "evidence",
+            "reason": "the model's own words",
+        },
+        model="m",
+    )
+    body = stop.as_entity()
+    for field in ("stage", "state_code", "category"):
+        assert field in body, field
+    assert "m" in str(body)
+
+    # And the ledger path is durable and committed, not runner-local.
+    from src.run.early_stop import early_stop_ledger_path
+
+    assert early_stop_ledger_path(stop, client="never_blank", month="2026-10") == (
+        "early_stops/never_blank/2026-10/stop-r1-S-04.json"
+    )

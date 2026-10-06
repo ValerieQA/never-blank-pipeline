@@ -154,3 +154,52 @@ jobs:
             --signal-id "${{ steps.signal.outputs.signal_id }}" \
             --role "${{ inputs.role || 'never-blank-monday-documented-case' }}" \
             --commit
+
+      # Acceptance run 1 (37460768845) was non-qualifying twice over: it
+      # stopped at S-04, and its evidence was destroyed with the runner. This
+      # workflow uploaded nothing, so the run namespace and the early-stop
+      # record existed only on the runner's disk — and four of #308's
+      # acceptance items are statements about the trace, the manifest and the
+      # StageRecords, which no amount of re-reading the committed summary can
+      # answer. Step 3 §3.2 already expects the run namespace to be an
+      # uploaded Actions artifact with explicit retention; Monday and Wednesday
+      # implement it and the shadow path did not.
+      #
+      # Two directories, and both are **untracked in a clean checkout** — the
+      # run's own summary records `tracked_worktree_clean: true` — so what is
+      # uploaded can only be what this run produced. That is why the paths need
+      # no `run_id`: the id is generated inside the process and is deliberately
+      # never reconstructed from a log or a marker file.
+      #
+      #   reports/editorial_runs/      the run namespace: manifest.json, the
+      #                               entity and trace indexes, every
+      #                               StageRecord, and each entity version
+      #                               (§2.2). This is where PASS_THROUGH_MARKER
+      #                               counts, ID+version lineage,
+      #                               `request_digest` coverage and the call
+      #                               trace are readable.
+      #   data/editorial/early_stops/  why the run stopped before S-14, with the
+      #                               stage, the state code and the rationale
+      #                               §3.3 keeps out of the public summary.
+      #
+      # `always()`: an early stop and a failed run are the evidence that
+      # matters most, and #308 cannot diagnose either from a green summary. A
+      # run that reached S-14 writes no early-stop record at all, so
+      # `if-no-files-found: warn` — never `error`, which would turn a
+      # legitimate early stop, or a legitimate complete run, into a failed
+      # workflow.
+      #
+      # It publishes nothing, writes no publication marker and touches no
+      # bookkeeping: it is one `upload-artifact` with no `run` script, no
+      # `env`, and no secret. Placed last, after the run and after the run's
+      # own commits, so it cannot fail in front of them.
+      - name: Preserve canonical run evidence
+        if: always() && steps.gate.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: "canonical-shadow-evidence-${{ steps.signal.outputs.signal_id || github.run_id }}"
+          path: |
+            reports/editorial_runs/
+            data/editorial/early_stops/
+          if-no-files-found: warn
+          retention-days: 90

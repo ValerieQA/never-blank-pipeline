@@ -1128,6 +1128,7 @@ def canonical_run(
     research: Any = None,
     evidence_judgment: Any = None,
     boundary: Optional[Boundary] = None,
+    eligibility: Any = None,
     client_dir: Path = CLIENT_DIR,
 ) -> CanonicalRun:
     """Assemble one canonical run: production configuration, authored answers.
@@ -1229,7 +1230,7 @@ def canonical_run(
     seams = GoldenEngineSeams(
         transports=GoldenEngineTransports(**bound),
         research=research or Research(ledger, identity=strategy_view.identity),
-        eligibility=Eligibility(ledger),
+        eligibility=eligibility or Eligibility(ledger),
         evidence_judgment=evidence_judgment or EvidenceJudgment(ledger),
         relevance=DecisionLensEvaluator(
             Lens(ledger),

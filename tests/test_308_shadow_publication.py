@@ -589,7 +589,16 @@ def test_the_shadow_workflow_has_no_second_generic_ledger_commit():
         Path(".github/workflows/canonical_shadow.yml").read_text(encoding="utf-8")
     )
     steps = parsed["jobs"]["shadow"]["steps"]
-    assert [step["name"] for step in steps][-1] == "Run the canonical chain in shadow"
+    # The run is the last step that executes a **shell**, which is the property
+    # this used to assert as "the last step" outright. #308's evidence repair
+    # adds an `upload-artifact` step after it; that step has no `run` block, so
+    # it cannot stage, commit or push anything — see
+    # `tests/test_308_shadow_evidence.py`, which holds its whole contract.
+    shells = [step.get("name") for step in steps if step.get("run")]
+    assert shells[-1] == "Run the canonical chain in shadow"
+    names = [step.get("name") for step in steps]
+    for step in steps[names.index("Run the canonical chain in shadow") + 1:]:
+        assert "run" not in step, f"a shell step follows the run: {step.get('name')}"
 
     # What the job *runs*, with the comments stripped: a line that explains why
     # there is no `git add` here is not a `git add`.
@@ -599,7 +608,7 @@ def test_the_shadow_workflow_has_no_second_generic_ledger_commit():
             for forbidden in ("git add", "git commit", "git push"):
                 assert forbidden not in code, f"{step['name']}: {line.strip()}"
 
-    asked = steps[-1]["run"]
+    asked = steps[names.index("Run the canonical chain in shadow")]["run"]
     assert "--commit" in asked, "the run's own mechanism has to be asked for"
 
 
