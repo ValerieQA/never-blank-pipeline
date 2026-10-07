@@ -36,6 +36,24 @@ on:
         required: false
         default: never-blank-monday-documented-case
         type: string
+      # A diagnostic run asks one question and should not pay for the whole
+      # measurement to ask it. #308's run 1 spent 6 of 60 calls and stopped at
+      # S-04; reading why needs the stage, not the budget.
+      #
+      # The default is the canonical ceiling, so a dispatch that leaves this
+      # alone behaves exactly as every dispatch did before. A **scheduled** run
+      # carries no inputs at all, and the step below passes no flag in that
+      # case, so the acceptance path keeps taking its default from the script —
+      # there is no second place where the number lives.
+      #
+      # `type: string` because `workflow_dispatch` has no number type. The
+      # value is validated as digits in the step and as a range by
+      # `RunCallBudget`, which owns what a legal ceiling is.
+      call_budget:
+        description: "Maximum model calls for this run (1…60). Default: the canonical ceiling."
+        required: false
+        default: "60"
+        type: string
 
 # The run writes its fingerprints and its summary into the durable ledger and
 # commits them. It publishes nothing, so it needs no publishing credential.
@@ -141,6 +159,7 @@ jobs:
           NB_GOLDEN_ENGINE_MODEL: ${{ secrets.NB_GOLDEN_ENGINE_MODEL }}
           NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
           NB_EXA_API_KEY: ${{ secrets.NB_EXA_API_KEY }}
+          CALL_BUDGET: ${{ inputs.call_budget }}
         run: |
           # --commit: the run itself commits the durable E-16 records S-14
           # wrote and then its summary, each over its own exact paths, and the
@@ -150,9 +169,30 @@ jobs:
           # be untracked there — another run's records, or a publication marker
           # its own step withheld — and would report a status about them under
           # this run's name.
+          # The ceiling, when this run was dispatched with one. Read from an
+          # environment variable and checked as digits before it is used:
+          # interpolating a dispatch input straight into a shell is how an
+          # input becomes a command, and the repository already guards its
+          # other dispatch inputs this way.
+          #
+          # Empty means a scheduled run, which carries no inputs — no flag is
+          # passed and the script applies its own default. An out-of-range
+          # number is left to `RunCallBudget`, which refuses it and fails the
+          # run rather than falling back to a ceiling nobody asked for.
+          BUDGET=""
+          if [ -n "${CALL_BUDGET}" ]; then
+            case "${CALL_BUDGET}" in
+              (*[!0-9]*|"")
+                echo "ERROR: call_budget must be digits; got '${CALL_BUDGET}'"
+                exit 1
+                ;;
+            esac
+            BUDGET="--call-budget ${CALL_BUDGET}"
+          fi
           python3 scripts/run_canonical_shadow.py \
             --signal-id "${{ steps.signal.outputs.signal_id }}" \
             --role "${{ inputs.role || 'never-blank-monday-documented-case' }}" \
+            ${BUDGET} \
             --commit
 
       # Acceptance run 1 (37460768845) was non-qualifying twice over: it
