@@ -1,12 +1,18 @@
-"""Fail-closed API prohibition for ordinary tests (#172).
+"""Fail-closed provider prohibition for ordinary tests (#172, widened 2026-10-06).
 
-Ordinary unit/integration tests must never be able to make a real billed
-OpenAI call merely because the developer's shell happens to export
-``NB_OPENAI_API_KEY``. Before this guard, CI was safe only because the test
-workflow happened not to pass the key — an accident of configuration, not a
-guarantee.
+Ordinary unit/integration tests must never be able to make a real external
+call merely because the developer's shell happens to export a credential.
+Before this guard, CI was safe only because the test workflow happened not to
+pass the key — an accident of configuration, not a guarantee.
 
-The guard is one autouse fixture. A test may see real OpenAI credentials
+#172 closed that for OpenAI. The cost-discipline decision of 2026-10-06 closed
+it for the rest: the same sentence was still true of `NB_EXA_API_KEY` (billed
+retrieval), Cloudinary, and the publishing credentials, where an accident is
+not a refundable amount of money but a post the world can see. The mechanism
+is unchanged — one list of variables got longer. See
+:data:`_PROVIDER_KEY_VARS`.
+
+The guard is one autouse fixture. A test may see real provider credentials
 only when TWO independent explicit conditions hold together:
 
 1. the test carries ``@pytest.mark.live_api`` — the per-test authorization,
@@ -38,10 +44,47 @@ import pytest
 
 from src.utils import llm_client
 
-#: Every variable that could authenticate a billed OpenAI call. The bare
-#: OPENAI_API_KEY is included because the SDK reads it as a default when no
-#: explicit key is passed.
-_OPENAI_KEY_VARS = ("NB_OPENAI_API_KEY", "OPENAI_API_KEY")
+#: Every variable that could authenticate a billed call or an outward-facing
+#: one. The bare OPENAI_API_KEY is included because the SDK reads it as a
+#: default when no explicit key is passed.
+#:
+#: Extended beyond OpenAI by the cost-discipline decision of 2026-10-06. Until
+#: then this tuple held two variables, and the suite was safe from every other
+#: provider only because `pr_tests.yml` passes no secrets to the test job —
+#: which is exactly the condition the module docstring above diagnoses as "an
+#: accident of configuration, not a guarantee". A developer with
+#: `NB_EXA_API_KEY` exported, the normal state for anyone who has run the
+#: canonical path locally, could make real billed Exa calls by running the
+#: tests.
+#:
+#: Two kinds, and the second is the one money does not measure:
+#:
+#:   billed    — a call that costs money: text generation, retrieval, image
+#:               hosting.
+#:   outward   — a call the world can see: a published post, a sent message.
+#:               An accident here cannot be refunded.
+#:
+#: Every transport behind these reads its key at construction and fails closed
+#: without it — `RequestsExaTransport` raises
+#: `EnvironmentError("NB_EXA_API_KEY is not set")` — so removing the variable
+#: turns a silent external call into a visible refusal, which is how the
+#: OpenAI half has always worked.
+_PROVIDER_KEY_VARS = (
+    # billed · text
+    "NB_OPENAI_API_KEY",
+    "OPENAI_API_KEY",
+    # billed · retrieval
+    "NB_EXA_API_KEY",
+    # billed · image hosting
+    "NB_CLOUDINARY_API_KEY",
+    "NB_CLOUDINARY_API_SECRET",
+    # outward · publishing
+    "NB_WIX_API_KEY",
+    "NB_ZERNIO_API_KEY",
+    "NB_META_FB_PAGE_TOKEN",
+    "NB_THREADS_ACCESS_TOKEN",
+    "NB_TELEGRAM_BOT_TOKEN",
+)
 
 #: Run-level live authorization: exactly this variable, exactly "1".
 _LIVE_OPT_IN_VAR = "NB_ALLOW_LIVE_API_TESTS"
@@ -56,17 +99,24 @@ def _run_authorizes_live_api() -> bool:
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",
-        "live_api: this test is deliberately allowed to see real OpenAI "
-        "credentials and may make billed API calls — but only when the run "
-        "itself is also authorized with NB_ALLOW_LIVE_API_TESTS=1. Either "
-        "condition alone blocks; ordinary tests always have the key "
-        "variables stripped and fail closed at client construction.",
+        "live_api: this test is deliberately allowed to see real provider "
+        "credentials and may make billed or outward-facing calls — but only "
+        "when the run itself is also authorized with "
+        "NB_ALLOW_LIVE_API_TESTS=1. Either condition alone blocks; ordinary "
+        "tests always have the credential variables stripped and fail closed "
+        "at client or transport construction.",
     )
 
 
 @pytest.fixture(autouse=True)
-def _no_billed_openai_calls(request, monkeypatch):
-    """Strip OpenAI credentials unless BOTH live authorizations hold."""
+def _no_billed_or_outward_provider_calls(request, monkeypatch):
+    """Strip provider credentials unless BOTH live authorizations hold.
+
+    One fixture, one authorization model, one list of variables. The
+    cost-discipline decision widened the list and changed nothing else: a
+    second fixture would mean two places that can disagree about what
+    "authorized" means.
+    """
 
     if (
         request.node.get_closest_marker("live_api")
@@ -77,7 +127,7 @@ def _no_billed_openai_calls(request, monkeypatch):
         yield
         return
 
-    for var in _OPENAI_KEY_VARS:
+    for var in _PROVIDER_KEY_VARS:
         monkeypatch.delenv(var, raising=False)
     # A client cached by an earlier authorized test must never be reusable
     # past its authorization: the cache is cleared for every blocked test.

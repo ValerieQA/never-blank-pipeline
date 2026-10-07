@@ -71,6 +71,30 @@ def test_inner_marked_test_is_still_blocked():
         llm_client._get_client()
 
 
+@pytest.mark.skipif(os.environ.get(_INNER_GATE) != "1", reason="subprocess-only")
+def test_inner_ordinary_test_sees_no_provider_credential_at_all():
+    """The runner exported every provider credential; none may be visible.
+
+    Read from the guard's own list rather than a copy, so a variable added
+    there without a thought about tests cannot slip past this proof.
+    """
+
+    from tests.conftest import _PROVIDER_KEY_VARS
+
+    for var in _PROVIDER_KEY_VARS:
+        assert os.environ.get(var) is None, var
+
+
+@pytest.mark.skipif(os.environ.get(_INNER_GATE) != "1", reason="subprocess-only")
+def test_inner_the_billed_retrieval_transport_fails_closed():
+    """And the refusal is visible where the call would have been paid for."""
+
+    from src.research.adapters.exa import RequestsExaTransport
+
+    with pytest.raises(EnvironmentError, match="NB_EXA_API_KEY"):
+        RequestsExaTransport()
+
+
 # ===========================================================================
 # 1. Ordinary test + developer key present → blocked before transport
 # ===========================================================================
@@ -253,3 +277,115 @@ def test_no_production_module_imports_the_guard():
                 if name.endswith(".py"):
                     text = open(os.path.join(dirpath, name), encoding="utf-8").read()
                     assert "conftest" not in text, os.path.join(dirpath, name)
+
+
+# ===========================================================================
+# 5. Every provider credential, not only OpenAI (cost discipline, 2026-10-06)
+# ===========================================================================
+
+
+def test_no_provider_credential_survives_into_an_ordinary_test():
+    """The widened list, proved the way the OpenAI half is proved.
+
+    A subprocess exports **every** guarded variable with a sentinel value and
+    runs one ordinary test inside it. Nothing may be visible.
+    """
+
+    from tests.conftest import _PROVIDER_KEY_VARS
+
+    result = _run_inner(
+        "test_inner_ordinary_test_sees_no_provider_credential_at_all",
+        {var: _SENTINEL_KEY for var in _PROVIDER_KEY_VARS},
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "1 passed" in result.stdout
+
+
+def test_the_billed_retrieval_transport_fails_closed_in_an_ordinary_test():
+    """Stripping is only half: the refusal has to be visible.
+
+    `NB_EXA_API_KEY` is the variable this widening was written for — billed
+    retrieval, and the one a developer who has run the canonical path locally
+    is most likely to have exported. With it stripped, constructing the
+    transport raises instead of quietly calling Exa.
+    """
+
+    result = _run_inner(
+        "test_inner_the_billed_retrieval_transport_fails_closed",
+        {"NB_EXA_API_KEY": _SENTINEL_KEY},
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "1 passed" in result.stdout
+
+
+def test_this_very_test_sees_no_provider_credential() -> None:
+    """The whole suite, this file included — not only the subprocess proofs."""
+
+    from tests.conftest import _PROVIDER_KEY_VARS
+
+    for var in _PROVIDER_KEY_VARS:
+        assert os.environ.get(var) is None, var
+
+
+def test_the_guarded_list_covers_billed_and_outward_credentials() -> None:
+    """What the list must contain, named rather than left to a reading of it.
+
+    Billed: text, retrieval, image hosting. Outward: the publishing
+    credentials, where an accident is a post the world can see rather than an
+    amount of money. If a provider is added to the repository and not here,
+    this is the test that should have failed.
+    """
+
+    from tests.conftest import _PROVIDER_KEY_VARS
+
+    for required in (
+        "NB_OPENAI_API_KEY", "OPENAI_API_KEY",
+        "NB_EXA_API_KEY",
+        "NB_CLOUDINARY_API_KEY", "NB_CLOUDINARY_API_SECRET",
+        "NB_WIX_API_KEY", "NB_ZERNIO_API_KEY",
+        "NB_META_FB_PAGE_TOKEN", "NB_THREADS_ACCESS_TOKEN",
+        "NB_TELEGRAM_BOT_TOKEN",
+    ):
+        assert required in _PROVIDER_KEY_VARS, required
+
+    assert len(set(_PROVIDER_KEY_VARS)) == len(_PROVIDER_KEY_VARS), "duplicated"
+
+
+@pytest.mark.parametrize(
+    "variable",
+    ["NB_EXA_API_KEY", "NB_WIX_API_KEY", "NB_TELEGRAM_BOT_TOKEN"],
+)
+def test_a_test_may_still_set_its_own_value_for_a_guarded_variable(
+    variable, monkeypatch
+) -> None:
+    """The property the existing suite depends on, held for the new variables.
+
+    Test-level setup runs **after** the autouse fixture, so a test that sets
+    its own sentinel keeps it — which is how the nine files that already
+    `monkeypatch.setenv` a publishing credential go on working. The fixture
+    restores the previous value afterwards; it does not fight the test.
+    """
+
+    assert os.environ.get(variable) is None  # stripped by the fixture first
+
+    monkeypatch.setenv(variable, _SENTINEL_KEY)
+
+    assert os.environ[variable] == _SENTINEL_KEY
+
+
+def test_the_authorization_model_was_not_touched_by_the_widening() -> None:
+    """One fixture, one model, and the strict value check still strict."""
+
+    from tests import conftest
+
+    assert conftest._LIVE_OPT_IN_VAR == "NB_ALLOW_LIVE_API_TESTS"
+    assert conftest._LIVE_OPT_IN_VALUE == "1"
+    assert not conftest._run_authorizes_live_api()  # this run is not authorized
+
+    # Exactly one autouse credential fixture: a second would be a second place
+    # that can disagree about what "authorized" means.
+    fixtures = [
+        name for name in dir(conftest)
+        if name.startswith("_no_billed") or "provider_calls" in name
+    ]
+    assert fixtures == ["_no_billed_or_outward_provider_calls"], fixtures
