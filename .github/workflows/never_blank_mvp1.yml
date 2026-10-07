@@ -135,6 +135,24 @@ jobs:
           NB_RESEARCH_PUBLISH_ENABLED: "true"
           NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
           NB_OPENAI_CHAT_MODEL: ${{ secrets.NB_OPENAI_CHAT_MODEL }}
+          # #213's convention, and the defect live run 37689111181 paid for.
+          # Every stage resolved through `NB_OPENAI_CHAT_MODEL` because none of
+          # the stage secrets were passed, and the provider rejected that value
+          # with HTTP 400 `invalid model ID` on the first call — the identical
+          # failure `wednesday_golden.yml` records for run 33281894748 (#236).
+          # Same five secrets and same spelling as Wednesday and the daily
+          # research workflow this lane restores; not a new routing scheme.
+          #
+          # Stage 11 reaches only enrich, article and social; discovery and
+          # scoring belong to the research stages this lane does not run, and
+          # are passed to keep the set identical to the established one rather
+          # than to satisfy a call. `NB_IMAGE_MODEL` is deliberately still not
+          # passed: the package's image is reused hosted, so nothing draws one.
+          NB_DISCOVERY_MODEL: ${{ secrets.NB_DISCOVERY_MODEL }}
+          NB_SCORING_MODEL: ${{ secrets.NB_SCORING_MODEL }}
+          NB_ENRICH_MODEL: ${{ secrets.NB_ENRICH_MODEL }}
+          NB_ARTICLE_MODEL: ${{ secrets.NB_ARTICLE_MODEL }}
+          NB_SOCIAL_MODEL: ${{ secrets.NB_SOCIAL_MODEL }}
           NB_WIX_API_KEY: ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID: ${{ secrets.NB_WIX_SITE_ID }}
           NB_WIX_POST_OWNER_ID: ${{ secrets.NB_WIX_POST_OWNER_ID }}
