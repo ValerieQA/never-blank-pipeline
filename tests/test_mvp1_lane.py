@@ -1,22 +1,25 @@
-"""Never Blank MVP 1 — the proven July lane, restored as a manual trigger.
+"""Never Blank MVP 1 — the historical research lane, on demand (#393).
 
 A temporary operational release so Never Blank has something demonstrably
-working for prospective clients while the Golden Engine is completed (#393).
+working for prospective clients while the Golden Engine is completed. The lane
+is the July one: a signal the system discovered, the package Stage 10 prepared,
+and Stage 11, which generates the six final texts and publishes them.
 
 What this file holds is the restoration's contract, not the lane's editorial
-behaviour: the lane itself is `scripts/generate.py` → `data/drafts/latest/` →
-`scripts/publish.py`, unchanged since July, and its behaviour is whatever those
-scripts do. What a restoration can get wrong is the wiring around them —
-spending by accident, publishing by accident, hiding one destination's failure
-behind another's, or quietly reposting to a destination that already succeeded.
+behaviour. What a restoration can get wrong is the wiring around it — spending
+or publishing by accident, reaching a destination that is out of scope, hiding
+one destination's failure behind another's, reposting to a destination that
+already succeeded, or quietly inventing the subject.
 
-Everything here is deterministic: YAML, repository state, and the publishers'
-own idempotency types. No provider call, no network, no publication.
+Everything here is deterministic: YAML, repository state, the entry script's
+own refusals, and the publishers' idempotency types. No provider call, no
+network, no publication.
 """
 
 from __future__ import annotations
 
-import csv
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -25,19 +28,19 @@ yaml = pytest.importorskip("yaml")
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "never_blank_mvp1.yml"
+ENTRY = ROOT / "scripts" / "mvp1_publish_signal.py"
 
-EVIDENCE_STEP = "Preserve the MVP 1 cycle"
-DRY_STEP = "Dry: validate the lane"
+INSPECT_STEP = "Inspect the signal and its package"
 LIVE_STEP = "Live: generate and publish"
+EVIDENCE_STEP = "Preserve the MVP 1 cycle"
 
-#: MVP 1's destinations, in the order the proven sequence runs them.
-#:
-#: Owner decision 2026-10-07: **Threads is out of MVP 1** — not because it
-#: failed, but because #393 found no record of it ever having published, and
-#: this lane carries only what is proven. The publisher module stays in the
-#: repository; it is this lane's destination set that excludes it.
+#: MVP 1's destinations (owner, 2026-10-07). Threads is deliberately absent.
 DESTINATIONS = ("wix", "linkedin", "facebook", "instagram", "telegram")
 EXCLUDED = "threads"
+
+#: The signal selected for the first proof (#393): discovered by the system
+#: from Entrepreneur Magazine on 2026-09-18, package and hosted image present.
+SIGNAL = "a71d52f27d921529"
 
 
 def _spec() -> dict:
@@ -59,151 +62,345 @@ def _named(name: str) -> dict:
     return found[0]
 
 
-def _script(name: str) -> str:
-    return (ROOT / "scripts" / name).read_text(encoding="utf-8")
+def _entry(*args: str) -> subprocess.CompletedProcess:
+    """Run the entry script. It reaches no provider in any case tested here."""
+
+    return subprocess.run(
+        [sys.executable, str(ENTRY), *args],
+        cwd=ROOT, capture_output=True, text=True, timeout=180,
+    )
 
 
 # ===========================================================================
-# 1 · nothing starts, and nothing is paid for, by accident
+# 1 · nothing starts, spends or publishes by accident
 # ===========================================================================
 
 
 def test_the_lane_has_no_schedule() -> None:
-    """A recurring lane is a separate decision. This one is asked for."""
-
     assert list(_triggers()) == ["workflow_dispatch"]
 
 
-def test_a_dispatch_defaults_to_dry() -> None:
-    """The default must not be able to spend or publish."""
+def test_a_dispatch_defaults_to_inspect() -> None:
+    """And there is deliberately no dry-run.
+
+    Stage 11 generates before it touches a publisher, so a rehearsal through it
+    costs nine model calls and posts nothing. `inspect` is free because it never
+    reaches the stage (owner decision 2026-10-07).
+    """
 
     mode = _triggers()["workflow_dispatch"]["inputs"]["mode"]
 
-    assert mode["default"] == "dry"
-    assert mode["type"] == "choice"
-    assert mode["options"] == ["dry", "live"]
+    assert mode["default"] == "inspect"
+    assert mode["options"] == ["inspect", "live"]
+    assert "dry" not in mode["options"]
 
 
-def test_publication_requires_asking_for_it_explicitly() -> None:
-    """`live` is the only value that reaches the publishing script."""
-
-    assert "== 'live'" in _named(LIVE_STEP)["if"]
-    assert "== 'dry'" in _named(DRY_STEP)["if"]
-    for step in (LIVE_STEP, DRY_STEP):
-        assert "inputs.mode || 'dry'" in _named(step)["if"], step
-
-
-def test_a_second_switch_has_to_be_on_as_well() -> None:
-    """Two independent conditions, for two different kinds of accident.
-
-    The variable stops a dispatch from running at all; the mode stops a run
-    from publishing. Either alone is enough to prevent a live cycle.
-    """
-
+def test_two_independent_switches_guard_a_live_cycle() -> None:
     gate = [step for step in _steps() if step.get("id") == "gate"]
+
     assert len(gate) == 1
     assert gate[0]["env"]["ENABLED"] == "${{ vars.NB_MVP1_ENABLED }}"
     assert '"${ENABLED}" = "true"' in gate[0]["run"]
 
-    for step in (DRY_STEP, LIVE_STEP):
+    for step in (INSPECT_STEP, LIVE_STEP):
         assert "steps.gate.outputs.run == 'true'" in _named(step)["if"], step
+    assert "== 'live'" in _named(LIVE_STEP)["if"]
+    assert "== 'inspect'" in _named(INSPECT_STEP)["if"]
 
 
-def test_the_dry_mode_calls_no_paid_api() -> None:
-    """Each dry command is the no-call variant of its script."""
+def test_inspect_is_given_no_credential_at_all() -> None:
+    """It cannot spend or publish even if it tried."""
 
-    body = _named(DRY_STEP)["run"]
+    step = _named(INSPECT_STEP)
 
-    assert "scripts/generate.py --dry" in body
-    assert "scripts/generate_image.py --dry-run" in body
-    assert "scripts/publish.py --dry-run" in body
-    for paid in ("--upload", "--live", "--qc"):
-        assert paid not in body, paid
-
-
-def test_the_dry_step_receives_no_provider_credential() -> None:
-    """It cannot spend even if it tried: it is given nothing to spend with."""
-
-    step = _named(DRY_STEP)
-
-    assert set(step.get("env", {})) == {"CHANNELS"}
+    assert set(step["env"]) == {"PYTHONPATH", "SIGNAL_ID", "CHANNELS"}
     assert "secrets." not in str(step)
+    assert "--mode inspect" in step["run"]
 
 
-def test_the_channel_list_cannot_become_a_command() -> None:
-    """A dispatch input reaches bash through the environment, guarded."""
+def test_the_dispatch_inputs_cannot_become_commands() -> None:
+    """Both reach bash through the environment, behind a charset guard."""
 
-    step = _named(DRY_STEP)
-
-    assert step["env"]["CHANNELS"] == "${{ inputs.channels }}"
-    assert "${{ inputs.channels }}" not in step["run"]
-    assert "(*[!a-z,]*|\"\")" in step["run"]
+    for name in (INSPECT_STEP, LIVE_STEP):
+        step = _named(name)
+        assert step["env"]["SIGNAL_ID"] == "${{ inputs.signal_id }}"
+        assert step["env"]["CHANNELS"] == "${{ inputs.channels }}"
+        assert "${{ inputs.signal_id }}" not in step["run"]
+        assert "${{ inputs.channels }}" not in step["run"]
+        assert '(*[!a-z0-9]*|"")' in step["run"]
+        assert '(*[!a-z,]*|"")' in step["run"]
 
 
 # ===========================================================================
-# 2 · the lane runs the existing scripts, and no logic is duplicated
+# 2 · the lane is the historical one, and the subject is not invented
 # ===========================================================================
 
 
-def test_live_runs_the_proven_sequence_through_its_own_script() -> None:
-    """`scheduled_publish.py` owns the order; the workflow does not restate it."""
+def test_no_manual_topic_queue_is_involved() -> None:
+    """The correction that started this: MVP 1 does not read a topic file.
 
-    body = _named(LIVE_STEP)["run"]
+    The owner did not supply the topics the working system published — the
+    Versant lineage proves the system discovered them — so the lane reads the
+    discovered store and nothing else.
+    """
 
-    assert "scripts/scheduled_publish.py --force" in body
-    # Full paths, because `scheduled_publish.py` contains `publish.py` as a
-    # substring — the question is whether the workflow invokes the individual
-    # scripts itself, not whether their names appear.
-    for duplicated in (
-        "scripts/publish.py",
-        "scripts/generate.py",
-        "scripts/generate_image.py",
+    for text in (WORKFLOW.read_text(encoding="utf-8"), ENTRY.read_text(encoding="utf-8")):
+        assert "topics_manual" not in text
+        assert "get_next_topic" not in text
+        assert "scripts/generate.py" not in text
+        assert "data/drafts" not in text
+
+
+def test_the_subject_comes_from_the_discovered_store() -> None:
+    source = ENTRY.read_text(encoding="utf-8")
+
+    assert "data/research/signals_active.jsonl" in source
+    assert "reports/content_packages" in source
+
+
+def test_the_lane_runs_the_historical_stage_rather_than_restating_it() -> None:
+    """Stage 11 is called; its sequence and marker logic are not duplicated."""
+
+    source = ENTRY.read_text(encoding="utf-8")
+
+    assert "publish_packages(" in source
+    for duplicated in ("WixPublisher", "record_intent", "record_marker", "generate_article"):
+        assert duplicated not in source, duplicated
+
+
+def test_no_generated_package_bypass_was_added() -> None:
+    """The declined capability, asserted absent (owner, 2026-10-07).
+
+    Stage 11 has always generated the six texts at publication time. A mode
+    that read `_generated.json` instead would have made a dry run free and
+    would have been a new capability; it was declined, so the entry must not
+    have grown one.
+    """
+
+    import ast
+
+    tree = ast.parse(ENTRY.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef)):
+            body = node.body
+            if (
+                body
+                and isinstance(body[0], ast.Expr)
+                and isinstance(body[0].value, ast.Constant)
+                and isinstance(body[0].value.value, str)
+            ):
+                body.pop(0)
+    code = ast.unparse(tree)
+
+    # The executable code never reads the stage's own output as an input.
+    assert "_generated.json" not in code
+    for invented in ("skip_generation", "reuse_generated", "use_existing"):
+        assert invented not in code, invented
+
+
+def test_discovery_and_image_generation_are_not_reachable() -> None:
+    """Asserted on what the job *executes*, not on the file's text.
+
+    The workflow's comments name `NB_FORCE_REGENERATE_RESEARCH_IMAGES` in order
+    to say it is deliberately not passed, and a sentence explaining an absence
+    is not that absence. So this reads the parsed steps — every `env` key and
+    every `run` body — and the entry script with its comments and docstrings
+    stripped.
+    """
+
+    import ast
+
+    for step in _steps():
+        for key in step.get("env", {}):
+            assert "FORCE_REGENERATE" not in key, step.get("name")
+        for forbidden in ("run_daily_research", "discover.py", "generate_image"):
+            assert forbidden not in str(step.get("run", "")), (step.get("name"), forbidden)
+
+    tree = ast.parse(ENTRY.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef)):
+            body = node.body
+            if (
+                body
+                and isinstance(body[0], ast.Expr)
+                and isinstance(body[0].value, ast.Constant)
+                and isinstance(body[0].value.value, str)
+            ):
+                body.pop(0)
+    code = ast.unparse(tree)
+    for forbidden in (
+        "run_daily_research",
+        "generate_image",
+        "NB_FORCE_REGENERATE_RESEARCH_IMAGES",
     ):
-        assert duplicated not in body, duplicated
+        assert forbidden not in code, forbidden
 
 
-def test_the_proven_sequence_is_still_what_that_script_does() -> None:
-    """Read from the script, so the workflow's comment cannot rot.
+# ===========================================================================
+# 3 · five destinations, Threads out, each independently observable
+# ===========================================================================
 
-    Wix first, the four social channels each independently, telegram last and
-    only when Wix produced a URL.
+
+def test_the_five_destinations_are_the_default() -> None:
+    declared = _triggers()["workflow_dispatch"]["inputs"]["channels"]["default"]
+
+    assert tuple(declared.split(",")) == DESTINATIONS
+    assert EXCLUDED not in declared
+
+
+def test_threads_is_out_of_the_lane_and_still_in_the_repository() -> None:
+    """A scope decision, not a removal."""
+
+    from scripts.research.publish_packages import _ALL_PUBLISHERS
+    from src.publishing.release_scope import NON_R1_PUBLISH_CHANNELS
+
+    assert (ROOT / "src" / "publishing" / "threads.py").is_file()
+    assert EXCLUDED in {name for name, _ in _ALL_PUBLISHERS}
+    assert EXCLUDED in NON_R1_PUBLISH_CHANNELS
+
+    live = _named(LIVE_STEP)
+    assert not any("THREADS" in key for key in live["env"])
+
+
+def test_every_destination_the_lane_names_has_a_publisher() -> None:
+    from scripts.research.publish_packages import _ALL_PUBLISHERS
+
+    known = {name for name, _ in _ALL_PUBLISHERS}
+    for destination in DESTINATIONS:
+        assert destination in known, destination
+
+
+def test_the_live_step_carries_each_destinations_credentials() -> None:
+    """And nothing for a destination the lane does not publish to."""
+
+    env = _named(LIVE_STEP)["env"]
+
+    for required in (
+        "NB_WIX_API_KEY", "NB_ZERNIO_API_KEY", "NB_META_FB_PAGE_TOKEN",
+        "NB_META_IG_USER_ID", "NB_TELEGRAM_BOT_TOKEN",
+    ):
+        assert required in env, required
+
+
+def test_the_cycle_is_preserved_whatever_happened() -> None:
+    step = _named(EVIDENCE_STEP)
+
+    assert step["uses"].startswith("actions/upload-artifact@")
+    assert "always()" in step["if"]
+    assert int(step["with"]["retention-days"]) == 90
+    assert step["with"]["if-no-files-found"] in ("warn", "ignore")
+    assert "_generated.json" in str(step["with"]["path"])
+
+
+# ===========================================================================
+# 4 · fail closed before anything outward
+# ===========================================================================
+
+
+def test_a_signal_the_system_never_discovered_is_refused() -> None:
+    result = _entry("--signal-id", "deadbeefdeadbeef")
+
+    assert result.returncode != 0
+    assert "is not in" in result.stderr
+
+
+def test_a_signal_without_a_prepared_package_is_refused() -> None:
+    """`6a72b2abcc466aab` is discovered and has no package — MVP 1 makes none."""
+
+    result = _entry("--signal-id", "6a72b2abcc466aab")
+
+    assert result.returncode != 0
+    assert "no content package" in result.stderr
+
+
+@pytest.mark.parametrize("channels", ["wix,bogus", "mastodon", ""])
+def test_a_malformed_destination_set_is_refused_in_inspect_too(channels) -> None:
+    """Before the paid mode, not inside it.
+
+    The stage validates its own destinations, but only a live run reaches the
+    stage — so a typo would otherwise pass `inspect` and surface for the first
+    time on a run that had already generated. The entry checks it up front,
+    against the stage's own vocabulary.
     """
 
-    source = _script("scheduled_publish.py")
+    result = _entry("--signal-id", SIGNAL, "--channels", channels)
 
-    assert 'scripts/generate.py", "--qc"' in source
-    assert 'scripts/generate_image.py", "--upload"' in source
-    assert '"--channels", "wix"' in source
-    assert "abort_on_fail=False" in source
-    assert "--force" in source
-
-    from scripts.scheduled_publish import DEFAULT_CHANNELS, SOCIAL_CHANNELS
-
-    # Wix first, the socials between, telegram last — the order is the
-    # pipeline's own and does not depend on what a caller asks for.
-    assert DEFAULT_CHANNELS[0] == "wix"
-    assert DEFAULT_CHANNELS[-1] == "telegram"
-    assert SOCIAL_CHANNELS == DEFAULT_CHANNELS[1:-1]
+    assert result.returncode != 0
+    assert "destination" in result.stderr
 
 
-def test_the_lane_shares_no_code_with_the_golden_engine() -> None:
-    """MVP 1 is a separate lane, not a backport."""
+def test_inspect_passes_for_the_selected_signal_and_calls_nothing() -> None:
+    """The one case that must succeed, and it needs no credential to do so."""
 
-    for name in ("scheduled_publish.py", "generate.py", "publish.py", "generate_image.py"):
-        source = _script(name)
-        assert "editorial_core" not in source, name
-        assert "golden_engine" not in source, name
+    result = _entry("--signal-id", SIGNAL)
+
+    assert result.returncode == 0, result.stderr
+    assert "Nothing was called" in result.stdout
+    assert SIGNAL in result.stdout
+    # It reports what a live run would cost, rather than leaving it implied.
+    assert "nine model calls" in result.stdout
 
 
-def test_the_r1_allowlist_is_neither_imported_nor_needed() -> None:
-    """The lane is the manual caller `release_scope.py` was written to permit.
+# ===========================================================================
+# 5 · a partial failure cannot repost to what already succeeded
+# ===========================================================================
 
-    Its own docstring: the module imports no publisher precisely so a publisher
-    class stays "fully usable by a manual or non-R1 caller, without becoming
-    reachable from a scheduled run". So MVP 1 publishes six destinations
-    without touching R1's scope — and the scope itself is asserted unchanged.
+
+def test_the_identity_key_is_stable_across_a_regenerated_article() -> None:
+    """Which matters more here than anywhere: this lane regenerates every run.
+
+    `PublicationIdentity` is (client, destination, source signal ids) — no run
+    id and no article digest — so Stage 11 producing fresh prose for the same
+    signal is still the same publication, and a destination that already
+    published is refused.
     """
 
+    from src.publishing.publication_markers import PublicationIdentity
+
+    first = PublicationIdentity(
+        client="never_blank", destination="wix", source_signal_ids=(SIGNAL,)
+    )
+    after_regeneration = PublicationIdentity(
+        client="never_blank", destination="wix", source_signal_ids=(SIGNAL,)
+    )
+
+    assert first == after_regeneration
+    assert set(PublicationIdentity.__dataclass_fields__) == {
+        "client", "destination", "source_signal_ids",
+    }
+
+
+def test_the_selected_signal_holds_no_marker_on_any_destination() -> None:
+    """So the first proof is a real publication, not a refusal."""
+
+    root = ROOT / "data" / "editorial" / "publication_markers" / "never_blank"
+    if not root.is_dir():
+        return
+    held = [
+        destination.name
+        for destination in root.iterdir()
+        if destination.is_dir() and list(destination.glob(f"*{SIGNAL}*"))
+    ]
+
+    assert held == [], f"{SIGNAL} already published to {held}"
+
+
+def test_the_stage_claims_each_destination_before_calling_it() -> None:
+    source = (ROOT / "scripts" / "research" / "publish_packages.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "guard.check(name)" in source
+    assert "guard.record_intent(name" in source
+    assert 'if mode == "live"' in source
+
+
+# ===========================================================================
+# 6 · the Golden Engine and Release 1 are untouched
+# ===========================================================================
+
+
+def test_release_scope_is_untouched_and_knows_nothing_of_this_lane() -> None:
     from src.publishing.release_scope import (
         NON_R1_PUBLISH_CHANNELS,
         R1_PUBLISH_CHANNELS,
@@ -212,237 +409,33 @@ def test_the_r1_allowlist_is_neither_imported_nor_needed() -> None:
     assert R1_PUBLISH_CHANNELS == ("wix", "linkedin")
     assert NON_R1_PUBLISH_CHANNELS == ("facebook", "instagram", "threads", "telegram")
 
-    for name in ("scheduled_publish.py", "publish.py", "generate.py"):
-        assert "release_scope" not in _script(name), name
+    source = (ROOT / "src" / "publishing" / "release_scope.py").read_text(encoding="utf-8")
+    assert "mvp" not in source.lower()
 
 
-# ===========================================================================
-# 3 · all six destinations, each independently observable
-# ===========================================================================
+def test_the_nightly_research_job_still_publishes_nothing() -> None:
+    """The default destination set has not moved, so #231 still holds for it."""
 
+    from scripts.research.publish_packages import _publishers_for
 
-def test_mvp1s_five_destinations_are_the_default() -> None:
-    declared = _triggers()["workflow_dispatch"]["inputs"]["channels"]["default"]
+    assert _publishers_for(None) == []
 
-    assert tuple(declared.split(",")) == DESTINATIONS
-    assert EXCLUDED not in declared
-
-
-def test_every_destination_has_a_publisher_behind_it() -> None:
-    from src.publishing.publication_markers import DESTINATIONS as KNOWN
-
-    source = _script("publish.py")
-    for destination in DESTINATIONS:
-        assert destination in KNOWN, destination
-        assert f'"{destination}"' in source, destination
-
-
-def test_threads_is_out_of_the_lane_and_still_in_the_repository() -> None:
-    """A scope decision, not a removal (owner, 2026-10-07).
-
-    The publisher module, its mapping in `publish.py` and the pipeline's own
-    knowledge of the name all stay — so a manual caller can still use it and
-    nothing was refactored to exclude it. What excludes it is this lane's
-    destination set, in one place, where the owner can change her mind by
-    editing one input default.
-    """
-
-    from src.publishing.release_scope import NON_R1_PUBLISH_CHANNELS
-    from src.publishing.publication_markers import DESTINATIONS as KNOWN
-    from scripts.scheduled_publish import DEFAULT_CHANNELS
-
-    # Still known to the repository, untouched.
-    assert (ROOT / "src" / "publishing" / "threads.py").is_file()
-    assert EXCLUDED in KNOWN
-    assert EXCLUDED in DEFAULT_CHANNELS
-    assert EXCLUDED in NON_R1_PUBLISH_CHANNELS
-    assert f'"{EXCLUDED}"' in _script("publish.py")
-
-    # And out of this lane, in both modes and in its credentials.
-    workflow = WORKFLOW.read_text(encoding="utf-8")
-    assert EXCLUDED not in workflow.split("# Owner decision 2026-10-07")[0]
-    assert "NB_THREADS_ACCESS_TOKEN" not in workflow
-
-
-def test_one_destination_failing_cannot_hide_the_others() -> None:
-    """Each channel is its own step with its own return code."""
-
-    source = _script("scheduled_publish.py")
-
-    assert "abort_on_fail=False" in source
-    assert "steps_failed" in source
-    assert "scheduled_publish_report.json" in source
-
-
-def test_the_cycle_is_preserved_whatever_happened() -> None:
-    """A failed or partial cycle is the one worth reading."""
-
-    step = _named(EVIDENCE_STEP)
-
-    assert step["uses"].startswith("actions/upload-artifact@")
-    assert "always()" in step["if"]
-    assert int(step["with"]["retention-days"]) == 90
-    assert step["with"]["if-no-files-found"] in ("warn", "ignore")
-
-    paths = [
-        line.strip()
-        for line in str(step["with"]["path"]).splitlines()
-        if line.strip()
-    ]
-    assert "reports/scheduled_publish_report.json" in paths
-    assert "data/drafts/latest/" in paths
-
-
-# ===========================================================================
-# 4 · a partial failure must not repost to what already succeeded
-# ===========================================================================
-
-
-def test_the_identity_key_is_stable_across_a_regenerated_draft() -> None:
-    """The protection the owner asked about, stated as the key's own shape.
-
-    `PublicationIdentity` is (client, destination, source signal ids) — **no
-    run id and no article digest**. So a retry that regenerates the article
-    from the same topic produces the same key, and the destination that already
-    published is recognised. A digest in the key would have made every rewrite
-    a new publication.
-    """
-
-    from src.publishing.publication_markers import PublicationIdentity
-
-    first = PublicationIdentity(
-        client="never_blank", destination="wix", source_signal_ids=("1",)
-    )
-    regenerated = PublicationIdentity(
-        client="never_blank", destination="wix", source_signal_ids=("1",)
-    )
-
-    assert first == regenerated
-    assert set(PublicationIdentity.__dataclass_fields__) == {
-        "client",
-        "destination",
-        "source_signal_ids",
-    }
-
-
-def test_a_destination_is_claimed_before_its_call_and_marked_after() -> None:
-    """Intent first, marker second — per destination, in the live path only."""
-
-    source = _script("publish.py")
-
-    assert "guard.check(channel)" in source
-    assert "guard.record_intent(channel" in source
-    assert "guard.record_marker(channel" in source
-    assert 'if mode == "live"' in source
-
-
-def test_a_draft_that_names_no_source_publishes_nothing() -> None:
-    """No identity, no authority, no publication."""
-
-    from src.publishing.publication_markers import (
-        PublicationIdentity,
-        PublicationIdentityError,
-    )
-
-    with pytest.raises(PublicationIdentityError):
-        PublicationIdentity(
-            client="never_blank", destination="wix", source_signal_ids=()
-        )
-
-
-# ===========================================================================
-# 5 · the input lineage — what MVP 1 will actually write about
-# ===========================================================================
-
-
-def test_the_subject_comes_from_the_manual_topic_queue() -> None:
-    """Established deterministically, and it is not fresh discovery.
-
-    `get_next_topic()` reads `topics_manual.csv` and takes the first row whose
-    status is `pending`. Its only other branch logs that the Intelligence
-    Engine is "not wired yet (Phase 7)" and returns `None`, which makes
-    `generate.py` exit 1. So MVP 1 writes about a **configured** topic, and
-    there is no path by which it discovers one.
-    """
-
-    from src.internal.topic_prioritizer import MANUAL_QUEUE, get_next_topic
-
-    assert MANUAL_QUEUE.name == "topics_manual.csv"
-
-    source = (ROOT / "src" / "internal" / "topic_prioritizer.py").read_text(
+    nightly = (ROOT / ".github" / "workflows" / "daily_signal_research.yml").read_text(
         encoding="utf-8"
     )
-    assert "Intelligence Engine not wired yet" in source
-
-    topic = get_next_topic()
-    assert topic is not None, "the queue has no pending row, so the lane has no subject"
+    assert "mvp1" not in nightly.lower()
+    assert 'NB_RESEARCH_PUBLISH_ENABLED: "true"' not in nightly
 
 
-def test_the_queue_state_is_reported_rather_than_assumed() -> None:
-    """What is in the queue today, so a live run cannot surprise us.
-
-    This is the operational input step MVP 1 needs: a human adds a row. The
-    single row on `main` is an **example** written for a dry run — publishing
-    it live is a decision, not a default, and this test exists so that decision
-    is made with the row in front of you.
-    """
-
-    rows = list(
-        csv.DictReader(
-            (ROOT / "topics_manual.csv").read_text(encoding="utf-8").splitlines()
-        )
-    )
-    pending = [row for row in rows if (row.get("status") or "").strip() == "pending"]
-
-    assert pending, "no pending topic: a live MVP 1 run would exit 1 at generation"
-    assert len(pending) == 1, (
-        f"{len(pending)} pending topics; the lane takes the first and the rest "
-        "stay queued — worth knowing before a live run"
-    )
-    assert "Example manual topic" in (pending[0].get("notes") or ""), (
-        "the pending row is no longer the known example; a live run would "
-        "publish whatever replaced it, so this test asks you to look"
-    )
-
-
-def test_a_used_topic_is_not_marked_so_a_rerun_regenerates_it() -> None:
-    """The one stale-material risk, named rather than papered over.
-
-    `topic_prioritizer` has `mark_manual_topic_in_progress` and
-    `mark_manual_topic_published`, and **`generate.py` calls neither**. So a
-    second run takes the same first pending row again. Two things stop that
-    becoming a second publication: the semantic duplicate check in
-    `generate.py`, which exits 1, and the publication markers, which refuse a
-    destination that already published.
-    """
-
-    generator = _script("generate.py")
-
-    assert "mark_manual_topic_published" not in generator
-    assert "mark_manual_topic_in_progress" not in generator
-    assert "is_duplicate" in generator
-    assert "guard.check(channel)" in _script("publish.py")
-
-
-# ===========================================================================
-# 6 · the Golden Engine is untouched
-# ===========================================================================
-
-
-def test_the_canonical_workflows_are_not_touched_by_this_lane() -> None:
-    """MVP 1 adds a file. It does not edit the engine's own triggers."""
-
+def test_the_canonical_lane_is_not_touched_by_this_workflow() -> None:
     workflows = ROOT / ".github" / "workflows"
-    for canonical in (
-        "canonical_shadow.yml",
-        "monday_publish.yml",
-        "wednesday_golden.yml",
-    ):
+    for canonical in ("canonical_shadow.yml", "monday_publish.yml", "wednesday_golden.yml"):
         text = (workflows / canonical).read_text(encoding="utf-8")
         assert "mvp1" not in text.lower(), canonical
-        assert "NB_MVP1_ENABLED" not in text, canonical
 
-    assert "CANONICAL_SHADOW_ENABLED" not in WORKFLOW.read_text(encoding="utf-8")
+    for text in (WORKFLOW.read_text(encoding="utf-8"), ENTRY.read_text(encoding="utf-8")):
+        for forbidden in ("editorial_core", "golden_engine", "CANONICAL_SHADOW_ENABLED"):
+            assert forbidden not in text, forbidden
 
 
 def test_the_golden_engine_call_budgets_are_unchanged() -> None:
@@ -452,68 +445,6 @@ def test_the_golden_engine_call_budgets_are_unchanged() -> None:
         WEDNESDAY_MAX_CEILING,
     )
 
-    assert (
-        GOLDEN_ENGINE_MAX_CEILING,
-        R1_MAX_CEILING,
-        WEDNESDAY_MAX_CEILING,
-    ) == (60, 40, 56)
-
-
-def test_one_input_governs_the_dry_run_and_the_live_run() -> None:
-    """The gap the Threads decision exposed, closed.
-
-    Before it, `channels` reached only `publish.py --dry-run`: the live step
-    ran `scheduled_publish.py --force`, whose destination list was hardcoded
-    and included Threads. So narrowing the input would have narrowed the dry
-    run while the live run published to a destination the owner had excluded —
-    the two modes disagreeing about what the lane is.
-
-    Both steps now take the same value, through the environment, behind the
-    same digits-and-commas guard.
-    """
-
-    dry, live = _named(DRY_STEP), _named(LIVE_STEP)
-
-    assert dry["env"]["CHANNELS"] == "${{ inputs.channels }}"
-    assert live["env"]["CHANNELS"] == "${{ inputs.channels }}"
-    for step in (dry, live):
-        assert '(*[!a-z,]*|"")' in step["run"]
-        assert "${{ inputs.channels }}" not in step["run"]
-    assert '--channels "${CHANNELS}"' in live["run"]
-
-
-def test_the_shared_pipeline_keeps_its_own_default() -> None:
-    """Adding the argument changed no existing behaviour.
-
-    `scheduled_publish.py` is shared code. Run without `--channels` it still
-    does what it always did, all six destinations included — so the MVP scope
-    decision lives in the caller, not in the script.
-    """
-
-    import inspect
-
-    from scripts.scheduled_publish import DEFAULT_CHANNELS, main
-
-    assert DEFAULT_CHANNELS == (
-        "wix", "linkedin", "facebook", "instagram", "threads", "telegram",
+    assert (GOLDEN_ENGINE_MAX_CEILING, R1_MAX_CEILING, WEDNESDAY_MAX_CEILING) == (
+        60, 40, 56,
     )
-    source = inspect.getsource(main)
-    assert 'default=",".join(DEFAULT_CHANNELS)' in source
-    # An unknown name is refused rather than handed to a publisher.
-    assert "Unknown destination(s)" in source
-
-
-def test_an_unknown_destination_is_refused_before_anything_publishes() -> None:
-    """Fail closed on a typo, rather than silently skipping a channel."""
-
-    import subprocess
-    import sys
-
-    result = subprocess.run(
-        [sys.executable, "scripts/scheduled_publish.py", "--force",
-         "--channels", "wix,linkedni"],
-        cwd=ROOT, capture_output=True, text=True, timeout=120,
-    )
-
-    assert result.returncode == 2, result.stdout + result.stderr
-    assert "linkedni" in result.stdout
