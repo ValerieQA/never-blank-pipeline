@@ -1,0 +1,11 @@
+{
+  "client": "never_blank",
+  "content_digest": "sha256:aade3ee2f9c4bf895fd2aa00dde737555559ca81829084a39ae849170fa8c60e",
+  "destination": "wix",
+  "key": "43a2b5c7454d8e2a-4ac00b1c0bb76596",
+  "recorded_at": "2026-10-07T15:36:40.659270+00:00",
+  "run_id": "2db1e8bb-8cfd-463d-98b1-b429f25a0170",
+  "source_signal_ids": [
+    "43a2b5c7454d8e2a"
+  ]
+}
