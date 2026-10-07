@@ -1,56 +1,63 @@
-# Never Blank MVP 1 — the proven July production lane, on demand.
+# Never Blank MVP 1 — the historical research lane, on demand.
 #
 # A temporary operational release so Never Blank has something demonstrably
 # working for prospective clients while the Golden Engine is completed. It is
-# **not** a replacement for the Golden Engine and shares no code with it: this
-# lane is `scripts/generate.py` → `data/drafts/latest/` → `scripts/publish.py`,
-# the sequence `scripts/scheduled_publish.py` has always driven, and the
-# publishers under `src/publishing/`. Nothing here imports
-# `src/editorial_core/`.
+# not a replacement for the Golden Engine and shares no code with it: this is
+# the July lane — a signal the system discovered, the package Stage 10
+# prepared, and Stage 11, which generates the six final texts and publishes
+# them. Forensics and the Versant lineage: #393.
 #
-# Why a new workflow and no new code: every component of that lane is still on
-# `main` and unmodified — `generate.py` was last changed 2026-07-21, which is
-# the July behaviour itself. What was removed was the lane's *trigger*,
-# `scheduled_publish.yml`, deleted on 2026-10-04 (#326/#380). This restores a
-# trigger and nothing else. Forensics: #393.
+# **This drives the historical behaviour, not a reconstruction of it.** Stage 11
+# has always produced the prose at publication time — July's own
+# `publish_packages.py` imported `generate_article` — so a live run generates.
+# A "publish the already-generated package" mode was considered and **declined**
+# (owner, 2026-10-07): it would be a new capability, and this lane is being
+# restored, not redesigned.
 #
-# On the R1 allowlist: this lane does not import `src/publishing/release_scope.py`
-# and does not need to. That module states the reason itself — it imports no
-# publisher precisely so a publisher class stays "fully usable by a manual or
-# non-R1 caller, without becoming reachable from a scheduled run". MVP 1 is
-# that manual caller. R1's scope is untouched.
+# What was broken and is now fixed is one seam: #100/#101 moved the Wix and
+# LinkedIn adapters to a frozen canonical package and moved their target
+# identity into it, and nothing adapted the lane already calling them. #395
+# restored that caller. `release_scope.py` is untouched and still answers what
+# an automatic Release 1 run may do; this is an explicit manual non-R1 caller,
+# which is the case that module was written to permit.
 #
-# **Off until somebody turns it on, and dry until somebody asks for live.**
-# Two independent conditions, for two different kinds of accident: the
-# `NB_MVP1_ENABLED` repository variable stops a dispatch from running at all,
-# and `mode` defaults to `dry`, which makes no paid call and publishes nothing.
+# **Off until somebody turns it on, and inspecting until somebody asks for
+# live.** `NB_MVP1_ENABLED` stops a dispatch from running at all; `mode`
+# defaults to `inspect`, which calls nothing.
+#
+# There is deliberately **no dry-run mode**. Stage 11 generates before it
+# touches a publisher, so a rehearsal through it would cost nine model calls
+# and post nothing — the worst of both. `inspect` is free because it never
+# reaches the stage.
 name: Never Blank MVP 1
 
 on:
-  # No schedule. A recurring lane is a separate decision, and this one exists
-  # to be shown to a client on purpose rather than to run unattended.
+  # No schedule. A recurring lane is a separate decision.
   workflow_dispatch:
     inputs:
-      mode:
-        description: "dry: validate the whole lane, no paid call, no publication. live: generate and publish."
+      signal_id:
+        description: "A signal the system already discovered, with a prepared package."
         required: false
-        default: dry
+        default: a71d52f27d921529
+        type: string
+      mode:
+        description: "inspect: check the inputs, call nothing. live: generate and publish."
+        required: false
+        default: inspect
         type: choice
-        options: [dry, live]
+        options: [inspect, live]
       channels:
         description: "Comma-separated destinations. Default: MVP 1's five."
         required: false
-        # Owner decision 2026-10-07: **Threads is out of MVP 1.** Not because
-        # it failed — because #393 found no record of it ever having published,
-        # and MVP 1 is the lane that only carries what is proven. The publisher
-        # module stays in the repository, unchanged and still usable by a
-        # manual caller; it is this lane's destination set that excludes it.
+        # Owner decision 2026-10-07: Threads is out of MVP 1 — not because it
+        # failed, but because #393 found no record of it ever having published.
+        # The publisher stays in the repository and stays drivable when asked.
         default: wix,linkedin,facebook,instagram,telegram
         type: string
 
 jobs:
   mvp1:
-    name: "MVP 1 — ${{ inputs.mode || 'dry' }}"
+    name: "MVP 1 — ${{ inputs.mode || 'inspect' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -65,8 +72,8 @@ jobs:
           ENABLED: ${{ vars.NB_MVP1_ENABLED }}
         run: |
           # Unset is "nobody enabled this", not "enabled with a default" — the
-          # same posture canonical_shadow.yml takes, and for the same reason:
-          # a live run of this lane publishes to six real surfaces.
+          # same posture canonical_shadow.yml takes, and for the same reason: a
+          # live run of this lane publishes to five real surfaces.
           if [ "${ENABLED}" = "true" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
@@ -83,59 +90,57 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: pip install --quiet -r requirements.txt
 
-      # ── dry: the whole lane, validated, with nothing paid and nothing posted
+      # ── inspect: free, and it never reaches Stage 11
       #
-      # `generate.py --dry` resolves the topic and the brief and stops before
-      # the model. `generate_image.py --dry-run` checks the image pipeline's
-      # configuration without calling DALL·E or Cloudinary. `publish.py
-      # --dry-run` validates the payload of every requested destination without
-      # an API call — which is what makes all six independently observable
-      # before a single cent is spent.
-      - name: "Dry: validate the lane"
-        if: steps.gate.outputs.run == 'true' && (inputs.mode || 'dry') == 'dry'
+      # It answers one question — could this signal be published — by checking
+      # that the signal is in the discovered store, that its package exists and
+      # carries text for every requested destination, and that the package
+      # already holds a hosted image. No credential is given to this step.
+      - name: "Inspect the signal and its package"
+        if: steps.gate.outputs.run == 'true' && (inputs.mode || 'inspect') == 'inspect'
         env:
+          PYTHONPATH: .
+          SIGNAL_ID: ${{ inputs.signal_id }}
           CHANNELS: ${{ inputs.channels }}
         run: |
           set -euo pipefail
-          case "${CHANNELS}" in
-            (*[!a-z,]*|"") echo "ERROR: channels must be lowercase names and commas; got '${CHANNELS}'"; exit 1 ;;
-          esac
-          python3 scripts/generate.py --dry
-          python3 scripts/generate_image.py --dry-run
-          # A draft from an earlier generate run is validated when one exists;
-          # on a clean checkout there is none, and that is not a failure of the
-          # lane. Reported either way rather than hidden.
-          if [ -f data/drafts/latest/metadata.json ] || [ -f data/drafts/latest/final/metadata.json ]; then
-            python3 scripts/publish.py --dry-run --channels "${CHANNELS}"
-          else
-            echo "No draft in data/drafts/latest/ — payload validation skipped."
-            echo "Run mode=live, or generate a draft first, to exercise the publishers."
-          fi
+          case "${SIGNAL_ID}" in (*[!a-z0-9]*|"") echo "ERROR: signal_id must be lowercase hex; got '${SIGNAL_ID}'"; exit 1 ;; esac
+          case "${CHANNELS}" in (*[!a-z,]*|"") echo "ERROR: channels must be lowercase names and commas; got '${CHANNELS}'"; exit 1 ;; esac
+          python3 scripts/mvp1_publish_signal.py \
+            --signal-id "${SIGNAL_ID}" --channels "${CHANNELS}" --mode inspect
 
-      # ── live: the proven sequence, verbatim, through its own script
+      # ── live: Stage 11 — generate the six texts, then publish
       #
-      # `--force` runs regardless of config/schedule.yaml, which still says
-      # Friday. The script itself owns the order and the per-destination
-      # isolation: Wix first, then each social channel this lane asked for,
-      # independently with abort_on_fail=False, then telegram only if Wix
-      # returned 0 — because telegram needs the article URL. The destination
-      # set is passed in, so the same input governs the dry run and the live
-      # one; a hardcoded list would have let them disagree.
+      # `NB_RESEARCH_PUBLISH_ENABLED` is the stage's own switch and is set here,
+      # for this step only. It does not reach Daily Signal Research, which reads
+      # its own from a secret: that job still generates, packages and publishes
+      # nothing.
       #
-      # Idempotency is the publishers' own: `PublicationGuard` records an
-      # intent before each destination's call and a marker after it, keyed by
-      # (client, destination, source signal) with no run id and no digest. A
-      # destination that already published is refused on a retry, so a partial
+      # The image is the one the package already carries, hosted. Stage 11
+      # reuses a hosted image rather than regenerating it, so no image call is
+      # expected — `NB_FORCE_REGENERATE_RESEARCH_IMAGES` is deliberately not
+      # passed.
+      #
+      # Idempotency is the publishers' own: `PublicationGuard` records an intent
+      # before each destination's call and a marker after it, keyed by
+      # (client, destination, source signal) with no run id and no digest, so a
+      # destination that already published is refused on a retry and a partial
       # failure cannot repost to the ones that succeeded.
       - name: "Live: generate and publish"
-        if: steps.gate.outputs.run == 'true' && (inputs.mode || 'dry') == 'live'
+        if: steps.gate.outputs.run == 'true' && (inputs.mode || 'inspect') == 'live'
         env:
+          PYTHONPATH: .
+          SIGNAL_ID: ${{ inputs.signal_id }}
+          CHANNELS: ${{ inputs.channels }}
+          NB_RESEARCH_PUBLISH_ENABLED: "true"
           NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
           NB_OPENAI_CHAT_MODEL: ${{ secrets.NB_OPENAI_CHAT_MODEL }}
           NB_WIX_API_KEY: ${{ secrets.NB_WIX_API_KEY }}
           NB_WIX_SITE_ID: ${{ secrets.NB_WIX_SITE_ID }}
           NB_WIX_POST_OWNER_ID: ${{ secrets.NB_WIX_POST_OWNER_ID }}
           NB_WIX_SITE_BASE_URL: ${{ secrets.NB_WIX_SITE_BASE_URL }}
+          NB_WIX_BLOG_CATEGORY_ID: ${{ secrets.NB_WIX_BLOG_CATEGORY_ID }}
+          NB_WIX_BLOG_TAG_IDS: ${{ secrets.NB_WIX_BLOG_TAG_IDS }}
           NB_ZERNIO_API_KEY: ${{ secrets.NB_ZERNIO_API_KEY }}
           NB_ZERNIO_LINKEDIN_ACCOUNT_ID: ${{ secrets.NB_ZERNIO_LINKEDIN_ACCOUNT_ID }}
           NB_META_FB_PAGE_ID: ${{ secrets.NB_META_FB_PAGE_ID }}
@@ -143,31 +148,23 @@ jobs:
           NB_META_IG_USER_ID: ${{ secrets.NB_META_IG_USER_ID }}
           NB_TELEGRAM_BOT_TOKEN: ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
           NB_TELEGRAM_CHANNEL_ID: ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
-          NB_CLOUDINARY_CLOUD_NAME: ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
-          NB_CLOUDINARY_API_KEY: ${{ secrets.NB_CLOUDINARY_API_KEY }}
-          NB_CLOUDINARY_API_SECRET: ${{ secrets.NB_CLOUDINARY_API_SECRET }}
-          CHANNELS: ${{ inputs.channels }}
         run: |
           set -euo pipefail
-          # The same guard the dry step uses, for the same reason: this value
-          # comes from a dispatch input.
-          case "${CHANNELS}" in
-            (*[!a-z,]*|"") echo "ERROR: channels must be lowercase names and commas; got '${CHANNELS}'"; exit 1 ;;
-          esac
-          python3 scripts/scheduled_publish.py --force --channels "${CHANNELS}"
+          case "${SIGNAL_ID}" in (*[!a-z0-9]*|"") echo "ERROR: signal_id must be lowercase hex; got '${SIGNAL_ID}'"; exit 1 ;; esac
+          case "${CHANNELS}" in (*[!a-z,]*|"") echo "ERROR: channels must be lowercase names and commas; got '${CHANNELS}'"; exit 1 ;; esac
+          python3 scripts/mvp1_publish_signal.py \
+            --signal-id "${SIGNAL_ID}" --channels "${CHANNELS}" --mode live
 
-      # Always, and after the run: a failed or partial cycle is the one worth
-      # reading. `scheduled_publish_report.{json,md}` carries one record per
-      # step with its return code, which is where each destination's outcome is
-      # independently visible; the draft is what was actually generated.
+      # Always, and last: a partial cycle is the one worth reading. The
+      # generated package is what Stage 11 wrote — the six texts as published —
+      # and it is the evidence a reviewer needs when one destination failed.
       - name: Preserve the MVP 1 cycle
         if: always() && steps.gate.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: "nb-mvp1-${{ inputs.mode || 'dry' }}-${{ github.run_id }}"
+          name: "nb-mvp1-${{ inputs.mode || 'inspect' }}-${{ github.run_id }}"
           path: |
-            reports/scheduled_publish_report.json
-            reports/scheduled_publish_report.md
-            data/drafts/latest/
+            reports/content_packages/${{ inputs.signal_id }}_generated.json
+            reports/content_packages/${{ inputs.signal_id }}.json
           if-no-files-found: warn
           retention-days: 90
