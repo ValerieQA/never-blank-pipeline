@@ -32,6 +32,14 @@ REPO_ROOT   = Path(__file__).resolve().parent.parent
 CONFIG_PATH = REPO_ROOT / "config" / "schedule.yaml"
 REPORTS_DIR = REPO_ROOT / "reports"
 
+#: Every destination this pipeline knows how to run, in publication order. Wix
+#: is first because the article URL comes from it and Telegram is last because
+#: it needs that URL; the four in between are independent of each other.
+DEFAULT_CHANNELS = ("wix", "linkedin", "facebook", "instagram", "threads", "telegram")
+
+#: The ones that run independently between those two.
+SOCIAL_CHANNELS = ("linkedin", "facebook", "instagram", "threads")
+
 DAY_NAMES = {
     "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
     "friday": 4, "saturday": 5, "sunday": 6,
@@ -175,6 +183,17 @@ def main() -> int:
     parser.add_argument("--cron", default="", help="github.event.schedule — the cron that fired")
     parser.add_argument("--decision-out", default="",
                         help="Where to write the scheduling-decision record")
+    # Which destinations this cycle publishes to. Optional, and the default is
+    # the six this pipeline has always run, so a bare
+    # `python scripts/scheduled_publish.py` behaves exactly as it did.
+    #
+    # It exists because MVP 1 (#393) needs its destination set to be a
+    # statement its caller makes, not a list buried in this script: the owner
+    # removed Threads from MVP 1 on 2026-10-07, and a hardcoded list would have
+    # meant the workflow's own `channels` input governed the dry run while the
+    # live run published somewhere the owner had excluded.
+    parser.add_argument("--channels", default=",".join(DEFAULT_CHANNELS),
+                        help="Comma-separated destinations, in publication order")
     args = parser.parse_args()
 
     cfg      = load_config()
@@ -208,6 +227,24 @@ def main() -> int:
     if args.force:
         print("\n--force flag set — running pipeline immediately.")
 
+    # The destinations this cycle was asked for, in this pipeline's own order:
+    # Wix first because the article URL comes from it, then each social channel
+    # independently, then Telegram last because it needs that URL.
+    #
+    # Validated **here**, before step 1. Generation is the only paid step, so a
+    # typo in the destination list has to be refused before it, not after: the
+    # first version of this check sat beside the publish steps and would have
+    # charged for an article it then declined to send anywhere.
+    requested = [name.strip().lower() for name in args.channels.split(",") if name.strip()]
+    unknown = [name for name in requested if name not in DEFAULT_CHANNELS]
+    if unknown:
+        print(f"\n✗ Unknown destination(s): {', '.join(unknown)}")
+        print(f"  known: {', '.join(DEFAULT_CHANNELS)}")
+        return 2
+    if not requested:
+        print("\n✗ No destination requested — nothing to publish.")
+        return 2
+
     steps: list[dict] = []
 
     def step(label: str, cmd: list[str], abort_on_fail: bool = False) -> int:
@@ -229,14 +266,18 @@ def main() -> int:
     step("Generate + upload image", [python, "scripts/generate_image.py", "--upload"], abort_on_fail=False)
 
     # 3. Publish — Wix first
-    wix_rc = step("Publish Wix", [python, "scripts/publish.py", "--live", "--channels", "wix"], abort_on_fail=False)
+    wix_rc = 0
+    if "wix" in requested:
+        wix_rc = step("Publish Wix", [python, "scripts/publish.py", "--live", "--channels", "wix"], abort_on_fail=False)
 
     # 4. Social channels — each runs independently; Telegram skipped if Wix failed
-    social_channels = ["linkedin", "facebook", "instagram", "threads"]
+    social_channels = [ch for ch in SOCIAL_CHANNELS if ch in requested]
     for ch in social_channels:
         step(f"Publish {ch}", [python, "scripts/publish.py", "--live", "--channels", ch], abort_on_fail=False)
 
-    if wix_rc == 0:
+    if "telegram" not in requested:
+        pass
+    elif wix_rc == 0:
         step("Publish telegram", [python, "scripts/publish.py", "--live", "--channels", "telegram"], abort_on_fail=False)
     else:
         steps.append({"label": "Publish telegram", "rc": -1, "status": "SKIPPED (Wix failed — no article URL)"})

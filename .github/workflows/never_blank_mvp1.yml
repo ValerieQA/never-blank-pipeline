@@ -38,9 +38,14 @@ on:
         type: choice
         options: [dry, live]
       channels:
-        description: "Comma-separated destinations. Default: all six."
+        description: "Comma-separated destinations. Default: MVP 1's five."
         required: false
-        default: wix,linkedin,facebook,instagram,threads,telegram
+        # Owner decision 2026-10-07: **Threads is out of MVP 1.** Not because
+        # it failed — because #393 found no record of it ever having published,
+        # and MVP 1 is the lane that only carries what is proven. The publisher
+        # module stays in the repository, unchanged and still usable by a
+        # manual caller; it is this lane's destination set that excludes it.
+        default: wix,linkedin,facebook,instagram,telegram
         type: string
 
 jobs:
@@ -111,9 +116,11 @@ jobs:
       #
       # `--force` runs regardless of config/schedule.yaml, which still says
       # Friday. The script itself owns the order and the per-destination
-      # isolation: Wix first, then linkedin/facebook/instagram/threads each
+      # isolation: Wix first, then each social channel this lane asked for,
       # independently with abort_on_fail=False, then telegram only if Wix
-      # returned 0 — because telegram needs the article URL.
+      # returned 0 — because telegram needs the article URL. The destination
+      # set is passed in, so the same input governs the dry run and the live
+      # one; a hardcoded list would have let them disagree.
       #
       # Idempotency is the publishers' own: `PublicationGuard` records an
       # intent before each destination's call and a marker after it, keyed by
@@ -134,13 +141,20 @@ jobs:
           NB_META_FB_PAGE_ID: ${{ secrets.NB_META_FB_PAGE_ID }}
           NB_META_FB_PAGE_TOKEN: ${{ secrets.NB_META_FB_PAGE_TOKEN }}
           NB_META_IG_USER_ID: ${{ secrets.NB_META_IG_USER_ID }}
-          NB_THREADS_ACCESS_TOKEN: ${{ secrets.NB_THREADS_ACCESS_TOKEN }}
           NB_TELEGRAM_BOT_TOKEN: ${{ secrets.NB_TELEGRAM_BOT_TOKEN }}
           NB_TELEGRAM_CHANNEL_ID: ${{ secrets.NB_TELEGRAM_CHANNEL_ID }}
           NB_CLOUDINARY_CLOUD_NAME: ${{ secrets.NB_CLOUDINARY_CLOUD_NAME }}
           NB_CLOUDINARY_API_KEY: ${{ secrets.NB_CLOUDINARY_API_KEY }}
           NB_CLOUDINARY_API_SECRET: ${{ secrets.NB_CLOUDINARY_API_SECRET }}
-        run: python3 scripts/scheduled_publish.py --force
+          CHANNELS: ${{ inputs.channels }}
+        run: |
+          set -euo pipefail
+          # The same guard the dry step uses, for the same reason: this value
+          # comes from a dispatch input.
+          case "${CHANNELS}" in
+            (*[!a-z,]*|"") echo "ERROR: channels must be lowercase names and commas; got '${CHANNELS}'"; exit 1 ;;
+          esac
+          python3 scripts/scheduled_publish.py --force --channels "${CHANNELS}"
 
       # Always, and after the run: a failed or partial cycle is the one worth
       # reading. `scheduled_publish_report.{json,md}` carries one record per

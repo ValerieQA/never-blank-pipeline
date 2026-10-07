@@ -30,8 +30,14 @@ EVIDENCE_STEP = "Preserve the MVP 1 cycle"
 DRY_STEP = "Dry: validate the lane"
 LIVE_STEP = "Live: generate and publish"
 
-#: The six configured destinations, in the order the proven sequence runs them.
-DESTINATIONS = ("wix", "linkedin", "facebook", "instagram", "threads", "telegram")
+#: MVP 1's destinations, in the order the proven sequence runs them.
+#:
+#: Owner decision 2026-10-07: **Threads is out of MVP 1** — not because it
+#: failed, but because #393 found no record of it ever having published, and
+#: this lane carries only what is proven. The publisher module stays in the
+#: repository; it is this lane's destination set that excludes it.
+DESTINATIONS = ("wix", "linkedin", "facebook", "instagram", "telegram")
+EXCLUDED = "threads"
 
 
 def _spec() -> dict:
@@ -149,7 +155,6 @@ def test_live_runs_the_proven_sequence_through_its_own_script() -> None:
     # substring — the question is whether the workflow invokes the individual
     # scripts itself, not whether their names appear.
     for duplicated in (
-        "--channels",
         "scripts/publish.py",
         "scripts/generate.py",
         "scripts/generate_image.py",
@@ -169,9 +174,16 @@ def test_the_proven_sequence_is_still_what_that_script_does() -> None:
     assert 'scripts/generate.py", "--qc"' in source
     assert 'scripts/generate_image.py", "--upload"' in source
     assert '"--channels", "wix"' in source
-    assert '["linkedin", "facebook", "instagram", "threads"]' in source
     assert "abort_on_fail=False" in source
     assert "--force" in source
+
+    from scripts.scheduled_publish import DEFAULT_CHANNELS, SOCIAL_CHANNELS
+
+    # Wix first, the socials between, telegram last — the order is the
+    # pipeline's own and does not depend on what a caller asks for.
+    assert DEFAULT_CHANNELS[0] == "wix"
+    assert DEFAULT_CHANNELS[-1] == "telegram"
+    assert SOCIAL_CHANNELS == DEFAULT_CHANNELS[1:-1]
 
 
 def test_the_lane_shares_no_code_with_the_golden_engine() -> None:
@@ -209,26 +221,47 @@ def test_the_r1_allowlist_is_neither_imported_nor_needed() -> None:
 # ===========================================================================
 
 
-def test_all_six_destinations_are_the_default() -> None:
+def test_mvp1s_five_destinations_are_the_default() -> None:
     declared = _triggers()["workflow_dispatch"]["inputs"]["channels"]["default"]
 
     assert tuple(declared.split(",")) == DESTINATIONS
+    assert EXCLUDED not in declared
 
 
 def test_every_destination_has_a_publisher_behind_it() -> None:
-    """Including threads, which is configured but has no proven publication.
-
-    #393 found no marker, no index entry and no forensic record of a Threads
-    post. It is included because the owner asked for all six and because its
-    failure is isolated — not because it is proven.
-    """
-
     from src.publishing.publication_markers import DESTINATIONS as KNOWN
 
     source = _script("publish.py")
     for destination in DESTINATIONS:
         assert destination in KNOWN, destination
         assert f'"{destination}"' in source, destination
+
+
+def test_threads_is_out_of_the_lane_and_still_in_the_repository() -> None:
+    """A scope decision, not a removal (owner, 2026-10-07).
+
+    The publisher module, its mapping in `publish.py` and the pipeline's own
+    knowledge of the name all stay — so a manual caller can still use it and
+    nothing was refactored to exclude it. What excludes it is this lane's
+    destination set, in one place, where the owner can change her mind by
+    editing one input default.
+    """
+
+    from src.publishing.release_scope import NON_R1_PUBLISH_CHANNELS
+    from src.publishing.publication_markers import DESTINATIONS as KNOWN
+    from scripts.scheduled_publish import DEFAULT_CHANNELS
+
+    # Still known to the repository, untouched.
+    assert (ROOT / "src" / "publishing" / "threads.py").is_file()
+    assert EXCLUDED in KNOWN
+    assert EXCLUDED in DEFAULT_CHANNELS
+    assert EXCLUDED in NON_R1_PUBLISH_CHANNELS
+    assert f'"{EXCLUDED}"' in _script("publish.py")
+
+    # And out of this lane, in both modes and in its credentials.
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    assert EXCLUDED not in workflow.split("# Owner decision 2026-10-07")[0]
+    assert "NB_THREADS_ACCESS_TOKEN" not in workflow
 
 
 def test_one_destination_failing_cannot_hide_the_others() -> None:
@@ -424,3 +457,63 @@ def test_the_golden_engine_call_budgets_are_unchanged() -> None:
         R1_MAX_CEILING,
         WEDNESDAY_MAX_CEILING,
     ) == (60, 40, 56)
+
+
+def test_one_input_governs_the_dry_run_and_the_live_run() -> None:
+    """The gap the Threads decision exposed, closed.
+
+    Before it, `channels` reached only `publish.py --dry-run`: the live step
+    ran `scheduled_publish.py --force`, whose destination list was hardcoded
+    and included Threads. So narrowing the input would have narrowed the dry
+    run while the live run published to a destination the owner had excluded —
+    the two modes disagreeing about what the lane is.
+
+    Both steps now take the same value, through the environment, behind the
+    same digits-and-commas guard.
+    """
+
+    dry, live = _named(DRY_STEP), _named(LIVE_STEP)
+
+    assert dry["env"]["CHANNELS"] == "${{ inputs.channels }}"
+    assert live["env"]["CHANNELS"] == "${{ inputs.channels }}"
+    for step in (dry, live):
+        assert '(*[!a-z,]*|"")' in step["run"]
+        assert "${{ inputs.channels }}" not in step["run"]
+    assert '--channels "${CHANNELS}"' in live["run"]
+
+
+def test_the_shared_pipeline_keeps_its_own_default() -> None:
+    """Adding the argument changed no existing behaviour.
+
+    `scheduled_publish.py` is shared code. Run without `--channels` it still
+    does what it always did, all six destinations included — so the MVP scope
+    decision lives in the caller, not in the script.
+    """
+
+    import inspect
+
+    from scripts.scheduled_publish import DEFAULT_CHANNELS, main
+
+    assert DEFAULT_CHANNELS == (
+        "wix", "linkedin", "facebook", "instagram", "threads", "telegram",
+    )
+    source = inspect.getsource(main)
+    assert 'default=",".join(DEFAULT_CHANNELS)' in source
+    # An unknown name is refused rather than handed to a publisher.
+    assert "Unknown destination(s)" in source
+
+
+def test_an_unknown_destination_is_refused_before_anything_publishes() -> None:
+    """Fail closed on a typo, rather than silently skipping a channel."""
+
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "scripts/scheduled_publish.py", "--force",
+         "--channels", "wix,linkedni"],
+        cwd=ROOT, capture_output=True, text=True, timeout=120,
+    )
+
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "linkedni" in result.stdout
