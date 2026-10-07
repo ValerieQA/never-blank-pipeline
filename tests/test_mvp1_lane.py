@@ -282,6 +282,56 @@ def test_the_live_step_carries_each_destinations_credentials() -> None:
         assert required in env, required
 
 
+def test_the_live_step_routes_every_stage_model() -> None:
+    """Live run 37689111181 died on its first call for want of these.
+
+    The step passed only `NB_OPENAI_CHAT_MODEL`, so `model_enrich()` and every
+    sibling resolved to the global fallback, whose value the provider rejects
+    with HTTP 400 `invalid model ID`. `wednesday_golden.yml` records the same
+    failure for run 33281894748 (#213, #236) and survives by routing the five.
+
+    Read from the parsed step, because a comment naming a secret is not the
+    secret being passed.
+    """
+
+    env = _named(LIVE_STEP)["env"]
+
+    for stage in (
+        "NB_DISCOVERY_MODEL", "NB_SCORING_MODEL", "NB_ENRICH_MODEL",
+        "NB_ARTICLE_MODEL", "NB_SOCIAL_MODEL",
+    ):
+        assert env.get(stage) == "${{ secrets.%s }}" % stage, stage
+
+
+def test_the_stage_models_match_the_restored_lanes_own_convention() -> None:
+    """Same secrets, same spelling as the workflow this lane was taken from."""
+
+    daily = yaml.safe_load(
+        (WORKFLOW.parent / "daily_signal_research.yml").read_text(encoding="utf-8")
+    )
+    daily_env: dict = {}
+    for job in daily["jobs"].values():
+        for step in job["steps"]:
+            daily_env.update(step.get("env") or {})
+    live_env = _named(LIVE_STEP)["env"]
+
+    for stage in (
+        "NB_DISCOVERY_MODEL", "NB_SCORING_MODEL", "NB_ENRICH_MODEL",
+        "NB_ARTICLE_MODEL", "NB_SOCIAL_MODEL",
+    ):
+        assert live_env[stage] == daily_env[stage], stage
+
+
+def test_no_image_model_was_routed_with_them() -> None:
+    """The package's image is reused hosted, so nothing draws one (#393).
+
+    Guards the one member of the daily lane's model set that this lane must
+    not acquire, so routing the five cannot quietly re-enable a paid image.
+    """
+
+    assert "NB_IMAGE_MODEL" not in _named(LIVE_STEP)["env"]
+
+
 def test_the_cycle_is_preserved_whatever_happened() -> None:
     step = _named(EVIDENCE_STEP)
 
