@@ -168,7 +168,24 @@ class WixPublisher(BasePublisher):
             return self._fail(
                 "package configuration identity does not match the Wix strategy view"
             )
-        draft = DraftPackage.from_wix_package(package)
+        # #393: the legacy caller this adapter used to have.
+        #
+        # Until #100/#101 this method took a ``DraftPackage`` and read its
+        # target from the environment. The migration was right for the
+        # canonical path — "a second independent target selection here would
+        # let the external call go to a target the package digest does not
+        # identify" — and nothing adapted the lane that was already calling
+        # here, so Daily Signal Research's Stage 11 raised ``AttributeError``
+        # before any provider call (#231) and was emptied rather than fixed.
+        #
+        # Given a draft there is nothing to derive, so nothing is derived. A
+        # canonical caller passes a frozen package and this line behaves
+        # exactly as before, conversion included.
+        draft = (
+            package
+            if isinstance(package, DraftPackage)
+            else DraftPackage.from_wix_package(package)
+        )
         # Credential secret — environment-only (readiness gate is Issue #101).
         api_key  = os.getenv("NB_WIX_API_KEY", "")
         # Target identity — package-derived (Issue #100): the environment was

@@ -10,7 +10,7 @@ import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -221,13 +221,67 @@ def _build_draft(signal: dict, package: dict, blog_body: str, linkedin_text: str
         wix_slug=wix_slug,
         wix_category_id=wix_category_id,
         wix_tags=wix_tags,
+        # #393: the target identity, which July's publishers read from the
+        # environment themselves. #100 moved that read into the package —
+        # "the package target is the external target" — and this caller was
+        # never adapted, so the adapters now fail closed with "Missing package
+        # target identity". Read here instead: the same three variables, the
+        # same values, one layer up. Still exactly one read per run.
+        wix_site_id=os.getenv("NB_WIX_SITE_ID", ""),
+        wix_owner_member_id=os.getenv("NB_WIX_POST_OWNER_ID", ""),
+        linkedin_account_id=os.getenv("NB_ZERNIO_LINKEDIN_ACCOUNT_ID", ""),
         metadata={"signal_id": signal.get("SIGNAL_ID"), "published_at": datetime.now(timezone.utc).isoformat()},
     )
 
 
-def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[str] = None) -> list[dict]:
+class UnknownDestination(ValueError):
+    """A destination this stage cannot drive was requested."""
+
+
+def _publishers_for(channels: Optional[Sequence[str]]) -> list[tuple[str, object]]:
+    """Which publishers this call drives, and the two reporting sets beside it.
+
+    ``channels=None`` is every existing caller, and it is **unchanged**: the
+    stage drives nothing, Release 1's two channels are reported as having no
+    canonical preflight (#231) and the other four as outside Release 1 scope
+    (#227). Daily Signal Research still generates and packages and publishes
+    nothing.
+
+    A caller that names channels is an explicit non-Release-1 operator — MVP 1
+    (#393) — and drives exactly what it named. It does not widen Release 1:
+    `release_scope.py` is untouched and still answers what an automatic R1 run
+    may do. An unknown name is refused rather than silently skipped, because a
+    destination that disappears from a report is how #227 stayed hidden for
+    months.
+    """
+
+    if channels is None:
+        return list(_PUBLISHERS)
+    requested = [name.strip().lower() for name in channels if str(name).strip()]
+    known = {name for name, _ in _ALL_PUBLISHERS}
+    unknown = [name for name in requested if name not in known]
+    if unknown:
+        raise UnknownDestination(
+            f"unknown destination(s): {', '.join(unknown)}; "
+            f"this stage drives {', '.join(sorted(known))}"
+        )
+    if not requested:
+        raise UnknownDestination("no destination requested")
+    return [(name, pub) for name, pub in _ALL_PUBLISHERS if name in requested]
+
+
+def publish_packages(
+    signals: list[dict],
+    packages: list[dict],
+    mode: Optional[str] = None,
+    channels: Optional[Sequence[str]] = None,
+) -> list[dict]:
     if not signals:
         return []
+    publishers = _publishers_for(channels)
+    driving = [name for name, _ in publishers]
+    withheld = tuple(name for name in _WITHHELD_CHANNELS if name not in driving)
+    no_preflight = tuple(name for name in _NO_PREFLIGHT_CHANNELS if name not in driving)
     if os.getenv("NB_RESEARCH_PUBLISH_ENABLED", "false").lower() != "true":
         log.info("Publishing disabled — skipping Stage 11")
         return []
@@ -248,12 +302,12 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
     # #227: say out loud what this stage will not publish. The previous
     # behaviour was not a decision anyone had made — it was a list nobody had
     # revisited — and it stayed invisible because nothing ever named it.
-    if _WITHHELD_CHANNELS:
+    if withheld:
         log.info(
             "Release 1 scope: publishing %s; withholding %s (generated and "
             "packaged, not published)",
-            ", ".join(name for name, _ in _PUBLISHERS),
-            ", ".join(_WITHHELD_CHANNELS),
+            ", ".join(driving) or "nothing",
+            ", ".join(withheld),
         )
 
     for signal in signals:
@@ -340,8 +394,8 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
                 error_message=reason,
             ).to_dict()
             for names, reason in (
-                (_WITHHELD_CHANNELS, _OUTSIDE_R1_REASON),
-                (_NO_PREFLIGHT_CHANNELS, _NO_PREFLIGHT_REASON),
+                (withheld, _OUTSIDE_R1_REASON),
+                (no_preflight, _NO_PREFLIGHT_REASON),
             )
             for name in names
         }
@@ -362,7 +416,7 @@ def publish_packages(signals: list[dict], packages: list[dict], mode: Optional[s
             else None
         )
         unconfirmed: list[str] = []
-        for name, publisher in _PUBLISHERS:
+        for name, publisher in publishers:
             platform_img = pimgs.get(name, {}).get("url") or draft.image_url
             use_draft = _swap_image(draft, platform_img) if name in ("linkedin", "facebook", "instagram") else draft
             digest = content_digest(destination_text(use_draft, name))
