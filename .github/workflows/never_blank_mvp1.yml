@@ -32,16 +32,22 @@
 name: Never Blank MVP 1
 
 on:
-  # Tuesday and Thursday, one cycle each (owner, 2026-10-08). 08:17 UTC is the
-  # 04:17 ET slot #232 established, and it deliberately avoids
-  # `visibility_publish.yml`'s 07:00 UTC on these same two days.
+  # Tuesday and Thursday, one cycle each (owner, 2026-10-08).
+  #
+  # **The schedule is fixed UTC, and the local time therefore moves.** 08:17
+  # UTC is 04:17 EDT while daylight saving is in effect and 03:17 EST outside
+  # it — it is not "04:17 ET" all year, and #232's slot was only ever the
+  # summer reading of the same instant. Fixed UTC is deliberate: a cron that
+  # chased the local hour would move the publication time twice a year for no
+  # editorial reason. It also stays clear of `visibility_publish.yml`, which
+  # already publishes at 07:00 UTC on these same two days.
   #
   # The minute is :17 for the reason #224 found: a runner that fires late must
   # still be inside its own local day, and the hour boundary is where that
   # tolerance was being lost.
   schedule:
-    - cron: "17 8 * * 2"   # Tuesday  08:17 UTC = 04:17 ET
-    - cron: "17 8 * * 4"   # Thursday 08:17 UTC = 04:17 ET
+    - cron: "17 8 * * 2"   # Tuesday  08:17 UTC (04:17 EDT / 03:17 EST)
+    - cron: "17 8 * * 4"   # Thursday 08:17 UTC (04:17 EDT / 03:17 EST)
   workflow_dispatch:
     inputs:
       signal_id:
@@ -265,8 +271,19 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "nb-mvp1-${{ env.MVP1_MODE }}-${{ github.run_id }}"
+          # The *resolved* id first. A scheduled run has no `inputs.signal_id`,
+          # so reading it here produced `reports/content_packages/_generated.json`
+          # — a path matching nothing, which `if-no-files-found: warn` then
+          # passed over in silence. The evidence of an unattended cycle would
+          # have been the one thing lost, which is the whole of #287 again.
+          #
+          # The fallback keeps a manual `inspect` exactly as it was: that mode
+          # never runs the publish step, so the output is empty and
+          # `MVP1_SIGNAL` carries the dispatched id. A live run that died
+          # before resolving falls back to `auto`, matches nothing, and warns
+          # — correctly, because nothing was generated to preserve.
           path: |
-            reports/content_packages/${{ inputs.signal_id }}_generated.json
-            reports/content_packages/${{ inputs.signal_id }}.json
+            reports/content_packages/${{ steps.publish.outputs.signal_id || env.MVP1_SIGNAL }}_generated.json
+            reports/content_packages/${{ steps.publish.outputs.signal_id || env.MVP1_SIGNAL }}.json
           if-no-files-found: warn
           retention-days: 90

@@ -836,3 +836,72 @@ def test_selection_is_only_the_queue_order_with_no_eligibility_judgment() -> Non
 
     for forbidden in ("chat(", "model_", "eligib", "resolve_editorial_role"):
         assert forbidden not in code, forbidden
+
+
+# ═══════ 7 · the schedule's local time, and a scheduled run's evidence ══════
+
+PRESERVE_STEP = "Preserve the MVP 1 cycle"
+
+
+def _schedule_block() -> str:
+    """The workflow text from `on:` to the first job, comments included."""
+
+    text = WORKFLOW.read_text(encoding="utf-8")
+    return text[text.index("on:"):text.index("jobs:")]
+
+
+def test_the_schedule_is_fixed_utc() -> None:
+    """GitHub cron is UTC. Keeping the hour fixed is the decision; the local
+    time moving twice a year is its consequence, not a defect."""
+
+    for entry in _on()["schedule"]:
+        assert entry["cron"].split()[1] == "8", entry
+
+
+def test_the_schedule_does_not_claim_one_local_time_all_year() -> None:
+    """08:17 UTC is 04:17 EDT and 03:17 EST. Documenting only the first is how
+    a reader concludes the lane publishes at 04:17 in January.
+    """
+
+    block = _schedule_block()
+
+    assert "EDT" in block and "EST" in block
+    # The unqualified claim this replaced.
+    assert "= 04:17 ET" not in block
+
+
+def test_a_scheduled_run_preserves_its_own_cycle(tmp_path: Path) -> None:
+    """The defect: `inputs.signal_id` is empty on a schedule, so the paths
+    became `reports/content_packages/_generated.json` — matching nothing, and
+    `if-no-files-found: warn` passed over it in silence.
+    """
+
+    paths = _named(PRESERVE_STEP)["with"]["path"]
+
+    assert "steps.publish.outputs.signal_id" in paths
+    assert "${{ inputs.signal_id }}" not in paths
+
+
+def test_the_artifact_still_follows_a_manual_inspect() -> None:
+    """`inspect` never runs the publish step, so the resolved output is empty
+    and the dispatched id must still reach the paths."""
+
+    paths = _named(PRESERVE_STEP)["with"]["path"]
+
+    assert "|| env.MVP1_SIGNAL" in paths
+    assert paths.count("env.MVP1_SIGNAL") == 2, "both files, or neither"
+
+
+def test_no_step_reads_the_raw_dispatch_signal_id() -> None:
+    """Once a schedule exists, `inputs.signal_id` is empty for half the runs.
+    Exactly one place may resolve it — the job's own env — and nothing else
+    may read it, whether into a command, an env value or an artifact path.
+    """
+
+    spec = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    job = spec["jobs"][next(iter(spec["jobs"]))]
+
+    assert "inputs.signal_id" in job["env"]["MVP1_SIGNAL"]
+    for step in job["steps"]:
+        rendered = yaml.safe_dump(step)
+        assert "inputs.signal_id" not in rendered, step.get("name")
