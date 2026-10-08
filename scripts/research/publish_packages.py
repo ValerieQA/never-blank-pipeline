@@ -4,6 +4,7 @@ The research workflow may publish only after the complete cross-platform package
 hard validation.  A failed generation or validation publishes nothing for that signal.
 """
 
+import dataclasses
 import json
 import os
 import re
@@ -552,15 +553,22 @@ def publish_packages(
 
 
 def _swap_image(draft: DraftPackage, image_url: str) -> DraftPackage:
-    return DraftPackage(
-        draft_dir=draft.draft_dir, blog_title=draft.blog_title, blog_body=draft.blog_body,
-        blog_meta=draft.blog_meta, linkedin_text=draft.linkedin_text,
-        instagram_text=draft.instagram_text, facebook_text=draft.facebook_text,
-        threads_sequence=draft.threads_sequence, telegram_text=draft.telegram_text,
-        image_url=image_url, wix_slug=draft.wix_slug,
-        wix_category_id=draft.wix_category_id, wix_tags=draft.wix_tags,
-        metadata=draft.metadata,
-    )
+    """The same draft, aimed at one platform's image. Everything else is the draft.
+
+    This enumerated its fields until run 37715852447, and so silently dropped
+    the five it did not name — ``platform_image_urls``, ``run_id`` and the three
+    target-identity fields added for this lane in #393. All five default to
+    empty, so nothing failed at construction: LinkedIn, the only destination
+    that is both image-swapped and identity-requiring, failed at its publisher
+    with ``Missing package target identity`` after four surfaces had already
+    published.
+
+    ``replace`` is not a tidier spelling of that list — it is the reason the
+    defect cannot recur. A copy that names fields can omit a future one; a copy
+    that replaces one cannot.
+    """
+
+    return dataclasses.replace(draft, image_url=image_url)
 
 
 def _save_generated(path: Path, sig_id, headline, blog_body, linkedin, facebook,

@@ -180,6 +180,56 @@ jobs:
           python3 scripts/mvp1_publish_signal.py \
             --signal-id "${SIGNAL_ID}" --channels "${CHANNELS}" --mode live
 
+      # Evidence first, and under `always()` — the whole point of #287. The
+      # marker store is written inside the publishing step, intent before each
+      # irreversible call and marker immediately after that destination
+      # succeeds, but `record_marker` writes locally and never pushes: on a
+      # hosted runner that tree dies with the job. Run 37715852447 is what that
+      # costs — four surfaces published and no durable record of any of them,
+      # because this lane was the one publishing workflow that never called the
+      # script four others already do.
+      #
+      # It must not be guarded by `success()`: a run whose second destination
+      # fails commits nothing, and the marker of the destination that DID
+      # publish is exactly what has to survive that failure.
+      - name: "Live: persist publication markers"
+        if: always() && steps.gate.outputs.run == 'true' && (inputs.mode || 'inspect') == 'live'
+        env:
+          # The script refuses to leave durable evidence of a rehearsal. This
+          # step is already live-only; the second statement of it is the
+          # script's own, and they must agree rather than one trusting the other.
+          DRY_RUN: ${{ (inputs.mode || 'inspect') != 'live' }}
+        run: bash scripts/ci/persist_publication_markers.sh
+
+      # Bookkeeping second, and only on `success()` — which now means
+      # something, because the entry script no longer returns 0 for a cycle it
+      # did not settle. Consuming the signal and appending to the published
+      # index together declare *the cycle* complete, so a partial run must not
+      # reach them: its markers are already preserved above, and the signal
+      # stays eligible.
+      #
+      # The two files move together on purpose. `append_published_entry` is a
+      # plain append with no duplicate guard, so committing the index for a
+      # cycle whose signal is still unconsumed would give a later complete run
+      # a second row for the same signal.
+      #
+      # Same sequence as `wednesday_golden.yml`'s "Mark signal as published".
+      - name: "Live: mark the cycle complete"
+        if: success() && steps.gate.outputs.run == 'true' && (inputs.mode || 'inspect') == 'live'
+        env:
+          SIGNAL_ID: ${{ inputs.signal_id }}
+        run: |
+          set -euo pipefail
+          case "${SIGNAL_ID}" in (*[!a-z0-9]*|"") echo "ERROR: signal_id must be lowercase hex"; exit 1 ;; esac
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash origin main
+          echo "${SIGNAL_ID}" >> data/research/published_signal_ids.txt
+          git add data/research/published_signal_ids.txt
+          git add strategy/published_content_index.jsonl 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "MVP 1: ${SIGNAL_ID} published [skip ci]"
+          git push
+
       # Always, and last: a partial cycle is the one worth reading. The
       # generated package is what Stage 11 wrote — the six texts as published —
       # and it is the evidence a reviewer needs when one destination failed.
