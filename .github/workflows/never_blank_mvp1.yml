@@ -61,7 +61,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      contents: read
+      # Live run 37704053905 generated all six texts and published nothing:
+      # read-only denied `GitSharedClaim`'s `git push origin HEAD:main`, so
+      # `acquire()` could not establish idempotency authority and every
+      # destination fail-closed with `idempotency_authority_unavailable`.
+      # A claim that cannot reach the remote is not authority, and that push
+      # is a prerequisite of publication — not bookkeeping after it.
+      # Same grant as `daily_signal_research.yml` and `wednesday_golden.yml`.
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
