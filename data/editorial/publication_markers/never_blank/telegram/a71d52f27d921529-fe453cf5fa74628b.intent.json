@@ -1,0 +1,11 @@
+{
+  "client": "never_blank",
+  "content_digest": "sha256:1c8ee73613d5026d8d752edc3261971b98dd0dc76910b7e910f763ab5cce4925",
+  "destination": "telegram",
+  "key": "a71d52f27d921529-fe453cf5fa74628b",
+  "recorded_at": "2026-10-08T02:03:14.904294+00:00",
+  "run_id": "",
+  "source_signal_ids": [
+    "a71d52f27d921529"
+  ]
+}
