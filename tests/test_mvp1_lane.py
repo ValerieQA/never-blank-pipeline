@@ -76,8 +76,15 @@ def _entry(*args: str) -> subprocess.CompletedProcess:
 # ===========================================================================
 
 
-def test_the_lane_has_no_schedule() -> None:
-    assert list(_triggers()) == ["workflow_dispatch"]
+def test_only_a_schedule_or_a_dispatch_can_start_the_lane() -> None:
+    """The schedule is the owner's decision of 2026-10-08, and replaces this
+    test's original claim that the lane had none.
+
+    What it protected is kept: nothing *else* may start a lane that publishes
+    to five real surfaces — no push, no pull request, no issue event.
+    """
+
+    assert sorted(_triggers()) == ["schedule", "workflow_dispatch"]
 
 
 def test_a_dispatch_defaults_to_inspect() -> None:
@@ -118,15 +125,24 @@ def test_inspect_is_given_no_credential_at_all() -> None:
     assert "--mode inspect" in step["run"]
 
 
-def test_the_dispatch_inputs_cannot_become_commands() -> None:
-    """Both reach bash through the environment, behind a charset guard."""
+def test_no_step_interpolates_an_expression_into_a_command() -> None:
+    """Values reach bash through the environment, never through `${{ }}`.
 
+    Stated over *every* step rather than over two named inputs, because the
+    schedule added a step that carries a signal id too: the resolved id from
+    `steps.publish.outputs`. The property was never about which expression it
+    was — it is that no expression is ever spliced into a command.
+    """
+
+    for step in _steps():
+        assert "${{" not in str(step.get("run") or ""), step.get("name")
+
+
+def test_the_signal_and_destinations_stay_behind_a_charset_guard() -> None:
     for name in (INSPECT_STEP, LIVE_STEP):
         step = _named(name)
-        assert step["env"]["SIGNAL_ID"] == "${{ inputs.signal_id }}"
-        assert step["env"]["CHANNELS"] == "${{ inputs.channels }}"
-        assert "${{ inputs.signal_id }}" not in step["run"]
-        assert "${{ inputs.channels }}" not in step["run"]
+        assert step["env"]["SIGNAL_ID"].startswith("${{")
+        assert step["env"]["CHANNELS"].startswith("${{")
         assert '(*[!a-z0-9]*|"")' in step["run"]
         assert '(*[!a-z,]*|"")' in step["run"]
 

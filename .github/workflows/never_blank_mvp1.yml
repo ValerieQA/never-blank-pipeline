@@ -32,7 +32,22 @@
 name: Never Blank MVP 1
 
 on:
-  # No schedule. A recurring lane is a separate decision.
+  # Tuesday and Thursday, one cycle each (owner, 2026-10-08).
+  #
+  # **The schedule is fixed UTC, and the local time therefore moves.** 08:17
+  # UTC is 04:17 EDT while daylight saving is in effect and 03:17 EST outside
+  # it — it is not "04:17 ET" all year, and #232's slot was only ever the
+  # summer reading of the same instant. Fixed UTC is deliberate: a cron that
+  # chased the local hour would move the publication time twice a year for no
+  # editorial reason. It also stays clear of `visibility_publish.yml`, which
+  # already publishes at 07:00 UTC on these same two days.
+  #
+  # The minute is :17 for the reason #224 found: a runner that fires late must
+  # still be inside its own local day, and the hour boundary is where that
+  # tolerance was being lost.
+  schedule:
+    - cron: "17 8 * * 2"   # Tuesday  08:17 UTC (04:17 EDT / 03:17 EST)
+    - cron: "17 8 * * 4"   # Thursday 08:17 UTC (04:17 EDT / 03:17 EST)
   workflow_dispatch:
     inputs:
       signal_id:
@@ -57,9 +72,23 @@ on:
 
 jobs:
   mvp1:
-    name: "MVP 1 — ${{ inputs.mode || 'inspect' }}"
+    name: "MVP 1 — ${{ inputs.mode || (github.event_name == 'schedule' && 'live' || 'inspect') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
+    # Resolved once, because `inputs` is empty on a schedule and a step that
+    # read it directly would quietly fall back to `inspect` and publish
+    # nothing. A dispatch keeps every default it had; only the scheduled event
+    # is new here.
+    #
+    # `auto` is not a new selection policy: it is the queue order the lane
+    # already walks, restricted to signals with a prepared package that the
+    # publication authority has not spent. A scheduled day cannot name a
+    # signal, and naming one in the cron would republish it forever.
+    env:
+      MVP1_MODE: ${{ inputs.mode || (github.event_name == 'schedule' && 'live' || 'inspect') }}
+      MVP1_SIGNAL: ${{ inputs.signal_id || 'auto' }}
+      MVP1_CHANNELS: ${{ inputs.channels || 'wix,linkedin,facebook,instagram,telegram' }}
     permissions:
       # Live run 37704053905 generated all six texts and published nothing:
       # read-only denied `GitSharedClaim`'s `git push origin HEAD:main`, so
@@ -104,11 +133,11 @@ jobs:
       # carries text for every requested destination, and that the package
       # already holds a hosted image. No credential is given to this step.
       - name: "Inspect the signal and its package"
-        if: steps.gate.outputs.run == 'true' && (inputs.mode || 'inspect') == 'inspect'
+        if: steps.gate.outputs.run == 'true' && env.MVP1_MODE == 'inspect'
         env:
           PYTHONPATH: .
-          SIGNAL_ID: ${{ inputs.signal_id }}
-          CHANNELS: ${{ inputs.channels }}
+          SIGNAL_ID: ${{ env.MVP1_SIGNAL }}
+          CHANNELS: ${{ env.MVP1_CHANNELS }}
         run: |
           set -euo pipefail
           case "${SIGNAL_ID}" in (*[!a-z0-9]*|"") echo "ERROR: signal_id must be lowercase hex; got '${SIGNAL_ID}'"; exit 1 ;; esac
@@ -134,11 +163,12 @@ jobs:
       # destination that already published is refused on a retry and a partial
       # failure cannot repost to the ones that succeeded.
       - name: "Live: generate and publish"
-        if: steps.gate.outputs.run == 'true' && (inputs.mode || 'inspect') == 'live'
+        id: publish
+        if: steps.gate.outputs.run == 'true' && env.MVP1_MODE == 'live'
         env:
           PYTHONPATH: .
-          SIGNAL_ID: ${{ inputs.signal_id }}
-          CHANNELS: ${{ inputs.channels }}
+          SIGNAL_ID: ${{ env.MVP1_SIGNAL }}
+          CHANNELS: ${{ env.MVP1_CHANNELS }}
           NB_RESEARCH_PUBLISH_ENABLED: "true"
           NB_OPENAI_API_KEY: ${{ secrets.NB_OPENAI_API_KEY }}
           NB_OPENAI_CHAT_MODEL: ${{ secrets.NB_OPENAI_CHAT_MODEL }}
@@ -193,12 +223,12 @@ jobs:
       # fails commits nothing, and the marker of the destination that DID
       # publish is exactly what has to survive that failure.
       - name: "Live: persist publication markers"
-        if: always() && steps.gate.outputs.run == 'true' && (inputs.mode || 'inspect') == 'live'
+        if: always() && steps.gate.outputs.run == 'true' && env.MVP1_MODE == 'live'
         env:
           # The script refuses to leave durable evidence of a rehearsal. This
           # step is already live-only; the second statement of it is the
           # script's own, and they must agree rather than one trusting the other.
-          DRY_RUN: ${{ (inputs.mode || 'inspect') != 'live' }}
+          DRY_RUN: ${{ env.MVP1_MODE != 'live' }}
         run: bash scripts/ci/persist_publication_markers.sh
 
       # Bookkeeping second, and only on `success()` — which now means
@@ -215,9 +245,12 @@ jobs:
       #
       # Same sequence as `wednesday_golden.yml`'s "Mark signal as published".
       - name: "Live: mark the cycle complete"
-        if: success() && steps.gate.outputs.run == 'true' && (inputs.mode || 'inspect') == 'live'
+        if: success() && steps.gate.outputs.run == 'true' && env.MVP1_MODE == 'live' && steps.publish.outputs.signal_id != ''
         env:
-          SIGNAL_ID: ${{ inputs.signal_id }}
+          # The *resolved* id, never the literal `auto` a scheduled day passes
+          # in. Same output name and same `!= ''` guard as
+          # `wednesday_golden.yml`'s "Mark signal as published".
+          SIGNAL_ID: ${{ steps.publish.outputs.signal_id }}
         run: |
           set -euo pipefail
           case "${SIGNAL_ID}" in (*[!a-z0-9]*|"") echo "ERROR: signal_id must be lowercase hex"; exit 1 ;; esac
@@ -237,9 +270,20 @@ jobs:
         if: always() && steps.gate.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: "nb-mvp1-${{ inputs.mode || 'inspect' }}-${{ github.run_id }}"
+          name: "nb-mvp1-${{ env.MVP1_MODE }}-${{ github.run_id }}"
+          # The *resolved* id first. A scheduled run has no `inputs.signal_id`,
+          # so reading it here produced `reports/content_packages/_generated.json`
+          # — a path matching nothing, which `if-no-files-found: warn` then
+          # passed over in silence. The evidence of an unattended cycle would
+          # have been the one thing lost, which is the whole of #287 again.
+          #
+          # The fallback keeps a manual `inspect` exactly as it was: that mode
+          # never runs the publish step, so the output is empty and
+          # `MVP1_SIGNAL` carries the dispatched id. A live run that died
+          # before resolving falls back to `auto`, matches nothing, and warns
+          # — correctly, because nothing was generated to preserve.
           path: |
-            reports/content_packages/${{ inputs.signal_id }}_generated.json
-            reports/content_packages/${{ inputs.signal_id }}.json
+            reports/content_packages/${{ steps.publish.outputs.signal_id || env.MVP1_SIGNAL }}_generated.json
+            reports/content_packages/${{ steps.publish.outputs.signal_id || env.MVP1_SIGNAL }}.json
           if-no-files-found: warn
           retention-days: 90

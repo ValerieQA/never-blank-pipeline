@@ -31,6 +31,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -41,7 +42,12 @@ from scripts.research.publish_packages import (  # noqa: E402
     UnknownDestination,
     publish_packages,
 )
-from src.publishing.publication_markers import PUBLICATION_UNCONFIRMED  # noqa: E402
+from src.publishing.publication_markers import (  # noqa: E402
+    PUBLICATION_UNCONFIRMED,
+    AuthorityState,
+    MarkerStore,
+    PublicationIdentity,
+)
 from src.publishing.result import PublishStatus  # noqa: E402
 
 SIGNALS = Path("data/research/signals_active.jsonl")
@@ -72,6 +78,14 @@ CYCLE_INCOMPLETE = 3
 #: ``PROVIDER_DUPLICATE`` proves *a* duplicate but never which post (#108),
 #: and a refusal is not an outcome.
 _SETTLED = frozenset({PublishStatus.PUBLISHED.value, PublishStatus.REUSED.value})
+
+#: A scheduled day with nothing left to publish. Visible on purpose: a lane
+#: that reports success while publishing nothing is the failure this
+#: repository has already paid for twice.
+NO_ELIGIBLE_SIGNAL = 4
+
+#: What `--signal-id` is given when nobody named one — a scheduled day.
+AUTO = "auto"
 
 
 def _signal(signal_id: str) -> dict:
@@ -125,6 +139,82 @@ def _package(signal_id: str, channels: list[str]) -> tuple[dict, str]:
             "one; the package must already carry it"
         )
     return package, hosted[0][1]
+
+
+def _github_output(signal_id: str) -> None:
+    """Publish the resolved id as a step output, when running under Actions."""
+
+    target = os.environ.get("GITHUB_OUTPUT")
+    if not target:
+        return
+    with open(target, "a", encoding="utf-8") as handle:
+        handle.write(f"signal_id={signal_id}\n")
+
+
+def unspent(signal_id: str, channels: list[str]) -> bool:
+    """Has the publication authority left every requested destination open?
+
+    The authority, not the consumption list. `published_signal_ids.txt` is
+    written only when a whole cycle succeeded, so run 37715852447 — four
+    surfaces published, LinkedIn failed — left it untouched and that signal
+    still looks unused there. The marker store knows better, and an
+    `UNAVAILABLE` answer counts as spent: a selector that cannot read the
+    authority must not pick.
+    """
+
+    store = MarkerStore(require_shared_claim=False)
+    for destination in channels:
+        state = store.lookup(
+            PublicationIdentity(
+                client="never_blank",
+                destination=destination,
+                source_signal_ids=[signal_id],
+            )
+        ).state
+        if state is not AuthorityState.NO_PUBLICATION:
+            return False
+    return True
+
+
+def select_signal(channels: list[str]) -> Optional[str]:
+    """The first signal in the research store's own order that can be published.
+
+    Queue order, nothing cleverer. That is the baseline
+    `scripts/streams/select_eligible_signal.py` documents before it adds a
+    role's eligibility judgment — and the judgment is exactly what this lane
+    must not acquire: MVP 1 has no editorial role, and asking a model about
+    each candidate would put a paid call in front of every scheduled day.
+    So eligibility here is only what the lane already requires of a named
+    signal: a prepared package it can publish, and an authority that has not
+    spent it.
+
+    Returns ``None`` when the queue is exhausted, which is a reportable
+    outcome rather than an error.
+    """
+
+    if not SIGNALS.is_file():
+        return None
+
+    for line in SIGNALS.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            signal_id = str(json.loads(line).get("SIGNAL_ID") or "")
+        except json.JSONDecodeError:
+            continue
+        if not signal_id:
+            continue
+        try:
+            # The lane's own package rules, called rather than restated, so a
+            # selected signal cannot fail the validation that follows.
+            _package(signal_id, channels)
+        except SystemExit:
+            continue
+        if unspent(signal_id, channels):
+            return signal_id
+
+    return None
 
 
 def classify(
@@ -203,7 +293,10 @@ def classify(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--signal-id", required=True)
+    parser.add_argument(
+        "--signal-id", required=True,
+        help=f"a signal id, or {AUTO!r} to take the first publishable one in queue order",
+    )
     parser.add_argument(
         "--channels", default=",".join(MVP1_CHANNELS),
         help="Comma-separated destinations, in the stage's own publication order",
@@ -234,13 +327,32 @@ def main(argv: list[str] | None = None) -> int:
     if not channels:
         raise SystemExit("no destination requested")
 
-    signal = _signal(args.signal_id)
-    package, image_url = _package(args.signal_id, channels)
+    signal_id = args.signal_id
+    if signal_id == AUTO:
+        selected = select_signal(channels)
+        if selected is None:
+            print(
+                "  no publishable signal: every discovered signal either has no "
+                "package\n  for these destinations or has already been spent by "
+                "the publication\n  authority. Nothing was called."
+            )
+            return NO_ELIGIBLE_SIGNAL
+        signal_id = selected
+        print(f"  selected   {signal_id} (first publishable in queue order)")
 
-    print(f"  signal     {args.signal_id}")
+    # The resolved id, for the step that marks the cycle complete. On a
+    # scheduled day `--signal-id` is `auto`, and appending *that* to the
+    # consumption list would record a signal nobody published. Same mechanism
+    # and same output name `wednesday_golden.yml` already reads.
+    _github_output(signal_id)
+
+    signal = _signal(signal_id)
+    package, image_url = _package(signal_id, channels)
+
+    print(f"  signal     {signal_id}")
     print(f"  headline   {str(signal.get('HEADLINE'))[:88]}")
     print(f"  source     {signal.get('SOURCE_NAME')} · found {signal.get('DATE_FOUND')}")
-    print(f"  package    {PACKAGES / (args.signal_id + '.json')}")
+    print(f"  package    {PACKAGES / (signal_id + '.json')}")
     print(f"  mode       {args.mode}")
     print(f"  channels   {', '.join(channels)}")
     print(f"  image      {image_url}")
