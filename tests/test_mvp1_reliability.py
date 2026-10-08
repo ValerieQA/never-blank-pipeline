@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import dataclasses
 import importlib.util
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -245,8 +246,8 @@ def test_markers_are_persisted_for_live_runs_only() -> None:
 
     step = _named(PERSIST_STEP)
 
-    assert "(inputs.mode || 'inspect') == 'live'" in step["if"]
-    assert step["env"]["DRY_RUN"] == "${{ (inputs.mode || 'inspect') != 'live' }}"
+    assert "env.MVP1_MODE == 'live'" in step["if"]
+    assert step["env"]["DRY_RUN"] == "${{ env.MVP1_MODE != 'live' }}"
 
 
 def test_the_persist_script_exists_and_is_executable_as_invoked() -> None:
@@ -382,7 +383,7 @@ def test_marking_complete_cannot_be_driven_by_a_crafted_signal_id() -> None:
 
 
 def test_marking_complete_is_live_only() -> None:
-    assert "(inputs.mode || 'inspect') == 'live'" in _named(COMPLETE_STEP)["if"]
+    assert "env.MVP1_MODE == 'live'" in _named(COMPLETE_STEP)["if"]
 
 
 # ═════════════ 4 · an exit code that means what it says ═════════════════════
@@ -615,3 +616,223 @@ def test_every_requested_destination_is_accounted_for_exactly_once() -> None:
     assert sorted(accounted) == sorted(REQUESTED + ["threads"])
     assert len(accounted) == len(set(accounted))
 
+
+
+# ══════════ 6 · the Tuesday/Thursday schedule, and what it must pick ════════
+
+VI_WORKFLOW = ROOT / ".github" / "workflows" / "visibility_publish.yml"
+
+
+def _on() -> dict:
+    spec = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    # PyYAML reads the bare key `on` as the boolean True.
+    return spec.get("on", spec.get(True))
+
+
+def test_the_lane_runs_on_tuesday_and_thursday_once_each() -> None:
+    crons = [entry["cron"] for entry in _on()["schedule"]]
+    days = sorted(cron.split()[4] for cron in crons)
+
+    assert len(crons) == 2
+    assert days == ["2", "4"]
+
+
+def test_the_schedule_keeps_the_late_firing_tolerance() -> None:
+    """#224: a runner that fires late must stay inside its own local day, and
+    the hour boundary is where that tolerance was lost."""
+
+    for entry in _on()["schedule"]:
+        assert entry["cron"].split()[0] == "17", entry
+
+
+def test_the_schedule_does_not_collide_with_visibility_intelligence() -> None:
+    """That lane already publishes on these same two days."""
+
+    vi = yaml.safe_load(VI_WORKFLOW.read_text(encoding="utf-8"))
+    vi_on = vi.get("on", vi.get(True))
+    vi_slots = {
+        (e["cron"].split()[1], e["cron"].split()[4]) for e in vi_on["schedule"]
+    }
+    mine = {
+        (e["cron"].split()[1], e["cron"].split()[4]) for e in _on()["schedule"]
+    }
+
+    assert mine & vi_slots == set()
+
+
+def test_a_dispatch_still_defaults_to_inspect() -> None:
+    """The schedule is additive: nothing about a manual run changed."""
+
+    spec = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    inputs = _on()["workflow_dispatch"]["inputs"]
+    job = spec["jobs"][next(iter(spec["jobs"]))]
+
+    assert inputs["mode"]["default"] == "inspect"
+    assert "inputs.mode ||" in job["env"]["MVP1_MODE"]
+
+
+def test_a_scheduled_run_is_live_and_self_selecting() -> None:
+    """`inputs` is empty on a schedule, so a step reading it directly would
+    fall back to `inspect` and publish nothing."""
+
+    spec = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    env = spec["jobs"][next(iter(spec["jobs"]))]["env"]
+
+    assert "github.event_name == 'schedule' && 'live'" in env["MVP1_MODE"]
+    assert env["MVP1_SIGNAL"] == "${{ inputs.signal_id || 'auto' }}"
+
+
+def test_the_scheduled_destinations_are_the_five_and_exclude_threads() -> None:
+    spec = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    channels = spec["jobs"][next(iter(spec["jobs"]))]["env"]["MVP1_CHANNELS"]
+
+    assert "wix,linkedin,facebook,instagram,telegram" in channels
+    assert "threads" not in channels
+
+
+def test_every_step_reads_the_resolved_mode() -> None:
+    """One resolution, not one per step — the schedule must not be half-applied."""
+
+    for step in _steps():
+        assert "inputs.mode" not in str(step.get("if") or ""), step.get("name")
+
+
+def test_the_gate_still_guards_a_scheduled_run() -> None:
+    for name in (LIVE_STEP, PERSIST_STEP, COMPLETE_STEP):
+        assert "steps.gate.outputs.run == 'true'" in _named(name)["if"]
+
+
+def test_consumption_records_the_resolved_signal_not_the_literal_auto() -> None:
+    """A scheduled day passes `auto`; appending that would record a signal
+    nobody published."""
+
+    step = _named(COMPLETE_STEP)
+
+    assert step["env"]["SIGNAL_ID"] == "${{ steps.publish.outputs.signal_id }}"
+    assert "steps.publish.outputs.signal_id != ''" in step["if"]
+    assert _named(LIVE_STEP)["id"] == "publish"
+
+
+# ── selection, on doubles, with no provider call ────────────────────────────
+
+
+def _selection_double(tmp_path: Path, monkeypatch, signals, packaged):
+    """A research store, its prepared packages, and an empty marker store."""
+
+    entry = _entry_module()
+
+    store = tmp_path / "signals.jsonl"
+    store.write_text(
+        "\n".join(json.dumps({"SIGNAL_ID": s, "HEADLINE": s}) for s in signals),
+        encoding="utf-8",
+    )
+    packages = tmp_path / "packages"
+    packages.mkdir()
+    for signal in packaged:
+        (packages / f"{signal}.json").write_text(
+            json.dumps({
+                "signal_id": signal,
+                "content": {k: "x" for k in
+                            ("blog", "linkedin", "facebook", "instagram")},
+                "images": {"platform_images": {
+                    "blog": {"url": "https://example.test/i.png"},
+                }},
+            }),
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(entry, "SIGNALS", store)
+    monkeypatch.setattr(entry, "PACKAGES", packages)
+    monkeypatch.setenv("NB_PUBLICATION_MARKERS_DIR", str(tmp_path / "markers"))
+    (tmp_path / "markers").mkdir()
+    return entry
+
+
+def test_selection_takes_the_first_publishable_in_queue_order(
+    tmp_path: Path, monkeypatch
+) -> None:
+    entry = _selection_double(
+        tmp_path, monkeypatch,
+        signals=["aaa1", "bbb2", "ccc3"], packaged=["bbb2", "ccc3"],
+    )
+
+    assert entry.select_signal(["wix"]) == "bbb2"
+
+
+def test_selection_skips_a_signal_the_authority_has_spent(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """An intent alone is enough: the lane would skip it as possibly published."""
+
+    entry = _selection_double(
+        tmp_path, monkeypatch,
+        signals=["aaa1", "bbb2"], packaged=["aaa1", "bbb2"],
+    )
+    spent = tmp_path / "markers" / "never_blank" / "wix"
+    spent.mkdir(parents=True)
+    identity = entry.PublicationIdentity(
+        client="never_blank", destination="wix", source_signal_ids=["aaa1"]
+    )
+    (spent / f"{identity.key}.intent.json").write_text("{}")
+
+    assert entry.unspent("aaa1", ["wix"]) is False
+    assert entry.select_signal(["wix"]) == "bbb2"
+
+
+def test_selection_refuses_when_the_authority_cannot_answer(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """`UNAVAILABLE` counts as spent — a selector that cannot read the
+    authority must not pick."""
+
+    entry = _selection_double(tmp_path, monkeypatch, signals=["aaa1"], packaged=["aaa1"])
+    monkeypatch.setenv(
+        "NB_PUBLICATION_MARKERS_DIR", str(tmp_path / "does-not-exist")
+    )
+
+    assert entry.unspent("aaa1", ["wix"]) is False
+    assert entry.select_signal(["wix"]) is None
+
+
+def test_an_exhausted_queue_is_reported_not_hidden(
+    tmp_path: Path, monkeypatch
+) -> None:
+    entry = _selection_double(tmp_path, monkeypatch, signals=["aaa1"], packaged=[])
+
+    assert entry.select_signal(["wix"]) is None
+    assert entry.NO_ELIGIBLE_SIGNAL not in (0, entry.BAD_INPUT, entry.CYCLE_INCOMPLETE)
+
+
+def test_a_scheduled_day_with_nothing_to_publish_does_not_report_success(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """End to end through `main`, with the stage replaced so nothing is called."""
+
+    entry = _selection_double(tmp_path, monkeypatch, signals=["aaa1"], packaged=[])
+    called = []
+    monkeypatch.setattr(
+        entry, "publish_packages", lambda *a, **k: called.append(1) or []
+    )
+
+    code = entry.main(["--signal-id", "auto", "--channels", "wix", "--mode", "live"])
+
+    assert code == entry.NO_ELIGIBLE_SIGNAL
+    assert called == [], "the stage must not be reached"
+
+
+def test_selection_is_only_the_queue_order_with_no_eligibility_judgment() -> None:
+    """MVP 1 has no editorial role, and a model call per candidate would put a
+    paid judgment in front of every scheduled day."""
+
+    import ast
+    import inspect
+
+    entry = _entry_module()
+    tree = ast.parse(inspect.getsource(entry.select_signal).strip())
+    body = tree.body[0].body
+    if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
+        body.pop(0)
+    code = ast.unparse(tree)
+
+    for forbidden in ("chat(", "model_", "eligib", "resolve_editorial_role"):
+        assert forbidden not in code, forbidden
