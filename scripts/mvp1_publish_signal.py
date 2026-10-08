@@ -37,6 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.research.publish_packages import (  # noqa: E402
     _ALL_PUBLISHERS,
     _OUTSIDE_R1_REASON,
+    _WITHHELD_CHANNELS,
     UnknownDestination,
     publish_packages,
 )
@@ -126,15 +127,24 @@ def _package(signal_id: str, channels: list[str]) -> tuple[dict, str]:
     return package, hosted[0][1]
 
 
-def classify(reports: list[dict]) -> tuple[list[str], list[str], list[tuple[str, str]]]:
-    """Every reported destination, split into settled, expected-skip, unresolved.
+def classify(
+    reports: list[dict], requested: list[str]
+) -> tuple[list[str], list[str], list[tuple[str, str]]]:
+    """Every requested destination, accounted for: settled, expected, unresolved.
 
     Run 37715852447 published to four surfaces, failed LinkedIn, and reported
-    success — because this entry returned 0 whatever its table said. These
-    three groups are the whole of that repair: only proof settles a
-    destination, only the Release 1 scope refusal is an expected absence, and
-    anything else — a failure, a refusal this run could not resolve, a status
-    nobody recognises — leaves the cycle incomplete.
+    success, because this entry returned 0 whatever its table said. The three
+    groups are the repair: only proof settles a destination, only the stated
+    Release 1 scope refusal is an expected absence, and anything else leaves
+    the cycle incomplete.
+
+    It reads the report **against the request**, not on its own terms. A table
+    is not evidence that every destination was attempted: a destination that
+    silently vanishes from the results is indistinguishable from one that was
+    never driven, and #227 stayed hidden for months on exactly that. So a
+    requested destination with no result, a destination reported twice, a
+    result for something nobody asked for, and a report with no results at
+    all are each unresolved rather than absent.
 
     ``publication_unconfirmed`` counts as unresolved too (NB-00a §3.6 p5): the
     post exists and its marker does not, so the next run will skip the key.
@@ -145,8 +155,33 @@ def classify(reports: list[dict]) -> tuple[list[str], list[str], list[tuple[str,
     expected: list[str] = []
     unresolved: list[tuple[str, str]] = []
 
-    for report in reports:
-        for name, result in sorted((report.get("results") or {}).items()):
+    wanted = [name.strip().lower() for name in requested if str(name).strip()]
+    # Channels the release scope withholds are reported without being asked
+    # for, and that is the one expected extra (#227 item 8).
+    permitted = set(wanted) | set(_WITHHELD_CHANNELS)
+    seen: dict[str, int] = {}
+
+    if not reports:
+        unresolved.append(("(report)", "the stage reported nothing"))
+
+    for index, report in enumerate(reports):
+        results = report.get("results") or {}
+        if not isinstance(results, dict) or not results:
+            unresolved.append((f"(report {index})", "no results reported"))
+            continue
+
+        for name, result in sorted(results.items()):
+            seen[name] = seen.get(name, 0) + 1
+            if seen[name] > 1:
+                unresolved.append((name, "reported more than once"))
+                continue
+            if name not in permitted:
+                unresolved.append((name, "result for a destination nobody requested"))
+                continue
+            if not isinstance(result, dict):
+                unresolved.append((name, "result is not a result"))
+                continue
+
             status = str(result.get("status") or "")
             reason = str(result.get("error_message") or "")
             if status in _SETTLED:
@@ -155,8 +190,13 @@ def classify(reports: list[dict]) -> tuple[list[str], list[str], list[tuple[str,
                 expected.append(name)
             else:
                 unresolved.append((name, reason or status or "no status reported"))
+
         for key in report.get(PUBLICATION_UNCONFIRMED) or []:
             unresolved.append((str(key), PUBLICATION_UNCONFIRMED))
+
+    for name in wanted:
+        if name not in seen:
+            unresolved.append((name, "requested, and no result was reported"))
 
     return settled, expected, unresolved
 
@@ -232,7 +272,7 @@ def main(argv: list[str] | None = None) -> int:
         for name, result in sorted((report.get("results") or {}).items()):
             print(f"  {name:10} {result.get('status'):22} {str(result.get('error_message') or result.get('url') or '')[:64]}")
 
-    settled, expected, unresolved = classify(reports)
+    settled, expected, unresolved = classify(reports, channels)
 
     if unresolved:
         print(

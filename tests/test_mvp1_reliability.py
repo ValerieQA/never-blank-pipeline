@@ -388,6 +388,11 @@ def test_marking_complete_is_live_only() -> None:
 # ═════════════ 4 · an exit code that means what it says ═════════════════════
 
 
+#: What a live MVP 1 cycle asks for. `threads` is never requested and is
+#: still reported, withheld by the release scope (#227 item 8).
+REQUESTED = ["wix", "linkedin", "facebook", "instagram", "telegram"]
+
+
 def _report(results: dict, unconfirmed: list[str] | None = None) -> list[dict]:
     return [{
         "signal_id": "sig",
@@ -410,7 +415,7 @@ def test_a_partial_cycle_does_not_report_success() -> None:
         "telegram":  ("PUBLISHED", ""),
         "linkedin":  ("FAILED", "Missing package target identity"),
         "threads":   ("SKIPPED", "outside the Release 1 publishing scope (#227)"),
-    }))
+    }), REQUESTED)
 
     assert sorted(settled) == ["facebook", "instagram", "telegram", "wix"]
     assert expected == ["threads"]
@@ -426,7 +431,7 @@ def test_a_complete_cycle_reports_success() -> None:
         "instagram": ("PUBLISHED", ""),
         "telegram":  ("PUBLISHED", ""),
         "threads":   ("SKIPPED", "outside the Release 1 publishing scope (#227)"),
-    }))
+    }), REQUESTED)
 
     assert unresolved == []
 
@@ -437,9 +442,8 @@ def test_a_repeat_of_a_settled_cycle_reports_success() -> None:
 
     entry = _entry_module()
     settled, _, unresolved = entry.classify(_report({
-        name: ("REUSED", "") for name in
-        ("wix", "linkedin", "facebook", "instagram", "telegram")
-    }))
+        name: ("REUSED", "") for name in REQUESTED
+    }), REQUESTED)
 
     assert len(settled) == 5
     assert unresolved == []
@@ -450,9 +454,8 @@ def test_a_cycle_that_published_nothing_does_not_report_success() -> None:
 
     entry = _entry_module()
     settled, _, unresolved = entry.classify(_report({
-        name: ("SKIPPED", "idempotency_authority_unavailable") for name in
-        ("wix", "linkedin", "facebook", "instagram", "telegram")
-    }))
+        name: ("SKIPPED", "idempotency_authority_unavailable") for name in REQUESTED
+    }), REQUESTED)
 
     assert settled == []
     assert len(unresolved) == 5
@@ -466,7 +469,8 @@ def test_an_unconfirmed_publication_does_not_report_success() -> None:
         _report(
             {name: ("PUBLISHED", "") for name in ("wix", "linkedin")},
             unconfirmed=["never_blank/linkedin/sig-abc"],
-        )
+        ),
+        ["wix", "linkedin"],
     )
 
     assert [why for _, why in unresolved] == [PUBLICATION_UNCONFIRMED]
@@ -478,7 +482,7 @@ def test_nothing_but_proof_settles_a_destination(status: str) -> None:
     post (#108). An unrecognised status is unresolved by construction."""
 
     entry = _entry_module()
-    settled, _, unresolved = entry.classify(_report({"wix": (status, "")}))
+    settled, _, unresolved = entry.classify(_report({"wix": (status, "")}), ["wix"])
 
     assert settled == []
     assert len(unresolved) == 1
@@ -489,7 +493,7 @@ def test_a_skip_that_is_not_the_scope_refusal_is_unresolved() -> None:
 
     entry = _entry_module()
     _, expected, unresolved = entry.classify(
-        _report({"wix": ("SKIPPED", "something else entirely")})
+        _report({"wix": ("SKIPPED", "something else entirely")}), ["wix"]
     )
 
     assert expected == []
@@ -501,3 +505,113 @@ def test_the_entry_has_a_distinct_code_for_an_unsettled_cycle() -> None:
 
     assert entry.CYCLE_INCOMPLETE != 0
     assert entry.CYCLE_INCOMPLETE != entry.BAD_INPUT
+
+
+# ═════════ 5 · a report is read against the request, never alone ════════════
+
+
+def test_a_requested_destination_with_no_result_does_not_report_success() -> None:
+    """A destination that vanishes from the table is not an absence of news.
+
+    It is indistinguishable from one that was never driven — which is how #227
+    stayed hidden for months — so it fails closed.
+    """
+
+    entry = _entry_module()
+    settled, _, unresolved = entry.classify(
+        _report({name: ("PUBLISHED", "") for name in REQUESTED if name != "telegram"}),
+        REQUESTED,
+    )
+
+    assert len(settled) == 4
+    assert unresolved == [("telegram", "requested, and no result was reported")]
+
+
+def test_a_destination_reported_twice_does_not_report_success() -> None:
+    """Two reports for one signal, each claiming the same destination."""
+
+    entry = _entry_module()
+    reports = _report({"wix": ("PUBLISHED", "")}) + _report({"wix": ("PUBLISHED", "")})
+    _, _, unresolved = entry.classify(reports, ["wix"])
+
+    assert ("wix", "reported more than once") in unresolved
+
+
+def test_a_result_nobody_requested_does_not_report_success() -> None:
+    entry = _entry_module()
+    _, _, unresolved = entry.classify(
+        _report({"wix": ("PUBLISHED", ""), "mastodon": ("PUBLISHED", "")}), ["wix"]
+    )
+
+    assert ("mastodon", "result for a destination nobody requested") in unresolved
+
+
+def test_the_withheld_channel_is_still_expected_without_being_requested() -> None:
+    """The scope exclusion is the one permitted extra, and stays an absence."""
+
+    entry = _entry_module()
+    settled, expected, unresolved = entry.classify(
+        _report({
+            **{name: ("PUBLISHED", "") for name in REQUESTED},
+            "threads": ("SKIPPED", "outside the Release 1 publishing scope (#227)"),
+        }),
+        REQUESTED,
+    )
+
+    assert expected == ["threads"]
+    assert len(settled) == 5
+    assert unresolved == []
+
+
+def test_an_empty_report_does_not_report_success() -> None:
+    entry = _entry_module()
+    _, _, unresolved = entry.classify([{"signal_id": "sig", "results": {}}], REQUESTED)
+
+    assert ("(report 0)", "no results reported") in unresolved
+
+
+def test_a_report_without_a_results_key_does_not_report_success() -> None:
+    entry = _entry_module()
+    _, _, unresolved = entry.classify([{"signal_id": "sig"}], REQUESTED)
+
+    assert ("(report 0)", "no results reported") in unresolved
+
+
+def test_no_reports_at_all_does_not_report_success() -> None:
+    entry = _entry_module()
+    _, _, unresolved = entry.classify([], REQUESTED)
+
+    assert ("(report)", "the stage reported nothing") in unresolved
+
+
+def test_a_result_that_is_not_a_result_does_not_report_success() -> None:
+    """Shape, not just content: a malformed entry must not read as settled."""
+
+    entry = _entry_module()
+    _, _, unresolved = entry.classify(
+        [{"signal_id": "sig", "results": {"wix": "PUBLISHED"}}], ["wix"]
+    )
+
+    assert ("wix", "result is not a result") in unresolved
+
+
+def test_every_requested_destination_is_accounted_for_exactly_once() -> None:
+    """The whole contract in one assertion, on the shape run 3 produced."""
+
+    entry = _entry_module()
+    settled, expected, unresolved = entry.classify(
+        _report({
+            "wix":       ("PUBLISHED", ""),
+            "facebook":  ("PUBLISHED", ""),
+            "instagram": ("PUBLISHED", ""),
+            "telegram":  ("PUBLISHED", ""),
+            "linkedin":  ("FAILED", "Missing package target identity"),
+            "threads":   ("SKIPPED", "outside the Release 1 publishing scope (#227)"),
+        }),
+        REQUESTED,
+    )
+
+    accounted = settled + expected + [name for name, _ in unresolved]
+    assert sorted(accounted) == sorted(REQUESTED + ["threads"])
+    assert len(accounted) == len(set(accounted))
+

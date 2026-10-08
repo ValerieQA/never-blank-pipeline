@@ -440,19 +440,172 @@ def test_the_identity_key_is_stable_across_a_regenerated_article() -> None:
     }
 
 
-def test_the_selected_signal_holds_no_marker_on_any_destination() -> None:
-    """So the first proof is a real publication, not a refusal."""
+#: Where the publication authority keeps its records, and where the lane
+#: records that a signal's cycle finished.
+_MARKER_ROOT = ROOT / "data" / "editorial" / "publication_markers" / "never_blank"
+_CONSUMED = ROOT / "data" / "research" / "published_signal_ids.txt"
 
-    root = ROOT / "data" / "editorial" / "publication_markers" / "never_blank"
+
+def publication_records(root: Path, signal: str) -> dict[str, dict[str, bool]]:
+    """Per destination, whether this signal holds an intent and/or a marker.
+
+    One reader for both the real store and a double, so the invariants below
+    are asserted on the same code path in either.
+    """
+
+    found: dict[str, dict[str, bool]] = {}
     if not root.is_dir():
-        return
-    held = [
-        destination.name
-        for destination in root.iterdir()
-        if destination.is_dir() and list(destination.glob(f"*{SIGNAL}*"))
-    ]
+        return found
+    for destination in sorted(root.iterdir()):
+        if not destination.is_dir():
+            continue
+        files = [f.name for f in destination.glob(f"*{signal}*")]
+        if not files:
+            continue
+        found[destination.name] = {
+            "intent": any(f.endswith(".intent.json") for f in files),
+            "marker": any(
+                f.endswith(".json") and not f.endswith(".intent.json") for f in files
+            ),
+        }
+    return found
 
-    assert held == [], f"{SIGNAL} already published to {held}"
+
+def record_violations(
+    root: Path, signal: str, *, consumed: bool, drivable: set[str]
+) -> list[str]:
+    """Every way this signal's records could contradict what the lane did.
+
+    This replaces an assertion that the signal held *no* records at all. That
+    one existed so the lane's first proof would be a real publication rather
+    than a refusal, and run 37715852447 spent it: four surfaces published and
+    five intents are now legitimate history. Asserting their absence would
+    only be satisfiable by deleting publication evidence, which is the one
+    thing a publication authority must never make convenient.
+
+    What survives the first publication is what the records must *mean*:
+
+    1. nothing was ever claimed for a destination this lane cannot drive;
+    2. no marker exists without its intent — the authority writes the intent
+       before the irreversible call and the marker after it, so a marker alone
+       would be a publication nobody claimed;
+    3. consumption never outruns evidence — a consumed signal means the cycle
+       completed, so every destination holding an intent must hold a marker.
+    """
+
+    records = publication_records(root, signal)
+    problems: list[str] = []
+
+    for destination, state in records.items():
+        if destination not in drivable:
+            problems.append(f"{destination}: claimed but not drivable by this lane")
+        if state["marker"] and not state["intent"]:
+            problems.append(f"{destination}: marker without an intent")
+        if consumed and state["intent"] and not state["marker"]:
+            problems.append(f"{destination}: signal consumed with no marker")
+
+    return problems
+
+
+def _drivable() -> set[str]:
+    """Every destination the stage knows, including the withheld one."""
+
+    from scripts.research.publish_packages import _ALL_PUBLISHERS
+
+    return {name for name, _ in _ALL_PUBLISHERS}
+
+
+def _is_consumed(signal: str) -> bool:
+    if not _CONSUMED.is_file():
+        return False
+    return signal in _CONSUMED.read_text(encoding="utf-8").split()
+
+
+def test_the_selected_signals_publication_records_are_coherent() -> None:
+    """The live state, read rather than assumed.
+
+    Deterministic in both directions: it passes today with five intents and no
+    markers, it would fail the moment a record meant something the lane could
+    not have done, and nothing about it asks for a record to be removed.
+    """
+
+    problems = record_violations(
+        _MARKER_ROOT, SIGNAL, consumed=_is_consumed(SIGNAL), drivable=_drivable()
+    )
+
+    assert problems == [], f"{SIGNAL}: " + "; ".join(problems)
+
+
+def test_a_marker_without_its_intent_is_a_violation(tmp_path: Path) -> None:
+    """The ordering the authority guarantees, asserted on a double."""
+
+    destination = tmp_path / "wix"
+    destination.mkdir()
+    (destination / f"{SIGNAL}-abc.json").write_text("{}")
+
+    problems = record_violations(
+        tmp_path, SIGNAL, consumed=False, drivable={"wix"}
+    )
+
+    assert problems == ["wix: marker without an intent"]
+
+
+def test_consumption_without_a_marker_is_a_violation(tmp_path: Path) -> None:
+    """What the `success()` gate on "mark the cycle complete" exists to prevent."""
+
+    destination = tmp_path / "linkedin"
+    destination.mkdir()
+    (destination / f"{SIGNAL}-abc.intent.json").write_text("{}")
+
+    problems = record_violations(
+        tmp_path, SIGNAL, consumed=True, drivable={"linkedin"}
+    )
+
+    assert problems == ["linkedin: signal consumed with no marker"]
+
+
+def test_a_record_for_an_undrivable_destination_is_a_violation(tmp_path: Path) -> None:
+    destination = tmp_path / "mastodon"
+    destination.mkdir()
+    (destination / f"{SIGNAL}-abc.intent.json").write_text("{}")
+
+    problems = record_violations(
+        tmp_path, SIGNAL, consumed=False, drivable={"wix", "linkedin"}
+    )
+
+    assert problems == ["mastodon: claimed but not drivable by this lane"]
+
+
+def test_the_shape_run_37715852447_actually_left_is_coherent(tmp_path: Path) -> None:
+    """Five intents, no markers, signal unconsumed — history, not a defect.
+
+    Pins the distinction the replaced test could no longer make: an incomplete
+    cycle is not an incoherent one.
+    """
+
+    for name in ("wix", "linkedin", "facebook", "instagram", "telegram"):
+        destination = tmp_path / name
+        destination.mkdir()
+        (destination / f"{SIGNAL}-fe453cf5.intent.json").write_text("{}")
+
+    assert record_violations(
+        tmp_path, SIGNAL, consumed=False,
+        drivable={"wix", "linkedin", "facebook", "instagram", "telegram"},
+    ) == []
+
+
+def test_a_completed_cycle_is_coherent(tmp_path: Path) -> None:
+    """And the shape a settled cycle leaves, so the invariant is not one-sided."""
+
+    for name in ("wix", "linkedin"):
+        destination = tmp_path / name
+        destination.mkdir()
+        (destination / f"{SIGNAL}-fe453cf5.intent.json").write_text("{}")
+        (destination / f"{SIGNAL}-fe453cf5.json").write_text("{}")
+
+    assert record_violations(
+        tmp_path, SIGNAL, consumed=True, drivable={"wix", "linkedin"}
+    ) == []
 
 
 def test_the_stage_claims_each_destination_before_calling_it() -> None:
