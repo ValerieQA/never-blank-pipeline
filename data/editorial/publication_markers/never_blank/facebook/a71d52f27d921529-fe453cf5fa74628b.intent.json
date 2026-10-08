@@ -1,0 +1,11 @@
+{
+  "client": "never_blank",
+  "content_digest": "sha256:25f09e2c05576e34f304c77bfe311fed81a5a7a2accc3f0c424b99a38e15a037",
+  "destination": "facebook",
+  "key": "a71d52f27d921529-fe453cf5fa74628b",
+  "recorded_at": "2026-10-08T02:02:54.307952+00:00",
+  "run_id": "",
+  "source_signal_ids": [
+    "a71d52f27d921529"
+  ]
+}
