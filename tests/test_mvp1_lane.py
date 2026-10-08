@@ -332,6 +332,26 @@ def test_no_image_model_was_routed_with_them() -> None:
     assert "NB_IMAGE_MODEL" not in _named(LIVE_STEP)["env"]
 
 
+def test_the_lane_can_write_the_claim_it_must_push() -> None:
+    """Live run 37704053905: green, six texts written, nothing published.
+
+    `GitSharedClaim.acquire()` pushes the claim to the remote *before* a
+    provider call, and a read-only token denies that push — so idempotency
+    authority was never established and all five destinations fail-closed
+    with `idempotency_authority_unavailable`. The grant is a prerequisite of
+    publication, not bookkeeping after it.
+
+    Read from the effective permission the job runs under, so declaring it at
+    workflow level instead would satisfy this test too.
+    """
+
+    spec = _spec()
+    job = spec["jobs"][next(iter(spec["jobs"]))]
+    effective = {**(spec.get("permissions") or {}), **(job.get("permissions") or {})}
+
+    assert effective.get("contents") == "write"
+
+
 def test_the_cycle_is_preserved_whatever_happened() -> None:
     step = _named(EVIDENCE_STEP)
 
