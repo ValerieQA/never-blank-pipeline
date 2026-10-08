@@ -1,0 +1,11 @@
+{
+  "client": "never_blank",
+  "content_digest": "sha256:1b791fe552cd638cc3b6962d358ac86a94e47d477a885e3d6fa7035561a241fc",
+  "destination": "instagram",
+  "key": "a71d52f27d921529-fe453cf5fa74628b",
+  "recorded_at": "2026-10-08T02:03:01.158453+00:00",
+  "run_id": "",
+  "source_signal_ids": [
+    "a71d52f27d921529"
+  ]
+}
