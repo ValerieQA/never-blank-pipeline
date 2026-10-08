@@ -1,0 +1,14 @@
+{
+  "client": "never_blank",
+  "content_digest": "sha256:26d369413c85b326d0e442f10158950131053c4eac867504ed2f5b2dd11b610f",
+  "destination": "wix",
+  "external_id": "96fcb9d7-19b7-4866-8250-490fe756ffa7",
+  "key": "a71d52f27d921529-fe453cf5fa74628b",
+  "published_at": "2026-10-08T12:50:45.388130+00:00",
+  "run_id": "37715852447",
+  "source_signal_ids": [
+    "a71d52f27d921529"
+  ],
+  "url": "https://www.inneros.online/post/when-viral-hits-meet-real-business-managing-growth-beyond-the-first-150k",
+  "url_provenance": "provider_lookup"
+}
