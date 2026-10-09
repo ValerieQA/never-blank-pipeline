@@ -61,11 +61,16 @@ OUTSIDE_ADMITTED_TOKEN = "none_of_these"
 #: a reason string, and the record keeps no trace of it.
 #:
 #: The Golden Engine's Monday role is `never-blank-monday-documented-case`, and
-#: a documented case is exactly path 1 — a named company with a source for the
-#: case. Path 2 is legitimate Never Blank material and is not a case: it is
-#: research or data standing on its own, explicitly "without a named company".
-#: Recording which one verified the premise is therefore the difference between
-#: a role being able to select its own material and a person guessing.
+#: path 1 is the **company-case evidence path**: a named company together with
+#: a source for the case. That is an admissibility *shape*, and deliberately
+#: not a verdict — it does not establish that the business outcome is proven,
+#: which is S-04's question and not this field's. Path 2 is legitimate Never
+#: Blank material that is not a company case at all: research or data standing
+#: on its own, explicitly "without a named company".
+#:
+#: Recording which path verified the premise is therefore the difference
+#: between a role being able to shortlist its own material and a person
+#: guessing — not between a confirmed case and an unconfirmed one.
 #:
 #: This is a derivation, not a judgement: the booleans below are the ones the
 #: readiness check already computes, and no model is asked anything new.
@@ -83,9 +88,14 @@ def premise_path(signal: dict) -> Optional[str]:
 
     Deterministic, no model call, no side effects — the same three fields
     :func:`determine_article_readiness` reads, in the same order of precedence
-    it applies: a verified company case is path 1 even when the research path
-    would also hold, because a named company with a source for the case is the
-    stronger statement and is the one a documented-case role needs.
+    it applies: the company-case path wins over the research path when both
+    would hold, because a named company with a source for the case is the more
+    specific statement and the one a documented-case role can shortlist on.
+
+    ``COMPANY_CASE`` says the record has the **shape** of a company case. It
+    does not say the business outcome is established — nothing here reads
+    ``EVIDENCE_OF_OUTCOME`` or judges it, and S-04 may still refuse the signal
+    for want of an admissible interpretation.
 
     ``None`` means the premise does not verify at all. It never means
     "research/data", and it is never written to the record as a value.
@@ -284,11 +294,15 @@ def enrich_signal(signal: dict) -> dict:
     path = premise_path(merged)
     premise_verified = path is not None
     merged["SOURCE_PREMISE_VERIFIED"] = str(premise_verified).lower()
-    # Written only when a path verified it. A signal whose premise does not
-    # verify carries no path, and the field is absent rather than empty: the
-    # same posture #365 holds for an unclassified domain.
+    # Written only when a path verified it, and **removed** when none did.
+    # The pop is the point: `merged` carries the input record's fields, so a
+    # value from an earlier enrichment would otherwise survive re-enrichment
+    # of a signal whose evidence no longer verifies — a stale path reading as
+    # a current one. Absence has to be produced, not merely not-written.
     if path is not None:
         merged[PREMISE_PATH_FIELD] = path
+    else:
+        merged.pop(PREMISE_PATH_FIELD, None)
     merged["ARTICLE_READY"]           = str(article_ready).lower()
     # Keep legacy field in sync so sheet consumers remain unaffected.
     merged["RECOMMENDED_FOR_ARTICLE"] = str(article_ready).lower()

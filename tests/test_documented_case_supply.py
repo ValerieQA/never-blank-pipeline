@@ -55,7 +55,9 @@ LIVE = {
 # ═════════════════════════ 1 · the derivation ══════════════════════════════
 
 
-def test_a_named_company_with_a_source_is_a_documented_case() -> None:
+def test_a_named_company_with_a_source_takes_the_company_case_path() -> None:
+    """A shape, not a verdict: nothing here reads `EVIDENCE_OF_OUTCOME`."""
+
     assert premise_path({
         "REAL_COMPANY_EXAMPLE": "Zingerman's Delicatessen",
         "SOURCE_FOR_CASE": "https://example.test/case",
@@ -64,8 +66,8 @@ def test_a_named_company_with_a_source_is_a_documented_case() -> None:
 
 
 def test_a_source_without_a_company_is_research_data() -> None:
-    """Legitimate Never Blank material, and not a case — the readiness check's
-    own words are "without a named company"."""
+    """Legitimate Never Blank material, and not a company case — the readiness
+    check's own words are "without a named company"."""
 
     assert premise_path({
         "SOURCE_FOR_CASE": "https://example.test/study",
@@ -74,8 +76,8 @@ def test_a_source_without_a_company_is_research_data() -> None:
 
 
 def test_the_company_path_wins_when_both_would_hold() -> None:
-    """A named company with a source is the stronger statement, and it is the
-    one a documented-case role needs."""
+    """A named company with a source is the more specific statement, and the
+    one a documented-case role can shortlist on."""
 
     assert premise_path({
         "REAL_COMPANY_EXAMPLE": "Buffer",
@@ -161,6 +163,51 @@ def test_an_unverified_signal_carries_no_path_field_at_all(monkeypatch) -> None:
     assert record["SOURCE_PREMISE_VERIFIED"] == "false"
 
 
+def test_a_stale_path_does_not_survive_re_enrichment(monkeypatch) -> None:
+    """Independent review, #401: the input record may already carry a path.
+
+    `merged` starts from the input, so writing only when a path verifies is
+    not enough — a value from an earlier enrichment would read as current for
+    a signal whose evidence no longer verifies. Absence has to be produced.
+    """
+
+    record = _enriched(
+        monkeypatch,
+        {"CORE_FACT": "a fact", "CONFIDENCE": "low"},
+        {
+            "SIGNAL_ID": "stale",
+            "HEADLINE": "h",
+            "SOURCE_URL": "https://example.test",
+            PREMISE_PATH_FIELD: COMPANY_CASE,   # left over from before
+        },
+    )
+
+    assert PREMISE_PATH_FIELD not in record
+    assert record["SOURCE_PREMISE_VERIFIED"] == "false"
+
+
+def test_a_stale_path_is_replaced_when_the_other_path_verifies(monkeypatch) -> None:
+    """And the complement: a surviving wrong value is as bad as a surviving
+    stale one."""
+
+    record = _enriched(
+        monkeypatch,
+        {
+            "SOURCE_FOR_CASE": "https://example.test/study",
+            "CORE_FACT": "a fact",
+            "CONFIDENCE": "high",
+        },
+        {
+            "SIGNAL_ID": "swap",
+            "HEADLINE": "h",
+            "SOURCE_URL": "https://example.test",
+            PREMISE_PATH_FIELD: COMPANY_CASE,
+        },
+    )
+
+    assert record[PREMISE_PATH_FIELD] == RESEARCH_DATA
+
+
 def test_the_boolean_and_the_path_cannot_disagree() -> None:
     """They were two copies of one derivation; now the boolean comes from the
     path, so no record can carry `verified=true` with no path."""
@@ -209,7 +256,7 @@ def _record(sid: str, **over) -> dict:
     return base
 
 
-def test_a_documented_case_that_clears_s00_is_a_candidate() -> None:
+def test_a_company_case_signal_that_clears_s00_is_a_candidate() -> None:
     found = candidates(
         [_record("ok1", REAL_COMPANY_EXAMPLE="Zingerman's")], client_dir=CLIENT
     )
@@ -217,7 +264,7 @@ def test_a_documented_case_that_clears_s00_is_a_candidate() -> None:
     assert [c["signal_id"] for c in found] == ["ok1"]
 
 
-def test_a_documented_case_that_fails_s00_is_not_a_candidate() -> None:
+def test_a_company_case_signal_that_fails_s00_is_not_a_candidate() -> None:
     """Run 2's shape exactly: all the material, no stated classification."""
 
     rec = _record("run2", REAL_COMPANY_EXAMPLE="Stripe")
@@ -233,7 +280,7 @@ def test_a_documented_case_that_fails_s00_is_not_a_candidate() -> None:
 
 
 def test_a_research_signal_that_clears_s00_is_not_a_candidate() -> None:
-    """Run 1's shape: eligible, and refused at S-04 for want of a case."""
+    """Run 1's shape: eligible, and refused at S-04 for want of a company case."""
 
     verdict = assess(_record("run1"), client_dir=CLIENT)
 
