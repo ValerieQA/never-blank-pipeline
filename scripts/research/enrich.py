@@ -6,6 +6,7 @@ Fill full signal schema via LLM. Never invents case sources, outcomes, or compan
 import json
 import sys
 from pathlib import Path
+from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
@@ -53,6 +54,52 @@ CANNOT_ANSWER    = "cannot_answer"
 #: answer recorded as OUTSIDE_ADMITTED, it is never written to a value field,
 #: and it is never added to the Client Contract, which stays a pure allow-list.
 OUTSIDE_ADMITTED_TOKEN = "none_of_these"
+
+#: Which of the two evidence paths verified the premise. Both already satisfy
+#: `SOURCE_PREMISE_VERIFIED`, and that boolean is the whole of what survives
+#: today: `determine_article_readiness` computes the distinction, states it in
+#: a reason string, and the record keeps no trace of it.
+#:
+#: The Golden Engine's Monday role is `never-blank-monday-documented-case`, and
+#: a documented case is exactly path 1 — a named company with a source for the
+#: case. Path 2 is legitimate Never Blank material and is not a case: it is
+#: research or data standing on its own, explicitly "without a named company".
+#: Recording which one verified the premise is therefore the difference between
+#: a role being able to select its own material and a person guessing.
+#:
+#: This is a derivation, not a judgement: the booleans below are the ones the
+#: readiness check already computes, and no model is asked anything new.
+PREMISE_PATH_FIELD = "SOURCE_PREMISE_PATH"
+
+#: The two paths, closed. Absence is a third state and is never a value: a
+#: signal whose premise does not verify carries no path at all, exactly as an
+#: unclassified signal carries no domain (#365).
+COMPANY_CASE  = "company_case"
+RESEARCH_DATA = "research_data"
+
+
+def premise_path(signal: dict) -> Optional[str]:
+    """Which evidence path verifies this signal's premise, or ``None``.
+
+    Deterministic, no model call, no side effects — the same three fields
+    :func:`determine_article_readiness` reads, in the same order of precedence
+    it applies: a verified company case is path 1 even when the research path
+    would also hold, because a named company with a source for the case is the
+    stronger statement and is the one a documented-case role needs.
+
+    ``None`` means the premise does not verify at all. It never means
+    "research/data", and it is never written to the record as a value.
+    """
+
+    has_company = bool(signal.get("REAL_COMPANY_EXAMPLE"))
+    has_source  = bool(signal.get("SOURCE_FOR_CASE"))
+    confidence  = signal.get("CONFIDENCE", "low")
+
+    if has_company and has_source:
+        return COMPANY_CASE
+    if has_source and confidence in ("high", "medium"):
+        return RESEARCH_DATA
+    return None
 
 
 def determine_article_readiness(signal: dict) -> tuple[bool, str]:
@@ -231,11 +278,17 @@ def enrich_signal(signal: dict) -> dict:
     # SOURCE_PREMISE_VERIFIED is true if either evidence path is satisfied:
     # path 1 — company case: REAL_COMPANY_EXAMPLE + SOURCE_FOR_CASE
     # path 2 — research/data: SOURCE_FOR_CASE + confidence >= medium
-    has_source   = bool(merged.get("SOURCE_FOR_CASE"))
-    has_company  = bool(merged.get("REAL_COMPANY_EXAMPLE"))
-    confidence   = merged.get("CONFIDENCE", "low")
-    premise_verified = (has_company and has_source) or (has_source and confidence in ("high", "medium"))
+    # Derived from `premise_path` rather than restated, so the boolean and the
+    # path can never disagree about the same record — this expression was a
+    # third copy of the readiness check's own logic.
+    path = premise_path(merged)
+    premise_verified = path is not None
     merged["SOURCE_PREMISE_VERIFIED"] = str(premise_verified).lower()
+    # Written only when a path verified it. A signal whose premise does not
+    # verify carries no path, and the field is absent rather than empty: the
+    # same posture #365 holds for an unclassified domain.
+    if path is not None:
+        merged[PREMISE_PATH_FIELD] = path
     merged["ARTICLE_READY"]           = str(article_ready).lower()
     # Keep legacy field in sync so sheet consumers remain unaffected.
     merged["RECOMMENDED_FOR_ARTICLE"] = str(article_ready).lower()
