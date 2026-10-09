@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "run_id": "a30b3188-d60b-4baf-b5ac-93dc9e632945",
+  "client": "never_blank",
+  "started_at": "2026-10-09T16:17:36.788781Z",
+  "signal_ids": [
+    "422a53e0ae83e40a"
+  ],
+  "unit_ids": [],
+  "code_identity": {
+    "commit_sha": "67f96089682f08ffa70b3dd47f83ee25add8af2d",
+    "tracked_worktree_clean": true,
+    "clean_policy": "tracked-source-v1"
+  },
+  "configuration_identity": null,
+  "topology_digest": "sha256:d01a7bc1f43e87c7fc08e4d1f122bbd0146b21a8fb385cd6bdd24d6c3b8dc00c",
+  "scope_outcomes": [
+    {
+      "scope": "signal",
+      "scope_key": "422a53e0ae83e40a",
+      "outcome": "SKIP",
+      "state_code": "signal_outside_contract",
+      "category": "contract_fit"
+    }
+  ],
+  "counters": [
+    {
+      "counter": "L_anchor",
+      "used": 0,
+      "limit": 1
+    },
+    {
+      "counter": "L_boundary",
+      "used": 0,
+      "limit": 1
+    },
+    {
+      "counter": "L_edit",
+      "used": 0,
+      "limit": 1
+    },
+    {
+      "counter": "L_enrich",
+      "used": 0,
+      "limit": 2
+    },
+    {
+      "counter": "L_strategy",
+      "used": 0,
+      "limit": 2
+    }
+  ],
+  "stage_calls": [
+    {
+      "stage": "S-00",
+      "calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "tokens_absent": null,
+      "usage_reports": 0,
+      "silent_reports": 0
+    }
+  ],
+  "calls_total": 0,
+  "call_budget_limit": 12,
+  "first_pass": [],
+  "fingerprint_ids": [],
+  "publications": [],
+  "split_candidate": false,
+  "vt02_unmatched_findings": 0,
+  "workspace": {
+    "artifact_name": "editorial-run-a30b3188-d60b-4baf-b5ac-93dc9e632945",
+    "retention_days": 90,
+    "expires_on": "2027-01-07",
+    "manifest_digest": "sha256:d4bd3fe3ef3afcd82032e47850aeb68dfa25147b34ab50d70e19523d9ccb1af7"
+  },
+  "ledger_commit": "nothing_to_commit",
+  "publication_unconfirmed": []
+}
