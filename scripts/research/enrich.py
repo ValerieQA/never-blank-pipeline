@@ -6,6 +6,7 @@ Fill full signal schema via LLM. Never invents case sources, outcomes, or compan
 import json
 import sys
 from pathlib import Path
+from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.utils.logger import get_logger
@@ -53,6 +54,62 @@ CANNOT_ANSWER    = "cannot_answer"
 #: answer recorded as OUTSIDE_ADMITTED, it is never written to a value field,
 #: and it is never added to the Client Contract, which stays a pure allow-list.
 OUTSIDE_ADMITTED_TOKEN = "none_of_these"
+
+#: Which of the two evidence paths verified the premise. Both already satisfy
+#: `SOURCE_PREMISE_VERIFIED`, and that boolean is the whole of what survives
+#: today: `determine_article_readiness` computes the distinction, states it in
+#: a reason string, and the record keeps no trace of it.
+#:
+#: The Golden Engine's Monday role is `never-blank-monday-documented-case`, and
+#: path 1 is the **company-case evidence path**: a named company together with
+#: a source for the case. That is an admissibility *shape*, and deliberately
+#: not a verdict — it does not establish that the business outcome is proven,
+#: which is S-04's question and not this field's. Path 2 is legitimate Never
+#: Blank material that is not a company case at all: research or data standing
+#: on its own, explicitly "without a named company".
+#:
+#: Recording which path verified the premise is therefore the difference
+#: between a role being able to shortlist its own material and a person
+#: guessing — not between a confirmed case and an unconfirmed one.
+#:
+#: This is a derivation, not a judgement: the booleans below are the ones the
+#: readiness check already computes, and no model is asked anything new.
+PREMISE_PATH_FIELD = "SOURCE_PREMISE_PATH"
+
+#: The two paths, closed. Absence is a third state and is never a value: a
+#: signal whose premise does not verify carries no path at all, exactly as an
+#: unclassified signal carries no domain (#365).
+COMPANY_CASE  = "company_case"
+RESEARCH_DATA = "research_data"
+
+
+def premise_path(signal: dict) -> Optional[str]:
+    """Which evidence path verifies this signal's premise, or ``None``.
+
+    Deterministic, no model call, no side effects — the same three fields
+    :func:`determine_article_readiness` reads, in the same order of precedence
+    it applies: the company-case path wins over the research path when both
+    would hold, because a named company with a source for the case is the more
+    specific statement and the one a documented-case role can shortlist on.
+
+    ``COMPANY_CASE`` says the record has the **shape** of a company case. It
+    does not say the business outcome is established — nothing here reads
+    ``EVIDENCE_OF_OUTCOME`` or judges it, and S-04 may still refuse the signal
+    for want of an admissible interpretation.
+
+    ``None`` means the premise does not verify at all. It never means
+    "research/data", and it is never written to the record as a value.
+    """
+
+    has_company = bool(signal.get("REAL_COMPANY_EXAMPLE"))
+    has_source  = bool(signal.get("SOURCE_FOR_CASE"))
+    confidence  = signal.get("CONFIDENCE", "low")
+
+    if has_company and has_source:
+        return COMPANY_CASE
+    if has_source and confidence in ("high", "medium"):
+        return RESEARCH_DATA
+    return None
 
 
 def determine_article_readiness(signal: dict) -> tuple[bool, str]:
@@ -231,11 +288,21 @@ def enrich_signal(signal: dict) -> dict:
     # SOURCE_PREMISE_VERIFIED is true if either evidence path is satisfied:
     # path 1 — company case: REAL_COMPANY_EXAMPLE + SOURCE_FOR_CASE
     # path 2 — research/data: SOURCE_FOR_CASE + confidence >= medium
-    has_source   = bool(merged.get("SOURCE_FOR_CASE"))
-    has_company  = bool(merged.get("REAL_COMPANY_EXAMPLE"))
-    confidence   = merged.get("CONFIDENCE", "low")
-    premise_verified = (has_company and has_source) or (has_source and confidence in ("high", "medium"))
+    # Derived from `premise_path` rather than restated, so the boolean and the
+    # path can never disagree about the same record — this expression was a
+    # third copy of the readiness check's own logic.
+    path = premise_path(merged)
+    premise_verified = path is not None
     merged["SOURCE_PREMISE_VERIFIED"] = str(premise_verified).lower()
+    # Written only when a path verified it, and **removed** when none did.
+    # The pop is the point: `merged` carries the input record's fields, so a
+    # value from an earlier enrichment would otherwise survive re-enrichment
+    # of a signal whose evidence no longer verifies — a stale path reading as
+    # a current one. Absence has to be produced, not merely not-written.
+    if path is not None:
+        merged[PREMISE_PATH_FIELD] = path
+    else:
+        merged.pop(PREMISE_PATH_FIELD, None)
     merged["ARTICLE_READY"]           = str(article_ready).lower()
     # Keep legacy field in sync so sheet consumers remain unaffected.
     merged["RECOMMENDED_FOR_ARTICLE"] = str(article_ready).lower()
