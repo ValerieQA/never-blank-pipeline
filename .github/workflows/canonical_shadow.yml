@@ -50,9 +50,9 @@ on:
       # value is validated as digits in the step and as a range by
       # `RunCallBudget`, which owns what a legal ceiling is.
       call_budget:
-        description: "Maximum model calls for this run (1…60). Default: the canonical ceiling."
+        description: "Maximum model calls for this run (1…62). Default: the canonical ceiling."
         required: false
-        default: "60"
+        default: "62"
         type: string
 
 # The run writes its fingerprints and its summary into the durable ledger and

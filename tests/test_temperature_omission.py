@@ -34,6 +34,7 @@ from openai import BadRequestError
 
 import src.utils.llm_client as llm
 from src.run.call_budget import (
+    GOLDEN_ENGINE_MAX_CEILING,
     RunCallBudget,
     RunCallBudgetExceededError,
     activate_call_budget,
@@ -170,7 +171,13 @@ def test_fifty_calls_cost_fifty_one_units_not_a_hundred(
     six-destination cascade (~50 calls, Step 2 §6 normal ~61) could not finish.
     """
 
-    budget = RunCallBudget(60, hard_max=60)
+    # The real ceiling, not a literal: `hard_max` is a closed set of the three
+    # named ceilings, so a hardcoded number stops being a valid maximum the
+    # moment one of them moves — which is exactly what caught this test when
+    # the canonical ceiling went 60 → 62.
+    budget = RunCallBudget(
+        GOLDEN_ENGINE_MAX_CEILING, hard_max=GOLDEN_ENGINE_MAX_CEILING
+    )
 
     with activate_call_budget(budget):
         for _ in range(50):

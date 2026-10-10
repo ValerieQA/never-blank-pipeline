@@ -27,8 +27,9 @@ three were resolved by owner decision:
    for ``L_strategy``. F-4 is exercised here, not asserted;
 2. the canonical six-destination topology costs more than ``R1_MAX_CEILING``
    admits, so no complete run could be sealed. The canonical path now has its own
-   finite ceiling of 60 — a runaway guard and not a target spend — while the
-   legacy default, ``R1_MAX_CEILING`` and Wednesday's 56 are untouched;
+   finite ceiling — 60 when this was written, 62 since SL-7 measured what it
+   had to hold — a runaway guard and not a target spend, while the legacy
+   default, ``R1_MAX_CEILING`` and Wednesday's 56 are untouched;
 3. that ceiling bounded the wrong thing. §0.3 gives the run counter one consumer,
    "Every model call", but the canonical path never activated the budget, so
    ``llm_client.chat`` charged nothing and the only consumer was the stage-side
@@ -677,7 +678,11 @@ def test_a_complete_canonical_run_seals_inside_the_golden_engine_ceiling(tmp_pat
 
     summary = sealed.summary
     assert summary.calls_total == 50
-    assert summary.call_budget_limit == GOLDEN_ENGINE_MAX_CEILING == 60
+    # The run inherits the canonical ceiling, whatever it currently is. The
+    # trailing `== 60` that used to sit here was a second copy of the constant
+    # this line already compares against, so it pinned the value twice and
+    # said nothing extra; `calls_total == 50` above is the measurement.
+    assert summary.call_budget_limit == GOLDEN_ENGINE_MAX_CEILING
     assert summary.calls_total > R1_MAX_CEILING, (
         "the canonical run does not fit the legacy ceiling, which is why it has "
         "one of its own"
@@ -691,24 +696,28 @@ def test_a_complete_canonical_run_seals_inside_the_golden_engine_ceiling(tmp_pat
 def test_the_legacy_and_wednesday_ceilings_are_untouched():
     """Three ceilings, three paths, and no path inherits another's.
 
-    The Golden Engine's 60 is reached only by naming it. `DEFAULT_CEILING` and
-    `R1_MAX_CEILING` stay 40 for every legacy caller, Wednesday's exception stays
-    56, and a limit above a path's own hard maximum is refused rather than
+    The Golden Engine's ceiling is reached only by naming it. `DEFAULT_CEILING`
+    and `R1_MAX_CEILING` stay 40 for every legacy caller, Wednesday's exception
+    stays 56, and a limit above a path's own hard maximum is refused rather than
     clamped — the posture `NB_OPENAI_MAX_RETRIES` established.
+
+    The canonical ceiling moved 60 → 62 (owner decision, 2026-10-10) once SL-7
+    measured what it had to hold; the other two did not move with it, which is
+    the whole point of this test.
     """
 
     assert (DEFAULT_CEILING, R1_MAX_CEILING) == (40, 40)
     assert WEDNESDAY_MAX_CEILING == 56
-    assert GOLDEN_ENGINE_MAX_CEILING == 60
+    assert GOLDEN_ENGINE_MAX_CEILING == 62
     for limit, hard_max in (
         (41, R1_MAX_CEILING),
         (57, WEDNESDAY_MAX_CEILING),
-        (61, GOLDEN_ENGINE_MAX_CEILING),
+        (63, GOLDEN_ENGINE_MAX_CEILING),
     ):
         with pytest.raises(CallBudgetConfigurationError, match="must be between"):
             RunCallBudget(limit, hard_max=hard_max)
     # The pass-through harness keeps the legacy default; only the canonical
-    # entrypoint reaches for 60.
+    # entrypoint reaches for the canonical ceiling.
     assert (
         inspect.signature(run_golden_engine).parameters["call_budget_limit"].default
         == GOLDEN_ENGINE_MAX_CEILING
