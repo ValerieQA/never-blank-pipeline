@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "run_id": "edcb268a-30ff-4ab1-b2d4-e87784b6158d",
+  "client": "never_blank",
+  "started_at": "2026-10-10T18:09:38.971324Z",
+  "signal_ids": [
+    "7965169a1ae121c5"
+  ],
+  "unit_ids": [],
+  "code_identity": {
+    "commit_sha": "633eec7d24088d9dac5424c62da12cd2e7a25fb8",
+    "tracked_worktree_clean": true,
+    "clean_policy": "tracked-source-v1"
+  },
+  "configuration_identity": null,
+  "topology_digest": "sha256:d01a7bc1f43e87c7fc08e4d1f122bbd0146b21a8fb385cd6bdd24d6c3b8dc00c",
+  "scope_outcomes": [
+    {
+      "scope": "signal",
+      "scope_key": "7965169a1ae121c5",
+      "outcome": "SKIP",
+      "state_code": "relevance_evidence_insufficient",
+      "category": "evidence"
+    }
+  ],
+  "counters": [
+    {
+      "counter": "L_anchor",
+      "used": 0,
+      "limit": 1
+    },
+    {
+      "counter": "L_boundary",
+      "used": 0,
+      "limit": 1
+    },
+    {
+      "counter": "L_edit",
+      "used": 0,
+      "limit": 1
+    },
+    {
+      "counter": "L_enrich",
+      "used": 0,
+      "limit": 2
+    },
+    {
+      "counter": "L_strategy",
+      "used": 0,
+      "limit": 2
+    }
+  ],
+  "stage_calls": [
+    {
+      "stage": "S-00",
+      "calls": 1,
+      "tokens_in": 601,
+      "tokens_out": 125,
+      "tokens_absent": null,
+      "usage_reports": 1,
+      "silent_reports": 0
+    },
+    {
+      "stage": "S-01",
+      "calls": 2,
+      "tokens_in": 4211,
+      "tokens_out": 1404,
+      "tokens_absent": null,
+      "usage_reports": 2,
+      "silent_reports": 0
+    }
+  ],
+  "calls_total": 3,
+  "call_budget_limit": 62,
+  "first_pass": [],
+  "fingerprint_ids": [],
+  "publications": [],
+  "split_candidate": false,
+  "vt02_unmatched_findings": 0,
+  "workspace": {
+    "artifact_name": "editorial-run-edcb268a-30ff-4ab1-b2d4-e87784b6158d",
+    "retention_days": 90,
+    "expires_on": "2027-01-08",
+    "manifest_digest": "sha256:c8417e8830545267cb402a81f33402fccaed634fb8189c809708f72bf959421d"
+  },
+  "ledger_commit": "nothing_to_commit",
+  "publication_unconfirmed": []
+}
