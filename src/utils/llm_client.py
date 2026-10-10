@@ -59,6 +59,38 @@ def _get_client() -> OpenAI:
     return _client
 
 
+#: Models the provider has rejected ``temperature`` for, learned from its own
+#: answer and never configured. A hard-coded list would be an invented
+#: configuration — and an unreadable one, since the model name arrives from a
+#: secret — so the first call to such a model still pays the retry, and every
+#: later call in the same process omits the parameter and pays nothing.
+#:
+#: Why it is worth doing: the configured Golden Engine model rejects
+#: ``temperature`` on **every** call — 6 of 6 on acceptance run `37460768845`,
+#: whose artifact names it — and each rejection charges
+#: a second budget unit for a request the provider refuses before inference —
+#: billed nothing, counted twice. Across ~50 calls that halved the effective
+#: ceiling. Learning it once turns ~50 wasted units into 1.
+#:
+#: Process-local on purpose: a cache of a provider fact, not state any run
+#: depends on. An empty memo costs only the one retry that happens today.
+_TEMPERATURE_UNSUPPORTED: set[str] = set()
+
+
+def _supports_temperature(model: str) -> bool:
+    """Whether to send ``temperature`` to this model at all."""
+
+    return model not in _TEMPERATURE_UNSUPPORTED
+
+
+def _temperature_rejected(model: str) -> None:
+    """Record the provider's refusal so the next call does not repeat it."""
+
+    if model not in _TEMPERATURE_UNSUPPORTED:
+        log.info("Model %s does not accept temperature — omitting it from now on", model)
+        _TEMPERATURE_UNSUPPORTED.add(model)
+
+
 def _temperature() -> float:
     return float(os.environ.get("NB_OPENAI_TEMPERATURE", "0.7"))
 
@@ -123,7 +155,9 @@ def chat(system: str, user: str, json_mode: bool = False, model: str | None = No
     model = model or _model()
     kwargs: dict[str, Any] = {
         "model": model,
-        "temperature": _temperature(),
+        # Omitted for a model the provider has already refused it for: the
+        # refusal costs a budget unit for a request that is never billed.
+        **({"temperature": _temperature()} if _supports_temperature(model) else {}),
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -144,6 +178,7 @@ def chat(system: str, user: str, json_mode: bool = False, model: str | None = No
     except BadRequestError as exc:
         if "temperature" in str(exc):
             log.warning("Model %s rejected temperature — retrying without it", model)
+            _temperature_rejected(model)
             kwargs.pop("temperature", None)
             # #171: the fallback is a second application-level transport —
             # charged like any other, and refused when the budget is spent
@@ -181,7 +216,8 @@ def chat_qc(system: str, user: str, json_mode: bool = False, model: str | None =
     model = model or _model()
     kwargs: dict[str, Any] = {
         "model": model,
-        "temperature": _qc_temperature(),
+        # Same omission as `chat`, with this variant's own temperature.
+        **({"temperature": _qc_temperature()} if _supports_temperature(model) else {}),
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -198,6 +234,7 @@ def chat_qc(system: str, user: str, json_mode: bool = False, model: str | None =
     except BadRequestError as exc:
         if "temperature" in str(exc):
             log.warning("Model %s rejected temperature — retrying without it", model)
+            _temperature_rejected(model)
             kwargs.pop("temperature", None)
             # #171: the fallback is a second application-level transport —
             # charged like any other, and refused when the budget is spent
@@ -249,30 +286,31 @@ def chat_parsed(
     log.debug("chat_parsed() model=%s response_model=%s", model, response_model.__name__)
     charge_active_call_budget()  # #171: one logical call, refused before any paid transport
     observe_request(system, user)                                            # #279
+    kwargs: dict = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "response_format": response_model,
+    }
+    # Same omission as `chat`; the arguments are a dict here so the parameter
+    # is dropped in one place rather than restated in a second call site.
+    if _supports_temperature(model):
+        kwargs["temperature"] = _temperature()
     try:
-        response = client.beta.chat.completions.parse(
-            model=model,
-            temperature=_temperature(),
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            response_format=response_model,
-        )
+        response = client.beta.chat.completions.parse(**kwargs)
     except BadRequestError as exc:
         if "temperature" in str(exc):
             log.warning("Model %s rejected temperature — retrying without it", model)
+            _temperature_rejected(model)
+            kwargs.pop("temperature", None)
             # #171: the fallback is a second application-level transport —
-            # charged like any other, and refused when the budget is spent
+            # charged like any other, and refused when the budget is spent.
+            # The charge stays: this retry really happens, and real retries
+            # are what the counter exists to bound.
             charge_active_call_budget()
-            response = client.beta.chat.completions.parse(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-                response_format=response_model,
-            )
+            response = client.beta.chat.completions.parse(**kwargs)
         else:
             raise
     parsed = response.choices[0].message.parsed
