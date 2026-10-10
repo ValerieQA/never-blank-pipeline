@@ -23,7 +23,9 @@ import scripts.generate_and_publish as gap
 from scripts.generate_and_publish import main
 from src.run.call_budget import (
     DEFAULT_CEILING,
+    GOLDEN_ENGINE_MAX_CEILING,
     R1_MAX_CEILING,
+    WEDNESDAY_MAX_CEILING,
     CallBudgetConfigurationError,
     RunCallBudget,
     RunCallBudgetExceededError,
@@ -459,3 +461,92 @@ def test_non_temperature_bad_requests_still_raise_without_extra_charges(monkeypa
     assert client.requests == 1
     assert budget.used == 1
     monkeypatch.setattr(llm_client, "_client", None)
+
+
+# ═══════════ the canonical ceiling, 60 → 62 (owner decision 2026-10-10) ═════
+
+
+def test_the_canonical_ceiling_is_sixty_two_and_the_other_two_did_not_move():
+    """One ceiling moved. The value of this test is the two that did not."""
+
+    assert GOLDEN_ENGINE_MAX_CEILING == 62
+    assert R1_MAX_CEILING == 40
+    assert WEDNESDAY_MAX_CEILING == 56
+    assert DEFAULT_CEILING == 40
+
+
+def test_sixty_two_is_accepted_and_sixty_three_is_refused():
+    """Refused, never clamped — the posture every ceiling here keeps."""
+
+    assert RunCallBudget(62, hard_max=GOLDEN_ENGINE_MAX_CEILING).limit == 62
+
+    with pytest.raises(CallBudgetConfigurationError, match="must be between"):
+        RunCallBudget(63, hard_max=GOLDEN_ENGINE_MAX_CEILING)
+
+
+def test_sixty_two_is_the_smallest_ceiling_a_normal_run_fits_in():
+    """Why 62 rather than a rounder number, asserted rather than asserted-in-prose.
+
+    Step 2 §6 puts the normal six-destination run at 61 logical calls, and the
+    first call to a model that refuses `temperature` costs two budget units
+    while every later one costs one (#402). So an ordinary run spends 62 units,
+    and 61 would stop it one call short of finishing.
+    """
+
+    normal_logical_calls = 61
+    spend = normal_logical_calls + 1   # the single learning unit
+
+    assert spend == GOLDEN_ENGINE_MAX_CEILING
+    assert spend > GOLDEN_ENGINE_MAX_CEILING - 1
+
+
+def test_an_unlisted_hard_maximum_is_still_refused():
+    """The closed set is a safety control, and raising one member must not open
+    it to arbitrary values — 60 itself is no longer a valid maximum."""
+
+    for unlisted in (60, 61, 50, 100):
+        with pytest.raises(CallBudgetConfigurationError, match="unsupported"):
+            RunCallBudget(10, hard_max=unlisted)
+
+
+def test_the_first_temperature_refusal_still_costs_two_units(monkeypatch):
+    """The accounting #402 preserved, re-asserted beside the new ceiling: this
+    change must not have made the learning retry free."""
+
+    import openai
+
+    import src.utils.llm_client as llm
+
+    llm._TEMPERATURE_UNSUPPORTED.clear()
+
+    class _Refuses:
+        def __init__(self):
+            self.requests = 0
+
+        def _respond(self, **kwargs):
+            self.requests += 1
+            if "temperature" in kwargs:
+                exc = openai.BadRequestError.__new__(openai.BadRequestError)
+                Exception.__init__(exc, "Unsupported parameter: 'temperature'")
+                raise exc
+            choice = type("C", (), {"message": type("M", (), {"content": "{}"})()})()
+            return type("R", (), {"choices": [choice], "usage": None})()
+
+        create = _respond
+
+    client = _Refuses()
+    holder = type("Chat", (), {"completions": client})()
+    monkeypatch.setattr(
+        llm, "_get_client", lambda: type("Cl", (), {"chat": holder})()
+    )
+    monkeypatch.setattr(llm, "observe_request", lambda *a, **k: None)
+    monkeypatch.setattr(llm, "observe_usage", lambda *a, **k: None)
+
+    budget = RunCallBudget(GOLDEN_ENGINE_MAX_CEILING, hard_max=GOLDEN_ENGINE_MAX_CEILING)
+    with activate_call_budget(budget):
+        llm.chat("s", "u", model="refuses-temperature")
+
+    assert client.requests == 2, "sent, refused, retried without it"
+    assert budget.used == 2, "a real retry is still charged"
+
+    llm._TEMPERATURE_UNSUPPORTED.clear()

@@ -39,12 +39,30 @@ ceiling is 40**", and §6's own estimate for all six destinations is min 44,
 normal 61, worst 211 against "40 (current engine)". The deterministic #351
 execution measures 50 for a clean six-destination run — the §6 minimum of 44
 plus one S-09 ranking per destination, which the minimum assumes away. So the
-engine is given its own finite ceiling of 60 (owner decision, 2026-10-01): a
-runaway guard and not a target spend, high enough that the canonical
-architecture completes without a required editorial check being optimized away
-to fit 40, and low enough to stop a loop well inside §6's worst case. Which
-number it should finally be is SL-7's decision from measured data; this one
-exists so that the measurement can be taken at all.
+engine was first given its own finite ceiling of 60 (owner decision,
+2026-10-01): a runaway guard and not a target spend, high enough that the
+canonical architecture completes without a required editorial check being
+optimized away to fit 40, and low enough to stop a loop well inside §6's worst
+case. That value said of itself that "which number it should finally be is
+SL-7's decision from measured data; this one exists so that the measurement can
+be taken at all."
+
+SL-7 took the measurement, and the ceiling is **62** (owner decision,
+2026-10-10). Two measured facts moved it, neither of them a preference:
+
+* §6's normal case for six destinations is **61** logical calls, and 60 could
+  not hold it — the first value was two short of the architecture's own
+  ordinary expectation, which no amount of optimizing away would have fixed.
+* One logical call costs **two** budget units the first time a model refuses
+  ``temperature``, because the refusal is charged like any retry (#402 learns
+  the refusal so it happens once per model per process rather than on every
+  call). That is exactly **one** extra unit per run.
+
+So 62 = §6's normal 61 + that one learning unit: the smallest ceiling at which
+an ordinary six-destination run completes, derived rather than chosen. It
+remains a runaway guard — §6's worst case is 211, and the deterministic #351
+execution measures 50 for a clean run — and it remains reached only by
+``run_golden_engine``.
 """
 
 from __future__ import annotations
@@ -68,8 +86,8 @@ _WEDNESDAY_ROLE_ID = "never-blank-wednesday-golden"
 #: Finite hard ceiling for the canonical Golden Engine path (#351). Also not a
 #: new global maximum: it is reached only by ``run_golden_engine``, which names
 #: it explicitly, and the legacy default, ``R1_MAX_CEILING`` and Wednesday's 56
-#: are all unchanged. See the module docstring for where 60 comes from.
-GOLDEN_ENGINE_MAX_CEILING = 60
+#: are all unchanged. See the module docstring for where 62 comes from.
+GOLDEN_ENGINE_MAX_CEILING = 62
 
 #: Default when NB_RUN_TEXT_CALL_BUDGET is unset. See the module docstring
 #: for the derivation.

@@ -684,6 +684,9 @@ def test_the_golden_engine_call_budgets_are_unchanged() -> None:
         WEDNESDAY_MAX_CEILING,
     )
 
+    # 62 is the canonical ceiling after the owner's 2026-10-10 decision; 40 and
+    # 56 are the two this guard really protects, since what it asserts is that
+    # MVP 1 work never disturbs the engine's budgets.
     assert (GOLDEN_ENGINE_MAX_CEILING, R1_MAX_CEILING, WEDNESDAY_MAX_CEILING) == (
-        60, 40, 56,
+        62, 40, 56,
     )

@@ -983,7 +983,7 @@ def run_golden_engine(
     # six-destination minimum at 44 and the normal case at 61), so
     # `R1_MAX_CEILING` cannot admit one. Named explicitly, so the
     # legacy default, Wednesday's 56 and `R1_MAX_CEILING` are all
-    # untouched and no other caller inherits 60.
+    # untouched and no other caller inherits the canonical ceiling.
     run_budget = RunCallBudget(
         call_budget_limit, hard_max=GOLDEN_ENGINE_MAX_CEILING
     )

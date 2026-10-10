@@ -140,11 +140,11 @@ def test_a_non_numeric_budget_is_refused_by_the_step() -> None:
     assert "call_budget must be digits" in body
 
 
-@pytest.mark.parametrize("limit", [0, -1, 61, 100])
+@pytest.mark.parametrize("limit", [0, -1, 63, 100])
 def test_an_out_of_range_budget_is_refused_by_the_engine(limit) -> None:
     """Range is the engine's to judge, and it refuses rather than clamping.
 
-    A silent fallback to 60 would be the failure mode this whole wiring exists
+    A silent fallback to the ceiling would be the failure mode this wiring exists
     to avoid: a diagnostic run that quietly costs the acceptance ceiling.
     """
 
@@ -232,8 +232,10 @@ def test_the_engine_budget_implementation_is_untouched() -> None:
         RunCallBudget,
     )
 
+    # The canonical ceiling moved 60 → 62 (owner decision, 2026-10-10); the
+    # other two are what this assertion is really guarding, and they did not.
     assert (GOLDEN_ENGINE_MAX_CEILING, R1_MAX_CEILING, WEDNESDAY_MAX_CEILING) == (
-        60, 40, 56,
+        62, 40, 56,
     )
     signature = inspect.signature(RunCallBudget.__init__)
     assert list(signature.parameters) == ["self", "limit", "hard_max"]
